@@ -6,19 +6,20 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j // Usamos log de Slf4j en lugar de System.out
+@Slf4j
 public class EmailService {
 
     private final JavaMailSender mailSender;
 
+    @Async // Envió asíncrono para no demorar la respuesta de la API
     public void enviarCorreoPro(String destinatario, String asunto, String contenidoHtml) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
-            // Multipart = true permite renderizar el HTML del ticket o reporte
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
             helper.setTo(destinatario);
@@ -26,11 +27,10 @@ public class EmailService {
             helper.setText(contenidoHtml, true);
 
             mailSender.send(message);
-            log.info("LOCAL: Email enviado con éxito a: {}", destinatario);
+            log.info("Email enviado con éxito a: {}", destinatario);
 
         } catch (MessagingException e) {
-            log.error("LOCAL ERROR: No se pudo enviar el email a {}. Detalle: {}", destinatario, e.getMessage());
-            throw new RuntimeException("Error enviando email: " + e.getMessage());
+            log.error("Error al enviar correo a {}. Detalle: {}", destinatario, e.getMessage());
         }
     }
 }

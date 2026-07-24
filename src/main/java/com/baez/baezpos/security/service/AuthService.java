@@ -12,13 +12,13 @@ import com.baez.baezpos.user.entity.User;
 import com.baez.baezpos.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.CredentialsExpiredException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.baez.baezpos.util.HardwareIdentificador; // Asegurate de que la clase que creamos antes esté aquí
-import org.springframework.security.authentication.CredentialsExpiredException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Service
@@ -35,37 +35,51 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        // CHECK DE SEGURIDAD: Si está usando la clave de emergencia
+        // CHECK DE SEGURIDAD: Clave temporal "admin123"
         if ("admin123".equals(request.getPassword())) {
             if (user.getPasswordResetAt() == null ||
-                    user.getPasswordResetAt().plusMinutes(10).isBefore(java.time.LocalDateTime.now())) {
-
-                // CAMBIO AQUÍ: Lanzamos una excepción de seguridad que Spring no oculta tan fácilmente
+                    user.getPasswordResetAt().plusMinutes(10).isBefore(LocalDateTime.now())) {
                 throw new CredentialsExpiredException("La clave temporal ha expirado. Solicite soporte nuevamente.");
             }
         }
 
-        // Si pasó el tiempo bien, se autentica de forma normal
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
             );
         } catch (Exception e) {
-            // Si el problema fue que pusieron mal la contraseña normal, ahí sí va el genérico
             throw new RuntimeException("Credenciales incorrectas");
         }
 
         if (!user.getActive()) {
-            throw new RuntimeException("La cuenta se encuentra desactivada");
+            throw new RuntimeException("La cuenta del usuario se encuentra desactivada");
+        }
+
+        // ==========================================
+        // VALIDACIÓN DE LICENCIA SAAS (MULTI-TENANT)
+        // ==========================================
+        if (user.getRole() != Role.SUPER_ADMIN) {
+            Company company = user.getCompany();
+            if (company == null) {
+                throw new RuntimeException("El usuario no tiene una empresa asociada.");
+            }
+            if (!Boolean.TRUE.equals(company.getActive())) {
+                throw new RuntimeException("La suscripción de la empresa se encuentra suspendida.");
+            }
+            if (company.getExpirationDate() != null && company.getExpirationDate().isBefore(LocalDate.now())) {
+                throw new RuntimeException("Su licencia/suscripción ha vencido el " + company.getExpirationDate() + ". Contacte a soporte para renovar.");
+            }
         }
 
         String jwtToken = jwtService.generateToken(user);
+        Long companyId = (user.getCompany() != null) ? user.getCompany().getId() : null;
 
         return AuthenticationResponse.builder()
                 .token(jwtToken)
                 .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole().name())
+                .companyId(companyId) // <-- Devolvemos el ID de la empresa
                 .build();
     }
 
@@ -77,9 +91,10 @@ public class AuthService {
     public AuthenticationResponse setup(SetupRequest request) {
         long userCount = userRepository.count();
         if (userCount > 0) {
-            throw new BadRequestException("El sistema ya ha sido configurado previamente. Diríjase al Login.");
+            throw new BadRequestException("El sistema ya ha sido configurado previamente.");
         }
 
+        // Damos 30 días de prueba inicial en el Setup
         Company company = Company.builder()
                 .name(request.getCompanyName())
                 .taxId(request.getTaxId())
@@ -87,14 +102,16 @@ public class AuthService {
                 .address(request.getAddress())
                 .ticketMessage(request.getTicketMessage())
                 .active(true)
+                .expirationDate(LocalDate.now().plusDays(30)) // Trial de 30 días
                 .build();
-        companyRepository.save(company);
+        Company savedCompany = companyRepository.save(company);
 
         User adminUser = User.builder()
                 .name(request.getUserName())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.ADMIN)
+                .company(savedCompany) // <-- Relacionamos al usuario con su empresa
                 .active(true)
                 .build();
         userRepository.save(adminUser);
@@ -106,26 +123,7 @@ public class AuthService {
                 .name(adminUser.getName())
                 .email(adminUser.getEmail())
                 .role(adminUser.getRole().name())
+                .companyId(savedCompany.getId())
                 .build();
-    }
-
-    @Transactional
-    public void validarYResetearAdmin(String llaveIngresada) {
-        String pcId = HardwareIdentificador.getSerialNumber();
-        String llaveReal = HardwareIdentificador.generarLlaveMaestra(pcId);
-
-        if (!llaveReal.equals(llaveIngresada)) {
-            throw new RuntimeException("La llave de desbloqueo es inválida para este equipo.");
-        }
-
-        User admin = userRepository.findAll().stream()
-                .filter(u -> u.getRole() == Role.ADMIN)
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("No se encontró un usuario Administrador."));
-
-        // Reseteamos y marcamos la hora exacta
-        admin.setPassword(passwordEncoder.encode("admin123"));
-        admin.setPasswordResetAt(LocalDateTime.now()); // <--- ACÁ ACTIVAMOS EL RELOJ
-        userRepository.save(admin);
     }
 }

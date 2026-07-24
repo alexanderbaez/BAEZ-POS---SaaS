@@ -1,15 +1,18 @@
 package com.baez.baezpos.log.entity;
 
+import com.baez.baezpos.shared.entity.TenantEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "system_logs")
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
-@Builder
-public class SystemLog {
+@SuperBuilder
+public class SystemLog extends TenantEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,12 +25,15 @@ public class SystemLog {
     private String description;
 
     @Column(nullable = false)
-    private String userEmail; // Quién hizo la acción
+    private String userEmail;
 
-    private LocalDateTime timestamp;
+    @Builder.Default
+    private LocalDateTime timestamp = LocalDateTime.now();
 
     @PrePersist
     protected void onCreate() {
-        this.timestamp = LocalDateTime.now();
+        if (this.timestamp == null) {
+            this.timestamp = LocalDateTime.now();
+        }
     }
 }

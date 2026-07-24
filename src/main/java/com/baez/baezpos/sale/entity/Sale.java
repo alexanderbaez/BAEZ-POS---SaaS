@@ -1,9 +1,11 @@
 package com.baez.baezpos.sale.entity;
 
-import com.baez.baezpos.shared.entity.BaseEntity;
+import com.baez.baezpos.shared.entity.TenantEntity;
 import com.baez.baezpos.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -12,8 +14,8 @@ import java.util.List;
 @Table(name = "sales")
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
-@Builder
-public class Sale extends BaseEntity {
+@SuperBuilder
+public class Sale extends TenantEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -44,7 +46,7 @@ public class Sale extends BaseEntity {
     private Boolean canceled = false;
 
     // ==========================================
-    // NUEVOS CAMPOS PARA ARCA / AFIP (PASO 1)
+    // CAMPOS PARA ARCA / AFIP
     // ==========================================
     @Column(name = "cae", length = 14)
     @Builder.Default

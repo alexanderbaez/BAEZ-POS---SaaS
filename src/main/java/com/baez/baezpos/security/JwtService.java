@@ -24,6 +24,10 @@ public class JwtService {
         return extractClaim(token, Claims::getSubject);
     }
 
+    public Long extractCompanyId(String token) {
+        return extractClaim(token, claims -> claims.get("companyId", Long.class));
+    }
+
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
@@ -32,16 +36,20 @@ public class JwtService {
     public String generateToken(User user) {
         Map<String, Object> claims = new HashMap<>();
 
-        // Solo roles y datos básicos
         claims.put("authorities", List.of("ROLE_" + user.getRole().name()));
         claims.put("role", user.getRole().name());
         claims.put("userId", user.getId());
+
+        // <-- NUEVO: Guardamos el companyId en el JWT
+        if (user.getCompany() != null) {
+            claims.put("companyId", user.getCompany().getId());
+        }
 
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(user.getEmail())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000L * 60 * 60 * 24))
                 .signWith(getSignInKey(), SignatureAlgorithm.HS256)
                 .compact();
     }

@@ -1,11 +1,14 @@
 package com.baez.baezpos.customer.service;
 
+import com.baez.baezpos.company.entity.Company;
+import com.baez.baezpos.company.repository.CompanyRepository;
 import com.baez.baezpos.customer.dto.CustomerMovementDTO;
 import com.baez.baezpos.customer.entities.Customer;
 import com.baez.baezpos.customer.entities.CustomerMovement;
 import com.baez.baezpos.customer.repository.CustomerMovementRepository;
 import com.baez.baezpos.customer.repository.CustomerRepository;
 import com.baez.baezpos.sale.entity.Sale;
+import com.baez.baezpos.security.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,23 +22,30 @@ public class CustomerServiceImpl implements CustomerService {
 
     private final CustomerRepository customerRepository;
     private final CustomerMovementRepository customerMovementRepository;
+    private final CompanyRepository companyRepository;
 
     @Override
     public List<Customer> getAll() {
-        return customerRepository.findAll();
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        return customerRepository.findByCompanyId(companyId);
     }
 
     @Override
     @Transactional
     public Customer saveCustomer(Customer customer) {
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        Company company = companyRepository.getReferenceById(companyId);
+
+        customer.setCompany(company); // <-- LIGAMOS EL CLIENTE A LA EMPRESA
         return customerRepository.save(customer);
     }
 
     @Override
     @Transactional
     public void updateBalance(Long customerId, BigDecimal amount, String type, String description, Sale sale, String paymentMethod) {
-        Customer customer = customerRepository.findById(customerId)
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        Customer customer = customerRepository.findByIdAndCompanyId(customerId, companyId)
+                .orElseThrow(() -> new RuntimeException("Cliente no encontrado en su empresa"));
 
         if ("DEBITO".equals(type)) {
             customer.setCurrentBalance(customer.getCurrentBalance().add(amount));
@@ -62,13 +72,15 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Override
     public List<Customer> searchCustomers(String query) {
-        return customerRepository.searchCustomers(query);
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        return customerRepository.searchCustomersByCompanyId(query, companyId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CustomerMovementDTO> getHistory(Long customerId) {
-        List<CustomerMovement> movements = customerMovementRepository.findByCustomerIdOrderByIdDesc(customerId);
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        List<CustomerMovement> movements = customerMovementRepository.findByCustomerIdAndCustomerCompanyIdOrderByIdDesc(customerId, companyId);
 
         return movements.stream().map(m -> {
             CustomerMovementDTO dto = new CustomerMovementDTO();
@@ -95,7 +107,8 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     @Transactional
     public Customer updateCustomer(Long id, Customer details) {
-        Customer customer = customerRepository.findById(id)
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        Customer customer = customerRepository.findByIdAndCompanyId(id, companyId)
                 .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
 
         customer.setName(details.getName());
@@ -122,16 +135,15 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     @Transactional
     public void deleteCustomer(Long id) {
-        Customer customer = customerRepository.findById(id)
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        Customer customer = customerRepository.findByIdAndCompanyId(id, companyId)
                 .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
 
-        // 1. Limpiamos movimientos asociados si los tiene
-        List<CustomerMovement> movements = customerMovementRepository.findByCustomerIdOrderByIdDesc(id);
+        List<CustomerMovement> movements = customerMovementRepository.findByCustomerIdAndCustomerCompanyIdOrderByIdDesc(id, companyId);
         if (!movements.isEmpty()) {
             customerMovementRepository.deleteAll(movements);
         }
 
-        // 2. Eliminamos el cliente
         customerRepository.delete(customer);
     }
 }

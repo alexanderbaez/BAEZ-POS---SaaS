@@ -1,11 +1,11 @@
 package com.baez.baezpos.expense.service;
 
 import com.baez.baezpos.expense.dto.ExpenseRequestDTO;
-import com.baez.baezpos.expense.entity.Expense;
+import com.baez.baezpos.expense.dto.ExpenseResponseDTO;
 
 import java.util.List;
 
 public interface ExpenseService {
-    Expense createExpense(ExpenseRequestDTO dto);
-    List<Expense> getAllExpenses();
+    ExpenseResponseDTO createExpense(ExpenseRequestDTO dto);
+    List<ExpenseResponseDTO> getAllExpenses();
 }

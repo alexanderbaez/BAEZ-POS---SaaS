@@ -1,36 +1,38 @@
 package com.baez.baezpos.customer.entities;
 
-import com.baez.baezpos.company.entity.Company;
+import com.baez.baezpos.shared.entity.TenantEntity;
 import jakarta.persistence.*;
-import lombok.Data; // <--- Importante
-import lombok.NoArgsConstructor; // <--- Importante
-import lombok.AllArgsConstructor; // <--- Importante
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "customers")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class Customer {
+@Getter @Setter
+@NoArgsConstructor @AllArgsConstructor
+@SuperBuilder
+public class Customer extends TenantEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false)
     private String name;
+
     private String phone;
     private String dniCuit;
 
     @Column(precision = 10, scale = 2)
+    @Builder.Default
     private BigDecimal currentBalance = BigDecimal.ZERO;
 
     @Column(precision = 10, scale = 2)
+    @Builder.Default
     private BigDecimal creditLimit = BigDecimal.valueOf(10000);
 
+    @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
-
-    // ELIMINADO: Company company
 }

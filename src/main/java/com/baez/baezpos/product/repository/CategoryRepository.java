@@ -6,7 +6,12 @@ import java.util.List;
 import java.util.Optional;
 
 public interface CategoryRepository extends JpaRepository<Category, Long> {
-    Optional<Category> findByName(String name);
-    List<Category> findByActiveTrue();
-    List<Category> findByActiveFalse();
+
+    Optional<Category> findByIdAndCompanyId(Long id, Long companyId);
+
+    Optional<Category> findByNameAndCompanyId(String name, Long companyId);
+
+    List<Category> findByCompanyIdAndActiveTrue(Long companyId);
+
+    List<Category> findByCompanyIdAndActiveFalse(Long companyId);
 }

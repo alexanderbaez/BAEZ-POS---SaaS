@@ -17,14 +17,18 @@ public class UserPrincipal implements UserDetails {
     private String email;
     private String password;
     private boolean enabled;
+    private Long companyId; // <-- NUEVO: ID de la Empresa
     private Collection<? extends GrantedAuthority> authorities;
 
     public static UserPrincipal create(User user) {
+        Long companyId = (user.getCompany() != null) ? user.getCompany().getId() : null;
+
         return new UserPrincipal(
                 user.getId(),
                 user.getEmail(),
                 user.getPassword(),
                 user.getActive(),
+                companyId,
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
         );
     }

@@ -1,15 +1,22 @@
 package com.baez.baezpos.inventory.service.InventoryServiceImpl;
 
+import com.baez.baezpos.company.entity.Company;
+import com.baez.baezpos.company.repository.CompanyRepository;
+import com.baez.baezpos.inventory.dto.InventoryMovementResponseDTO;
 import com.baez.baezpos.inventory.entity.InventoryMovement;
 import com.baez.baezpos.inventory.entity.MovementType;
 import com.baez.baezpos.inventory.repository.InventoryRepository;
 import com.baez.baezpos.inventory.service.InventoryService.InventoryService;
 import com.baez.baezpos.product.entity.Product;
 import com.baez.baezpos.product.repository.ProductRepository;
+import com.baez.baezpos.security.util.SecurityUtils;
+import com.baez.baezpos.shared.exception.BadRequestException;
+import com.baez.baezpos.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 
 @Service
@@ -19,18 +26,23 @@ public class InventoryServiceImpl implements InventoryService {
 
     private final InventoryRepository inventoryRepository;
     private final ProductRepository productRepository;
+    private final CompanyRepository companyRepository;
 
     @Override
     @Transactional
-    public InventoryMovement registerMovement(Long productId, Integer quantity, MovementType type, String reason) {
-        // 1. Validar que el producto existe (Ya no filtramos por empresa)
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado."));
+    public InventoryMovementResponseDTO registerMovement(Long productId, Integer quantity, MovementType type, String reason) {
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+
+        // 1. Validar producto dentro de la empresa
+        Product product = productRepository.findByIdAndCompanyId(productId, companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado en su empresa."));
+
+        Company company = companyRepository.getReferenceById(companyId);
 
         // 2. Lógica de Stock
         if (isNegativeMovement(type)) {
             if (product.getStock() < quantity) {
-                throw new RuntimeException("Stock insuficiente. Actual: " + product.getStock());
+                throw new BadRequestException("Stock insuficiente para " + product.getName() + ". Stock actual: " + product.getStock());
             }
             product.setStock(product.getStock() - quantity);
         } else {
@@ -39,7 +51,7 @@ public class InventoryServiceImpl implements InventoryService {
 
         productRepository.save(product);
 
-        // 3. Registrar movimiento
+        // 3. Crear y guardar movimiento asociando la Company
         InventoryMovement movement = InventoryMovement.builder()
                 .movementType(type)
                 .quantity(quantity)
@@ -47,8 +59,12 @@ public class InventoryServiceImpl implements InventoryService {
                 .product(product)
                 .build();
 
-        log.info("LOCAL: Movimiento {} registrado para: {}", type, product.getName());
-        return inventoryRepository.save(movement);
+        movement.setCompany(company);
+
+        InventoryMovement savedMovement = inventoryRepository.save(movement);
+        log.info("Empresa [{}]: Movimiento {} ({}) registrado para producto ID {}", companyId, type, quantity, product.getId());
+
+        return mapToDTO(savedMovement);
     }
 
     private boolean isNegativeMovement(MovementType type) {
@@ -60,13 +76,33 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<InventoryMovement> getProductMovements(Long productId) {
-        return inventoryRepository.findByProductIdOrderByCreatedAtDesc(productId);
+    public List<InventoryMovementResponseDTO> getProductMovements(Long productId) {
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        return inventoryRepository.findByProductIdAndCompanyIdOrderByCreatedAtDesc(productId, companyId)
+                .stream()
+                .map(this::mapToDTO)
+                .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<InventoryMovement> getAllRecentMovements() {
-        return inventoryRepository.findAllByOrderByCreatedAtDesc();
+    public List<InventoryMovementResponseDTO> getAllRecentMovements() {
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        return inventoryRepository.findByCompanyIdOrderByCreatedAtDesc(companyId)
+                .stream()
+                .map(this::mapToDTO)
+                .toList();
+    }
+
+    private InventoryMovementResponseDTO mapToDTO(InventoryMovement movement) {
+        return InventoryMovementResponseDTO.builder()
+                .id(movement.getId())
+                .productId(movement.getProduct().getId())
+                .productName(movement.getProduct().getName())
+                .movementType(movement.getMovementType())
+                .quantity(movement.getQuantity())
+                .reason(movement.getReason())
+                .createdAt(movement.getCreatedAt())
+                .build();
     }
 }

@@ -1,5 +1,6 @@
 package com.baez.baezpos.user.entity;
 
+import com.baez.baezpos.company.entity.Company;
 import com.baez.baezpos.shared.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -35,11 +36,19 @@ public class User extends BaseEntity implements UserDetails {
     @Column(nullable = false)
     private Role role;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean active = true;
 
     @Column(name = "password_reset_at")
     private LocalDateTime passwordResetAt;
+
+    // ==========================================
+    // RELACIÓN MULTI-TENANT (SaaS)
+    // ==========================================
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id", nullable = true) // Nullable para el SUPER_ADMIN
+    private Company company;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

@@ -1,22 +1,22 @@
 package com.baez.baezpos.product.entity;
 
-import com.baez.baezpos.shared.entity.BaseEntity;
+import com.baez.baezpos.shared.entity.TenantEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.SQLDelete;
 
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "products", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"barcode"}) // Unicidad global (local)
+        @UniqueConstraint(columnNames = {"company_id", "barcode"}) // Unicidad POR EMPRESA
 })
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
-@Builder
+@SuperBuilder
 @SQLDelete(sql = "UPDATE products SET active = false WHERE id = ?")
-// Si usas Hibernate 6.3+, SQLRestriction es el reemplazo de Where para soft delete
-public class Product extends BaseEntity {
+public class Product extends TenantEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,7 +27,7 @@ public class Product extends BaseEntity {
 
     private String description;
 
-    @Column(length = 100) // Ahora es único de forma absoluta
+    @Column(length = 100)
     private String barcode;
 
     @Column(nullable = false, precision = 10, scale = 2)
@@ -36,12 +36,15 @@ public class Product extends BaseEntity {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
+    @Builder.Default
     @Column(nullable = false)
     private Integer stock = 0;
 
+    @Builder.Default
     @Column(name = "min_stock")
     private Integer minStock = 0;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean active = true;
 

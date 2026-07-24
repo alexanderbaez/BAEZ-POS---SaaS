@@ -20,4 +20,13 @@ public class SecurityUtils {
         }
         return null;
     }
+
+    // <-- NUEVO: Obtener la empresa del usuario logueado
+    public static Long getCurrentCompanyId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof UserPrincipal principal) {
+            return principal.getCompanyId();
+        }
+        return null;
+    }
 }

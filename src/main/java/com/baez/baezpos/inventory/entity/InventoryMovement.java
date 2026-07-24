@@ -1,16 +1,17 @@
 package com.baez.baezpos.inventory.entity;
 
 import com.baez.baezpos.product.entity.Product;
-import com.baez.baezpos.shared.entity.BaseEntity;
+import com.baez.baezpos.shared.entity.TenantEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "inventory_movements")
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
-@Builder
-public class InventoryMovement extends BaseEntity {
+@SuperBuilder
+public class InventoryMovement extends TenantEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,5 +29,4 @@ public class InventoryMovement extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
-
 }

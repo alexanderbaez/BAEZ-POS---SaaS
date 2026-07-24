@@ -13,18 +13,21 @@ import java.util.List;
 
 @Repository
 public interface CustomerMovementRepository extends JpaRepository<CustomerMovement, Long> {
-    // Historial de la libreta por cliente
+
     @EntityGraph(attributePaths = {"sale", "sale.items"})
-    List<CustomerMovement> findByCustomerIdOrderByIdDesc(Long customerId);
+    List<CustomerMovement> findByCustomerIdAndCustomerCompanyIdOrderByIdDesc(Long customerId, Long companyId);
 
     @Query("SELECT COALESCE(SUM(cm.amount), 0) FROM CustomerMovement cm " +
-            "WHERE cm.type = 'CREDITO' AND cm.createdAt BETWEEN :start AND :end")
-    BigDecimal sumCreditsByDateRange(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+            "WHERE cm.customer.company.id = :companyId AND cm.type = 'CREDITO' AND cm.createdAt BETWEEN :start AND :end")
+    BigDecimal sumCreditsByDateRangeAndCompanyId(@Param("companyId") Long companyId,
+                                                 @Param("start") LocalDateTime start,
+                                                 @Param("end") LocalDateTime end);
 
     @Query("SELECT COALESCE(SUM(cm.amount), 0) FROM CustomerMovement cm " +
-            "WHERE cm.type = 'CREDITO' AND cm.paymentMethod = :method " +
+            "WHERE cm.customer.company.id = :companyId AND cm.type = 'CREDITO' AND cm.paymentMethod = :method " +
             "AND cm.createdAt BETWEEN :start AND :end")
-    BigDecimal sumPaymentsByMethod(@Param("method") String method,
-                                   @Param("start") LocalDateTime start,
-                                   @Param("end") LocalDateTime end);
+    BigDecimal sumPaymentsByMethodAndCompanyId(@Param("method") String method,
+                                               @Param("companyId") Long companyId,
+                                               @Param("start") LocalDateTime start,
+                                               @Param("end") LocalDateTime end);
 }

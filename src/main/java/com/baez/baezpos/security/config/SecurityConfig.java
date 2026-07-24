@@ -41,19 +41,20 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .authorizeHttpRequests(auth -> auth
-                        // RECURSOS PÚBLICOS Y NUEVOS ENDPOINTS DE HARDWARE
                         .requestMatchers("/", "/login.html", "/index.html", "/*.html", "/css/**", "/js/**", "/images/**", "/*.js", "/*.css", "/favicon.ico", "/error").permitAll()
                         .requestMatchers("/api/v1/auth/authenticate", "/api/v1/auth/setup-status", "/api/v1/auth/setup").permitAll()
-                        .requestMatchers("/api/v1/auth/pc-id", "/api/v1/auth/validar-llave-maestra").permitAll() // <-- ACCESO LIBRE
 
-                        // (Resto de tus reglas de roles...)
-                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/my-company/profile").hasAnyRole("ADMIN", "VENDEDOR")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/products/**").hasAnyRole("ADMIN", "VENDEDOR")
-                        .requestMatchers("/api/v1/sales/**").hasAnyRole("ADMIN", "VENDEDOR")
-                        .requestMatchers("/api/v1/customers/**").hasAnyRole("ADMIN", "VENDEDOR")
-                        .requestMatchers("/api/v1/users/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/inventory/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        // Rutas exclusivas para el Creador del SaaS (Alexander)
+                        .requestMatchers("/api/v1/super-admin/**").hasRole("SUPER_ADMIN")
+
+                        // Rutas compartidas por los roles del cliente
+                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/my-company/profile").hasAnyRole("SUPER_ADMIN", "ADMIN", "VENDEDOR")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/products/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "VENDEDOR")
+                        .requestMatchers("/api/v1/sales/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "VENDEDOR")
+                        .requestMatchers("/api/v1/customers/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "VENDEDOR")
+                        .requestMatchers("/api/v1/users/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
+                        .requestMatchers("/api/v1/inventory/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
+                        .requestMatchers("/api/v1/admin/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

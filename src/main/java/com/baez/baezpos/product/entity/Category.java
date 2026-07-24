@@ -1,19 +1,20 @@
 package com.baez.baezpos.product.entity;
 
-import com.baez.baezpos.shared.entity.BaseEntity;
+import com.baez.baezpos.shared.entity.TenantEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.SQLDelete;
 
 @Entity
 @Table(name = "categories", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"name"}) // Unicidad local por nombre
+        @UniqueConstraint(columnNames = {"company_id", "name"}) // Unicidad POR EMPRESA
 })
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
-@Builder
+@SuperBuilder
 @SQLDelete(sql = "UPDATE categories SET active = false WHERE id = ?")
-public class Category extends BaseEntity {
+public class Category extends TenantEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,6 +26,7 @@ public class Category extends BaseEntity {
     @Column(length = 255)
     private String description;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean active = true;
 }
