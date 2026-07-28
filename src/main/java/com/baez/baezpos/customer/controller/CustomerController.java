@@ -42,14 +42,13 @@ public class CustomerController {
     }
 
     @PostMapping("/{id}/payments")
-    public ResponseEntity<String> receivePayment(@PathVariable Long id, @RequestBody PaymentRequestDTO paymentDTO) {
-
+    public ResponseEntity<Map<String, String>> receivePayment(@PathVariable Long id, @RequestBody PaymentRequestDTO paymentDTO) {
         if (paymentDTO.getAmount() == null || paymentDTO.getMethod() == null) {
-            return ResponseEntity.badRequest().body("Datos incompletos");
+            return ResponseEntity.badRequest().body(Map.of("message", "Datos incompletos para el pago."));
         }
 
         customerService.processCustomerPayment(id, paymentDTO.getAmount(), paymentDTO.getMethod());
-        return ResponseEntity.ok("Pago registrado con éxito");
+        return ResponseEntity.ok(Map.of("message", "Pago registrado con éxito"));
     }
 
     @PutMapping("/{id}")
@@ -57,15 +56,9 @@ public class CustomerController {
         return ResponseEntity.ok(customerService.updateCustomer(id, customer));
     }
 
-    // NUEVO ENDPOINT PARA ELIMINAR CLIENTE
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable Long id) {
-        try {
-            customerService.deleteCustomer(id);
-            return ResponseEntity.ok().body(Map.of("message", "Cliente eliminado con éxito"));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", e.getMessage()));
-        }
+    public ResponseEntity<Map<String, String>> delete(@PathVariable Long id) {
+        customerService.deleteCustomer(id);
+        return ResponseEntity.ok(Map.of("message", "Cliente eliminado con éxito"));
     }
 }

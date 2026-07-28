@@ -4,7 +4,7 @@ import com.baez.baezpos.sale.dto.BoxReportDTO;
 import com.baez.baezpos.sale.dto.ChartDataDTO;
 import com.baez.baezpos.sale.dto.SaleRequestDTO;
 import com.baez.baezpos.sale.dto.SaleResponseDTO;
-import com.baez.baezpos.sale.service.SaleService.SaleService;
+import com.baez.baezpos.sale.service.SaleService;
 import com.baez.baezpos.security.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

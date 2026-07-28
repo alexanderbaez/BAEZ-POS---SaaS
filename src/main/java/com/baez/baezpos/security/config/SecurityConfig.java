@@ -36,7 +36,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable()) // Deshabilitado para permitir el POST de la llave
+                .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
@@ -44,17 +44,21 @@ public class SecurityConfig {
                         .requestMatchers("/", "/login.html", "/index.html", "/*.html", "/css/**", "/js/**", "/images/**", "/*.js", "/*.css", "/favicon.ico", "/error").permitAll()
                         .requestMatchers("/api/v1/auth/authenticate", "/api/v1/auth/setup-status", "/api/v1/auth/setup").permitAll()
 
-                        // Rutas exclusivas para el Creador del SaaS (Alexander)
+                        // 1. Exclusivo para Vos (SUPER_ADMIN)
                         .requestMatchers("/api/v1/super-admin/**").hasRole("SUPER_ADMIN")
 
-                        // Rutas compartidas por los roles del cliente
-                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/my-company/profile").hasAnyRole("SUPER_ADMIN", "ADMIN", "VENDEDOR")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/products/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "VENDEDOR")
-                        .requestMatchers("/api/v1/sales/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "VENDEDOR")
-                        .requestMatchers("/api/v1/customers/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "VENDEDOR")
-                        .requestMatchers("/api/v1/users/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
-                        .requestMatchers("/api/v1/inventory/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
-                        .requestMatchers("/api/v1/admin/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
+                        // 2. Rutas que pueden acceder el Cliente (ADMIN) y sus empleados (VENDEDOR)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/my-company/status", "/api/v1/admin/my-company/check-status").hasAnyRole("ADMIN", "VENDEDOR")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/my-company/profile").hasAnyRole("ADMIN", "VENDEDOR")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/products/**").hasAnyRole("ADMIN", "VENDEDOR")
+                        .requestMatchers("/api/v1/sales/**").hasAnyRole("ADMIN", "VENDEDOR")
+                        .requestMatchers("/api/v1/customers/**").hasAnyRole("ADMIN", "VENDEDOR")
+
+                        // 3. Configuración y administración del local (Solo el dueño: ADMIN)
+                        .requestMatchers("/api/v1/users/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/inventory/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

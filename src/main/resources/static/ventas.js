@@ -802,6 +802,9 @@ function agregarProductoManual() {
         return;
     }
 
+    // Listener nombrado para poder removerlo limpiamente al cerrar el modal
+    let onClickFuera = null;
+
     Swal.fire({
         title: '<i class="bi bi-box-seam me-2"></i>Venta de Sueltos',
         html: `
@@ -815,7 +818,7 @@ function agregarProductoManual() {
 
             <div class="text-start mt-3">
                 <label class="small text-muted mb-1">Monto total ($):</label>
-                <input id="manualPrecio" type="number" class="swal2-input m-0 w-100" placeholder="0.00">
+                <input id="manualPrecio" type="number" class="swal2-input m-0 w-100" placeholder="0.00" step="any" min="0">
             </div>
         `,
         showCancelButton: true,
@@ -828,7 +831,7 @@ function agregarProductoManual() {
             inputBusqueda.focus();
 
             inputBusqueda.addEventListener('input', () => {
-                const search = inputBusqueda.value.toUpperCase();
+                const search = inputBusqueda.value.toUpperCase().trim();
                 contenedorSugerencias.innerHTML = '';
 
                 if (search.length > 0) {
@@ -838,6 +841,7 @@ function agregarProductoManual() {
                         contenedorSugerencias.classList.remove('d-none');
                         filtrados.forEach(p => {
                             const btn = document.createElement('button');
+                            btn.type = 'button';
                             btn.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2';
                             btn.style.fontSize = '0.9rem';
                             btn.innerHTML = `
@@ -859,21 +863,31 @@ function agregarProductoManual() {
                 }
             });
 
-            document.addEventListener('click', (e) => {
-                if (e.target !== inputBusqueda) contenedorSugerencias.classList.add('d-none');
-            });
+            // Evitar acumular listeners en el documento
+            onClickFuera = (e) => {
+                if (e.target !== inputBusqueda && !contenedorSugerencias.contains(e.target)) {
+                    contenedorSugerencias.classList.add('d-none');
+                }
+            };
+            document.addEventListener('click', onClickFuera);
 
             inputPrecio.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') Swal.clickConfirm();
             });
         },
+        willClose: () => {
+            // Se remueve el listener cuando el modal se destruye
+            if (onClickFuera) {
+                document.removeEventListener('click', onClickFuera);
+            }
+        },
         preConfirm: () => {
-            const nombre = document.getElementById('manualNombreBusqueda').value.toUpperCase();
+            const nombre = document.getElementById('manualNombreBusqueda').value.toUpperCase().trim();
             const precio = parseFloat(document.getElementById('manualPrecio').value);
             const pEncontrado = productosSueltos.find(p => p.name.toUpperCase() === nombre);
 
             if (!nombre) return Swal.showValidationMessage('Escribí o seleccioná un producto');
-            if (isNaN(precio) || precio <= 0) return Swal.showValidationMessage('Ingresá un monto válido');
+            if (isNaN(precio) || precio <= 0) return Swal.showValidationMessage('Ingresá un monto válido mayor a 0');
 
             const comodin = PRODUCTOS_DB.find(p => p.barcode === 'MANUAL');
 
@@ -893,7 +907,7 @@ function agregarProductoManual() {
                 cantidad: 1
             });
             renderizarCarrito();
-            if(window.sndSuccess) window.sndSuccess.play().catch(()=>{});
+            if (window.sndSuccess) window.sndSuccess.play().catch(() => {});
         }
     });
 }
@@ -985,7 +999,22 @@ function seleccionarCliente(c) {
 }
 
 async function chequearEstadoLicencia() {
-    return;
+    try {
+        const res = await apiFetch(API_STATUS);
+        if (!res || !res.ok) return;
+
+        const data = await res.json();
+
+        // Si la suscripción venció o la empresa está inactiva
+        if (data.vencido === true || data.active === false) {
+            sistemaBloqueado = true;
+            mostrarCartelBloqueo(data.message || "Tu suscripción/licencia se encuentra vencida.");
+        } else {
+            sistemaBloqueado = false;
+        }
+    } catch (err) {
+        console.error("Error al verificar estado de la licencia SaaS:", err);
+    }
 }
 
 function mostrarCartelBloqueo() {

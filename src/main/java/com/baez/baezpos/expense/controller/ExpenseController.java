@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/expenses")
@@ -28,5 +29,11 @@ public class ExpenseController {
     @GetMapping
     public ResponseEntity<List<ExpenseResponseDTO>> list() {
         return ResponseEntity.ok(expenseService.getAllExpenses());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Map<String, String>> delete(@PathVariable Long id) {
+        expenseService.deleteExpense(id);
+        return ResponseEntity.ok(Map.of("message", "Gasto eliminado correctamente"));
     }
 }

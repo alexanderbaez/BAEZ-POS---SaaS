@@ -12,7 +12,7 @@ import com.baez.baezpos.user.entity.User;
 import com.baez.baezpos.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.CredentialsExpiredException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -31,46 +31,49 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
 
+    @Transactional(readOnly = true)
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
+        // 1. Buscar usuario por Email
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new BadCredentialsException("Credenciales incorrectas. Verifique email y contraseña."));
 
-        // CHECK DE SEGURIDAD: Clave temporal "admin123"
+        // 2. CHECK DE SEGURIDAD: Clave temporal "admin123"
         if ("admin123".equals(request.getPassword())) {
-            if (user.getPasswordResetAt() == null ||
-                    user.getPasswordResetAt().plusMinutes(10).isBefore(LocalDateTime.now())) {
-                throw new CredentialsExpiredException("La clave temporal ha expirado. Solicite soporte nuevamente.");
+            LocalDateTime resetAt = user.getPasswordResetAt();
+            if (resetAt == null || resetAt.plusMinutes(10).isBefore(LocalDateTime.now())) {
+                throw new BadCredentialsException("La clave temporal ha expirado o no es válida. Solicite soporte.");
             }
         }
 
+        // 3. Autenticar en Spring Security
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
             );
         } catch (Exception e) {
-            throw new RuntimeException("Credenciales incorrectas");
+            throw new BadCredentialsException("Credenciales incorrectas. Verifique email y contraseña.");
         }
 
-        if (!user.getActive()) {
-            throw new RuntimeException("La cuenta del usuario se encuentra desactivada");
+        // 4. Validar estado de la cuenta del usuario
+        if (!Boolean.TRUE.equals(user.getActive())) {
+            throw new BadRequestException("La cuenta de usuario se encuentra desactivada.");
         }
 
-        // ==========================================
-        // VALIDACIÓN DE LICENCIA SAAS (MULTI-TENANT)
-        // ==========================================
+        // 5. VALIDACIÓN DE LICENCIA SAAS (MULTI-TENANT)
         if (user.getRole() != Role.SUPER_ADMIN) {
             Company company = user.getCompany();
             if (company == null) {
-                throw new RuntimeException("El usuario no tiene una empresa asociada.");
+                throw new BadRequestException("El usuario no tiene una empresa asociada.");
             }
             if (!Boolean.TRUE.equals(company.getActive())) {
-                throw new RuntimeException("La suscripción de la empresa se encuentra suspendida.");
+                throw new BadRequestException("La suscripción de la empresa se encuentra suspendida.");
             }
             if (company.getExpirationDate() != null && company.getExpirationDate().isBefore(LocalDate.now())) {
-                throw new RuntimeException("Su licencia/suscripción ha vencido el " + company.getExpirationDate() + ". Contacte a soporte para renovar.");
+                throw new BadRequestException("Su licencia/suscripción ha vencido el " + company.getExpirationDate() + ". Contacte a soporte para renovar.");
             }
         }
 
+        // 6. Generar JWT y responder
         String jwtToken = jwtService.generateToken(user);
         Long companyId = (user.getCompany() != null) ? user.getCompany().getId() : null;
 
@@ -79,7 +82,7 @@ public class AuthService {
                 .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole().name())
-                .companyId(companyId) // <-- Devolvemos el ID de la empresa
+                .companyId(companyId)
                 .build();
     }
 
@@ -94,7 +97,6 @@ public class AuthService {
             throw new BadRequestException("El sistema ya ha sido configurado previamente.");
         }
 
-        // Damos 30 días de prueba inicial en el Setup
         Company company = Company.builder()
                 .name(request.getCompanyName())
                 .taxId(request.getTaxId())
@@ -102,7 +104,7 @@ public class AuthService {
                 .address(request.getAddress())
                 .ticketMessage(request.getTicketMessage())
                 .active(true)
-                .expirationDate(LocalDate.now().plusDays(30)) // Trial de 30 días
+                .expirationDate(LocalDate.now().plusDays(30))
                 .build();
         Company savedCompany = companyRepository.save(company);
 
@@ -111,7 +113,7 @@ public class AuthService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.ADMIN)
-                .company(savedCompany) // <-- Relacionamos al usuario con su empresa
+                .company(savedCompany)
                 .active(true)
                 .build();
         userRepository.save(adminUser);

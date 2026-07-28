@@ -2,7 +2,7 @@ package com.baez.baezpos.inventory.controller;
 
 import com.baez.baezpos.inventory.dto.InventoryMovementRequest;
 import com.baez.baezpos.inventory.dto.InventoryMovementResponseDTO;
-import com.baez.baezpos.inventory.service.InventoryService.InventoryService;
+import com.baez.baezpos.inventory.service.InventoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

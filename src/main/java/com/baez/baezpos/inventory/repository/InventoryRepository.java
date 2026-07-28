@@ -10,5 +10,6 @@ import java.util.List;
 public interface InventoryRepository extends JpaRepository<InventoryMovement, Long> {
 
     List<InventoryMovement> findByProductIdAndCompanyIdOrderByCreatedAtDesc(Long productId, Long companyId);
+    List<InventoryMovement> findByProductIdOrderByCreatedAtDesc(Long productId);
     List<InventoryMovement> findByCompanyIdOrderByCreatedAtDesc(Long companyId);
 }

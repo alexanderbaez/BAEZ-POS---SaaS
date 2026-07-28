@@ -8,4 +8,5 @@ import java.util.List;
 public interface ExpenseService {
     ExpenseResponseDTO createExpense(ExpenseRequestDTO dto);
     List<ExpenseResponseDTO> getAllExpenses();
+    void deleteExpense(Long id);
 }

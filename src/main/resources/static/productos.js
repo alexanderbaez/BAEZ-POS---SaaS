@@ -1,45 +1,21 @@
 /**
- * BÁEZ POS - GESTIÓN DE INVENTARIO (FULL)
- * Alexander Baez - 2026
+ * BÁEZ POS - GESTIÓN DE INVENTARIO (SAAS MULTITENANT)
  */
 
-const API_BASE = `/products`;
-const API_CAT = `/categories`;
+const API_BASE = '/products';
+const API_CAT = '/categories';
 
 let PRODUCTOS_LOCAL = [];
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. CAPTURA DE DATOS DEL OPERADOR LOGUEADO
-    const elUser = document.getElementById('userName');
-    const elRole = document.getElementById('userRoleBadge');
-
-    if (elUser) {
-        const nombreGuardado = localStorage.getItem('baezpos_user_name');
-        elUser.innerText = nombreGuardado ? nombreGuardado.toLowerCase() : "Operador";
-    }
-    if (elRole) {
-        const rolGuardado = localStorage.getItem('baezpos_user_role');
-        elRole.innerText = rolGuardado ? rolGuardado.replace('ROLE_', '') : 'USER';
-    }
-
-    // 2. TOGGLE PARA MENÚ RESPONSIVE
-    const btnCollapse = document.getElementById('sidebarCollapse');
-    if (btnCollapse) {
-        btnCollapse.addEventListener('click', () => {
-            document.getElementById('sidebar').classList.toggle('active');
-        });
-    }
-
-    // 3. CARGA INICIAL
+    // 1. Carga inicial de datos multitenant
     listarProductos();
     cargarCategorias();
 
     const form = document.getElementById('formProducto');
-    if(form) form.addEventListener('submit', guardarProducto);
+    if (form) form.addEventListener('submit', guardarProducto);
 
-    // ==========================================================
-    // 4. RECEPTOR DE SCANNER EXTERNO (MANTENIDO)
-    // ==========================================================
+    // 2. Receptor de Scanner / Búsqueda Externa vía URL
     const urlParams = new URLSearchParams(window.location.search);
     const nuevoCodigo = urlParams.get('nuevoCodigo');
     const nuevoNombre = urlParams.get('nuevoNombre');
@@ -50,29 +26,26 @@ document.addEventListener('DOMContentLoaded', () => {
             const inputCodigo = document.getElementById('prodBarcode');
             const inputNombre = document.getElementById('prodNombre');
 
-            console.log("Intentando escribir en los campos...");
-
             if (inputCodigo) inputCodigo.value = nuevoCodigo;
 
             if (inputNombre && nuevoNombre) {
                 const nombreLimpio = decodeURIComponent(nuevoNombre).trim().toUpperCase();
                 inputNombre.value = nombreLimpio;
-                console.log("Nombre escrito en input:", nombreLimpio);
             }
 
             const inputCosto = document.getElementById('prodCosto');
             if (inputCosto) inputCosto.focus();
 
             window.history.replaceState({}, document.title, window.location.pathname);
-        }, 1000);
+        }, 600);
     }
 });
 
-// --- CATEGORÍAS (CON GESTIÓN DE EDICIÓN Y ELIMINACIÓN) ---
+// --- CATEGORÍAS ---
 async function cargarCategorias() {
     try {
         const res = await apiFetch(API_CAT);
-        if(!res.ok) throw new Error("Error al cargar categorías");
+        if (!res || !res.ok) return [];
         const categorias = await res.json();
 
         const selectModal = document.getElementById('prodCategoria');
@@ -87,24 +60,27 @@ async function cargarCategorias() {
             optionsFiltro += opt;
         });
 
-        if(selectModal) selectModal.innerHTML = options;
-        if(selectFiltro) selectFiltro.innerHTML = optionsFiltro;
+        if (selectModal) selectModal.innerHTML = options;
+        if (selectFiltro) selectFiltro.innerHTML = optionsFiltro;
 
-        return categorias; // Retornamos para uso en gestión
-    } catch (err) { console.error(err); }
+        return categorias;
+    } catch (err) {
+        console.error("Error al cargar categorías SaaS:", err);
+        return [];
+    }
 }
 
-// NUEVA FUNCIONALIDAD: Abre un modal de gestión para ver, editar y borrar categorías
 async function abrirModalCategoria() {
     const categorias = await cargarCategorias();
 
     let listadoHtml = `
-        <div class="list-group list-group-flush mb-4" style="max-height: 200px; overflow-y: auto;">
+        <div class="list-group list-group-flush mb-3" style="max-height: 200px; overflow-y: auto;">
+            ${categorias.length === 0 ? '<div class="text-center p-3 text-muted">Sin categorías registradas</div>' : ''}
             ${categorias.map(c => `
                 <div class="list-group-item d-flex justify-content-between align-items-center bg-light rounded-3 mb-2 border-0">
                     <span class="fw-bold" id="cat-label-${c.id}">${c.name}</span>
                     <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-primary border-0" onclick="prepararEdicionCat(${c.id}, '${c.name}')"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-outline-primary border-0" onclick="prepararEdicionCat(${c.id}, '${c.name.replace(/'/g, "\\'")}')"><i class="bi bi-pencil"></i></button>
                         <button class="btn btn-outline-danger border-0" onclick="eliminarCategoria(${c.id})"><i class="bi bi-trash"></i></button>
                     </div>
                 </div>
@@ -114,29 +90,24 @@ async function abrirModalCategoria() {
             <label class="form-label fw-bold small text-primary">NUEVA / EDITAR CATEGORÍA</label>
             <input type="hidden" id="editCatId" value="">
             <input type="text" id="swalCatNombre" class="form-control mb-2" placeholder="Nombre de categoría">
-            <button class="btn btn-primary w-100 shadow-sm" id="btnGuardarCat" onclick="guardarCategoria()">Confirmar Guardar</button>
+            <button class="btn btn-primary w-100 shadow-sm fw-bold" id="btnGuardarCat" onclick="guardarCategoria()">Confirmar Guardar</button>
         </div>
     `;
 
     Swal.fire({
-            title: 'Gestión de Categorías',
-            html: listadoHtml,
-            showConfirmButton: false,
-            showCloseButton: true,
-            customClass: { popup: 'rounded-5' },
-            didOpen: () => {
-                const input = document.getElementById('swalCatNombre');
-                if(input) {
-                    // Forzamos el foco
-                    setTimeout(() => input.focus(), 100);
-
-                    // Evitamos que tus otros eventListeners de "keydown" interfieran
-                    input.addEventListener('keydown', (e) => {
-                        e.stopPropagation();
-                    });
-                }
+        title: 'Gestión de Categorías',
+        html: listadoHtml,
+        showConfirmButton: false,
+        showCloseButton: true,
+        customClass: { popup: 'rounded-4' },
+        didOpen: () => {
+            const input = document.getElementById('swalCatNombre');
+            if (input) {
+                setTimeout(() => input.focus(), 100);
+                input.addEventListener('keydown', (e) => e.stopPropagation());
             }
-        });
+        }
+    });
 }
 
 function prepararEdicionCat(id, nombre) {
@@ -149,9 +120,9 @@ function prepararEdicionCat(id, nombre) {
 async function guardarCategoria() {
     const id = document.getElementById('editCatId').value;
     const nombreInput = document.getElementById('swalCatNombre');
-    const nombre = nombreInput.value.trim();
+    const nombre = nombreInput ? nombreInput.value.trim() : "";
 
-    if(!nombre) return Swal.fire('Atención', "Escribe un nombre", 'warning');
+    if (!nombre) return Swal.fire('Atención', "Escribe un nombre para la categoría", 'warning');
 
     try {
         const url = id ? `${API_CAT}/${id}` : API_CAT;
@@ -162,8 +133,7 @@ async function guardarCategoria() {
             body: JSON.stringify({ name: nombre, description: "" })
         });
 
-        if(res.ok) {
-            // No cerramos el Swal de inmediato para que el usuario vea el éxito
+        if (res && res.ok) {
             await cargarCategorias();
             Swal.fire({
                 icon: 'success',
@@ -171,13 +141,15 @@ async function guardarCategoria() {
                 timer: 1000,
                 showConfirmButton: false
             }).then(() => {
-                abrirModalCategoria(); // Recargamos el modal de gestión para ver los cambios
+                abrirModalCategoria();
             });
-        } else {
-            const errorData = await res.json();
+        } else if (res) {
+            const errorData = await res.json().catch(() => ({}));
             Swal.fire('Error', errorData.message || 'Error en la operación', 'error');
         }
-    } catch (err) { console.error(err); }
+    } catch (err) {
+        console.error("Error guardando categoría:", err);
+    }
 }
 
 async function eliminarCategoria(id) {
@@ -192,17 +164,16 @@ async function eliminarCategoria(id) {
 
     if (confirm.isConfirmed) {
         try {
-            const res = await apiFetch(`${API_CAT}/${id}`, {
-                method: 'DELETE'
-            });
-            if (res.ok) {
-                Swal.close();
+            const res = await apiFetch(`${API_CAT}/${id}`, { method: 'DELETE' });
+            if (res && res.ok) {
                 await cargarCategorias();
-                abrirModalCategoria(); // Refresca el modal de gestión
+                abrirModalCategoria();
             } else {
-                Swal.fire('Error', 'La categoría está siendo usada por productos.', 'error');
+                Swal.fire('Error', 'La categoría tiene productos asociados o no existe.', 'error');
             }
-        } catch (err) { console.error(err); }
+        } catch (err) {
+            console.error("Error al borrar categoría:", err);
+        }
     }
 }
 
@@ -210,25 +181,30 @@ async function eliminarCategoria(id) {
 async function listarProductos() {
     try {
         const res = await apiFetch(API_BASE);
+        if (!res || !res.ok) return;
         PRODUCTOS_LOCAL = await res.json();
         renderizarTabla(PRODUCTOS_LOCAL);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+        console.error("Error al listar productos:", err);
+    }
 }
 
 function renderizarTabla(lista) {
     const tabla = document.getElementById('listaProductos');
-    if(!tabla) return;
+    if (!tabla) return;
     tabla.innerHTML = '';
 
-    if (lista.length === 0) {
-        tabla.innerHTML = '<tr><td colspan="7" class="text-center p-5 text-muted">No se encontraron productos.</td></tr>';
+    if (!lista || lista.length === 0) {
+        tabla.innerHTML = '<tr><td colspan="7" class="text-center p-5 text-muted">No se encontraron productos en el inventario.</td></tr>';
         return;
     }
 
     lista.forEach(p => {
         const catName = p.categoryName || 'S/C';
         const stockClase = p.stock <= p.minStock ? 'bg-danger bg-opacity-10 text-danger' : 'bg-success bg-opacity-10 text-success';
-        const margen = p.cost > 0 ? (((p.price - p.cost) / p.cost) * 100).toFixed(0) : 0;
+        const costo = parseFloat(p.cost) || 0;
+        const precio = parseFloat(p.price) || 0;
+        const margen = costo > 0 ? (((precio - costo) / costo) * 100).toFixed(0) : 0;
 
         tabla.innerHTML += `
             <tr>
@@ -236,11 +212,11 @@ function renderizarTabla(lista) {
                     <p class="product-name">${p.name}</p>
                     <span class="product-code"><i class="bi bi-barcode me-1"></i>${p.barcode || 'Sin código'}</span>
                 </td>
-                <td><span class="badge bg-light text-muted border-0 p-2 px-3 rounded-pill">${catName}</span></td>
-                <td class="text-muted">$${p.cost.toFixed(2)}</td>
-                <td class="fw-bold text-dark">$${p.price.toFixed(2)}</td>
+                <td><span class="badge bg-light text-dark border-0 p-2 px-3 rounded-pill">${catName}</span></td>
+                <td class="text-muted">$${costo.toFixed(2)}</td>
+                <td class="fw-bold text-dark">$${precio.toFixed(2)}</td>
                 <td><span class="text-success small fw-bold">+${margen}%</span></td>
-                <td><span class="badge ${stockClase} p-2 px-3 rounded-pill" style="font-size: 0.8rem;">${p.stock} unidades</span></td>
+                <td><span class="badge ${stockClase} p-2 px-3 rounded-pill" style="font-size: 0.8rem;">${p.stock} un.</span></td>
                 <td class="text-end pe-4">
                     <div class="btn-group shadow-sm rounded-3">
                         <button class="btn btn-white btn-sm border-end" title="Etiqueta" onclick="imprimirEtiqueta(${p.id})"><i class="bi bi-printer text-primary"></i></button>
@@ -253,7 +229,7 @@ function renderizarTabla(lista) {
 }
 
 function filtrarProductos() {
-    const texto = document.getElementById('buscador').value.toLowerCase();
+    const texto = document.getElementById('buscador').value.toLowerCase().trim();
     const catId = document.getElementById('filtroCategoria').value;
 
     const filtrados = PRODUCTOS_LOCAL.filter(p => {
@@ -277,8 +253,8 @@ async function guardarProducto(e) {
 
     const body = {
         name: nombre,
-        description: "Producto de local",
-        barcode: barcode || nombre.substring(0, 10).toUpperCase() + Date.now(),
+        description: "Producto registrado",
+        barcode: barcode || (nombre.substring(0, 5).toUpperCase() + Date.now().toString().slice(-5)),
         cost: parseFloat(document.getElementById('prodCosto').value) || 0,
         price: parseFloat(document.getElementById('prodPrecio').value) || 0,
         stock: parseInt(document.getElementById('prodStock').value) || 0,
@@ -292,40 +268,33 @@ async function guardarProducto(e) {
             body: JSON.stringify(body)
         });
 
-        if (res.ok) {
+        if (res && res.ok) {
             const modalEl = document.getElementById('modalProducto');
             const modalInstance = bootstrap.Modal.getInstance(modalEl);
-            if(modalInstance) modalInstance.hide();
+            if (modalInstance) modalInstance.hide();
 
             await listarProductos();
             Swal.fire({ icon: 'success', title: id ? 'Actualizado' : 'Creado', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
-        } else {
-            const errorData = await res.json();
-            Swal.fire('Error', errorData.message || 'Error al guardar.', 'error');
+        } else if (res) {
+            const errorData = await res.json().catch(() => ({}));
+            Swal.fire('Error', errorData.message || 'Error al guardar el producto.', 'error');
         }
-    } catch (err) { console.error(err); }
+    } catch (err) {
+        console.error("Error al guardar producto:", err);
+    }
 }
 
 function prepararFormulario() {
     document.getElementById('formProducto').reset();
     document.getElementById('prodId').value = '';
     document.getElementById('modalTitulo').innerText = "Nuevo Producto";
-    new bootstrap.Modal(document.getElementById('modalProducto')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalProducto')).show();
 }
 
 function editarProducto(id) {
-    // 1. Buscamos el producto en nuestro array local (evitamos una petición innecesaria)
     const p = PRODUCTOS_LOCAL.find(prod => prod.id === id);
+    if (!p) return;
 
-    if (!p) {
-        console.error("Producto no encontrado en local");
-        return;
-    }
-
-    console.log("Editando producto:", p); // Para debug
-
-    // 2. Llenamos los campos del formulario
-    // Asegúrate de que los IDs (prodNombre, prodBarcode, etc) coincidan con tu HTML
     document.getElementById('prodId').value = p.id;
     document.getElementById('prodNombre').value = p.name || '';
     document.getElementById('prodBarcode').value = p.barcode || '';
@@ -334,26 +303,17 @@ function editarProducto(id) {
     document.getElementById('prodStock').value = p.stock || 0;
     document.getElementById('prodMinStock').value = p.minStock || 0;
 
-    // 3. Manejo de la categoría
     const selectCat = document.getElementById('prodCategoria');
-    if (p.categoryId) {
-        selectCat.value = p.categoryId;
-    } else {
-        selectCat.value = ""; // Por si no tiene categoría
-    }
+    if (selectCat) selectCat.value = p.categoryId || "";
 
-    // 4. Cambiamos el título y mostramos el modal
     document.getElementById('modalTitulo').innerText = "Editar Producto";
-
-    const modalEl = document.getElementById('modalProducto');
-    const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
-    modalInstance.show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalProducto')).show();
 }
 
 async function eliminarProducto(id) {
     const result = await Swal.fire({
-        title: '¿A la papelera?',
-        text: "Podrás recuperarlo luego",
+        title: '¿Mover a la papelera?',
+        text: "Podrás restaurarlo en cualquier momento",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Sí, borrar',
@@ -362,55 +322,61 @@ async function eliminarProducto(id) {
 
     if (result.isConfirmed) {
         try {
-            const res = await apiFetch(`${API_BASE}/${id}`, {
-                method: 'DELETE'
-            });
-            if (res.ok) {
+            const res = await apiFetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+            if (res && res.ok) {
                 await listarProductos();
-                Swal.fire('Eliminado', 'Producto enviado a la papelera', 'success');
+                Swal.fire('Eliminado', 'Producto movido a la papelera', 'success');
             }
-        } catch (err) { console.error(err); }
+        } catch (err) {
+            console.error("Error eliminando producto:", err);
+        }
     }
 }
 
 async function abrirPapelera() {
     try {
         const res = await apiFetch(`${API_BASE}/deleted`);
+        if (!res || !res.ok) return;
         const borrados = await res.json();
         const tabla = document.getElementById('listaBorrados');
         tabla.innerHTML = '';
 
-        if(borrados.length === 0) {
-            tabla.innerHTML = '<tr><td colspan="2" class="text-center p-3 text-muted">Papelera vacía</td></tr>';
+        if (!borrados || borrados.length === 0) {
+            tabla.innerHTML = '<tr><td colspan="2" class="text-center p-4 text-muted">La papelera está vacía</td></tr>';
         } else {
             borrados.forEach(p => {
                 tabla.innerHTML += `
                     <tr>
-                        <td class="ps-3"><b>${p.name}</b><br><small>${p.barcode || 'S/C'}</small></td>
+                        <td class="ps-3"><b>${p.name}</b><br><small class="text-muted">${p.barcode || 'S/C'}</small></td>
                         <td class="text-end pe-3">
-                            <button class="btn btn-sm btn-success" onclick="restaurarProducto(${p.id})">Restaurar</button>
+                            <button class="btn btn-sm btn-success fw-bold" onclick="restaurarProducto(${p.id})">Restaurar</button>
                         </td>
                     </tr>`;
             });
         }
-        new bootstrap.Modal(document.getElementById('modalPapelera')).show();
-    } catch (err) { console.error(err); }
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPapelera')).show();
+    } catch (err) {
+        console.error("Error leyendo papelera:", err);
+    }
 }
 
 async function restaurarProducto(id) {
     try {
-        const res = await apiFetch(`${API_BASE}/${id}/activate`, {
-            method: 'PATCH'
-        });
-        if(res.ok) {
-            bootstrap.Modal.getInstance(document.getElementById('modalPapelera')).hide();
+        const res = await apiFetch(`${API_BASE}/${id}/activate`, { method: 'PATCH' });
+        if (res && res.ok) {
+            const modalEl = document.getElementById('modalPapelera');
+            const instance = bootstrap.Modal.getInstance(modalEl);
+            if (instance) instance.hide();
+
             await listarProductos();
             Swal.fire('Restaurado', 'El producto vuelve a estar activo', 'success');
         }
-    } catch (err) { console.error(err); }
+    } catch (err) {
+        console.error("Error restaurando producto:", err);
+    }
 }
 
-// --- LÓGICA DE ESCANEO ---
+// --- TECLADO Y ESCANEO ---
 document.addEventListener('keydown', (e) => {
     const buscador = document.getElementById('buscador');
     const modalProducto = document.getElementById('modalProducto');
@@ -423,7 +389,7 @@ document.addEventListener('keydown', (e) => {
         }
     } else {
         if (/[0-9]/.test(e.key) && document.activeElement !== buscador) {
-            if(buscador) buscador.focus();
+            if (buscador) buscador.focus();
         }
         if (e.key === 'Enter' && document.activeElement === buscador) {
             filtrarProductos();
@@ -431,12 +397,14 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// --- IMPRESIÓN ---
+// --- IMPRESIÓN DE ETIQUETA ---
 function imprimirEtiqueta(id) {
     const p = PRODUCTOS_LOCAL.find(prod => prod.id === id);
-    if (!p || !p.barcode) return Swal.fire('Error', 'El producto no tiene código de barras', 'warning');
+    if (!p || !p.barcode) return Swal.fire('Atención', 'El producto no tiene un código de barras registrado', 'warning');
 
     const ventana = window.open('', 'PRINT', 'height=400,width=600');
+    const precio = parseFloat(p.price) || 0;
+
     ventana.document.write(`
         <html>
             <head>
@@ -444,20 +412,20 @@ function imprimirEtiqueta(id) {
                 <style>
                     body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
                     .etiqueta {
-                        width: 50mm; height: 25mm; border: 1px solid #eee;
+                        width: 50mm; height: 25mm; border: 1px solid #ddd;
                         display: flex; flex-direction: column; align-items: center; justify-content: center;
-                        padding: 5px; box-sizing: border-box; text-align: center;
+                        padding: 4px; box-sizing: border-box; text-align: center;
                     }
                     .nombre { font-size: 10px; font-family: sans-serif; font-weight: bold; margin-bottom: 2px; }
                     .barcode { width: 100%; max-height: 40px; }
-                    .precio { font-size: 14px; font-family: sans-serif; font-weight: bold; margin-top: 2px; }
+                    .precio { font-size: 13px; font-family: sans-serif; font-weight: bold; margin-top: 2px; }
                 </style>
             </head>
             <body>
                 <div class="etiqueta">
                     <div class="nombre">${p.name.toUpperCase()}</div>
                     <svg id="barcode-svg" class="barcode"></svg>
-                    <div class="precio">$${p.price.toFixed(2)}</div>
+                    <div class="precio">$${precio.toFixed(2)}</div>
                 </div>
                 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
                 <script>
@@ -474,18 +442,13 @@ function imprimirEtiqueta(id) {
     ventana.document.close();
 }
 
-// 1. Evita que Bootstrap "secuestre" el foco y bloquee el teclado
+// Previene bloqueos de foco con modales de Bootstrap & SweetAlert2
 if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
     bootstrap.Modal.prototype._enforceFocus = function() {};
 }
 
-// 2. Permite que el foco fluya hacia SweetAlert2 (reemplazo de la lógica jQuery)
 document.addEventListener('focusin', (e) => {
     if (e.target.closest(".swal2-container")) {
         e.stopImmediatePropagation();
     }
 }, true);
-
-// 3. FIX CRÍTICO: Detener la propagación en el input de SweetAlert
-// Agregaremos este pequeño cambio dentro de tu función abrirModalCategoria
-// para asegurar que el teclado llegue al input.

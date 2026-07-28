@@ -2,7 +2,7 @@ package com.baez.baezpos.product.controller;
 
 import com.baez.baezpos.product.dto.CategoryRequestDTO;
 import com.baez.baezpos.product.dto.CategoryResponseDTO;
-import com.baez.baezpos.product.service.service.CategoryService;
+import com.baez.baezpos.product.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

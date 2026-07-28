@@ -2,7 +2,7 @@ package com.baez.baezpos.company.controller;
 
 import com.baez.baezpos.company.dto.CompanyDTO;
 import com.baez.baezpos.user.dto.UserDTO;
-import com.baez.baezpos.user.entity.Role; // Importante para que reconozca el Enum
+import com.baez.baezpos.user.entity.Role;
 import com.baez.baezpos.company.service.CompanyService.CompanyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -29,7 +29,8 @@ public class CompanyController {
         return ResponseEntity.ok(companyService.updateAuthenticatedCompany(dto));
     }
 
-    @GetMapping("/status")
+    // Acepta tanto /status como /check-status para compatibilidad total
+    @GetMapping({"/status", "/check-status"})
     public ResponseEntity<Map<String, Object>> getStatus() {
         return ResponseEntity.ok(companyService.verificarEstadoSuscripcionAutenticada());
     }
@@ -42,7 +43,6 @@ public class CompanyController {
 
     @PostMapping("/employees")
     public ResponseEntity<UserDTO> createEmployee(@RequestBody UserDTO dto) {
-        // Convertimos el Enum a String para que el DTO lo acepte
         dto.setRole(Role.VENDEDOR.name());
         return ResponseEntity.ok(companyService.createEmployee(dto));
     }

@@ -1,4 +1,4 @@
-package com.baez.baezpos.sale.service.SaleServiceImpl;
+package com.baez.baezpos.sale.service.impl;
 
 import com.baez.baezpos.company.entity.Company;
 import com.baez.baezpos.company.repository.CompanyRepository;
@@ -6,16 +6,15 @@ import com.baez.baezpos.customer.entities.Customer;
 import com.baez.baezpos.customer.repository.CustomerMovementRepository;
 import com.baez.baezpos.customer.repository.CustomerRepository;
 import com.baez.baezpos.customer.service.CustomerService;
-import com.baez.baezpos.expense.repository.ExpenseRepository;
 import com.baez.baezpos.inventory.entity.MovementType;
-import com.baez.baezpos.inventory.service.InventoryService.InventoryService;
+import com.baez.baezpos.inventory.service.InventoryService;
 import com.baez.baezpos.product.entity.Product;
 import com.baez.baezpos.product.repository.ProductRepository;
 import com.baez.baezpos.sale.dto.*;
 import com.baez.baezpos.sale.entity.Sale;
 import com.baez.baezpos.sale.entity.SaleItem;
 import com.baez.baezpos.sale.repository.SaleRepository;
-import com.baez.baezpos.sale.service.SaleService.SaleService;
+import com.baez.baezpos.sale.service.SaleService;
 import com.baez.baezpos.security.util.SecurityUtils;
 import com.baez.baezpos.shared.exception.BadRequestException;
 import com.baez.baezpos.shared.exception.ResourceNotFoundException;
@@ -27,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -45,7 +45,6 @@ public class SaleServiceImpl implements SaleService {
     private final ProductRepository productRepository;
     private final InventoryService inventoryService;
     private final UserRepository userRepository;
-    private final ExpenseRepository expenseRepository;
     private final CustomerService customerService;
     private final CustomerRepository customerRepository;
     private final CustomerMovementRepository customerMovementRepository;
@@ -54,20 +53,29 @@ public class SaleServiceImpl implements SaleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public SaleResponseDTO createSale(SaleRequestDTO saleDTO, Long userId) {
-
         Long companyId = SecurityUtils.getCurrentCompanyId();
+        if (companyId == null) {
+            throw new BadRequestException("No se puede registrar una venta sin estar asociado a una empresa.");
+        }
+
+        if (saleDTO.items() == null || saleDTO.items().isEmpty()) {
+            throw new BadRequestException("La venta debe contener al menos un producto.");
+        }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
 
         Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new RuntimeException("Empresa no encontrada"));
+                .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
 
         BigDecimal recargo = saleDTO.surcharge() != null ? saleDTO.surcharge() : BigDecimal.ZERO;
         BigDecimal porcentajeRecargo = saleDTO.surchargeRate() != null ? saleDTO.surchargeRate() : BigDecimal.ZERO;
         BigDecimal descuento = saleDTO.discount() != null ? saleDTO.discount() : BigDecimal.ZERO;
 
-        // 1. Construir entidad Sale asignando Company mediante el setter
+        if (descuento.compareTo(BigDecimal.ZERO) < 0 || recargo.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BadRequestException("Los valores de recargo y descuento deben ser positivos.");
+        }
+
         Sale sale = Sale.builder()
                 .user(user)
                 .saleDate(LocalDateTime.now())
@@ -79,9 +87,8 @@ public class SaleServiceImpl implements SaleService {
                 .canceled(false)
                 .build();
 
-        sale.setCompany(company); // <-- ASIGNAMOS LA EMPRESA DE LA SESIÓN
+        sale.setCompany(company);
 
-        // LÓGICA DE SELECCIÓN FISCAL
         if (Boolean.TRUE.equals(saleDTO.isFiscal())) {
             sale.setTipoComprobante("FACTURA C");
             sale.setCae("76543210987654");
@@ -92,13 +99,16 @@ public class SaleServiceImpl implements SaleService {
 
         BigDecimal subtotalAcumulado = BigDecimal.ZERO;
 
-        // 2. Procesar Items (Búsqueda restringida por companyId)
         for (SaleItemRequestDTO itemDTO : saleDTO.items()) {
+            if (itemDTO.quantity() == null || itemDTO.quantity() <= 0) {
+                throw new BadRequestException("La cantidad enviada para el producto debe ser mayor a 0.");
+            }
+
             Product product = productRepository.findByIdAndCompanyId(itemDTO.productId(), companyId)
-                    .orElseThrow(() -> new RuntimeException("Producto no encontrado o no pertenece a su empresa: " + itemDTO.productId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado en su empresa: ID " + itemDTO.productId()));
 
             if (product.getStock() < itemDTO.quantity()) {
-                throw new RuntimeException("Stock insuficiente para: " + product.getName());
+                throw new BadRequestException("Stock insuficiente para: " + product.getName() + " (Stock actual: " + product.getStock() + ")");
             }
 
             BigDecimal precioVenta = (itemDTO.price() != null) ? itemDTO.price() : product.getPrice();
@@ -117,16 +127,13 @@ public class SaleServiceImpl implements SaleService {
             subtotalAcumulado = subtotalAcumulado.add(subtotalItem);
         }
 
-        // 3. Calcular total final
         BigDecimal totalFinal = subtotalAcumulado.add(recargo).subtract(descuento);
         sale.setTotal(totalFinal.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : totalFinal);
 
-        // Guardar venta y generar número de comprobante
         Sale savedSale = saleRepository.save(sale);
         savedSale.setNroComprobante(String.format("00001-%08d", savedSale.getId()));
         savedSale = saleRepository.save(savedSale);
 
-        // 4. Actualizar Stock y registrar Movimiento
         for (SaleItem item : savedSale.getItems()) {
             inventoryService.registerMovement(
                     item.getProduct().getId(),
@@ -136,7 +143,6 @@ public class SaleServiceImpl implements SaleService {
             );
         }
 
-        // 5. Gestión de Cuenta Corriente
         if ("CUENTA_CORRIENTE".equals(saleDTO.paymentMethod())) {
             handleCreditSale(saleDTO.customerId(), savedSale, companyId);
         }
@@ -147,16 +153,16 @@ public class SaleServiceImpl implements SaleService {
 
     private void handleCreditSale(Long customerId, Sale savedSale, Long companyId) {
         if (customerId == null) {
-            throw new RuntimeException("Debe seleccionar un cliente para cuenta corriente");
+            throw new BadRequestException("Debe seleccionar un cliente para realizar una venta a cuenta corriente.");
         }
 
         Customer customer = customerRepository.findByIdAndCompanyId(customerId, companyId)
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado en su empresa"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado en su empresa"));
 
         BigDecimal nuevoSaldo = customer.getCurrentBalance().add(savedSale.getTotal());
 
         if (customer.getCreditLimit() != null && nuevoSaldo.compareTo(customer.getCreditLimit()) > 0) {
-            throw new RuntimeException("Límite de crédito excedido.");
+            throw new BadRequestException("La venta supera el límite de crédito configurado para el cliente.");
         }
 
         customerService.updateBalance(
@@ -173,8 +179,16 @@ public class SaleServiceImpl implements SaleService {
     @Transactional(readOnly = true)
     public SaleResponseDTO getSaleById(Long id) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
-        Sale sale = saleRepository.findByIdAndCompanyId(id, companyId)
-                .orElseThrow(() -> new RuntimeException("Venta no encontrada"));
+        Sale sale;
+
+        if (companyId != null) {
+            sale = saleRepository.findByIdAndCompanyId(id, companyId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada"));
+        } else {
+            sale = saleRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada"));
+        }
+
         return mapToResponseDTO(sale);
     }
 
@@ -182,7 +196,15 @@ public class SaleServiceImpl implements SaleService {
     @Transactional(readOnly = true)
     public List<SaleResponseDTO> getAllSales() {
         Long companyId = SecurityUtils.getCurrentCompanyId();
-        return saleRepository.findByCompanyIdOrderBySaleDateDesc(companyId).stream()
+        List<Sale> sales;
+
+        if (companyId != null) {
+            sales = saleRepository.findByCompanyIdOrderBySaleDateDesc(companyId);
+        } else {
+            sales = saleRepository.findAllByOrderBySaleDateDesc();
+        }
+
+        return sales.stream()
                 .map(this::mapToResponseDTO)
                 .toList();
     }
@@ -197,7 +219,12 @@ public class SaleServiceImpl implements SaleService {
         LocalDateTime startMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
         LocalDateTime endMonth = LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()).atTime(23, 59, 59);
 
-        List<Sale> monthlySales = saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, startMonth, endMonth);
+        List<Sale> monthlySales;
+        if (companyId != null) {
+            monthlySales = saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, startMonth, endMonth);
+        } else {
+            monthlySales = saleRepository.findBySaleDateBetweenOrderBySaleDateDesc(startMonth, endMonth);
+        }
 
         BigDecimal vCash = BigDecimal.ZERO;
         BigDecimal vTransfer = BigDecimal.ZERO;
@@ -236,31 +263,38 @@ public class SaleServiceImpl implements SaleService {
             }
         }
 
-        // Cobros de libreta del día por empresa
-        BigDecimal cobrosEfe = customerMovementRepository.sumPaymentsByMethodAndCompanyId("EFECTIVO", companyId, startToday, endToday);
-        if (cobrosEfe == null) cobrosEfe = BigDecimal.ZERO;
+        BigDecimal cobrosEfe = BigDecimal.ZERO;
+        BigDecimal cobrosTra = BigDecimal.ZERO;
 
-        BigDecimal cobrosTra = customerMovementRepository.sumPaymentsByMethodAndCompanyId("TRANSFERENCIA", companyId, startToday, endToday);
+        if (companyId != null) {
+            cobrosEfe = customerMovementRepository.sumPaymentsByMethodAndCompanyId("EFECTIVO", companyId, startToday, endToday);
+            cobrosTra = customerMovementRepository.sumPaymentsByMethodAndCompanyId("TRANSFERENCIA", companyId, startToday, endToday);
+        }
+
+        if (cobrosEfe == null) cobrosEfe = BigDecimal.ZERO;
         if (cobrosTra == null) cobrosTra = BigDecimal.ZERO;
 
         BigDecimal cobrosTotalHoy = cobrosEfe.add(cobrosTra);
-
         BigDecimal cashFinal = vCash.add(cobrosEfe);
         BigDecimal transferFinal = vTransfer.add(cobrosTra);
-
         BigDecimal recaudacionYBalanceReal = cashFinal.add(transferFinal);
 
         BigDecimal margenGananciaPromedio = BigDecimal.ZERO;
         if (mSales.compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal mProfitTemp = mSales.subtract(mCostAccumulator);
-            margenGananciaPromedio = mProfitTemp.divide(mSales, 4, java.math.RoundingMode.HALF_UP);
+            margenGananciaPromedio = mProfitTemp.divide(mSales, 4, RoundingMode.HALF_UP);
         }
 
         BigDecimal gananciaCobrosLibreta = cobrosTotalHoy.multiply(margenGananciaPromedio);
         BigDecimal totalProfitReal = tProfitDirecto.add(gananciaCobrosLibreta);
 
         BigDecimal mProfit = mSales.subtract(mCostAccumulator);
-        BigDecimal deudaTotalHistorica = customerRepository.sumAllBalancesByCompanyId(companyId);
+        BigDecimal deudaTotalHistorica = BigDecimal.ZERO;
+
+        if (companyId != null) {
+            deudaTotalHistorica = customerRepository.sumAllBalancesByCompanyId(companyId);
+        }
+
         if (deudaTotalHistorica == null) deudaTotalHistorica = BigDecimal.ZERO;
 
         return new BoxReportDTO(
@@ -291,7 +325,12 @@ public class SaleServiceImpl implements SaleService {
         LocalDateTime start = today.minusDays(6).atStartOfDay();
         LocalDateTime end = today.atTime(23, 59, 59);
 
-        List<Sale> recentSales = saleRepository.findByCompanyIdAndSaleDateBetweenAndCanceledFalse(companyId, start, end);
+        List<Sale> recentSales;
+        if (companyId != null) {
+            recentSales = saleRepository.findByCompanyIdAndSaleDateBetweenAndCanceledFalse(companyId, start, end);
+        } else {
+            recentSales = saleRepository.findBySaleDateBetweenAndCanceledFalse(start, end);
+        }
 
         for (Sale sale : recentSales) {
             LocalDate localDate = sale.getSaleDate().toLocalDate();
@@ -308,8 +347,15 @@ public class SaleServiceImpl implements SaleService {
     @Transactional
     public void cancelSale(Long saleId) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
-        Sale sale = saleRepository.findByIdAndCompanyId(saleId, companyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada"));
+        Sale sale;
+
+        if (companyId != null) {
+            sale = saleRepository.findByIdAndCompanyId(saleId, companyId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada"));
+        } else {
+            sale = saleRepository.findById(saleId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada"));
+        }
 
         if (Boolean.TRUE.equals(sale.getCanceled())) {
             throw new BadRequestException("La venta ya se encuentra anulada.");
@@ -333,13 +379,18 @@ public class SaleServiceImpl implements SaleService {
         LocalDateTime start = desde.atStartOfDay();
         LocalDateTime end = hasta.atTime(LocalTime.MAX);
 
-        return saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, start, end)
-                .stream()
+        List<Sale> sales;
+        if (companyId != null) {
+            sales = saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, start, end);
+        } else {
+            sales = saleRepository.findBySaleDateBetweenOrderBySaleDateDesc(start, end);
+        }
+
+        return sales.stream()
                 .map(this::mapToResponseDTO)
                 .toList();
     }
 
-    // MAPEO DINÁMICO A DTO UTILIZANDO LOS DATOS DE LA EMPRESA
     private SaleResponseDTO mapToResponseDTO(Sale sale) {
         List<SaleItemResponseDTO> itemDTOs = sale.getItems().stream()
                 .map(item -> new SaleItemResponseDTO(
@@ -349,11 +400,11 @@ public class SaleServiceImpl implements SaleService {
                         item.getSubtotal()
                 )).toList();
 
-        // Leemos los datos de la empresa dinámicamente de la entidad
         Company comp = sale.getCompany();
         String cName = (comp != null) ? comp.getName() : "BÁEZ POS";
         String cTaxId = (comp != null && comp.getTaxId() != null) ? comp.getTaxId() : "";
         String cAddress = (comp != null && comp.getAddress() != null) ? comp.getAddress() : "";
+        String uName = (sale.getUser() != null) ? sale.getUser().getName() : "Usuario Desconocido";
 
         return new SaleResponseDTO(
                 sale.getId(),
@@ -363,7 +414,7 @@ public class SaleServiceImpl implements SaleService {
                 sale.getSurcharge(),
                 sale.getSurchargeRate(),
                 sale.getPaymentMethod(),
-                sale.getUser().getName(),
+                uName,
                 cName,
                 cTaxId,
                 cAddress,

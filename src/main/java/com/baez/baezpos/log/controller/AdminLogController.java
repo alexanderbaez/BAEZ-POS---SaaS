@@ -1,8 +1,7 @@
 package com.baez.baezpos.log.controller;
 
 import com.baez.baezpos.log.entity.SystemLog;
-import com.baez.baezpos.log.repository.SystemLogRepository;
-import com.baez.baezpos.security.util.SecurityUtils;
+import com.baez.baezpos.log.service.AuditService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,11 +14,10 @@ import java.util.List;
 @CrossOrigin(origins = "*")
 public class AdminLogController {
 
-    private final SystemLogRepository logRepository;
+    private final AuditService auditService;
 
     @GetMapping
     public ResponseEntity<List<SystemLog>> getLogs() {
-        Long companyId = SecurityUtils.getCurrentCompanyId();
-        return ResponseEntity.ok(logRepository.findTop100ByCompanyIdOrderByTimestampDesc(companyId));
+        return ResponseEntity.ok(auditService.getLogs());
     }
 }

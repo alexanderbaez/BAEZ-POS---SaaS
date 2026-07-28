@@ -4,175 +4,189 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BaezPOS - Dashboard</title>
+  <!-- Framework UI & Iconos -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    :root { --sidebar-width: 250px; --primary-color: #1e3a8a; --primary-blue: #0d6efd; }
-    body { background-color: #f1f5f9; font-family: 'Segoe UI', sans-serif; }
+    :root { --sidebar-width: 250px; --primary-blue: #2563eb; }
+    body { background-color: #f8fafc; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
 
-    /* Mantenemos el contenedor alineado al sidebar dinámico */
     #content { margin-left: var(--sidebar-width); min-height: 100vh; padding: 2rem; }
 
-    .stat-card { border: none; border-radius: 15px; transition: transform 0.2s; border-start-width: 4px !important; }
-    .stat-card:hover { transform: translateY(-5px); }
+    .stat-card { border: none; border-radius: 16px; transition: all 0.2s ease; }
+    .stat-card:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.05) !important; }
     .icon-box { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
 
-    /* Estilos unificados para el hover del sidebar dinámico */
-    .nav-link.active-page {
-      background-color: var(--primary-blue) !important;
-      font-weight: bold;
-      color: white !important;
+    @media (max-width: 768px) {
+      #content { margin-left: 0; padding: 1rem; }
     }
   </style>
 </head>
 <body>
 
+<!-- Sidebar Dinámico -->
 <div id="sidebar-container"></div>
 
+<!-- Contenido Principal -->
 <div id="content">
-  <div class="d-flex justify-content-between align-items-center mb-4">
+  <!-- Topbar / Encabezado -->
+  <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
     <div>
       <h2 class="fw-bold m-0 text-dark">Panel de Control</h2>
       <p class="text-muted small mb-0" id="fechaActual"></p>
     </div>
-    <div class="text-end d-flex align-items-center gap-2">
-      <i class="bi bi-person-circle fs-3 text-primary"></i>
-      <div class="text-start">
-        <small class="text-muted d-block" style="font-size: 0.75rem; line-height: 1;">Bienvenido,</small>
-        <span class="fw-bold text-dark" id="userNameLabel" style="font-size: 0.95rem;">Cargando...</span>
+
+    <div class="d-flex align-items-center gap-3">
+      <button class="btn btn-outline-secondary d-md-none" id="sidebarCollapse">
+        <i class="bi bi-list fs-5"></i>
+      </button>
+
+      <div class="text-end d-flex align-items-center gap-2 bg-white px-3 py-2 rounded-4 shadow-sm border">
+        <i class="bi bi-person-circle fs-3 text-primary"></i>
+        <div class="text-start">
+          <small class="text-muted d-block" style="font-size: 0.7rem; line-height: 1;">Comercio Activo</small>
+          <span class="fw-bold text-dark" id="userNameLabel" style="font-size: 0.9rem;">Cargando...</span>
+        </div>
       </div>
     </div>
   </div>
 
-  <h6 class="fw-bold text-uppercase text-muted mb-3 small">Resumen de Hoy</h6>
+  <!-- METRICAS DE HOY -->
+  <h6 class="fw-bold text-uppercase text-muted mb-3 small">Resumen Diario</h6>
   <div class="row g-4 mb-4">
     <div class="col-md-4">
-      <div class="card stat-card shadow-sm p-3 border-0 border-start border-primary border-4">
+      <div class="card stat-card shadow-sm p-3 border-0 border-start border-primary border-4 bg-white">
         <div class="d-flex align-items-center">
           <div class="icon-box bg-primary bg-opacity-10 text-primary me-3"><i class="bi bi-cash-coin fs-4"></i></div>
           <div>
             <small class="text-muted fw-bold">VENTAS HOY</small>
-            <h4 class="mb-0 fw-bold" id="txtRecaudacion">$0.00</h4>
+            <h4 class="mb-0 fw-bold text-dark" id="txtRecaudacion">$0.00</h4>
           </div>
         </div>
       </div>
     </div>
     <div class="col-md-4">
-      <div class="card stat-card shadow-sm p-3 border-0 border-start border-success border-4">
+      <div class="card stat-card shadow-sm p-3 border-0 border-start border-success border-4 bg-white">
         <div class="d-flex align-items-center">
           <div class="icon-box bg-success bg-opacity-10 text-success me-3"><i class="bi bi-wallet2 fs-4"></i></div>
           <div>
             <small class="text-muted fw-bold">EFECTIVO EN CAJA</small>
-            <h4 class="mb-0 fw-bold" id="txtEfectivoHoy">$0.00</h4>
+            <h4 class="mb-0 fw-bold text-dark" id="txtEfectivoHoy">$0.00</h4>
           </div>
         </div>
       </div>
     </div>
     <div class="col-md-4">
-      <div class="card stat-card shadow-sm p-3 border-0 border-start border-info border-4">
+      <div class="card stat-card shadow-sm p-3 border-0 border-start border-info border-4 bg-white">
         <div class="d-flex align-items-center">
-          <div class="icon-box bg-info bg-opacity-10 text-info me-3"><i class="bi bi-phone-vibrate fs-4"></i></div>
+          <div class="icon-box bg-info bg-opacity-10 text-info me-3"><i class="bi bi-qr-code-scan fs-4"></i></div>
           <div>
             <small class="text-muted fw-bold">TRANSF / QR HOY</small>
-            <h4 class="mb-0 fw-bold" id="txtTransfHoy">$0.00</h4>
+            <h4 class="mb-0 fw-bold text-dark" id="txtTransfHoy">$0.00</h4>
           </div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-6">
-      <div class="card bg-warning text-dark h-100">
-        <div class="card-body text-center">
-          <h6 class="text-uppercase small">En Libreta (Fiado)</h6>
-          <h2 id="cardLibreta" class="fw-bold">$0.00</h2>
-          <i class="bi bi-journal-bookmark fs-1 opacity-50"></i>
         </div>
       </div>
     </div>
 
     <div class="col-md-6">
-      <div class="card bg-info text-white h-100">
-        <div class="card-body text-center">
-          <h6 class="text-uppercase small">Balance Real (Caja)</h6>
-          <h2 id="cardBalanceReal" class="fw-bold">$0.00</h2>
-          <i class="bi bi-safe fs-1 opacity-50"></i>
+      <div class="card bg-warning bg-opacity-10 border-0 shadow-sm rounded-4 h-100">
+        <div class="card-body text-center p-4">
+          <h6 class="text-uppercase text-warning-emphasis fw-bold small">En Libreta (Fiado / Cta Cte)</h6>
+          <h2 id="cardLibreta" class="fw-bold my-2">$0.00</h2>
+          <i class="bi bi-journal-bookmark fs-2 text-warning opacity-75"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card bg-primary bg-opacity-10 border-0 shadow-sm rounded-4 h-100">
+        <div class="card-body text-center p-4">
+          <h6 class="text-uppercase text-primary fw-bold small">Balance Real en Caja</h6>
+          <h2 id="cardBalanceReal" class="fw-bold my-2 text-primary">$0.00</h2>
+          <i class="bi bi-safe fs-2 text-primary opacity-75"></i>
         </div>
       </div>
     </div>
   </div>
 
-  <h6 class="fw-bold text-uppercase text-muted mb-3 small">Rendimiento Mensual</h6>
-  <div class="row g-4 mb-5">
-    <!-- RECAUDACIÓN DEL MES -->
-    <div class="col-md-6 col-lg-3">
-      <div class="card stat-card shadow-sm p-3 border-0 border-start border-dark border-4 h-100" style="background: #e2e8f0;">
-        <div class="d-flex align-items-center justify-content-between px-2">
-          <div>
-            <small class="text-muted fw-bold" style="font-size: 0.75rem;">RECAUDACIÓN TOTAL</small>
-            <h3 class="mb-0 fw-bold text-dark mt-1" id="txtRecaudacionMes">$0.00</h3>
+  <!-- RENDIMIENTO MENSUAL (RESTRINGIDO PARA ADMINS) -->
+  <div class="only-admin">
+    <h6 class="fw-bold text-uppercase text-muted mb-3 small">Rendimiento Mensual</h6>
+    <div class="row g-4 mb-4">
+      <!-- RECAUDACIÓN DEL MES -->
+      <div class="col-md-6 col-lg-3">
+        <div class="card stat-card shadow-sm p-3 border-0 border-start border-dark border-4 h-100 bg-white">
+          <div class="d-flex align-items-center justify-content-between px-2">
+            <div>
+              <small class="text-muted fw-bold" style="font-size: 0.75rem;">RECAUDACIÓN TOTAL</small>
+              <h3 class="mb-0 fw-bold text-dark mt-1" id="txtRecaudacionMes">$0.00</h3>
+            </div>
+            <i class="bi bi-calendar-check fs-2 text-muted opacity-50"></i>
           </div>
-          <i class="bi bi-calendar-check fs-2 text-muted opacity-50"></i>
         </div>
       </div>
-    </div>
 
-    <!-- GANANCIA REAL -->
-    <div class="col-md-6 col-lg-3">
-      <div class="card stat-card shadow-sm p-3 border-0 border-start border-success border-4 h-100" style="background: #d1e7dd;">
-        <div class="d-flex align-items-center justify-content-between px-2">
-          <div>
-            <small class="text-success fw-bold" style="font-size: 0.75rem;">GANANCIA REAL NETO</small>
-            <h3 class="mb-0 fw-bold text-success mt-1" id="txtGananciaMes">$0.00</h3>
+      <!-- GANANCIA REAL -->
+      <div class="col-md-6 col-lg-3">
+        <div class="card stat-card shadow-sm p-3 border-0 border-start border-success border-4 h-100 bg-white">
+          <div class="d-flex align-items-center justify-content-between px-2">
+            <div>
+              <small class="text-success fw-bold" style="font-size: 0.75rem;">GANANCIA NETO</small>
+              <h3 class="mb-0 fw-bold text-success mt-1" id="txtGananciaMes">$0.00</h3>
+            </div>
+            <i class="bi bi-graph-up-arrow fs-2 text-success opacity-50"></i>
           </div>
-          <i class="bi bi-graph-up-arrow fs-2 text-success opacity-50"></i>
         </div>
       </div>
-    </div>
 
-    <!-- CAPITAL DE REPOSICIÓN -->
-    <div class="col-md-6 col-lg-3">
-      <div class="card stat-card shadow-sm p-3 border-0 border-start border-warning border-4 h-100" style="background: #fff3cd;">
-        <div class="d-flex align-items-center justify-content-between px-2">
-          <div>
-            <small class="fw-bold" style="font-size: 0.75rem; color: #664d03;">MONTO PARA REPOSICIÓN</small>
-            <h3 class="mb-0 fw-bold mt-1" style="color: #664d03;" id="txtReposicionMes">$0.00</h3>
+      <!-- CAPITAL DE REPOSICIÓN -->
+      <div class="col-md-6 col-lg-3">
+        <div class="card stat-card shadow-sm p-3 border-0 border-start border-warning border-4 h-100 bg-white">
+          <div class="d-flex align-items-center justify-content-between px-2">
+            <div>
+              <small class="fw-bold text-warning-emphasis" style="font-size: 0.75rem;">REPOSICIÓN DE STOCK</small>
+              <h3 class="mb-0 fw-bold mt-1 text-warning-emphasis" id="txtReposicionMes">$0.00</h3>
+            </div>
+            <i class="bi bi-arrow-repeat fs-2 text-warning opacity-50"></i>
           </div>
-          <i class="bi bi-arrow-repeat fs-2 opacity-50" style="color: #664d03;"></i>
         </div>
       </div>
-    </div>
 
-    <!-- TOTAL OPERACIONES -->
-    <div class="col-md-6 col-lg-3">
-      <div class="card stat-card shadow-sm p-3 border-0 border-start border-primary border-4 h-100" style="background: #dbeafe;">
-        <div class="d-flex align-items-center justify-content-between px-2">
-          <div>
-            <small class="text-primary fw-bold" style="font-size: 0.75rem;">OPERACIONES EN EL MES</small>
-            <h3 class="mb-0 fw-bold text-primary mt-1" id="txtVentasCountMes">0</h3>
+      <!-- OPERACIONES -->
+      <div class="col-md-6 col-lg-3">
+        <div class="card stat-card shadow-sm p-3 border-0 border-start border-primary border-4 h-100 bg-white">
+          <div class="d-flex align-items-center justify-content-between px-2">
+            <div>
+              <small class="text-primary fw-bold" style="font-size: 0.75rem;">OPERACIONES</small>
+              <h3 class="mb-0 fw-bold text-primary mt-1" id="txtVentasCountMes">0</h3>
+            </div>
+            <i class="bi bi-bag-check fs-2 text-primary opacity-50"></i>
           </div>
-          <i class="bi bi-bag-check fs-2 text-primary opacity-50"></i>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- GRÁFICO & ALERTAS DE INVENTARIO -->
   <div class="row g-4">
     <div class="col-md-8">
-      <div class="card border-0 shadow-sm p-4" style="border-radius: 20px; background: white;">
+      <div class="card border-0 shadow-sm p-4 rounded-4 bg-white">
         <h5 class="fw-bold mb-4 text-dark"><i class="bi bi-bar-chart-line me-2 text-primary"></i>Ventas de los últimos 7 días</h5>
-        <div style="height: 350px;">
+        <div style="height: 320px;">
           <canvas id="chartSemanal"></canvas>
         </div>
       </div>
     </div>
+
     <div class="col-md-4">
-      <div class="card border-0 shadow-sm p-4" style="border-radius: 20px; background: white;">
+      <div class="card border-0 shadow-sm p-4 rounded-4 bg-white">
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h5 class="fw-bold m-0"><i class="bi bi-exclamation-octagon me-2 text-danger"></i>Stock Crítico</h5>
-          <span class="badge bg-danger rounded-pill" id="badgeStockCount">0</span>
+          <span class="badge bg-danger rounded-pill fs-6" id="badgeStockCount">0</span>
         </div>
-        <div id="listaAlertasStock" style="max-height: 350px; overflow-y: auto;">
-          <p class="text-muted small text-center">Analizando inventario...</p>
+        <div id="listaAlertasStock" style="max-height: 320px; overflow-y: auto;">
+          <p class="text-muted small text-center py-4">Analizando inventario...</p>
         </div>
       </div>
     </div>

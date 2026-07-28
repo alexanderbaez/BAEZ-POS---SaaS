@@ -7,10 +7,8 @@ const API_EXPENSES = '/expenses';
 // 2. INICIALIZACIÓN
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Auth manejado globalmente.
     cargarGastos();
 
-    // Listener para el formulario
     const formGasto = document.getElementById('formGasto');
     if (formGasto) {
         formGasto.addEventListener('submit', guardarGasto);
@@ -21,29 +19,23 @@ document.addEventListener('DOMContentLoaded', () => {
 // 3. LÓGICA DE DATOS (API)
 // ==========================================
 
-/**
- * Obtiene la lista de gastos desde el backend
- */
 async function cargarGastos() {
     try {
         const res = await apiFetch(API_EXPENSES);
-
         if (!res.ok) throw new Error("Error al obtener la lista de gastos");
 
         const gastos = await res.json();
         renderizarGastos(gastos);
+        calcularResumenGastos(gastos);
     } catch (err) {
         console.error("Error cargando gastos:", err);
         const tbody = document.getElementById('listaGastos');
         if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger p-4"><i class="bi bi-exclamation-triangle me-2"></i> Error al conectar con el servidor.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger p-4"><i class="bi bi-exclamation-triangle me-2"></i> Error al conectar con el servidor.</td></tr>';
         }
     }
 }
 
-/**
- * Dibuja la tabla de gastos
- */
 function renderizarGastos(gastos) {
     const tbody = document.getElementById('listaGastos');
     if (!tbody) return;
@@ -51,13 +43,11 @@ function renderizarGastos(gastos) {
     tbody.innerHTML = '';
 
     if (!gastos || gastos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center p-5 text-muted">No hay gastos registrados en este período.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center p-5 text-muted">No hay gastos registrados en este período.</td></tr>';
         return;
     }
 
-    // Ordenamos por ID descendente (más recientes arriba)
     gastos.sort((a, b) => b.id - a.id).forEach(g => {
-        // Formatear fecha para Argentina
         const fechaObj = g.date ? new Date(g.date) : new Date();
         const fechaFormateada = fechaObj.toLocaleDateString('es-AR', {
             day: '2-digit',
@@ -65,9 +55,8 @@ function renderizarGastos(gastos) {
             year: 'numeric',
             hour: '2-digit',
             minute: '2-digit'
-        }) + 'hs';
+        }) + ' hs';
 
-        // Estilos de Badge por categoría
         let badgeClass = 'bg-light text-dark border';
         if (g.category === 'PROVEEDOR') badgeClass = 'bg-primary-subtle text-primary border-primary';
         if (g.category === 'SERVICIOS') badgeClass = 'bg-warning-subtle text-warning-emphasis border-warning';
@@ -79,17 +68,27 @@ function renderizarGastos(gastos) {
             <td class="ps-4 text-muted" style="font-size: 13px;">${fechaFormateada}</td>
             <td class="fw-bold text-dark text-uppercase">${g.description}</td>
             <td><span class="badge ${badgeClass}" style="font-size: 11px;">${g.category}</span></td>
-            <td class="text-end pe-4 fw-black text-danger" style="font-size: 16px;">
-                -$${g.amount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+            <td class="text-end fw-bold text-danger" style="font-size: 15px;">
+                -$${(g.amount || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+            </td>
+            <td class="text-center pe-4">
+                <button class="btn btn-sm btn-light border" title="Eliminar gasto" onclick="confirmarEliminarGasto(${g.id})">
+                    <i class="bi bi-trash text-danger"></i>
+                </button>
             </td>
         `;
         tbody.appendChild(tr);
     });
 }
 
-/**
- * Envía un nuevo gasto al servidor
- */
+function calcularResumenGastos(gastos) {
+    const total = (gastos || []).reduce((acc, g) => acc + (parseFloat(g.amount) || 0), 0);
+    const txtTotal = document.getElementById('txtTotalGastos');
+    if (txtTotal) {
+        txtTotal.innerText = `$${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+    }
+}
+
 async function guardarGasto(e) {
     e.preventDefault();
 
@@ -99,7 +98,6 @@ async function guardarGasto(e) {
 
     const monto = parseFloat(montoInput.value);
 
-    // Validación de seguridad
     if (isNaN(monto) || monto <= 0) {
         return Swal.fire({
             icon: 'warning',
@@ -109,7 +107,6 @@ async function guardarGasto(e) {
         });
     }
 
-    // Bloqueamos el botón para evitar duplicados
     const btnGuardar = e.target.querySelector('button[type="submit"]');
     const originalText = btnGuardar.innerHTML;
     btnGuardar.disabled = true;
@@ -129,31 +126,22 @@ async function guardarGasto(e) {
         });
 
         if (res.ok) {
-            // Notificación rápida (Toast)
-            const Toast = Swal.mixin({
+            Swal.fire({
                 toast: true,
                 position: 'top-end',
+                icon: 'success',
+                title: 'Gasto registrado correctamente',
                 showConfirmButton: false,
                 timer: 2000,
                 timerProgressBar: true
             });
 
-            Toast.fire({
-                icon: 'success',
-                title: 'Gasto registrado correctamente'
-            });
-
-            // Limpiar formulario
             document.getElementById('formGasto').reset();
 
-            // Cerrar el modal (Bootstrap 5)
             const modalEl = document.getElementById('modalNuevoGasto');
             const modalInstance = bootstrap.Modal.getInstance(modalEl);
-            if (modalInstance) {
-                modalInstance.hide();
-            }
+            if (modalInstance) modalInstance.hide();
 
-            // Recargar la lista para mostrar el nuevo gasto
             cargarGastos();
         } else {
             const errorData = await res.json();
@@ -167,8 +155,38 @@ async function guardarGasto(e) {
             confirmButtonColor: '#dc3545'
         });
     } finally {
-        // Restaurar botón
         btnGuardar.disabled = false;
         btnGuardar.innerHTML = originalText;
+    }
+}
+
+async function confirmarEliminarGasto(id) {
+    const result = await Swal.fire({
+        title: '¿Eliminar registro de gasto?',
+        text: "Esta acción descontará el gasto y actualizará la caja diaria.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+        try {
+            const res = await apiFetch(`${API_EXPENSES}/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (res.ok) {
+                Swal.fire('Eliminado', 'El gasto ha sido eliminado.', 'success');
+                cargarGastos();
+            } else {
+                const errData = await res.json();
+                Swal.fire('Error', errData.message || 'No se pudo eliminar el gasto.', 'error');
+            }
+        } catch (err) {
+            Swal.fire('Error de conexión', 'No se pudo conectar con el servidor.', 'error');
+        }
     }
 }

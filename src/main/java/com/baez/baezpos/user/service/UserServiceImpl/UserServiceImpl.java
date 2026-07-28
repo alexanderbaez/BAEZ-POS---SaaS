@@ -4,10 +4,9 @@ import com.baez.baezpos.user.dto.UserResponseDTO;
 import com.baez.baezpos.user.entity.User;
 import com.baez.baezpos.user.repository.UserRepository;
 import com.baez.baezpos.user.service.UserService.UserService;
+import com.baez.baezpos.security.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +28,7 @@ public class UserServiceImpl implements UserService {
         if (userRepository.existsByEmail(user.getEmail())) {
             throw new RuntimeException("El email '" + user.getEmail() + "' ya existe.");
         }
+
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setActive(true);
         log.info("LOCAL: Registrando nuevo usuario: {}", user.getEmail());
@@ -38,6 +38,13 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public UserResponseDTO getUserById(Long id) {
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        if (companyId != null) {
+            return userRepository.findByIdAndCompanyId(id, companyId)
+                    .map(this::convertToDTO)
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado o no pertenece a su empresa."));
+        }
+
         return userRepository.findById(id)
                 .map(this::convertToDTO)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
@@ -46,6 +53,14 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public List<UserResponseDTO> getAllUsers() {
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+
+        if (companyId != null) {
+            return userRepository.findByCompanyId(companyId).stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+        }
+
         return userRepository.findAll().stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -54,14 +69,15 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponseDTO updateUser(Long id, User details) {
-        User existing = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        User existing = (companyId != null) ?
+                userRepository.findByIdAndCompanyId(id, companyId).orElseThrow(() -> new RuntimeException("No autorizado")) :
+                userRepository.findById(id).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         existing.setName(details.getName());
         existing.setRole(details.getRole());
         existing.setEmail(details.getEmail());
 
-        // CORRECCIÓN: Si el objeto que viene del frontend trae password, se encripta y guarda
         if (details.getPassword() != null && !details.getPassword().isEmpty()) {
             existing.setPassword(passwordEncoder.encode(details.getPassword()));
         }
@@ -72,17 +88,24 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void deleteUser(Long id) {
-        if (!userRepository.existsById(id)) throw new RuntimeException("Usuario no existe.");
-        userRepository.deleteById(id);
-        log.warn("Usuario eliminado ID: {}", id);
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        User existing = (companyId != null) ?
+                userRepository.findByIdAndCompanyId(id, companyId).orElseThrow(() -> new RuntimeException("No autorizado")) :
+                userRepository.findById(id).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        existing.setActive(false);
+        userRepository.save(existing);
+        log.warn("Usuario desactivado ID: {}", id);
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        // En modo local, la entidad User ya implementa UserDetails, la devolvemos directo
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + email));
+    @Transactional
+    public void updatePasswordOnly(String email, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setPasswordResetAt(null);
+        userRepository.save(user);
     }
 
     private UserResponseDTO convertToDTO(User user) {
@@ -92,14 +115,5 @@ public class UserServiceImpl implements UserService {
                 .email(user.getEmail())
                 .role(user.getRole())
                 .build();
-    }
-
-    @Override
-    @Transactional
-    public void updatePasswordOnly(String email, String newPassword) {
-        User user = userRepository.findByEmail(email).get();
-        user.setPassword(passwordEncoder.encode(newPassword));
-        user.setPasswordResetAt(null); // <--- Limpiamos el reloj porque ya puso su clave real
-        userRepository.save(user);
     }
 }

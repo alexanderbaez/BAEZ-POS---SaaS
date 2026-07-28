@@ -1,4 +1,4 @@
-package com.baez.baezpos.product.service.Impl;
+package com.baez.baezpos.product.service.impl;
 
 import com.baez.baezpos.company.entity.Company;
 import com.baez.baezpos.company.repository.CompanyRepository;
@@ -6,8 +6,10 @@ import com.baez.baezpos.product.dto.CategoryRequestDTO;
 import com.baez.baezpos.product.dto.CategoryResponseDTO;
 import com.baez.baezpos.product.entity.Category;
 import com.baez.baezpos.product.repository.CategoryRepository;
-import com.baez.baezpos.product.service.service.CategoryService;
+import com.baez.baezpos.product.service.CategoryService;
 import com.baez.baezpos.security.util.SecurityUtils;
+import com.baez.baezpos.shared.exception.BadRequestException;
+import com.baez.baezpos.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,29 +28,35 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public CategoryResponseDTO createCategory(CategoryRequestDTO dto) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
+        if (companyId == null) {
+            throw new BadRequestException("No se puede crear una categoría sin seleccionar una empresa.");
+        }
 
-        // 1. Buscamos si el nombre ya existe DENTRO de la misma empresa
-        Optional<Category> existing = categoryRepository.findByNameAndCompanyId(dto.name(), companyId);
+        if (dto.name() == null || dto.name().isBlank()) {
+            throw new BadRequestException("El nombre de la categoría es obligatorio.");
+        }
 
+        String categoryName = dto.name().trim();
+
+        Optional<Category> existing = categoryRepository.findByNameAndCompanyId(categoryName, companyId);
         if (existing.isPresent()) {
             Category category = existing.get();
             if (category.getActive()) {
-                throw new RuntimeException("Ya existe una categoría activa con ese nombre");
+                throw new BadRequestException("Ya existe una categoría activa con el nombre '" + categoryName + "'");
             } else {
-                // Reanimación de categoría borrada
                 category.setActive(true);
                 category.setDescription(dto.description());
                 return mapToResponseDTO(categoryRepository.save(category));
             }
         }
 
-        // 2. Creación con la Company del usuario
-        Company company = companyRepository.getReferenceById(companyId);
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
 
         Category newCategory = Category.builder()
-                .name(dto.name())
+                .name(categoryName)
                 .description(dto.description())
-                .company(company) // <-- ASIGNAMOS LA EMPRESA
+                .company(company)
                 .active(true)
                 .build();
 
@@ -56,29 +64,55 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<CategoryResponseDTO> getAllCategories() {
         Long companyId = SecurityUtils.getCurrentCompanyId();
-        return categoryRepository.findByCompanyIdAndActiveTrue(companyId).stream()
+        List<Category> categories;
+
+        if (companyId != null) {
+            categories = categoryRepository.findByCompanyIdAndActiveTrue(companyId);
+        } else {
+            categories = categoryRepository.findByActiveTrue();
+        }
+
+        return categories.stream()
                 .map(this::mapToResponseDTO)
                 .toList();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public CategoryResponseDTO getCategoryById(Long id) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
-        return categoryRepository.findByIdAndCompanyId(id, companyId)
-                .map(this::mapToResponseDTO)
-                .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
+        Category category;
+
+        if (companyId != null) {
+            category = categoryRepository.findByIdAndCompanyId(id, companyId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada"));
+        } else {
+            category = categoryRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada"));
+        }
+
+        return mapToResponseDTO(category);
     }
 
     @Override
     @Transactional
     public CategoryResponseDTO updateCategory(Long id, CategoryRequestDTO dto) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
-        Category category = categoryRepository.findByIdAndCompanyId(id, companyId)
-                .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
+        if (companyId == null) {
+            throw new BadRequestException("No se puede modificar una categoría sin contexto de empresa.");
+        }
 
-        category.setName(dto.name());
+        if (dto.name() == null || dto.name().isBlank()) {
+            throw new BadRequestException("El nombre de la categoría es obligatorio.");
+        }
+
+        Category category = categoryRepository.findByIdAndCompanyId(id, companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada en su empresa"));
+
+        category.setName(dto.name().trim());
         category.setDescription(dto.description());
 
         return mapToResponseDTO(categoryRepository.save(category));
@@ -88,17 +122,33 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public void deleteCategory(Long id) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
-        Category category = categoryRepository.findByIdAndCompanyId(id, companyId)
-                .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
+        Category category;
+
+        if (companyId != null) {
+            category = categoryRepository.findByIdAndCompanyId(id, companyId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada"));
+        } else {
+            category = categoryRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada"));
+        }
 
         category.setActive(false);
         categoryRepository.save(category);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<CategoryResponseDTO> getDeletedCategories() {
         Long companyId = SecurityUtils.getCurrentCompanyId();
-        return categoryRepository.findByCompanyIdAndActiveFalse(companyId).stream()
+        List<Category> categories;
+
+        if (companyId != null) {
+            categories = categoryRepository.findByCompanyIdAndActiveFalse(companyId);
+        } else {
+            categories = categoryRepository.findByActiveFalse();
+        }
+
+        return categories.stream()
                 .map(this::mapToResponseDTO)
                 .toList();
     }
@@ -107,8 +157,15 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public CategoryResponseDTO activateCategory(Long id) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
-        Category category = categoryRepository.findByIdAndCompanyId(id, companyId)
-                .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
+        Category category;
+
+        if (companyId != null) {
+            category = categoryRepository.findByIdAndCompanyId(id, companyId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada"));
+        } else {
+            category = categoryRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada"));
+        }
 
         category.setActive(true);
         return mapToResponseDTO(categoryRepository.save(category));

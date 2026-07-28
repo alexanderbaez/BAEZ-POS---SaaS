@@ -8,6 +8,9 @@ import com.baez.baezpos.security.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -28,7 +31,7 @@ public class AuditService {
                     .userEmail(userEmail != null ? userEmail : "SISTEMA");
 
             if (companyId != null) {
-                Company company = companyRepository.getReferenceById(companyId);
+                Company company = companyRepository.findById(companyId).orElse(null);
                 logBuilder.company(company);
             }
 
@@ -36,5 +39,18 @@ public class AuditService {
         } catch (Exception e) {
             log.error("Error al registrar auditoría de acción [{}]: {}", action, e.getMessage());
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<SystemLog> getLogs() {
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+
+        // Si es SUPER_ADMIN (companyId == null), obtiene los últimos 100 de toda la plataforma
+        if (companyId == null) {
+            return logRepository.findTop100ByOrderByTimestampDesc();
+        }
+
+        // Si es ADMIN / VENDEDOR, obtiene los 100 logs exclusivos de su empresa
+        return logRepository.findTop100ByCompanyIdOrderByTimestampDesc(companyId);
     }
 }

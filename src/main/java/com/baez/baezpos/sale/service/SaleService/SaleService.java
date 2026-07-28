@@ -1,17 +1,15 @@
-package com.baez.baezpos.sale.service.SaleService;
+package com.baez.baezpos.sale.service;
 
 import com.baez.baezpos.sale.dto.BoxReportDTO;
 import com.baez.baezpos.sale.dto.ChartDataDTO;
 import com.baez.baezpos.sale.dto.SaleRequestDTO;
 import com.baez.baezpos.sale.dto.SaleResponseDTO;
-import com.baez.baezpos.sale.entity.Sale;
-import org.springframework.web.bind.annotation.PathVariable;
 
 import java.time.LocalDate;
 import java.util.List;
 
 public interface SaleService {
-    SaleResponseDTO createSale(SaleRequestDTO saleDTO, Long userId); // Solo necesitamos el usuario que vende
+    SaleResponseDTO createSale(SaleRequestDTO saleDTO, Long userId);
     SaleResponseDTO getSaleById(Long id);
     List<SaleResponseDTO> getAllSales();
     BoxReportDTO getBoxReport(String period);

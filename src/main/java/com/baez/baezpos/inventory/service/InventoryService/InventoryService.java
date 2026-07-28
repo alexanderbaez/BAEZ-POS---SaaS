@@ -1,7 +1,6 @@
-package com.baez.baezpos.inventory.service.InventoryService;
+package com.baez.baezpos.inventory.service;
 
 import com.baez.baezpos.inventory.dto.InventoryMovementResponseDTO;
-import com.baez.baezpos.inventory.entity.InventoryMovement;
 import com.baez.baezpos.inventory.entity.MovementType;
 
 import java.util.List;

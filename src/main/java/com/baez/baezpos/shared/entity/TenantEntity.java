@@ -8,7 +8,8 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 @MappedSuperclass
-@Getter @Setter
+@Getter
+@Setter
 @SuperBuilder
 @NoArgsConstructor
 public abstract class TenantEntity extends BaseEntity {

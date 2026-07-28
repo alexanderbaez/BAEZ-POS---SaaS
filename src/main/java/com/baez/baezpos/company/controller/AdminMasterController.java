@@ -7,11 +7,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/superadmin/companies")
+@RequestMapping("/api/v1/super-admin/companies")
+@PreAuthorize("hasRole('SUPER_ADMIN')")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class AdminMasterController {
@@ -21,6 +24,12 @@ public class AdminMasterController {
     @GetMapping
     public ResponseEntity<List<CompanyDTO>> listAll() {
         return ResponseEntity.ok(masterAdminService.getAllCompaniesMaster());
+    }
+
+    @PostMapping
+    public ResponseEntity<String> registerCompany(@RequestBody MasterRegistrationRequest req) {
+        masterAdminService.registerFullBusiness(req);
+        return ResponseEntity.ok("Empresa y Dueño creados correctamente.");
     }
 
     @PostMapping("/full-register")
@@ -52,5 +61,15 @@ public class AdminMasterController {
     public ResponseEntity<String> extendSubscription(@PathVariable Long id) {
         masterAdminService.extendSubscriptionMaster(id);
         return ResponseEntity.ok("Suscripción extendida 30 días por Alexander.");
+    }
+
+    @PatchMapping("/{id}/reset-password")
+    public ResponseEntity<String> resetPassword(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        String newPass = body.get("password");
+        if (newPass == null || newPass.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("La nueva contraseña no puede estar vacía");
+        }
+        masterAdminService.resetOwnerPassword(id, newPass);
+        return ResponseEntity.ok("Contraseña restablecida correctamente.");
     }
 }

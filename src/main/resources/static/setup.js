@@ -1,15 +1,13 @@
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        const res = await fetch('http://localhost:8080/api/v1/auth/setup-status');
-        if (res.ok) {
-            const data = await res.json();
-            if (!data.isSetupRequired) {
-                // Si el sistema ya fue configurado, llevar a la fuerza a login
-                window.location.href = 'login.html';
-            }
-        }
-    } catch (e) {
-        console.error("Error conectando con el servidor local para verificar setup:", e);
+/**
+ * BÁEZ POS - REGISTRO / ONBOARDING SAAS
+ * Alexander Baez - 2026
+ */
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Si ya tiene sesión activa en este navegador, va al Dashboard directo
+    const token = localStorage.getItem('baezpos_token');
+    if (token) {
+        window.location.href = 'dashboard.html';
     }
 });
 
@@ -21,20 +19,18 @@ document.getElementById('setupForm').addEventListener('submit', async function(e
     const loader = document.getElementById('loader');
     const messageContainer = document.getElementById('messageContainer');
 
-    // CORRECCIÓN: Estructura del Payload mapeada exactamente con los nuevos campos para el endpoint de inicialización
+    // Construir Payload: los datos vacíos se envían limpios o con valores por defecto útiles
     const payload = {
-        userName: document.getElementById('userName').value,
-        email: document.getElementById('email').value,
+        userName: document.getElementById('userName').value.trim(),
+        email: document.getElementById('email').value.trim(),
         password: document.getElementById('password').value,
-        companyName: document.getElementById('companyName').value,
-        taxId: document.getElementById('taxId').value,
-        phone: document.getElementById('phone').value,
-        address: document.getElementById('address').value,
-        ticketMessage: document.getElementById('ticketMessage').value,
-
-        // Atributos obligatorios para la facturación electrónica
-        iibb: document.getElementById('iibb').value,
-        inicioActividades: document.getElementById('inicioActividades').value,
+        companyName: document.getElementById('companyName').value.trim(),
+        taxId: document.getElementById('taxId').value.trim() || '',
+        phone: document.getElementById('phone').value.trim() || '',
+        address: document.getElementById('address').value.trim() || '',
+        ticketMessage: document.getElementById('ticketMessage').value.trim() || '¡Gracias por su compra!',
+        iibb: document.getElementById('iibb').value.trim() || '',
+        inicioActividades: document.getElementById('inicioActividades').value || null,
         condicionIva: document.getElementById('condicionIva').value
     };
 
@@ -44,7 +40,8 @@ document.getElementById('setupForm').addEventListener('submit', async function(e
     btn.classList.add('disabled');
 
     try {
-        const response = await fetch('http://localhost:8080/api/v1/auth/setup', {
+        // En SaaS se suele consumir /api/v1/auth/register o mantener /setup para crear tenant + admin
+        const response = await fetch('/api/v1/auth/setup', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -53,39 +50,37 @@ document.getElementById('setupForm').addEventListener('submit', async function(e
         if (response.ok) {
             const data = await response.json();
 
-            // Loguear automáticamente
             const cleanRole = (data.role || "").replace('ROLE_', '');
 
             localStorage.clear();
             localStorage.setItem('baezpos_token', data.token);
             localStorage.setItem('baezpos_user_role', cleanRole);
-            localStorage.setItem('baezpos_user_name', data.name || "Administrador");
+            localStorage.setItem('baezpos_user_name', data.name || payload.userName);
 
             Swal.fire({
-                title: '¡Sistema Configurado!',
-                text: 'Bienvenido a BaezPOS. Redirigiendo a tu Dashboard...',
+                title: '¡Bienvenido a BaezPOS!',
+                text: 'Cuenta creada con éxito. Ingresando a tu panel...',
                 icon: 'success',
                 showConfirmButton: false,
-                timer: 2000
+                timer: 1800
             }).then(() => {
                 window.location.href = 'dashboard.html';
             });
 
         } else {
             const errorData = await response.json().catch(() => ({}));
-            let errorMsg = errorData.message || "Error al configurar el sistema. Intente de nuevo.";
+            let errorMsg = errorData.message || "Error al crear la cuenta. Verifica los datos ingresados.";
 
-            // Si es un Validation Error devuelto por nuestro backend
             if (errorData.validationErrors) {
                 errorMsg = Object.values(errorData.validationErrors).join('<br>');
             }
 
-            messageContainer.innerHTML = `<div class="alert alert-danger">${errorMsg}</div>`;
+            messageContainer.innerHTML = `<div class="alert alert-danger shadow-sm">${errorMsg}</div>`;
             resetButton();
         }
     } catch (error) {
-        console.error("Error de conexión:", error);
-        messageContainer.innerHTML = `<div class="alert alert-warning">No se pudo conectar con el servidor local para inicializar.</div>`;
+        console.error("Error de red:", error);
+        messageContainer.innerHTML = `<div class="alert alert-warning shadow-sm">No se pudo conectar con el servidor. Verifica tu conexión.</div>`;
         resetButton();
     }
 

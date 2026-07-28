@@ -2,8 +2,7 @@ package com.baez.baezpos.product.controller;
 
 import com.baez.baezpos.product.dto.ProductRequestDTO;
 import com.baez.baezpos.product.dto.ProductResponseDTO;
-import com.baez.baezpos.product.service.service.ProductService;
-import com.baez.baezpos.security.util.SecurityUtils;
+import com.baez.baezpos.product.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +13,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/products")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*") // Simplificamos el CORS para entorno local
+@CrossOrigin(origins = "*")
 public class ProductController {
 
     private final ProductService productService;

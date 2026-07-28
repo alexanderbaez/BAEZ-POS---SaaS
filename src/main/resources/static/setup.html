@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BaezPOS | Configuración Inicial</title>
+    <title>BaezPOS | Registro de Comercio</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
@@ -18,10 +18,10 @@
         }
         .setup-card {
             background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
-            border: none; border-radius: 24px; width: 100%; max-width: 950px;
+            border: none; border-radius: 24px; width: 100%; max-width: 900px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6); overflow: hidden;
         }
-        .card-header-custom { padding: 40px 20px 20px; text-align: center; }
+        .card-header-custom { padding: 35px 20px 10px; text-align: center; }
         .logo-text { font-weight: 800; font-style: italic; font-size: 2.8rem; color: var(--primary-dark); letter-spacing: -1px; margin-bottom: 0px;}
         .form-label { font-weight: 600; color: #4b5563; font-size: 0.8rem; letter-spacing: 0.5px; }
         .input-group-text { background-color: #f3f4f6; border: 1px solid #e5e7eb; border-right: none; color: #9ca3af; border-radius: 12px 0 0 12px; }
@@ -35,6 +35,7 @@
         .btn-setup:hover { transform: translateY(-2px); color: white; opacity: 0.9; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);}
         .section-title { font-weight: 700; color: var(--primary-dark); border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 20px;}
         .border-md-start { border-left: 1px solid #e5e7eb; }
+        .badge-optional { font-size: 0.7rem; font-weight: 600; background-color: #e5e7eb; color: #4b5563; padding: 2px 8px; border-radius: 6px; }
         @media (max-width: 768px) {
             .border-md-start { border-left: none; border-top: 1px solid #e5e7eb; padding-top: 20px; }
         }
@@ -45,7 +46,7 @@
 <div class="setup-card">
     <div class="card-header-custom">
         <h1 class="logo-text">BaezPOS</h1>
-        <p class="text-muted text-uppercase" style="letter-spacing: 1.5px; font-weight: 600;">Instalación & Configuración Inicial</p>
+        <p class="text-muted text-uppercase" style="letter-spacing: 1.5px; font-weight: 600;">Crea tu cuenta de comercio</p>
     </div>
 
     <div class="card-body p-4 pt-2">
@@ -53,20 +54,20 @@
 
         <form id="setupForm">
             <div class="row g-4">
-                <!-- Columna Administrador -->
+                <!-- Columna Administrador (Obligatoria) -->
                 <div class="col-md-5">
-                    <h4 class="section-title"><i class="bi bi-person-badge me-2"></i>Datos del Administrador</h4>
+                    <h4 class="section-title"><i class="bi bi-person-badge me-2"></i>Tus Datos de Acceso</h4>
 
                     <div class="mb-3">
                         <label class="form-label text-uppercase">Nombre Completo *</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-person"></i></span>
-                            <input type="text" class="form-control" id="userName" placeholder="Juan Pérez" required>
+                            <input type="text" class="form-control" id="userName" placeholder="Ej: Juan Pérez" required>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label text-uppercase">Correo para acceder *</label>
+                        <label class="form-label text-uppercase">Correo de Acceso *</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-envelope"></i></span>
                             <input type="email" class="form-control" id="email" placeholder="admin@tienda.com" required>
@@ -74,95 +75,99 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label text-uppercase">Contraseña Maestra *</label>
+                        <label class="form-label text-uppercase">Contraseña *</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
-                            <input type="password" class="form-control" id="password" placeholder="••••••••" required>
+                            <input type="password" class="form-control" id="password" placeholder="••••••••" required minlength="6">
                         </div>
                     </div>
                 </div>
 
-                <!-- Columna Empresa (Campos Fiscales unificados) -->
+                <!-- Columna Empresa (Opcional excepto Nombre) -->
                 <div class="col-md-7 border-md-start">
-                    <h4 class="section-title"><i class="bi bi-shop me-2"></i>Datos del Comercio</h4>
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                        <h4 class="section-title border-0 m-0 p-0"><i class="bi bi-shop me-2"></i>Datos de la Empresa</h4>
+                        <span class="badge badge-optional">Configurable luego en Perfil</span>
+                    </div>
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label text-uppercase">Nombre de la Tienda *</label>
+                            <label class="form-label text-uppercase">Nombre del Comercio *</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-bag"></i></span>
-                                <input type="text" class="form-control" id="companyName" placeholder="Kiosco Central" required>
+                                <input type="text" class="form-control" id="companyName" placeholder="Ej: Mi Tienda Express" required>
                             </div>
                         </div>
 
                         <div class="col-md-6 mb-3">
-                            <label class="form-label text-uppercase">CUIT / CUIL *</label>
+                            <label class="form-label text-uppercase">CUIT / CUIL <span class="text-muted fw-normal">(Opcional)</span></label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
-                                <input type="text" class="form-control" id="taxId" placeholder="Ej: 20123456789" required>
+                                <input type="text" class="form-control" id="taxId" placeholder="Ej: 20123456789">
                             </div>
                         </div>
                     </div>
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label text-uppercase">Teléfono *</label>
+                            <label class="form-label text-uppercase">Teléfono <span class="text-muted fw-normal">(Opcional)</span></label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-telephone"></i></span>
-                                <input type="text" class="form-control" id="phone" placeholder="1122334455" required>
+                                <input type="text" class="form-control" id="phone" placeholder="1122334455">
                             </div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label text-uppercase">Dirección *</label>
+                            <label class="form-label text-uppercase">Dirección <span class="text-muted fw-normal">(Opcional)</span></label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
-                                <input type="text" class="form-control" id="address" placeholder="Av. Corrientes 1234" required>
+                                <input type="text" class="form-control" id="address" placeholder="Av. Corrientes 1234">
                             </div>
                         </div>
                     </div>
 
-                    <!-- CORRECCIÓN ARCA: Agregados campos impositivos clave -->
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label text-uppercase">Nro. Ingresos Brutos (IIBB) *</label>
+                            <label class="form-label text-uppercase">IIBB <span class="text-muted fw-normal">(Opcional)</span></label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-card-checklist"></i></span>
-                                <input type="text" class="form-control" id="iibb" placeholder="Exento o Nro Convenio" required>
+                                <input type="text" class="form-control" id="iibb" placeholder="Exento / Convenio">
                             </div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label text-uppercase">Inicio de Actividades *</label>
+                            <label class="form-label text-uppercase">Inicio Actividades <span class="text-muted fw-normal">(Opcional)</span></label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-calendar-event"></i></span>
-                                <input type="date" class="form-control" id="inicioActividades" required>
+                                <input type="date" class="form-control" id="inicioActividades">
                             </div>
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label text-uppercase">Condición Frente al IVA *</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-briefcase"></i></span>
-                            <select id="condicionIva" class="form-select text-dark" required>
-                                <option value="Responsable Monotributo" selected>Responsable Monotributo</option>
-                                <option value="Responsable Inscripto">Responsable Inscripto</option>
-                                <option value="Exento">Exento</option>
-                            </select>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-uppercase">Condición IVA</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-briefcase"></i></span>
+                                <select id="condicionIva" class="form-select text-dark">
+                                    <option value="Responsable Monotributo" selected>Responsable Monotributo</option>
+                                    <option value="Responsable Inscripto">Responsable Inscripto</option>
+                                    <option value="Exento">Exento</option>
+                                    <option value="Consumidor Final">Consumidor Final</option>
+                                </select>
+                            </div>
                         </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label text-uppercase">Mensaje en el Ticket *</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-receipt"></i></span>
-                            <input type="text" class="form-control" id="ticketMessage" placeholder="¡Gracias por su compra!" required>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-uppercase">Mensaje Ticket <span class="text-muted fw-normal">(Opcional)</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-receipt"></i></span>
+                                <input type="text" class="form-control" id="ticketMessage" placeholder="¡Gracias por su compra!">
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-primary btn-setup w-100 shadow-lg mt-4" id="btnProcesar">
-                <span id="btnText"><i class="bi bi-rocket-takeoff me-2"></i> Inicializar Sistema</span>
+            <button type="submit" class="btn btn-primary btn-setup w-100 shadow-lg mt-3" id="btnProcesar">
+                <span id="btnText"><i class="bi bi-rocket-takeoff me-2"></i> Comenzar Ahora</span>
                 <div class="spinner-border spinner-border-sm d-none" id="loader" role="status"></div>
             </button>
         </form>

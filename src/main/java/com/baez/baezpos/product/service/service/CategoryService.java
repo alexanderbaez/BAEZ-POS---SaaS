@@ -1,4 +1,4 @@
-package com.baez.baezpos.product.service.service;
+package com.baez.baezpos.product.service;
 
 import com.baez.baezpos.product.dto.CategoryRequestDTO;
 import com.baez.baezpos.product.dto.CategoryResponseDTO;

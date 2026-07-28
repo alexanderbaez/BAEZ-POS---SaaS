@@ -1,11 +1,15 @@
-// Ruta centralizada para el perfil de la empresa
+/**
+ * BÁEZ POS - PERFIL DE LA EMPRESA & CONFIGURACIÓN
+ * Alexander Baez - 2026
+ */
+
 const API_URL = "/admin/my-company/profile";
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Cargar datos de la empresa desde la BD
     cargarDatosEmpresa();
 
-    // 2. Vincular escritura en vivo para la vista previa
+    // 2. Vincular escritura en vivo para la vista previa del ticket
     vincularInputsPreview();
 
     // 3. Vincular evento del switch para activar/desactivar datos fiscales
@@ -16,7 +20,7 @@ async function cargarDatosEmpresa() {
     try {
         const resp = await apiFetch(API_URL);
 
-        if (!resp.ok) throw new Error("No se pudo obtener la información.");
+        if (!resp || !resp.ok) throw new Error("No se pudo obtener la información.");
 
         const emp = await resp.json();
 
@@ -32,7 +36,7 @@ async function cargarDatosEmpresa() {
         document.getElementById('empDireccion').value = emp.address || '';
         document.getElementById('empTicketMsg').value = emp.ticketMessage || '';
 
-        // Carga de campos fiscales para ARCA
+        // Carga de campos fiscales para ARCA / AFIP
         document.getElementById('empIibb').value = emp.iibb || '';
         document.getElementById('empInicioAct').value = emp.inicioActividades || '';
         document.getElementById('empIva').value = emp.condicionIva || 'Responsable Monotributo';
@@ -53,7 +57,7 @@ async function cargarDatosEmpresa() {
         actualizarPreview();
 
     } catch (err) {
-        console.error(err);
+        console.error("Error al cargar perfil:", err);
         Swal.fire({
             title: 'Error de Carga',
             text: 'No logramos conectar con el servidor para traer tus datos.',
@@ -66,8 +70,15 @@ async function cargarDatosEmpresa() {
 function procesarVencimiento(fechaStr) {
     if (!fechaStr) return;
 
-    const fechaVenc = new Date(fechaStr + "T12:00:00");
+    // Soportar cadenas 'YYYY-MM-DD' de manera segura
+    const partes = fechaStr.split('-');
+    const fechaVenc = partes.length === 3
+        ? new Date(partes[0], partes[1] - 1, partes[2])
+        : new Date(fechaStr);
+
     const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
     const difTiempo = fechaVenc - hoy;
     const difDias = Math.ceil(difTiempo / (1000 * 60 * 60 * 24));
 
@@ -76,47 +87,52 @@ function procesarVencimiento(fechaStr) {
     const mensajeDias = document.getElementById('mensajeDias');
     const badge = document.getElementById('badgeEstado');
 
-    vencInput.innerText = fechaVenc.toLocaleDateString('es-AR', {
-        day: 'numeric', month: 'long', year: 'numeric'
-    });
+    if (vencInput) {
+        vencInput.innerText = fechaVenc.toLocaleDateString('es-AR', {
+            day: 'numeric', month: 'long', year: 'numeric'
+        });
+    }
+
+    if (!badge) return;
 
     badge.className = "badge rounded-pill p-2 px-4 shadow-sm ";
 
     if (difDias <= 0) {
         badge.classList.add("bg-danger");
         badge.innerText = "SERVICIO VENCIDO";
-        alerta.classList.remove('d-none');
-        mensajeDias.innerHTML = `<strong>Tu servicio ha vencido.</strong> Contactá al soporte para renovar tu acceso hoy mismo.`;
+        if (alerta) alerta.classList.remove('d-none');
+        if (mensajeDias) mensajeDias.innerHTML = `<strong>Tu servicio ha vencido.</strong> Contactá al soporte para renovar tu acceso hoy mismo.`;
     } else if (difDias <= 7) {
         badge.classList.add("bg-warning", "text-dark");
         badge.innerText = "VENCE PRONTO";
-        alerta.classList.remove('d-none');
-        alerta.classList.replace('alert-danger', 'alert-warning');
-        mensajeDias.innerText = `Tu abono mensual vence en ${difDias} días. ¡No te quedes sin sistema!`;
+        if (alerta) {
+            alerta.classList.remove('d-none');
+            alerta.classList.replace('alert-danger', 'alert-warning');
+        }
+        if (mensajeDias) mensajeDias.innerText = `Tu abono mensual vence en ${difDias} días. ¡No te quedes sin sistema!`;
     } else {
         badge.classList.add("bg-success");
         badge.innerText = "SERVICIO ACTIVO";
-        alerta.classList.add('d-none');
+        if (alerta) alerta.classList.add('d-none');
     }
 }
 
 async function actualizarEmpresa(silencioso = false) {
-    const nombre = document.getElementById('empNombre').value;
+    const nombre = document.getElementById('empNombre').value.trim();
     if (!nombre) {
         Swal.fire('Atención', 'El nombre del negocio es obligatorio.', 'warning');
         return;
     }
 
-    // Payload completo conteniendo estado del switch y campos ARCA
     const data = {
         name: nombre,
-        taxId: document.getElementById('empCuit').value,
-        phone: document.getElementById('empTel').value,
-        email: document.getElementById('empEmail').value,
-        address: document.getElementById('empDireccion').value,
-        ticketMessage: document.getElementById('empTicketMsg').value,
+        taxId: document.getElementById('empCuit').value.trim(),
+        phone: document.getElementById('empTel').value.trim(),
+        email: document.getElementById('empEmail').value.trim(),
+        address: document.getElementById('empDireccion').value.trim(),
+        ticketMessage: document.getElementById('empTicketMsg').value.trim(),
         hasTaxData: document.getElementById('checkMostrarFiscal').checked,
-        iibb: document.getElementById('empIibb').value,
+        iibb: document.getElementById('empIibb').value.trim(),
         inicioActividades: document.getElementById('empInicioAct').value,
         condicionIva: document.getElementById('empIva').value
     };
@@ -135,12 +151,12 @@ async function actualizarEmpresa(silencioso = false) {
             body: JSON.stringify(data)
         });
 
-        if (resp.ok) {
-            // Sincronizamos AMBAS claves en LocalStorage
+        if (resp && resp.ok) {
+            // Sincronizar LocalStorage
             localStorage.setItem('config_comercio', JSON.stringify(data));
             localStorage.setItem('DATOS_EMPRESA', JSON.stringify(data));
 
-            // Actualización reactiva del Sidebar
+            // Actualizar nombre en Navbar
             const elCompanyNav = document.getElementById('companyNameNav');
             if (elCompanyNav) elCompanyNav.innerText = nombre.toUpperCase();
 
@@ -153,7 +169,6 @@ async function actualizarEmpresa(silencioso = false) {
                     showConfirmButton: false
                 });
             } else {
-                // Notificación tipo Toast para cambios rápidos con el switch
                 const Toast = Swal.mixin({
                     toast: true,
                     position: 'top-end',
@@ -167,9 +182,10 @@ async function actualizarEmpresa(silencioso = false) {
                 });
             }
         } else {
-            throw new Error();
+            throw new Error("Respuesta no satisfactoria del servidor");
         }
     } catch (err) {
+        console.error("Error al guardar empresa:", err);
         Swal.fire('Error', 'No se pudieron guardar los cambios. Intenta nuevamente.', 'error');
     }
 }
@@ -181,14 +197,11 @@ function vincularSwitchFiscal() {
     switchFiscal.addEventListener('change', (e) => {
         const estaActivo = e.target.checked;
         aplicarEstadoFiscal(estaActivo);
-
-        // Guarda de inmediato el cambio en el servidor y sincroniza
         actualizarEmpresa(true);
     });
 }
 
 function aplicarEstadoFiscal(activo) {
-    // 1. Mostrar/Ocultar y alternar comportamiento en la vista previa del Ticket
     const previewBloque = document.getElementById('previewBloqueFiscal');
     const previewPie = document.getElementById('previewPieFiscal');
     const previewTipo = document.getElementById('previewTipoComprobante');
@@ -199,7 +212,6 @@ function aplicarEstadoFiscal(activo) {
         previewTipo.innerText = activo ? 'FACTURA C N° 00001-00001234' : 'TICKET NO FISCAL';
     }
 
-    // 2. Deshabilitar/Habilitar inputs de datos fiscales
     const inputsFiscales = ['empIibb', 'empInicioAct', 'empIva'];
     inputsFiscales.forEach(id => {
         const el = document.getElementById(id);
@@ -250,7 +262,6 @@ function vincularInputsPreview() {
         });
     });
 
-    // Listener para el select de Condición IVA
     const selectIva = document.getElementById('empIva');
     if (selectIva) {
         selectIva.addEventListener('change', (e) => {
@@ -285,7 +296,7 @@ async function cambiarPassword() {
             body: JSON.stringify({ newPassword: pass })
         });
 
-        if (resp.ok) {
+        if (resp && resp.ok) {
             Swal.fire('¡Éxito!', 'Contraseña actualizada correctamente.', 'success');
             document.getElementById('nuevaPass').value = '';
             document.getElementById('confirmarPass').value = '';
@@ -298,24 +309,39 @@ async function cambiarPassword() {
 }
 
 function actualizarPreview() {
-    document.getElementById('previewNombre').innerText = (document.getElementById('empNombre').value || 'TU NEGOCIO').toUpperCase();
-    document.getElementById('previewDir').innerText = document.getElementById('empDireccion').value || 'Tu Dirección';
-    document.getElementById('previewTel').innerText = 'Tel: ' + (document.getElementById('empTel').value || '000-000');
+    const elNombre = document.getElementById('previewNombre');
+    if (elNombre) elNombre.innerText = (document.getElementById('empNombre').value || 'TU NEGOCIO').toUpperCase();
 
-    // Asignación dinámica del email en la vista previa
+    const elDir = document.getElementById('previewDir');
+    if (elDir) elDir.innerText = document.getElementById('empDireccion').value || 'Tu Dirección';
+
+    const elTel = document.getElementById('previewTel');
+    if (elTel) elTel.innerText = 'Tel: ' + (document.getElementById('empTel').value || '000-000');
+
     const emailVal = document.getElementById('empEmail').value;
-    document.getElementById('previewEmail').innerText = emailVal ? `Email: ${emailVal}` : '';
+    const elEmail = document.getElementById('previewEmail');
+    if (elEmail) elEmail.innerText = emailVal ? `Email: ${emailVal}` : '';
 
-    document.getElementById('previewCuit').innerText = document.getElementById('empCuit').value || '-';
-    document.getElementById('previewIibb').innerText = document.getElementById('empIibb').value || '-';
-    document.getElementById('previewMsg').innerText = document.getElementById('empTicketMsg').value || '¡Gracias por su compra!';
-    document.getElementById('previewIva').innerText = document.getElementById('empIva').value || 'Responsable Monotributo';
+    const elCuit = document.getElementById('previewCuit');
+    if (elCuit) elCuit.innerText = document.getElementById('empCuit').value || '-';
+
+    const elIibb = document.getElementById('previewIibb');
+    if (elIibb) elIibb.innerText = document.getElementById('empIibb').value || '-';
+
+    const elMsg = document.getElementById('previewMsg');
+    if (elMsg) elMsg.innerText = document.getElementById('empTicketMsg').value || '¡Gracias por su compra!';
+
+    const elIva = document.getElementById('previewIva');
+    if (elIva) elIva.innerText = document.getElementById('empIva').value || 'Responsable Monotributo';
 
     const initAct = document.getElementById('empInicioAct').value;
-    if (initAct) {
-        const parts = initAct.split('-');
-        document.getElementById('previewInicio').innerText = `${parts[2]}/${parts[1]}/${parts[0]}`;
-    } else {
-        document.getElementById('previewInicio').innerText = '-';
+    const elInicio = document.getElementById('previewInicio');
+    if (elInicio) {
+        if (initAct) {
+            const parts = initAct.split('-');
+            elInicio.innerText = `${parts[2]}/${parts[1]}/${parts[0]}`;
+        } else {
+            elInicio.innerText = '-';
+        }
     }
 }

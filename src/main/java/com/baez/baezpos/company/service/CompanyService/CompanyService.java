@@ -1,7 +1,7 @@
 package com.baez.baezpos.company.service.CompanyService;
 
 import com.baez.baezpos.company.dto.CompanyDTO;
-import com.baez.baezpos.user.dto.UserDTO; // Importante
+import com.baez.baezpos.user.dto.UserDTO;
 import java.util.Map;
 import java.util.List;
 

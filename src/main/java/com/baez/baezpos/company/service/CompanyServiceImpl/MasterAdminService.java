@@ -50,7 +50,12 @@ public class MasterAdminService implements MasterADmin {
     @Override
     @Transactional
     public void registerFullBusiness(MasterRegistrationRequest req) {
-        if (companyRepository.existsByTaxId(req.getTaxId())) throw new RuntimeException("El CUIT ya existe");
+        if (req.getTaxId() != null && !req.getTaxId().isBlank() && companyRepository.existsByTaxId(req.getTaxId())) {
+            throw new RuntimeException("El CUIT/TaxID ya existe en el sistema.");
+        }
+        if (req.getOwnerEmail() != null && userRepository.existsByEmail(req.getOwnerEmail())) {
+            throw new RuntimeException("El correo del dueño ya esta registrado.");
+        }
 
         // 1. Guardar la configuración del negocio
         Company company = Company.builder()
@@ -59,16 +64,17 @@ public class MasterAdminService implements MasterADmin {
                 .expirationDate(req.getExpirationDate() != null ? req.getExpirationDate() : LocalDate.now().plusDays(15))
                 .active(true).ticketMessage(req.getTicketMessage()).build();
 
-        companyRepository.save(company);
+        Company savedCompany = companyRepository.save(company);
 
-        // 2. Guardar el Admin SIN relación con la empresa
+        // 2. Guardar el Admin CON relación a la empresa
         User owner = User.builder()
                 .name(req.getOwnerName())
                 .email(req.getOwnerEmail())
                 .password(passwordEncoder.encode(req.getOwnerPassword()))
                 .role(Role.ADMIN)
+                .company(savedCompany)
                 .active(true)
-                .build(); // <--- AQUÍ ESTABA EL ERROR. LIMPIO.
+                .build();
 
         userRepository.save(owner);
     }
@@ -91,7 +97,6 @@ public class MasterAdminService implements MasterADmin {
     @Transactional
     public void deleteCompanyMaster(Long id) {
         Company company = companyRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("No existe"));
-        // Borramos el log que causaba el error y procedemos al borrado directo
         companyRepository.delete(company);
     }
 
@@ -124,18 +129,29 @@ public class MasterAdminService implements MasterADmin {
     @Override
     @Transactional
     public void resetOwnerPassword(Long companyId, String newRawPassword) {
-        // Como no hay companyId en User, buscamos por Rol y Email o simplemente el primer ADMIN
-        User owner = userRepository.findAll().stream()
-                .filter(u -> u.getRole() == Role.ADMIN)
+        User owner = userRepository.findByCompanyIdAndRole(companyId, Role.ADMIN).stream()
                 .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("No se encontró un administrador"));
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró un administrador para esta empresa"));
 
         owner.setPassword(passwordEncoder.encode(newRawPassword));
         userRepository.save(owner);
     }
 
     private CompanyDTO convertToDTOMaster(Company c) {
-        return CompanyDTO.builder().id(c.getId()).name(c.getName()).taxId(c.getTaxId())
-                .email(c.getEmail()).expirationDate(c.getExpirationDate()).active(c.getActive()).build();
+        return CompanyDTO.builder()
+                .id(c.getId())
+                .name(c.getName())
+                .taxId(c.getTaxId())
+                .address(c.getAddress())
+                .phone(c.getPhone())
+                .email(c.getEmail())
+                .expirationDate(c.getExpirationDate())
+                .active(c.getActive())
+                .ticketMessage(c.getTicketMessage())
+                .hasTaxData(c.getHasTaxData())
+                .iibb(c.getIibb())
+                .inicioActividades(c.getInicioActividades())
+                .condicionIva(c.getCondicionIva())
+                .build();
     }
 }
