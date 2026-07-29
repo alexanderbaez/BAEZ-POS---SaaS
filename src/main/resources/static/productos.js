@@ -2,8 +2,9 @@
  * BÁEZ POS - GESTIÓN DE INVENTARIO (SAAS MULTITENANT)
  */
 
-const API_BASE = '/products';
-const API_CAT = '/categories';
+const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
+const API_BASE = `${BACKEND_URL}/products`;
+const API_CAT = `${BACKEND_URL}/categories`;
 
 let PRODUCTOS_LOCAL = [];
 

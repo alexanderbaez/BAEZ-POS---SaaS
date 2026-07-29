@@ -3,6 +3,9 @@
  * Alexander Baez - 2026
  */
 
+// URL base de tu backend en Render
+const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
+
 document.addEventListener('DOMContentLoaded', () => {
     // Verificar si es ADMIN
     const userRole = localStorage.getItem('baezpos_user_role');

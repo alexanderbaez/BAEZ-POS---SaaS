@@ -3,7 +3,8 @@
  * Alexander Baez - 2026
  */
 
-const API_URL = "/admin/my-company/profile";
+const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
+const API_URL = `${BACKEND_URL}/admin/my-company/profile`;
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Cargar datos de la empresa desde la BD

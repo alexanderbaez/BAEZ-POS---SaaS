@@ -2,6 +2,9 @@
  * BÁEZ POS - DASHBOARD DE GESTIÓN SAAS
  */
 
+// URL base de tu backend en Render
+const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
+
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Mostrar nombre de usuario
     const elUserLabel = document.getElementById('userNameLabel');

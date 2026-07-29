@@ -4,8 +4,12 @@
  * Control Central de Empresas / Clientes Multi-Tenant
  */
 
-const API_BASE = "/super-admin/companies";
-const LOGS_BASE = "/logs"; // ✅ Solución: Únicamente la ruta relativa limpia, apiFetch le antepondrá /api/v1
+// URL base de tu backend en Render
+const BACKEND_URL = "https://baez-pos-saas.onrender.com";
+
+// Rutas completas apuntando a la nube
+const API_BASE = `${BACKEND_URL}/super-admin/companies`;
+const LOGS_BASE = `${BACKEND_URL}/logs`;
 
 let modalEdicion;
 let modalMovimientos;

@@ -3,7 +3,8 @@
  * Alexander Baez - 2026
  */
 
-const BASE_URL = '/api/v1';
+const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
+const BASE_URL = `${BACKEND_URL}/api/v1`;
 const MI_WHATSAPP = "5492645468570"; // <--- Tu número de WhatsApp sin espacios ni símbolo +
 
 // 1. Verificación, decodificación estricta del Token JWT y Sincronización de Identidad

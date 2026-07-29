@@ -3,10 +3,11 @@
  * Alexander Baez - 2026
  */
 
-const API_BASE = '/sales';
-const API_PRODUCTS = '/products';
-const API_CUSTOMERS = '/customers';
-const API_STATUS = '/admin/my-company/status';
+const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
+const API_BASE = `${BACKEND_URL}/sales`;
+const API_PRODUCTS = `${BACKEND_URL}/products`;
+const API_CUSTOMERS = `${BACKEND_URL}/customers`;
+const API_STATUS = `${BACKEND_URL}/admin/my-company/status`;
 const companyId = localStorage.getItem('baezpos_company_id');
 
 let sistemaBloqueado = false;
@@ -25,7 +26,6 @@ let clienteSeleccionado = null;
 let indiceSeleccionado = -1;
 let ULTIMA_VENTA_EXITOSA = null;
 let DATOS_EMPRESA = null;
-
 // ==========================================
 // INICIALIZACIÓN PRINCIPAL
 // ==========================================
