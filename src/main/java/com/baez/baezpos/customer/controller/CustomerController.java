@@ -1,6 +1,8 @@
 package com.baez.baezpos.customer.controller;
 
 import com.baez.baezpos.customer.dto.CustomerMovementDTO;
+import com.baez.baezpos.customer.dto.CustomerRequestDTO;
+import com.baez.baezpos.customer.dto.CustomerResponseDTO;
 import com.baez.baezpos.customer.dto.PaymentRequestDTO;
 import com.baez.baezpos.customer.entities.Customer;
 import com.baez.baezpos.customer.service.CustomerService;
@@ -21,18 +23,18 @@ public class CustomerController {
     private final CustomerService customerService;
 
     @GetMapping
-    public ResponseEntity<List<Customer>> listCustomers() {
+    public ResponseEntity<List<CustomerResponseDTO>> listCustomers() {
         return ResponseEntity.ok(customerService.getAll());
     }
 
     @PostMapping
-    public ResponseEntity<Customer> create(@RequestBody Customer customer) {
+    public ResponseEntity<Customer> create(@RequestBody CustomerRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(customerService.saveCustomer(customer));
+                .body(customerService.saveCustomer(dto));
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<Customer>> search(@RequestParam String q) {
+    public ResponseEntity<List<CustomerResponseDTO>> search(@RequestParam String q) {
         return ResponseEntity.ok(customerService.searchCustomers(q));
     }
 
@@ -52,13 +54,13 @@ public class CustomerController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Customer> update(@PathVariable Long id, @RequestBody Customer customer) {
-        return ResponseEntity.ok(customerService.updateCustomer(id, customer));
+    public ResponseEntity<Customer> update(@PathVariable Long id, @RequestBody CustomerRequestDTO dto) {
+        return ResponseEntity.ok(customerService.updateCustomer(id, dto));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, String>> delete(@PathVariable Long id) {
         customerService.deleteCustomer(id);
-        return ResponseEntity.ok(Map.of("message", "Cliente eliminado con éxito"));
+        return ResponseEntity.ok(Map.of("message", "Cliente desactivado con éxito"));
     }
 }

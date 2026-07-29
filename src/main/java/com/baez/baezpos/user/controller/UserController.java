@@ -1,5 +1,6 @@
 package com.baez.baezpos.user.controller;
 
+import com.baez.baezpos.user.dto.UserRequestDTO;
 import com.baez.baezpos.user.dto.UserResponseDTO;
 import com.baez.baezpos.user.entity.User;
 import com.baez.baezpos.user.service.UserService.UserService;
@@ -21,8 +22,8 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping
-    public ResponseEntity<UserResponseDTO> create(@RequestBody User user) {
-        return new ResponseEntity<>(userService.createUser(user), HttpStatus.CREATED);
+    public ResponseEntity<UserResponseDTO> create(@RequestBody UserRequestDTO dto) {
+        return new ResponseEntity<>(userService.createUser(dto), HttpStatus.CREATED);
     }
 
     @GetMapping
@@ -36,8 +37,8 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<UserResponseDTO> update(@PathVariable Long id, @RequestBody User user) {
-        return ResponseEntity.ok(userService.updateUser(id, user));
+    public ResponseEntity<UserResponseDTO> update(@PathVariable Long id, @RequestBody UserRequestDTO dto) {
+        return ResponseEntity.ok(userService.updateUser(id, dto));
     }
 
     @DeleteMapping("/{id}")
@@ -49,12 +50,8 @@ public class UserController {
     @PatchMapping("/update-password")
     public ResponseEntity<?> updatePassword(@RequestBody Map<String, String> request) {
         String newPassword = request.get("newPassword");
-
-        // Obtenemos el email directamente de la sesión activa (Token JWT)
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-
         userService.updatePasswordOnly(email, newPassword);
-
         return ResponseEntity.ok(Map.of("message", "Contraseña actualizada correctamente"));
     }
 }

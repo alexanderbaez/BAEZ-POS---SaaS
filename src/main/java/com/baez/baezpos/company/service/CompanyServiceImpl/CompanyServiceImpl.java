@@ -5,6 +5,7 @@ import com.baez.baezpos.company.dto.MasterRegistrationRequest;
 import com.baez.baezpos.company.entity.Company;
 import com.baez.baezpos.company.repository.CompanyRepository;
 import com.baez.baezpos.company.service.CompanyService.CompanyService;
+import com.baez.baezpos.log.service.AuditService;
 import com.baez.baezpos.user.dto.UserDTO;
 import com.baez.baezpos.user.entity.User;
 import com.baez.baezpos.user.entity.Role;
@@ -31,6 +32,7 @@ public class CompanyServiceImpl implements CompanyService {
     private final CompanyRepository companyRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditService auditService;
 
     private Company getAuthenticatedCompanyEntity() {
         Long companyId = SecurityUtils.getCurrentCompanyId();
@@ -51,6 +53,10 @@ public class CompanyServiceImpl implements CompanyService {
     @Transactional
     public CompanyDTO updateAuthenticatedCompany(CompanyDTO dto) {
         Company company = getAuthenticatedCompanyEntity();
+
+        // Guardamos el nombre viejo para detallarlo en la bitácora
+        String nombreAntiguo = company.getName();
+
         company.setName(dto.getName());
         company.setAddress(dto.getAddress());
         company.setPhone(dto.getPhone());
@@ -63,7 +69,20 @@ public class CompanyServiceImpl implements CompanyService {
         company.setInicioActividades(dto.getInicioActividades());
         company.setCondicionIva(dto.getCondicionIva());
 
-        return convertToDTOClient(companyRepository.save(company));
+        Company savedCompany = companyRepository.save(company);
+
+        // ✅ 2. Registrar el evento en la bitácora del sistema
+        try {
+            auditService.logAction(
+                    "ACTUALIZACIÓN DE PERFIL",
+                    "El comercio '" + nombreAntiguo + "' actualizó sus datos de configuración. Nuevo nombre: '" + savedCompany.getName() + "'."
+            );
+        } catch (Exception e) {
+            // Evitamos que falle la actualización principal si el log falla por algún motivo de contexto
+            System.err.println("No se pudo registrar el log: " + e.getMessage());
+        }
+
+        return convertToDTOClient(savedCompany);
     }
 
     @Override

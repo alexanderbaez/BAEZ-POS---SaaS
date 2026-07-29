@@ -44,19 +44,20 @@ public class SecurityConfig {
                         .requestMatchers("/", "/login.html", "/index.html", "/*.html", "/css/**", "/js/**", "/images/**", "/*.js", "/*.css", "/favicon.ico", "/error").permitAll()
                         .requestMatchers("/api/v1/auth/authenticate", "/api/v1/auth/setup-status", "/api/v1/auth/setup").permitAll()
 
-                        // 1. Exclusivo para Vos (SUPER_ADMIN)
+                        // 1. Exclusivo para Super Admin
                         .requestMatchers("/api/v1/super-admin/**").hasRole("SUPER_ADMIN")
 
-                        // 2. Rutas que pueden acceder el Cliente (ADMIN) y sus empleados (VENDEDOR)
-                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/my-company/status", "/api/v1/admin/my-company/check-status").hasAnyRole("ADMIN", "VENDEDOR")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/my-company/profile").hasAnyRole("ADMIN", "VENDEDOR")
+                        // 2. Rutas específicas de la empresa accesibles por ADMIN y VENDEDOR
+                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/my-company/status", "/api/v1/admin/my-company/check-status", "/api/v1/admin/my-company/profile").hasAnyRole("ADMIN", "VENDEDOR")
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/**").hasAnyRole("ADMIN", "VENDEDOR")
                         .requestMatchers("/api/v1/sales/**").hasAnyRole("ADMIN", "VENDEDOR")
                         .requestMatchers("/api/v1/customers/**").hasAnyRole("ADMIN", "VENDEDOR")
 
-                        // 3. Configuración y administración del local (Solo el dueño: ADMIN)
+                        // 3. Módulos de administración del negocio ( ADMIN)
                         .requestMatchers("/api/v1/users/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/inventory/**").hasRole("ADMIN")
+
+                        // IMPORTANTE: Colocar /api/v1/admin/ al final de las reglas de ADMIN para que no bloquee los GET de arriba
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
 
                         .anyRequest().authenticated()

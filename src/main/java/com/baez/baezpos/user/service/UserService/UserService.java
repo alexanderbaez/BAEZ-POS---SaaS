@@ -1,14 +1,14 @@
 package com.baez.baezpos.user.service.UserService;
 
+import com.baez.baezpos.user.dto.UserRequestDTO;
 import com.baez.baezpos.user.dto.UserResponseDTO;
-import com.baez.baezpos.user.entity.User;
 import java.util.List;
 
-public interface UserService { // <-- Verificá que NO diga "extends UserDetailsService"
-    UserResponseDTO createUser(User user);
+public interface UserService {
+    UserResponseDTO createUser(UserRequestDTO dto);
     UserResponseDTO getUserById(Long id);
     List<UserResponseDTO> getAllUsers();
-    UserResponseDTO updateUser(Long id, User user);
+    UserResponseDTO updateUser(Long id, UserRequestDTO dto);
     void deleteUser(Long id);
     void updatePasswordOnly(String email, String newPassword);
 }

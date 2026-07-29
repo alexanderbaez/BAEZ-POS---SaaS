@@ -17,10 +17,12 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
     Optional<Customer> findByIdAndCompanyId(Long id, Long companyId);
 
-    @Query("SELECT c FROM Customer c WHERE c.company.id = :companyId AND " +
+    @Query("SELECT c FROM Customer c WHERE c.company.id = :companyId AND c.active = true AND " +
             "(LOWER(c.name) LIKE LOWER(concat('%', :query, '%')) OR c.dniCuit LIKE concat('%', :query, '%'))")
     List<Customer> searchCustomersByCompanyId(@Param("query") String query, @Param("companyId") Long companyId);
 
-    @Query("SELECT COALESCE(SUM(c.currentBalance), 0) FROM Customer c WHERE c.company.id = :companyId")
+    @Query("SELECT COALESCE(SUM(c.currentBalance), 0) FROM Customer c WHERE c.company.id = :companyId AND c.active = true")
     BigDecimal sumAllBalancesByCompanyId(@Param("companyId") Long companyId);
+
+    List<Customer> findByCompanyIdAndActiveTrue(Long companyId);
 }

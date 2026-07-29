@@ -15,4 +15,5 @@ public interface ProductService {
     Optional<ProductResponseDTO> getByBarcode(String barcode);
     ProductResponseDTO activateProduct(Long id);
     List<ProductResponseDTO> getDeletedProducts();
+    List<ProductResponseDTO> searchProducts(String term);
 }

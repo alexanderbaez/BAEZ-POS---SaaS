@@ -1,3 +1,8 @@
+/**
+ * BÁEZ POS - MÓDULO DE EMPLEADOS (SaaS)
+ * Alexander Baez - 2026
+ */
+
 document.addEventListener('DOMContentLoaded', () => {
     // Verificar si es ADMIN
     const userRole = localStorage.getItem('baezpos_user_role');
@@ -22,7 +27,7 @@ async function cargarEmpleados() {
     try {
         const res = await apiFetch('/users');
         const usuarios = await res.json();
-        
+
         const tbody = document.getElementById('tablaEmpleados');
         tbody.innerHTML = '';
 
@@ -93,7 +98,7 @@ document.getElementById('formEmpleado').addEventListener('submit', async (e) => 
 
         if (res.ok) {
             Swal.fire({
-                title: 'Exito',
+                title: 'Éxito',
                 text: isEditing ? 'Empleado actualizado.' : 'Nuevo empleado creado.',
                 icon: 'success',
                 timer: 1500,
@@ -102,12 +107,28 @@ document.getElementById('formEmpleado').addEventListener('submit', async (e) => 
             modalForm.hide();
             cargarEmpleados();
         } else {
-            const err = await res.json().catch(()=>({}));
-            Swal.fire('Error', err.message || 'No se pudo guardar.', 'error');
+            let errorMessage = 'No se pudo guardar el empleado.';
+            try {
+                const errData = await res.json();
+                errorMessage = errData.message || errData.error || errorMessage;
+            } catch (errJson) {
+                const errText = await res.text();
+                if (errText) errorMessage = errText;
+            }
+
+            Swal.fire({
+                title: 'Atención',
+                text: errorMessage.includes('ya existe')
+                    ? `El correo ${payload.email} ya está registrado en el sistema. Utiliza otro email.`
+                    : errorMessage,
+                icon: 'warning',
+                confirmButtonColor: '#0d6efd'
+            });
         }
 
     } catch (e) {
         console.error("Error al guardar empleado:", e);
+        Swal.fire('Error', 'Ocurrió un error inesperado al conectar con el servidor.', 'error');
     }
 });
 
@@ -118,7 +139,7 @@ function abrirEdicion(user) {
     document.getElementById('empRol').value = user.role;
     document.getElementById('empPassword').value = '';
     document.getElementById('passwordContainer').querySelector('small').classList.remove('d-none');
-    
+
     if (!modalForm) modalForm = new bootstrap.Modal(document.getElementById('modalEmpleado'));
     modalForm.show();
 }
@@ -130,7 +151,7 @@ document.getElementById('modalEmpleado').addEventListener('hidden.bs.modal', () 
     document.getElementById('passwordContainer').querySelector('small').classList.add('d-none');
 });
 
-// Inicializar bootstrap modal 
+// Inicializar bootstrap modal
 document.addEventListener('DOMContentLoaded', () => {
     const el = document.getElementById('modalEmpleado');
     if(el) {
@@ -140,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function eliminarEmpleado(id, name, rol) {
-    if(rol === 'ADMIN' && id === 1) { // Prevencion simple para evitar borrar el super admin base
+    if(rol === 'ADMIN' && id === 1) {
         Swal.fire('Denegado', 'No puedes eliminar al Administrador Principal.', 'error');
         return;
     }

@@ -1,4 +1,4 @@
-package com.baez.baezpos.sale.service.impl;
+package com.baez.baezpos.sale.service.SaleServiceImpl;
 
 import com.baez.baezpos.company.entity.Company;
 import com.baez.baezpos.company.repository.CompanyRepository;
@@ -14,7 +14,7 @@ import com.baez.baezpos.sale.dto.*;
 import com.baez.baezpos.sale.entity.Sale;
 import com.baez.baezpos.sale.entity.SaleItem;
 import com.baez.baezpos.sale.repository.SaleRepository;
-import com.baez.baezpos.sale.service.SaleService;
+import com.baez.baezpos.sale.service.SaleService.SaleService;
 import com.baez.baezpos.security.util.SecurityUtils;
 import com.baez.baezpos.shared.exception.BadRequestException;
 import com.baez.baezpos.shared.exception.ResourceNotFoundException;

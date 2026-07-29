@@ -35,4 +35,8 @@ public class Customer extends TenantEntity {
 
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean active = true;
 }

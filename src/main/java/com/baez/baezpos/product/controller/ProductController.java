@@ -53,4 +53,17 @@ public class ProductController {
     public ResponseEntity<ProductResponseDTO> activate(@PathVariable Long id) {
         return ResponseEntity.ok(productService.activateProduct(id));
     }
+    // Endpoint para la pistola de código de barras
+    @GetMapping("/barcode/{barcode}")
+    public ResponseEntity<ProductResponseDTO> getByBarcode(@PathVariable String barcode) {
+        return productService.getByBarcode(barcode)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // Endpoint para el buscador y sugerencias manuales
+    @GetMapping("/search")
+    public ResponseEntity<List<ProductResponseDTO>> search(@RequestParam(required = false) String q) {
+        return ResponseEntity.ok(productService.searchProducts(q));
+    }
 }

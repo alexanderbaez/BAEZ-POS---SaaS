@@ -27,13 +27,35 @@ public class SystemLog extends TenantEntity {
     @Column(nullable = false)
     private String userEmail;
 
+    // ➕ Agregamos el campo level para evitar el error de MySQL
+    @Builder.Default
+    @Column(nullable = false)
+    private String level = "INFO";
+
     @Builder.Default
     private LocalDateTime timestamp = LocalDateTime.now();
 
     @PrePersist
     protected void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
         if (this.timestamp == null) {
-            this.timestamp = LocalDateTime.now();
+            this.timestamp = now;
+        }
+        if (this.level == null) {
+            this.level = "INFO";
+        }
+        if (this.getCreatedAt() == null) {
+            this.setCreatedAt(now);
+        }
+        if (this.getUpdatedAt() == null) {
+            this.setUpdatedAt(now);
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        if (this.getUpdatedAt() == null) {
+            this.setUpdatedAt(LocalDateTime.now());
         }
     }
 }

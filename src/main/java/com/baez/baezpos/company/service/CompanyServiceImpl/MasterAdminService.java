@@ -4,7 +4,7 @@ import com.baez.baezpos.company.dto.CompanyDTO;
 import com.baez.baezpos.company.dto.MasterRegistrationRequest;
 import com.baez.baezpos.company.entity.Company;
 import com.baez.baezpos.company.repository.CompanyRepository;
-import com.baez.baezpos.company.service.CompanyService.MasterADmin;
+import com.baez.baezpos.company.service.CompanyService.MasterAdmin;
 import com.baez.baezpos.user.entity.User;
 import com.baez.baezpos.user.entity.Role;
 import com.baez.baezpos.user.repository.UserRepository;
@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class MasterAdminService implements MasterADmin {
+public class MasterAdminService implements MasterAdmin {
 
     private final CompanyRepository companyRepository;
     private final UserRepository userRepository;
@@ -82,9 +82,18 @@ public class MasterAdminService implements MasterADmin {
     @Override
     @Transactional
     public void updateCompanyMaster(Long id, CompanyDTO dto) {
-        Company company = companyRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("No existe"));
+        Company company = companyRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
+
+        // Validar unicidad de taxId si cambió
+        if (dto.getTaxId() != null && !dto.getTaxId().equals(company.getTaxId())) {
+            if (companyRepository.existsByTaxId(dto.getTaxId())) {
+                throw new RuntimeException("El CUIT/TaxID ya está registrado en otra empresa.");
+            }
+            company.setTaxId(dto.getTaxId());
+        }
+
         company.setName(dto.getName());
-        company.setTaxId(dto.getTaxId());
         company.setAddress(dto.getAddress());
         company.setPhone(dto.getPhone());
         company.setExpirationDate(dto.getExpirationDate());
@@ -96,8 +105,11 @@ public class MasterAdminService implements MasterADmin {
     @Override
     @Transactional
     public void deleteCompanyMaster(Long id) {
-        Company company = companyRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("No existe"));
-        companyRepository.delete(company);
+        Company company = companyRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
+        // Aplicamos borrado lógico acorde a la entidad BaseEntity / @SQLDelete
+        company.setActive(false);
+        companyRepository.save(company);
     }
 
     @Override

@@ -2,6 +2,7 @@ package com.baez.baezpos.log.service;
 
 import com.baez.baezpos.company.entity.Company;
 import com.baez.baezpos.company.repository.CompanyRepository;
+import com.baez.baezpos.log.dto.SystemLogResponseDTO;
 import com.baez.baezpos.log.entity.SystemLog;
 import com.baez.baezpos.log.repository.SystemLogRepository;
 import com.baez.baezpos.security.util.SecurityUtils;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -42,15 +44,27 @@ public class AuditService {
     }
 
     @Transactional(readOnly = true)
-    public List<SystemLog> getLogs() {
+    public List<SystemLogResponseDTO> getLogs() {
         Long companyId = SecurityUtils.getCurrentCompanyId();
+        List<SystemLog> logs;
 
-        // Si es SUPER_ADMIN (companyId == null), obtiene los últimos 100 de toda la plataforma
         if (companyId == null) {
-            return logRepository.findTop100ByOrderByTimestampDesc();
+            logs = logRepository.findTop100ByOrderByTimestampDesc();
+        } else {
+            logs = logRepository.findTop100ByCompanyIdOrderByTimestampDesc(companyId);
         }
 
-        // Si es ADMIN / VENDEDOR, obtiene los 100 logs exclusivos de su empresa
-        return logRepository.findTop100ByCompanyIdOrderByTimestampDesc(companyId);
+        return logs.stream().map(this::convertToDTO).collect(Collectors.toList());
+    }
+
+    private SystemLogResponseDTO convertToDTO(SystemLog log) {
+        return SystemLogResponseDTO.builder()
+                .id(log.getId())
+                .action(log.getAction())
+                .description(log.getDescription())
+                .userEmail(log.getUserEmail())
+                .companyId(log.getCompany() != null ? log.getCompany().getId() : null)
+                .timestamp(log.getTimestamp())
+                .build();
     }
 }

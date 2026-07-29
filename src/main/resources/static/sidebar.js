@@ -1,23 +1,38 @@
 /**
- * BÁEZ POS - COMPONENTE SIDEBAR DINÁMICO (SaaS)
+ * BÁEZ POS - COMPONENTE SIDEBAR Y NAVBAR DINÁMICO (SaaS)
  * Alexander Baez - 2026
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+    // 1. Recuperar datos de sesión limpios sincronizados por el token
+    const userRole = (localStorage.getItem('baezpos_user_role') || 'EMPLEADO').toUpperCase().trim();
+    const userName = localStorage.getItem('baezpos_user_name') || 'Usuario';
+    const tenantName = localStorage.getItem('baezpos_tenant_name') || userName; // Nombre del comercio/negocio
+
+    // BLINDAJE ABSOLUTO DE ROL
+    const isSuperAdmin = (userRole === 'SUPER_ADMIN');
+    const isAdmin = isSuperAdmin || userRole === 'ADMIN' || userRole === 'ADMINISTRADOR' || userRole === 'OWNER';
+
+    // 2. SINCRONIZAR AUTOMÁTICAMENTE LA NAVBAR SUPERIOR
+    const elUserName = document.getElementById('userName');
+    const elUserRoleBadge = document.getElementById('userRoleBadge');
+
+    if (elUserName) {
+        elUserName.textContent = tenantName;
+    }
+    if (elUserRoleBadge) {
+        elUserRoleBadge.textContent = userRole;
+        elUserRoleBadge.className = `badge text-uppercase ${isSuperAdmin ? 'bg-warning text-dark' : (isAdmin ? 'bg-primary' : 'bg-secondary')}`;
+        elUserRoleBadge.style.fontSize = '0.65rem';
+    }
+
+    // 3. INYECTAR SIDEBAR DINÁMICO
     const sidebarContainer = document.getElementById('sidebar-container');
     if (!sidebarContainer) return;
 
     const paginaActual = window.location.pathname.split("/").pop() || "dashboard.html";
 
-    // Recuperar datos de sesión guardados con fallback seguro
-    const userRole = (localStorage.getItem('baezpos_user_role') || 'EMPLEADO').toUpperCase().trim();
-    const userName = localStorage.getItem('baezpos_user_name') || 'Usuario';
-
-    // BLINDAJE DE ROL: Solo es SuperAdmin si el rol es exactamente SUPER_ADMIN
-    const isSuperAdmin = (userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN');
-    const isAdmin = isSuperAdmin || userRole === 'ADMIN' || userRole === 'ROLE_ADMIN' || userRole === 'ADMINISTRADOR' || userRole === 'OWNER';
-
-    // Inyectar estilos CSS
+    // Inyectar estilos CSS del Sidebar
     const estilos = document.createElement('style');
     estilos.innerHTML = `
         #sidebar {
@@ -70,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     document.head.appendChild(estilos);
 
-    // Inyectar HTML del Menú (CON BLINDAJE DE ROL ABSOLUTO)
+    // Inyectar HTML del Menú
     sidebarContainer.innerHTML = `
         <nav id="sidebar" class="shadow">
           <div>
@@ -92,7 +107,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <i class="bi bi-speedometer2 me-3 fs-5"></i> Dashboard
               </a>` : ''}
 
-              <!-- Punto de Venta (Accesible para todos los empleados/admins) -->
               <a href="ventas.html" class="nav-link-custom ${paginaActual === 'ventas.html' ? 'active-page' : ''}">
                 <i class="bi bi-cart me-3 fs-5"></i> Punto de Venta
               </a>
@@ -134,16 +148,60 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="d-flex align-items-center">
                     <i class="bi bi-person-circle fs-3 me-2 text-primary"></i>
                     <div class="text-truncate">
-                        <div class="fw-bold text-truncate" style="font-size: 0.85rem;">${userName}</div>
+                        <div class="fw-bold text-truncate" style="font-size: 0.85rem;">${tenantName}</div>
                         <span class="badge bg-secondary" style="font-size: 0.65rem;">${userRole}</span>
                     </div>
                 </div>
             </div>
 
-            <a href="#" class="nav-link-custom text-danger" onclick="cerrarSesion(event)">
+            <!-- Botón con ID y data-action para control absoluto -->
+            <a href="#" id="btnCerrarSesion" class="nav-link-custom text-danger">
               <i class="bi bi-box-arrow-left me-3 fs-5"></i> Cerrar Sesión
             </a>
           </div>
         </nav>
     `;
 });
+
+/**
+ * Interceptor en fase de CAPTURA (true):
+ * Esto frena el clic antes de que cualquier otro script de la página o del navegador lo reciba.
+ */
+document.addEventListener('click', async (event) => {
+    const btnLogout = event.target.closest('#btnCerrarSesion');
+    if (!btnLogout) return;
+
+    // Detenemos absolutamente cualquier comportamiento nativo o propagación externa
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    event.stopPropagation();
+
+    // Verificamos SweetAlert2
+    if (typeof Swal !== 'undefined') {
+        const resultado = await Swal.fire({
+            title: '¿Cerrar sesión?',
+            text: 'Tendrás que volver a ingresar tus credenciales para acceder al sistema.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Sí, cerrar sesión',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (resultado.isConfirmed) {
+            ejecutarCierreDeSesion();
+        }
+    } else {
+        // Respaldo nativo estricto
+        if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+            ejecutarCierreDeSesion();
+        }
+    }
+}, { capture: true }); // <--- CLAVE: El parámetro 'capture: true' intercepta el evento primero que nadie.
+
+// Función auxiliar interna para limpiar y redirigir
+function ejecutarCierreDeSesion() {
+    localStorage.clear();
+    window.location.href = 'index.html';
+}

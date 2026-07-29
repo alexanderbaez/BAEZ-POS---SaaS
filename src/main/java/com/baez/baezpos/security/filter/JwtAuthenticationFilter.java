@@ -64,7 +64,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (userDetails instanceof UserPrincipal userPrincipal) {
                     if (jwtService.isTokenValid(jwt, userPrincipal.getUsername())) {
 
-                        // 1. Validar que la cuenta del usuario no esté desactivada
+                        // 1. Validar únicamente que la cuenta individual del usuario esté activa
                         if (!userPrincipal.isEnabled()) {
                             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                             response.setContentType("application/json");
@@ -72,16 +72,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             return;
                         }
 
-                        // 2. Validar que la empresa/suscripción no haya sido suspendida o vencida en vivo
-                        //    (Excluimos la consulta de estado para permitir que el JS arme la alerta)
-                        if (!request.getServletPath().contains("/check-status") && !request.getServletPath().contains("/status")) {
-                            if (!userPrincipal.isCompanyAccessValid()) {
-                                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                                response.setContentType("application/json");
-                                response.getWriter().write("{\"error\": \"CUENTA_SUSPENDIDA\", \"message\": \"La suscripción de la empresa está suspendida o vencida.\"}");
-                                return;
-                            }
-                        }
+                        // Nota: Se removió el corte automático por estado de empresa en el filtro.
+                        // La navegación es libre para el dashboard/productos y el control del POS
+                        // queda a cargo del centinela visual en el frontend y la lógica de negocio en las ventas.
 
                         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                                 userPrincipal, null, userPrincipal.getAuthorities());

@@ -1,4 +1,4 @@
-package com.baez.baezpos.product.service.impl;
+package com.baez.baezpos.product.service;
 
 import com.baez.baezpos.company.entity.Company;
 import com.baez.baezpos.company.repository.CompanyRepository;
@@ -8,7 +8,6 @@ import com.baez.baezpos.product.entity.Category;
 import com.baez.baezpos.product.entity.Product;
 import com.baez.baezpos.product.repository.CategoryRepository;
 import com.baez.baezpos.product.repository.ProductRepository;
-import com.baez.baezpos.product.service.ProductService;
 import com.baez.baezpos.security.util.SecurityUtils;
 import com.baez.baezpos.shared.exception.BadRequestException;
 import com.baez.baezpos.shared.exception.ResourceNotFoundException;
@@ -246,5 +245,22 @@ public class ProductServiceImpl implements ProductService {
                 p.getMinStock(),
                 p.getBarcode()
         );
+    }
+
+    // En ProductServiceImpl.java (Implementación)
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductResponseDTO> searchProducts(String term) {
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        if (companyId == null) return List.of();
+
+        if (term == null || term.isBlank()) {
+            return getAllProducts();
+        }
+
+        return productRepository.searchByTermAndCompanyId(companyId, term.trim())
+                .stream()
+                .map(this::mapToResponseDTO)
+                .toList();
     }
 }

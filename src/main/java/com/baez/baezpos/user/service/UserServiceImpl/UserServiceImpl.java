@@ -1,6 +1,10 @@
 package com.baez.baezpos.user.service.UserServiceImpl;
 
+import com.baez.baezpos.company.repository.CompanyRepository; // <--- 1. Importar el repositorio de compañía
+import com.baez.baezpos.company.entity.Company;             // <--- 1. Importar la entidad Company
+import com.baez.baezpos.user.dto.UserRequestDTO;
 import com.baez.baezpos.user.dto.UserResponseDTO;
+import com.baez.baezpos.user.entity.Role;
 import com.baez.baezpos.user.entity.User;
 import com.baez.baezpos.user.repository.UserRepository;
 import com.baez.baezpos.user.service.UserService.UserService;
@@ -21,17 +25,33 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CompanyRepository companyRepository; // <--- 2. Declarar la dependencia
 
     @Override
     @Transactional
-    public UserResponseDTO createUser(User user) {
-        if (userRepository.existsByEmail(user.getEmail())) {
-            throw new RuntimeException("El email '" + user.getEmail() + "' ya existe.");
+    public UserResponseDTO createUser(UserRequestDTO dto) {
+        if (userRepository.existsByEmail(dto.getEmail())) {
+            throw new RuntimeException("El email '" + dto.getEmail() + "' ya existe.");
         }
 
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        User user = new User();
+        user.setName(dto.getName());
+        user.setEmail(dto.getEmail());
+        user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        user.setRole(dto.getRole() != null ? dto.getRole() : Role.VENDEDOR);
         user.setActive(true);
-        log.info("LOCAL: Registrando nuevo usuario: {}", user.getEmail());
+
+        // ==========================================
+        // CORRECCIÓN MULTI-TENANT: Asignar compañía
+        // ==========================================
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        if (companyId != null) {
+            Company company = companyRepository.findById(companyId)
+                    .orElseThrow(() -> new RuntimeException("Empresa no encontrada"));
+            user.setCompany(company);
+        }
+
+        log.info("Registrando nuevo usuario: {} asociado a la empresa ID: {}", user.getEmail(), companyId);
         return convertToDTO(userRepository.save(user));
     }
 
@@ -68,18 +88,20 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserResponseDTO updateUser(Long id, User details) {
+    public UserResponseDTO updateUser(Long id, UserRequestDTO dto) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         User existing = (companyId != null) ?
                 userRepository.findByIdAndCompanyId(id, companyId).orElseThrow(() -> new RuntimeException("No autorizado")) :
                 userRepository.findById(id).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        existing.setName(details.getName());
-        existing.setRole(details.getRole());
-        existing.setEmail(details.getEmail());
+        existing.setName(dto.getName());
+        if (dto.getRole() != null) {
+            existing.setRole(dto.getRole());
+        }
+        existing.setEmail(dto.getEmail());
 
-        if (details.getPassword() != null && !details.getPassword().isEmpty()) {
-            existing.setPassword(passwordEncoder.encode(details.getPassword()));
+        if (dto.getPassword() != null && !dto.getPassword().trim().isEmpty()) {
+            existing.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
 
         return convertToDTO(userRepository.save(existing));

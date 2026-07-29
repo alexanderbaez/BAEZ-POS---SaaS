@@ -1,16 +1,12 @@
 /**
- * BÁEZ POS - CENTINELA DE SEGURIDAD Y VERIFICACIÓN EN TIEMPO REAL (SaaS)
+ * BÁEZ POS - CENTINELA DE SEGURIDAD Y LICENCIAMIENTO QUIRÚRGICO (SaaS)
  * Alexander Baez - 2026
  */
 
 const BASE_URL = '/api/v1';
-const API_STATUS = '/api/v1/auth/setup-status'; // O tu endpoint de estado de licencia
-const MI_WHATSAPP = "5491112345678"; // <--- PONÉ TU NÚMERO ACÁ (sin espacios ni +)
+const MI_WHATSAPP = "5492645468570"; // <--- Tu número de WhatsApp sin espacios ni símbolo +
 
-let sistemaBloqueado = false;
-let carteBloqueoAbierto = false;
-
-// 1. Verificación básica de Token al ingresar
+// 1. Verificación, decodificación estricta del Token JWT y Sincronización de Identidad
 (function verificarSesionInicial() {
     if (window.location.pathname.endsWith('login.html')) return;
 
@@ -22,11 +18,28 @@ let carteBloqueoAbierto = false;
 
     try {
         const payload = JSON.parse(atob(token.split('.')[1]));
+
+        // Verificar expiración del token
         if (Date.now() >= payload.exp * 1000) {
             localStorage.clear();
             window.location.href = 'login.html';
+            return;
         }
+
+        // Sincronizar de forma inalterable el rol y el nombre desde el Token JWT del backend
+        const rolBackend = payload.role || payload.roles || 'EMPLEADO';
+        const rolLimpio = Array.isArray(rolBackend) ? rolBackend[0] : rolBackend;
+        localStorage.setItem('baezpos_user_role', rolLimpio.replace('ROLE_', '').toUpperCase().trim());
+
+        if (payload.sub) {
+            localStorage.setItem('baezpos_user_email', payload.sub);
+        }
+        if (payload.name || payload.userName) {
+            localStorage.setItem('baezpos_user_name', payload.name || payload.userName);
+        }
+
     } catch (e) {
+        console.error("Token inválido o corrupto:", e);
         localStorage.clear();
         window.location.href = 'login.html';
     }
@@ -49,7 +62,7 @@ async function apiFetch(path, options = {}) {
 
     try {
         const response = await fetch(url, config);
-        if (response.status === 401) {
+        if (response.status === 401 || response.status === 403) {
             localStorage.clear();
             window.location.href = 'login.html';
         }
@@ -60,30 +73,31 @@ async function apiFetch(path, options = {}) {
     }
 }
 
-// 3. CHEQUEO EN TIEMPO REAL DE SUSPENSIÓN Y VENCIMIENTO (CADA 15 SEGUNDOS)
-// En auth.js, dentro de chequearEstadoLicencia():
+// 3. CHEQUEO DE ESTADO DE LICENCIA (Diseño Quirúrgico Exclusivo para el Punto de Venta)
 async function chequearEstadoLicencia() {
     if (window.location.pathname.endsWith('login.html')) return;
 
     const userRole = (localStorage.getItem('baezpos_user_role') || '').toUpperCase().trim();
-    if (userRole === 'SUPER_ADMIN' && window.location.pathname.includes('admin-maestro.html')) {
-        return;
-    }
+    if (userRole === 'SUPER_ADMIN') return; // El super admin nunca se bloquea
 
     try {
-        // RUTA REAL DEL CONTROLLER DE JAVA
         const res = await apiFetch('/admin/my-company/check-status');
 
         if (res && res.ok) {
             const data = await res.json();
 
-            // A) Si está suspendido o inactivo o vencido -> Bloqueo SweetAlert
+            // Si la empresa está inactiva o vencida
             if (data.active === false || data.vencido === true) {
-                mostrarCartelBloqueo(data.message || "Tu suscripción/licencia se encuentra vencida.");
-                return;
+                // Si el usuario está parado en la pantalla de ventas, bloqueamos quirúrgicamente el POS
+                if (window.location.pathname.includes('ventas.html')) {
+                    bloquearPantallaVentas(data.message || "Tu suscripción/licencia se encuentra vencida.");
+                }
+            } else {
+                // Si está activo, removemos cualquier bloqueo previo
+                removerBloqueoVentas();
             }
 
-            // B) Notificación si quedan 5 días o menos
+            // Notificación global superior si el abono vence en 5 días o menos
             if (data.diasRestantes !== undefined && data.diasRestantes <= 5 && data.diasRestantes >= 0) {
                 mostrarNotificacionVencimientoGlobal(data.diasRestantes);
             } else {
@@ -91,75 +105,89 @@ async function chequearEstadoLicencia() {
             }
         }
     } catch (err) {
-        console.warn("Error consultando estado de licencia en vivo:", err);
+        console.warn("Error consultando estado de licencia:", err);
     }
 }
 
-// Bloqueo total modal con SweetAlert2
-function mostrarCartelBloqueo(mensaje) {
-    if (carteBloqueoAbierto) return;
-    carteBloqueoAbierto = true;
+// Bloqueo estético específico y bloqueante para el Punto de Venta
+function bloquearPantallaVentas(mensaje) {
+    const contentDiv = document.getElementById('content');
+    if (!contentDiv) return;
 
-    // Vaciamos el carrito si estamos en el punto de venta
+    // Evitar duplicar el overlay si ya está activo
+    if (document.getElementById('bloqueo-pos-overlay')) return;
+
+    // Vaciar el carrito de ventas por seguridad si existe
     if (typeof CARRITO !== 'undefined') {
         CARRITO = [];
         if (typeof renderizarCarrito === 'function') renderizarCarrito();
     }
 
-    if (typeof Swal !== 'undefined') {
-        Swal.fire({
-            title: '¡SERVICIO SUSPENDIDO!',
-            html: `<p class="mb-2">${mensaje}</p><b>Ponte en contacto para reactivar tu Punto de Venta inmediatamente.</b>`,
-            icon: 'error',
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            confirmButtonColor: '#25D366',
-            confirmButtonText: '<i class="bi bi-whatsapp"></i> Hablar con Administración',
-        }).then((result) => {
-            if (result.isConfirmed) {
-                window.open(`https://wa.me/${MI_WHATSAPP}?text=Hola Alexander, mi sistema BaezPOS aparece como suspendido.`);
-                carteBloqueoAbierto = false;
-                setTimeout(() => mostrarCartelBloqueo(mensaje), 1000);
-            }
-        });
-    } else {
-        alert("SERVICIO SUSPENDIDO: " + mensaje);
-    }
+    const overlay = document.createElement('div');
+    overlay.id = 'bloqueo-pos-overlay';
+    overlay.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.92);
+        backdrop-filter: blur(8px);
+        z-index: 99999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    `;
+
+    overlay.innerHTML = `
+        <div class="card p-5 text-center shadow-lg border-0" style="max-width: 550px; border-radius: 20px; background: white;">
+            <div class="mb-3 text-danger">
+                <i class="bi bi-shield-lock-fill display-3"></i>
+            </div>
+            <h3 class="fw-bold text-dark mb-2">Punto de Venta Bloqueado</h3>
+            <p class="text-muted mb-4">${mensaje}<br><br><strong>El sistema se encuentra bloqueado por falta de pago de suscripción. Comunícate con la administración para abonar y restablecer las ventas de inmediato.</strong></p>
+            <a href="https://wa.me/${MI_WHATSAPP}?text=Hola Alexander, mi sistema BaezPOS tiene el Punto de Venta bloqueado por suscripción." target="_blank" class="btn btn-success btn-lg fw-bold py-3 rounded-pill shadow">
+                <i class="bi bi-whatsapp me-2"></i> Regularizar Pago por WhatsApp
+            </a>
+            <p class="small text-secondary mt-3 mb-0">Nota: Puedes seguir consultando reportes, clientes y gastos con normalidad.</p>
+        </div>
+    `;
+
+    contentDiv.style.position = 'relative';
+    contentDiv.appendChild(overlay);
 }
 
-// Notificación permanente flotante superior para TODAS las pantallas
+function removerBloqueoVentas() {
+    const overlay = document.getElementById('bloqueo-pos-overlay');
+    if (overlay) overlay.remove();
+}
+
 function mostrarNotificacionVencimientoGlobal(dias) {
     let banner = document.getElementById('baezpos-vencimiento-banner');
     if (!banner) {
         banner = document.createElement('div');
         banner.id = 'baezpos-vencimiento-banner';
         banner.style.cssText = `
-            position: fixed;
-            top: 12px;
-            right: 20px;
-            z-index: 999999;
-            background: #fff5f5;
-            color: #c53030;
-            border: 1px solid #feb2b2;
-            padding: 8px 16px;
-            border-radius: 30px;
-            font-weight: 600;
-            font-size: 0.85rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            position: fixed; top: 12px; right: 20px; z-index: 999999;
+            background: #fff5f5; color: #c53030; border: 1px solid #feb2b2;
+            padding: 8px 16px; border-radius: 30px; font-weight: 600; font-size: 0.85rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px;
         `;
         document.body.appendChild(banner);
     }
-
     banner.innerHTML = `
         <i class="bi bi-exclamation-triangle-fill text-danger fs-6"></i>
         <span>Atención: Tu suscripción vence en <strong>${dias} ${dias === 1 ? 'día' : 'días'}</strong>. Recordá regularizar el pago.</span>
     `;
 }
 
-// Iniciar chequeo inmediato y repetirlo cada 15 segundos en tiempo real
+function removerNotificacionVencimiento() {
+    const banner = document.getElementById('baezpos-vencimiento-banner');
+    if (banner) banner.remove();
+}
+
+// Iniciar chequeo inmediato y repetirlo cada 15 segundos
 document.addEventListener('DOMContentLoaded', () => {
     chequearEstadoLicencia();
     setInterval(chequearEstadoLicencia, 15000);

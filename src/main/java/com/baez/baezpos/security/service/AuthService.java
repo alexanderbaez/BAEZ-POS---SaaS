@@ -54,26 +54,16 @@ public class AuthService {
             throw new BadCredentialsException("Credenciales incorrectas. Verifique email y contraseña.");
         }
 
-        // 4. Validar estado de la cuenta del usuario
+        // 4. Validar estado de la cuenta del usuario (Si el usuario individual está desactivado, sí se bloquea)
         if (!Boolean.TRUE.equals(user.getActive())) {
             throw new BadRequestException("La cuenta de usuario se encuentra desactivada.");
         }
 
-        // 5. VALIDACIÓN DE LICENCIA SAAS (MULTI-TENANT)
-        if (user.getRole() != Role.SUPER_ADMIN) {
-            Company company = user.getCompany();
-            if (company == null) {
-                throw new BadRequestException("El usuario no tiene una empresa asociada.");
-            }
-            if (!Boolean.TRUE.equals(company.getActive())) {
-                throw new BadRequestException("La suscripción de la empresa se encuentra suspendida.");
-            }
-            if (company.getExpirationDate() != null && company.getExpirationDate().isBefore(LocalDate.now())) {
-                throw new BadRequestException("Su licencia/suscripción ha vencido el " + company.getExpirationDate() + ". Contacte a soporte para renovar.");
-            }
-        }
+        // Nota: Se removió el bloqueo de la empresa en el login (Paso 5 anterior).
+        // Ahora el cliente puede iniciar sesión libremente aun estando suspendido,
+        // para poder navegar por el dashboard/productos y que el centinela actúe quirúrgicamente en el POS.
 
-        // 6. Generar JWT y responder
+        // 5. Generar JWT y responder
         String jwtToken = jwtService.generateToken(user);
         Long companyId = (user.getCompany() != null) ? user.getCompany().getId() : null;
 

@@ -2,7 +2,7 @@ package com.baez.baezpos.company.controller;
 
 import com.baez.baezpos.company.dto.CompanyDTO;
 import com.baez.baezpos.company.dto.MasterRegistrationRequest;
-import com.baez.baezpos.company.service.CompanyService.MasterADmin;
+import com.baez.baezpos.company.service.CompanyService.MasterAdmin;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,7 +19,7 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 public class AdminMasterController {
 
-    private final MasterADmin masterAdminService;
+    private final MasterAdmin masterAdminService; // Usando la interfaz corregida
 
     @GetMapping
     public ResponseEntity<List<CompanyDTO>> listAll() {
@@ -32,11 +32,7 @@ public class AdminMasterController {
         return ResponseEntity.ok("Empresa y Dueño creados correctamente.");
     }
 
-    @PostMapping("/full-register")
-    public ResponseEntity<String> fullRegister(@RequestBody MasterRegistrationRequest req) {
-        masterAdminService.registerFullBusiness(req);
-        return ResponseEntity.ok("Empresa y Dueño creados por Alexander.");
-    }
+    // Se eliminó el endpoint redundante "/full-register"
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
@@ -49,18 +45,16 @@ public class AdminMasterController {
         return ResponseEntity.ok(masterAdminService.getMasterDashboardStats());
     }
 
-    // En AdminMasterController.java
-
     @PutMapping("/{id}")
     public ResponseEntity<String> update(@PathVariable Long id, @RequestBody CompanyDTO dto) {
         masterAdminService.updateCompanyMaster(id, dto);
-        return ResponseEntity.ok("Empresa actualizada correctamente por Alexander.");
+        return ResponseEntity.ok("Empresa actualizada correctamente.");
     }
 
     @PatchMapping("/{id}/extend")
     public ResponseEntity<String> extendSubscription(@PathVariable Long id) {
         masterAdminService.extendSubscriptionMaster(id);
-        return ResponseEntity.ok("Suscripción extendida 30 días por Alexander.");
+        return ResponseEntity.ok("Suscripción extendida 30 días.");
     }
 
     @PatchMapping("/{id}/reset-password")

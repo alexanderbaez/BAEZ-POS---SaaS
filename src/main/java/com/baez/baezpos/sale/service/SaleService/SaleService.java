@@ -1,4 +1,4 @@
-package com.baez.baezpos.sale.service;
+package com.baez.baezpos.sale.service.SaleService;
 
 import com.baez.baezpos.sale.dto.BoxReportDTO;
 import com.baez.baezpos.sale.dto.ChartDataDTO;

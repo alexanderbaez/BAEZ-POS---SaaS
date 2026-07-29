@@ -1,9 +1,10 @@
 package com.baez.baezpos.log.controller;
 
-import com.baez.baezpos.log.entity.SystemLog;
+import com.baez.baezpos.log.dto.SystemLogResponseDTO;
 import com.baez.baezpos.log.service.AuditService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,7 +18,8 @@ public class AdminLogController {
     private final AuditService auditService;
 
     @GetMapping
-    public ResponseEntity<List<SystemLog>> getLogs() {
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<List<SystemLogResponseDTO>> getLogs() {
         return ResponseEntity.ok(auditService.getLogs());
     }
 }

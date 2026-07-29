@@ -5,14 +5,13 @@
  */
 
 const API_BASE = "/super-admin/companies";
-const LOGS_BASE = "/super-admin/logs";
+const LOGS_BASE = "/logs"; // ✅ Solución: Únicamente la ruta relativa limpia, apiFetch le antepondrá /api/v1
 
 let modalEdicion;
+let modalMovimientos;
 let todasLasEmpresas = [];
 
 document.addEventListener('DOMContentLoaded', () => {
-
-    // Validar Rol de SuperAdmin estrictamente
     const role = (localStorage.getItem('baezpos_user_role') || '').toUpperCase().trim();
     const esSuperAdmin = role === 'SUPER_ADMIN' || role === 'SUPERADMIN';
 
@@ -22,24 +21,21 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Refresco automático de logs cada 30 segundos
     setInterval(() => {
         cargarLogs();
     }, 30000);
 
-    // 1. Inicializar Modal de Bootstrap
-    const modalElement = document.getElementById('modalEditar');
-    if (modalElement) {
-        modalEdicion = new bootstrap.Modal(modalElement);
-    }
+    const elModalEdit = document.getElementById('modalEditar');
+    if (elModalEdit) modalEdicion = new bootstrap.Modal(elModalEdit);
 
-    // 2. Configurar Buscador de Comercios
+    const elModalMov = document.getElementById('modalMovimientos');
+    if (elModalMov) modalMovimientos = new bootstrap.Modal(elModalMov);
+
     const buscador = document.getElementById('buscadorEmpresas');
     if (buscador) {
         buscador.addEventListener('input', (e) => filtrarEmpresas(e.target.value));
     }
 
-    // 3. Cargar Datos Iniciales
     cargarTodo();
 });
 
@@ -48,24 +44,17 @@ function cargarTodo() {
     cargarLogs();
 }
 
-// --- 1. GESTIÓN DE EMPRESAS / COMERCIOS ---
-
 async function cargarEmpresas() {
     try {
         const resp = await apiFetch(API_BASE);
-
-        if (!resp.ok) {
-            console.error("Error al obtener empresas:", resp.status);
-            return;
-        }
+        if (!resp.ok) return;
 
         const empresas = await resp.json();
         todasLasEmpresas = empresas;
         renderizarTabla(empresas);
         actualizarKpis(empresas);
-
     } catch (err) {
-        console.error("Error de red al cargar empresas:", err);
+        console.error("Error al cargar empresas:", err);
     }
 }
 
@@ -88,29 +77,28 @@ function renderizarTabla(empresas) {
 
         const fechaVenc = empresa.expirationDate ? new Date(empresa.expirationDate) : null;
         if (fechaVenc) fechaVenc.setHours(23, 59, 59, 999);
-
         const estaVencida = fechaVenc && fechaVenc < hoy;
 
         if (!empresa.active || estaVencida) {
             rowClass = "row-vencido";
-            badge = `<span class="badge rounded-pill bg-danger shadow-sm"><i class="bi bi-x-circle me-1"></i>SUSPENDIDO</span>`;
+            badge = `<span class="badge rounded-pill bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-3 py-1"><i class="bi bi-x-circle me-1"></i>SUSPENDIDO</span>`;
         } else {
-            badge = '<span class="badge rounded-pill bg-success shadow-sm"><i class="bi bi-check-all me-1"></i>ACTIVO</span>';
+            badge = `<span class="badge rounded-pill bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-1"><i class="bi bi-check-all me-1"></i>ACTIVO</span>`;
         }
 
         const cleanPhone = empresa.phone ? empresa.phone.replace(/\D/g, '') : '';
         const msgWS = encodeURIComponent(`Hola ${empresa.name}, te contacto desde la administración central de BaezPOS...`);
 
         tbody.innerHTML += `
-            <tr class="align-middle ${rowClass}">
+            <tr class="${rowClass}">
                 <td class="ps-3">
-                    <div class="d-flex align-items-center">
-                        <div class="rounded-circle bg-primary bg-opacity-10 p-2 me-3 text-primary">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-3 bg-primary bg-opacity-10 p-2 text-primary">
                             <i class="bi bi-building fs-5"></i>
                         </div>
                         <div>
                             <div class="fw-bold text-white">${empresa.name}</div>
-                            <div class="text-muted" style="font-size: 0.65rem;">CUIT/TaxID: ${empresa.taxId || 'N/A'}</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">CUIT: ${empresa.taxId || 'N/A'}</div>
                         </div>
                     </div>
                 </td>
@@ -119,14 +107,85 @@ function renderizarTabla(empresas) {
                 <td>${badge}</td>
                 <td class="text-end pe-3">
                     <div class="d-flex justify-content-end gap-1">
-                        <button class="btn btn-action btn-outline-info" title="Editar" onclick="prepararEdicion(${empresa.id})"><i class="bi bi-pencil-fill"></i></button>
-                        <button class="btn btn-action btn-outline-success" title="WhatsApp" onclick="window.open('https://wa.me/${cleanPhone}?text=${msgWS}')"><i class="bi bi-whatsapp"></i></button>
-                        <button class="btn btn-action btn-outline-danger" title="Eliminar" onclick="eliminarEmpresa(${empresa.id})"><i class="bi bi-trash3"></i></button>
+                        <button class="btn-action bg-dark text-warning border border-warning border-opacity-25" title="Renovar +30 Días" onclick="renovarSuscripcion(${empresa.id})"><i class="bi bi-calendar-plus-fill"></i></button>
+                        <button class="btn-action bg-dark text-success border border-success border-opacity-25" title="Ver Movimientos y Actividad" onclick="verMovimientos(${empresa.id}, '${empresa.name}')"><i class="bi bi-eye-fill"></i></button>
+                        <button class="btn-action bg-dark text-info border border-info border-opacity-25" title="Editar Comercio" onclick="prepararEdicion(${empresa.id})"><i class="bi bi-pencil-fill"></i></button>
+                        <button class="btn-action bg-dark text-success border border-success border-opacity-25" title="WhatsApp" onclick="window.open('https://wa.me/${cleanPhone}?text=${msgWS}')"><i class="bi bi-whatsapp"></i></button>
+                        <button class="btn-action bg-dark text-danger border border-danger border-opacity-25" title="Eliminar" onclick="eliminarEmpresa(${empresa.id})"><i class="bi bi-trash3"></i></button>
                     </div>
                 </td>
             </tr>
         `;
     });
+}
+
+// 🚀 Función para sumar 30 días de suscripción con un solo clic y alerta blindada
+async function renovarSuscripcion(id) {
+    const empresa = todasLasEmpresas.find(e => e.id === id);
+    if (!empresa) return;
+
+    let baseDate = new Date();
+    if (empresa.expirationDate) {
+        const currentExp = new Date(empresa.expirationDate);
+        if (currentExp >= baseDate) {
+            baseDate = currentExp;
+        }
+    }
+
+    baseDate.setDate(baseDate.getDate() + 30);
+    const nuevaFechaStr = baseDate.toISOString().split('T')[0];
+
+    if (typeof Swal !== 'undefined') {
+        const result = await Swal.fire({
+            title: '¿Extender suscripción?',
+            text: `Se actualizará el vencimiento de "${empresa.name}" al ${nuevaFechaStr} (+30 días) y se activará automáticamente.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'SÍ, RENOVAR',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (result.isConfirmed) {
+            await procesarRenovacion(id, empresa, nuevaFechaStr);
+        }
+    } else {
+        if (confirm(`¿Extender suscripción de "${empresa.name}" al ${nuevaFechaStr}?`)) {
+            await procesarRenovacion(id, empresa, nuevaFechaStr);
+        }
+    }
+}
+
+async function procesarRenovacion(id, empresa, nuevaFechaStr) {
+    const payload = {
+        name: empresa.name,
+        taxId: empresa.taxId,
+        email: empresa.email,
+        phone: empresa.phone,
+        address: empresa.address,
+        expirationDate: nuevaFechaStr,
+        ticketMessage: empresa.ticketMessage,
+        active: true
+    };
+
+    try {
+        const resp = await apiFetch(`${API_BASE}/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload)
+        });
+
+        if (resp.ok) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('¡Renovado!', 'La suscripción se extendió por 30 días exitosamente.', 'success');
+            }
+            cargarTodo();
+        } else {
+            if (typeof Swal !== 'undefined') Swal.fire('Error', 'No se pudo actualizar la suscripción.', 'error');
+        }
+    } catch (err) {
+        if (typeof Swal !== 'undefined') Swal.fire('Error', 'Fallo en la comunicación con el servidor.', 'error');
+    }
 }
 
 function actualizarKpis(empresas) {
@@ -140,7 +199,6 @@ function actualizarKpis(empresas) {
     empresas.forEach(e => {
         const fechaVenc = e.expirationDate ? new Date(e.expirationDate) : null;
         if (fechaVenc) fechaVenc.setHours(23, 59, 59, 999);
-
         const diasRestantes = fechaVenc ? Math.ceil((fechaVenc - hoy) / (1000 * 60 * 60 * 24)) : 999;
 
         if (!e.active || (fechaVenc && fechaVenc < hoy)) {
@@ -159,7 +217,7 @@ function actualizarKpis(empresas) {
     if (document.getElementById('kpiVencidos')) document.getElementById('kpiVencidos').innerText = vencidos;
 }
 
-// --- 2. ALTA DE NUEVO COMERCIO ---
+// Alta de Comercio
 const formNueva = document.getElementById('formNuevaEmpresa');
 if (formNueva) {
     formNueva.addEventListener('submit', async (e) => {
@@ -185,49 +243,19 @@ if (formNueva) {
             });
 
             if (resp.ok) {
-                const msgBienvenida = `👋 *¡Bienvenido a BaezPOS SaaS!*\n\nHola ${nuevaEmpresaRequest.ownerName}, tu comercio *${nuevaEmpresaRequest.companyName}* ha sido activado con éxito.\n\n🌐 *Acceso:* ${window.location.origin}/login.html\n📧 *Usuario:* ${nuevaEmpresaRequest.ownerEmail}\n🔑 *Contraseña:* ${nuevaEmpresaRequest.ownerPassword}\n\n¡Gracias por confiar en BaezPOS!`;
-
-                Swal.fire({
-                    icon: 'success',
-                    title: '🎉 ¡Comercio Registrado con Éxito!',
-                    html: `
-                        <div class="text-start p-3 bg-dark bg-opacity-25 rounded border border-secondary border-opacity-25">
-                            <p class="mb-1 text-white"><b>Comercio:</b> ${nuevaEmpresaRequest.companyName}</p>
-                            <p class="mb-1 text-white"><b>Usuario Dueño:</b> ${nuevaEmpresaRequest.ownerEmail}</p>
-                            <p class="mb-1 text-white"><b>Contraseña Inicial:</b> <code>${nuevaEmpresaRequest.ownerPassword}</code></p>
-                        </div>
-                        <p class="mt-3 small text-muted">Copiá este mensaje para enviárselo al cliente por WhatsApp o email:</p>
-                    `,
-                    showCancelButton: true,
-                    confirmButtonText: '<i class="bi bi-whatsapp"></i> Copiar Mensaje de Bienvenida',
-                    cancelButtonText: 'Cerrar',
-                    confirmButtonColor: '#25D366'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        navigator.clipboard.writeText(msgBienvenida);
-                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Mensaje copiado al portapapeles', timer: 2000, showConfirmButton: false });
-                    }
-                });
-
+                if (typeof Swal !== 'undefined') Swal.fire('¡Registrado!', 'Comercio creado con éxito.', 'success');
                 cargarTodo();
                 e.target.reset();
             } else {
-                let errorMsg = 'No se pudo crear el comercio. Verifique que el correo/TaxID no exista.';
-                try {
-                    const errJson = await resp.json();
-                    if (errJson && errJson.message) errorMsg = errJson.message;
-                } catch(e) {}
-                Swal.fire('Error al crear comercio', errorMsg, 'error');
+                if (typeof Swal !== 'undefined') Swal.fire('Error', 'No se pudo crear el comercio.', 'error');
             }
         } catch (err) {
-            Swal.fire('Error de Red', 'No se pudo conectar con el servidor.', 'error');
+            if (typeof Swal !== 'undefined') Swal.fire('Error de Red', 'Fallo en la comunicación.', 'error');
         } finally {
             btnSubmit.disabled = false;
         }
     });
 }
-
-// --- 3. EDICIÓN DE COMERCIO (MODAL) ---
 
 function prepararEdicion(id) {
     const empresa = todasLasEmpresas.find(e => e.id === id);
@@ -241,14 +269,8 @@ function prepararEdicion(id) {
     document.getElementById('editAddress').value = empresa.address || '';
     document.getElementById('editVencimiento').value = empresa.expirationDate || '';
     document.getElementById('editTicketMessage').value = empresa.ticketMessage || '';
-
-    if (document.getElementById('editPass')) {
-        document.getElementById('editPass').value = '';
-    }
-
-    if (document.getElementById('editActive')) {
-        document.getElementById('editActive').value = empresa.active !== false ? "true" : "false";
-    }
+    if (document.getElementById('editPass')) document.getElementById('editPass').value = '';
+    if (document.getElementById('editActive')) document.getElementById('editActive').value = empresa.active !== false ? "true" : "false";
 
     modalEdicion.show();
 }
@@ -282,43 +304,63 @@ if (formEdit) {
                     await apiFetch(`${API_BASE}/${id}/reset-password`, {
                         method: 'PATCH',
                         body: JSON.stringify({ password: newPass })
-                    }).catch(err => console.warn("No se pudo actualizar clave:", err));
+                    }).catch(err => console.warn(err));
                 }
-
                 modalEdicion.hide();
-
-                if (newPass) {
-                    const msgClave = `🔐 *Aviso de Seguridad BaezPOS*\n\nHola ${payload.name}, tu contraseña de acceso ha sido actualizada por la administración central.\n\n📧 *Usuario:* ${payload.email}\n🔑 *Nueva Contraseña:* ${newPass}`;
-
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Datos y Contraseña Actualizados!',
-                        text: 'Se ha guardado la nueva información y la nueva clave de acceso.',
-                        showCancelButton: true,
-                        confirmButtonText: '<i class="bi bi-whatsapp"></i> Copiar Aviso de Nueva Clave',
-                        cancelButtonText: 'Cerrar',
-                        confirmButtonColor: '#25D366'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            navigator.clipboard.writeText(msgClave);
-                            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Aviso copiado al portapapeles', timer: 2000, showConfirmButton: false });
-                        }
-                    });
-                } else {
-                    Swal.fire('¡Actualizado!', 'Empresa actualizada correctamente.', 'success');
-                }
-
+                if (typeof Swal !== 'undefined') Swal.fire('¡Actualizado!', 'Datos guardados correctamente.', 'success');
                 cargarTodo();
             } else {
-                Swal.fire('Error', 'No se pudo guardar la información.', 'error');
+                if (typeof Swal !== 'undefined') Swal.fire('Error', 'No se pudo guardar la información.', 'error');
             }
         } catch (err) {
-            Swal.fire('Error', 'Fallo al guardar cambios.', 'error');
+            if (typeof Swal !== 'undefined') Swal.fire('Error', 'Fallo al guardar.', 'error');
         }
     });
 }
 
-// --- 4. BITÁCORA DE EVENTOS ---
+// Ver Movimientos y Auditoría del Cliente Específico
+async function verMovimientos(id, nombreComercio) {
+    document.getElementById('lblClienteMov').innerText = nombreComercio;
+    document.getElementById('detTotalVentas').innerText = "—";
+    document.getElementById('detVolumen').innerText = "$ —";
+    document.getElementById('detUltimaAct').innerText = "Cargando...";
+
+    const tbodyMov = document.getElementById('tablaMovimientosCliente');
+    tbodyMov.innerHTML = '<tr><td colspan="3" class="text-center text-muted p-3">Buscando actividad reciente...</td></tr>';
+
+    modalMovimientos.show();
+
+    try {
+        const resp = await apiFetch(LOGS_BASE);
+        if (!resp.ok) return;
+
+        const logs = await resp.json();
+        const logsCliente = logs.filter(l =>
+            (l.description && l.description.toLowerCase().includes(nombreComercio.toLowerCase())) ||
+            (l.userEmail && l.userEmail.toLowerCase().includes(nombreComercio.toLowerCase()))
+        );
+
+        document.getElementById('detTotalVentas').innerText = logsCliente.length;
+        document.getElementById('detUltimaAct').innerText = logsCliente.length > 0 ? new Date(logsCliente[0].timestamp).toLocaleString() : 'Sin actividad reciente';
+
+        if (logsCliente.length === 0) {
+            tbodyMov.innerHTML = '<tr><td colspan="3" class="text-center text-muted p-4">No se registran movimientos recientes para este comercio.</td></tr>';
+            return;
+        }
+
+        tbodyMov.innerHTML = logsCliente.map(log => `
+            <tr>
+                <td class="text-muted small">${new Date(log.timestamp).toLocaleString()}</td>
+                <td><span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25">${log.action}</span></td>
+                <td class="text-white-50 small">${log.description}</td>
+            </tr>
+        `).join('');
+
+    } catch (err) {
+        console.error("Error al obtener movimientos:", err);
+        tbodyMov.innerHTML = '<tr><td colspan="3" class="text-center text-danger p-3">Error al cargar el historial.</td></tr>';
+    }
+}
 
 async function cargarLogs() {
     try {
@@ -326,24 +368,27 @@ async function cargarLogs() {
         if (!resp.ok) return;
 
         const logs = await resp.json();
-        const contenedor = document.getElementById('listaLogs');
-        if (!contenedor) return;
+        const tbodyLogs = document.getElementById('tablaLogsCompleta');
+        if (!tbodyLogs) return;
 
-        contenedor.innerHTML = logs.map(log => {
+        if (!logs || logs.length === 0) {
+            tbodyLogs.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-muted">No hay registros en la bitácora.</td></tr>';
+            return;
+        }
+
+        tbodyLogs.innerHTML = logs.map(log => {
             const fecha = new Date(log.timestamp).toLocaleString();
-            let color = 'text-info';
-            if (log.action && log.action.includes('ELIMINAR')) color = 'text-danger';
-            if (log.action && log.action.includes('ALTA')) color = 'text-success';
+            let colorBadge = 'bg-info text-info';
+            if (log.action && log.action.includes('ELIMINAR')) colorBadge = 'bg-danger text-danger';
+            if (log.action && log.action.includes('ALTA')) colorBadge = 'bg-success text-success';
 
             return `
-                <div class="log-item p-3 border-bottom border-secondary border-opacity-10">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span class="fw-bold ${color} small uppercase">${log.action || 'EVENTO'}</span>
-                        <span class="text-muted" style="font-size: 0.6rem;">${fecha}</span>
-                    </div>
-                    <div class="text-white-50" style="font-size: 0.72rem;">${log.description}</div>
-                    <div class="text-primary" style="font-size: 0.6rem;">Comercio / Usuario: ${log.userEmail || 'Sistema'}</div>
-                </div>
+                <tr>
+                    <td class="ps-3 text-muted small">${fecha}</td>
+                    <td><span class="badge ${colorBadge} bg-opacity-10 border border-opacity-25 px-2.5 py-1">${log.action || 'EVENTO'}</span></td>
+                    <td class="text-white-50 small">${log.description}</td>
+                    <td class="text-end pe-3 text-primary small">${log.userEmail || 'Sistema'}</td>
+                </tr>
             `;
         }).join('');
     } catch (err) {
@@ -351,37 +396,45 @@ async function cargarLogs() {
     }
 }
 
-// --- 5. ELIMINAR COMERCIO ---
-
+// Función de eliminación con alerta SweetAlert2 totalmente blindada
 async function eliminarEmpresa(id) {
-    const result = await Swal.fire({
-        title: '¿ESTÁS SEGURO?',
-        text: "Se eliminará el comercio y todos sus datos asociados permanentemente.",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#ef4444',
-        confirmButtonText: 'SÍ, ELIMINAR'
-    });
+    if (typeof Swal !== 'undefined') {
+        const result = await Swal.fire({
+            title: '¿ESTÁS SEGURO?',
+            text: "Se eliminará el comercio y todos sus datos asociados permanentemente.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#f87171',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'SÍ, ELIMINAR',
+            cancelButtonText: 'Cancelar'
+        });
 
-    if (result.isConfirmed) {
-        try {
-            const resp = await apiFetch(`${API_BASE}/${id}`, {
-                method: 'DELETE'
-            });
-
-            if (resp.ok) {
-                Swal.fire('Eliminado', 'Comercio eliminado con éxito.', 'success');
-                cargarTodo();
-            } else {
-                Swal.fire('Error', 'No se pudo eliminar el comercio.', 'error');
-            }
-        } catch (err) {
-            console.error(err);
+        if (result.isConfirmed) {
+            await ejecutarEliminacion(id);
+        }
+    } else {
+        if (confirm("¿ESTÁS SEGURO? Se eliminará el comercio y todos sus datos asociados permanentemente.")) {
+            await ejecutarEliminacion(id);
         }
     }
 }
 
-// --- 6. AUXILIARES Y FILTROS ---
+async function ejecutarEliminacion(id) {
+    try {
+        const resp = await apiFetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+        if (resp.ok) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Eliminado', 'Comercio eliminado con éxito.', 'success');
+            }
+            cargarTodo();
+        } else {
+            if (typeof Swal !== 'undefined') Swal.fire('Error', 'No se pudo eliminar.', 'error');
+        }
+    } catch (err) {
+        console.error(err);
+    }
+}
 
 function filtrarEmpresas(termino) {
     const filas = document.querySelectorAll('#tablaEmpresas tr');

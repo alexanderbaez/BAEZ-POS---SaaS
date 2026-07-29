@@ -1,4 +1,4 @@
-package com.baez.baezpos.product.service.impl;
+package com.baez.baezpos.product.service;
 
 import com.baez.baezpos.company.entity.Company;
 import com.baez.baezpos.company.repository.CompanyRepository;
@@ -6,7 +6,6 @@ import com.baez.baezpos.product.dto.CategoryRequestDTO;
 import com.baez.baezpos.product.dto.CategoryResponseDTO;
 import com.baez.baezpos.product.entity.Category;
 import com.baez.baezpos.product.repository.CategoryRepository;
-import com.baez.baezpos.product.service.CategoryService;
 import com.baez.baezpos.security.util.SecurityUtils;
 import com.baez.baezpos.shared.exception.BadRequestException;
 import com.baez.baezpos.shared.exception.ResourceNotFoundException;

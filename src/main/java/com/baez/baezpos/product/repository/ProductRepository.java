@@ -26,4 +26,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.active = false")
     List<Product> findAllInactiveWithCategory();
+
+
+    // Búsqueda parcial por nombre o código de barras para las sugerencias del buscador
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.company.id = :companyId AND p.active = true AND (LOWER(p.name) LIKE LOWER(CONCAT('%', :term, '%')) OR LOWER(p.barcode) LIKE LOWER(CONCAT('%', :term, '%')))")
+    List<Product> searchByTermAndCompanyId(@Param("companyId") Long companyId, @Param("term") String term);
 }

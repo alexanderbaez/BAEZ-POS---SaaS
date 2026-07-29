@@ -3,6 +3,8 @@ package com.baez.baezpos.customer.service;
 import com.baez.baezpos.company.entity.Company;
 import com.baez.baezpos.company.repository.CompanyRepository;
 import com.baez.baezpos.customer.dto.CustomerMovementDTO;
+import com.baez.baezpos.customer.dto.CustomerRequestDTO;
+import com.baez.baezpos.customer.dto.CustomerResponseDTO;
 import com.baez.baezpos.customer.entities.Customer;
 import com.baez.baezpos.customer.entities.CustomerMovement;
 import com.baez.baezpos.customer.repository.CustomerMovementRepository;
@@ -26,19 +28,34 @@ public class CustomerServiceImpl implements CustomerService {
     private final CustomerMovementRepository customerMovementRepository;
     private final CompanyRepository companyRepository;
 
+    private CustomerResponseDTO mapToDTO(Customer c) {
+        return CustomerResponseDTO.builder()
+                .id(c.getId())
+                .name(c.getName())
+                .phone(c.getPhone())
+                .dniCuit(c.getDniCuit())
+                .currentBalance(c.getCurrentBalance())
+                .creditLimit(c.getCreditLimit())
+                .active(c.getActive())
+                .build();
+    }
+
     @Override
     @Transactional(readOnly = true)
-    public List<Customer> getAll() {
+    public List<CustomerResponseDTO> getAll() {
         Long companyId = SecurityUtils.getCurrentCompanyId();
+        List<Customer> customers;
         if (companyId == null) {
-            return customerRepository.findAll(); // Soporte para SUPER_ADMIN
+            customers = customerRepository.findAll();
+        } else {
+            customers = customerRepository.findByCompanyIdAndActiveTrue(companyId);
         }
-        return customerRepository.findByCompanyId(companyId);
+        return customers.stream().map(this::mapToDTO).toList();
     }
 
     @Override
     @Transactional
-    public Customer saveCustomer(Customer customer) {
+    public Customer saveCustomer(CustomerRequestDTO dto) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         if (companyId == null) {
             throw new BadRequestException("No se puede crear un cliente sin una empresa asociada.");
@@ -46,14 +63,16 @@ public class CustomerServiceImpl implements CustomerService {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
 
-        customer.setCompany(company);
-        if (customer.getCurrentBalance() == null) {
-            customer.setCurrentBalance(BigDecimal.ZERO);
-        }
-        if (customer.getCreditLimit() == null) {
-            customer.setCreditLimit(BigDecimal.valueOf(10000));
-        }
+        Customer customer = Customer.builder()
+                .name(dto.getName())
+                .phone(dto.getPhone())
+                .dniCuit(dto.getDniCuit())
+                .creditLimit(dto.getCreditLimit() != null ? dto.getCreditLimit() : BigDecimal.valueOf(10000))
+                .currentBalance(BigDecimal.ZERO)
+                .active(true)
+                .build();
 
+        customer.setCompany(company);
         return customerRepository.save(customer);
     }
 
@@ -92,12 +111,15 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Customer> searchCustomers(String query) {
+    public List<CustomerResponseDTO> searchCustomers(String query) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
+        List<Customer> customers;
         if (companyId == null) {
-            return customerRepository.findAll();
+            customers = customerRepository.findAll();
+        } else {
+            customers = customerRepository.searchCustomersByCompanyId(query, companyId);
         }
-        return customerRepository.searchCustomersByCompanyId(query, companyId);
+        return customers.stream().map(this::mapToDTO).toList();
     }
 
     @Override
@@ -136,7 +158,7 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Override
     @Transactional
-    public Customer updateCustomer(Long id, Customer details) {
+    public Customer updateCustomer(Long id, CustomerRequestDTO dto) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         Customer customer = (companyId != null) ?
                 customerRepository.findByIdAndCompanyId(id, companyId)
@@ -144,11 +166,11 @@ public class CustomerServiceImpl implements CustomerService {
                 customerRepository.findById(id)
                         .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado"));
 
-        customer.setName(details.getName());
-        customer.setDniCuit(details.getDniCuit());
-        customer.setPhone(details.getPhone());
-        if (details.getCreditLimit() != null) {
-            customer.setCreditLimit(details.getCreditLimit());
+        customer.setName(dto.getName());
+        customer.setDniCuit(dto.getDniCuit());
+        customer.setPhone(dto.getPhone());
+        if (dto.getCreditLimit() != null) {
+            customer.setCreditLimit(dto.getCreditLimit());
         }
 
         return customerRepository.save(customer);
@@ -180,13 +202,7 @@ public class CustomerServiceImpl implements CustomerService {
                 customerRepository.findById(id)
                         .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado"));
 
-        List<CustomerMovement> movements = customerMovementRepository.findByCustomerIdAndCustomerCompanyIdOrderByIdDesc(id, companyId);
-        if (!movements.isEmpty()) {
-            // Desvinculamos las ventas si existen para evitar violaciones de clave foránea
-            movements.forEach(m -> m.setSale(null));
-            customerMovementRepository.deleteAll(movements);
-        }
-
-        customerRepository.delete(customer);
+        customer.setActive(false);
+        customerRepository.save(customer);
     }
 }
