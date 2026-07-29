@@ -12,5 +12,5 @@ frontend:
   redirects:
     - source: '/'
       target: '/login.html'
-      status: '302'
+      status: '200'
       condition: null
