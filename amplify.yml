@@ -9,3 +9,13 @@ frontend:
       - '**/*'
   cache:
     paths: []
+  customHeaders:
+    - pattern: '**/*'
+      headers:
+        - key: 'Cache-Control'
+          value: 'no-store, no-cache, must-revalidate'
+  redirects:
+    - source: '/'
+      target: '/login.html'
+      status: '200'
+      condition: null
