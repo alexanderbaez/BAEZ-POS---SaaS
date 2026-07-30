@@ -4,10 +4,10 @@
  */
 
 const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
-const API_BASE = `${BACKEND_URL}/sales`;
-const API_PRODUCTS = `${BACKEND_URL}/products`;
-const API_CUSTOMERS = `${BACKEND_URL}/customers`;
-const API_STATUS = `${BACKEND_URL}/admin/my-company/status`;
+const API_BASE = `${BACKEND_URL}/api/v1/sales`;
+const API_PRODUCTS = `${BACKEND_URL}/api/v1/products`;
+const API_CUSTOMERS = `${BACKEND_URL}/api/v1/customers`;
+const API_STATUS = `${BACKEND_URL}/api/v1/admin/my-company/status`;
 const companyId = localStorage.getItem('baezpos_company_id');
 
 let sistemaBloqueado = false;

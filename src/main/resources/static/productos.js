@@ -3,8 +3,8 @@
  */
 
 const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
-const API_BASE = `${BACKEND_URL}/products`;
-const API_CAT = `${BACKEND_URL}/categories`;
+const API_BASE = `${BACKEND_URL}/api/v1/products`;
+const API_CAT = `${BACKEND_URL}/api/v1/categories`;
 
 let PRODUCTOS_LOCAL = [];
 
