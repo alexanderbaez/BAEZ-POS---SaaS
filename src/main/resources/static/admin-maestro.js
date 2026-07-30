@@ -9,7 +9,7 @@ const BACKEND_URL = "https://baez-pos-saas.onrender.com";
 
 // Rutas completas apuntando a la nube (Corregido con /api/v1)
 const API_BASE = `${BACKEND_URL}/api/v1/super-admin/companies`;
-const LOGS_BASE = `${BACKEND_URL}/logs`;
+const LOGS_BASE = `${BACKEND_URL}/api/v1/logs`;
 
 /**
  * FUNCIÓN HELPER API-FETCH

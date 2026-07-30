@@ -4,7 +4,7 @@
  */
 
 const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
-const API_URL = `${BACKEND_URL}/admin/my-company/profile`;
+const API_URL = `${BACKEND_URL}/api/v1/admin/my-company/profile`;
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Cargar datos de la empresa desde la BD

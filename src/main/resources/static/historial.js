@@ -2,7 +2,7 @@
 // 1. CONFIGURACIÓN Y VARIABLES GLOBALES
 // ==========================================
 const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
-const API_SALES = `${BACKEND_URL}/sales`;
+const API_SALES = `${BACKEND_URL}/api/v1/sales`;
 
 let VENTA_SELECCIONADA = null;
 let VENTAS_GLOBALES = [];
