@@ -5,7 +5,7 @@
  */
 
 // URL base de tu backend en Render
-//const BACKEND_URL = "https://baez-pos-saas.onrender.com";
+const BACKEND_URL = "https://baez-pos-saas.onrender.com";
 
 // Rutas completas apuntando a la nube (Corregido con /api/v1)
 const API_BASE = `${BACKEND_URL}/api/v1/super-admin/companies`;
