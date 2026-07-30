@@ -11,6 +11,28 @@ const BACKEND_URL = "https://baez-pos-saas.onrender.com";
 const API_BASE = `${BACKEND_URL}/super-admin/companies`;
 const LOGS_BASE = `${BACKEND_URL}/logs`;
 
+/**
+ * FUNCIÓN HELPER API-FETCH
+ * Gestiona automáticamente el token de autenticación y las cabeceras HTTP.
+ */
+async function apiFetch(endpoint, options = {}) {
+    const token = localStorage.getItem('baezpos_token') || '';
+
+    const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        ...(options.headers || {})
+    };
+
+    const config = {
+        ...options,
+        headers
+    };
+
+    const url = endpoint.startsWith('http') ? endpoint : `${BACKEND_URL}${endpoint}`;
+    return await fetch(url, config);
+}
+
 let modalEdicion;
 let modalMovimientos;
 let todasLasEmpresas = [];
