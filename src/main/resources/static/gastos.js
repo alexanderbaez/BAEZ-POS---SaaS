@@ -1,7 +1,7 @@
 // ==========================================
 // 1. CONFIGURACIÓN Y VARIABLES GLOBALES
 // ==========================================
-const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
+//const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
 const API_EXPENSES = `${BACKEND_URL}/api/v1/expenses`;
 let gastosGlobales = [];
 

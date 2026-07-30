@@ -3,7 +3,7 @@
  * Alexander Baez - 2026
  */
 
-const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
+//const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
 const API_BASE = `${BACKEND_URL}/api/v1/sales`;
 const API_PRODUCTS = `${BACKEND_URL}/api/v1/products`;
 const API_CUSTOMERS = `${BACKEND_URL}/api/v1/customers`;

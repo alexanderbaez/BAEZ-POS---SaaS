@@ -3,7 +3,7 @@
  */
 
 // URL base de tu backend en Render
-const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
+//const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
 
 /**
  * FUNCIÓN HELPER API-FETCH INTELIGENTE

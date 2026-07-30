@@ -2,7 +2,7 @@
  * BÁEZ POS - GESTIÓN DE CLIENTES Y CUENTA CORRIENTE (LIBRETA)
  */
 
-const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
+//const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
 const API_CUSTOMERS = `${BACKEND_URL}/api/v1/customers`;
 const API_PERFIL = `${BACKEND_URL}/api/v1/admin/my-company/profile`;
 
