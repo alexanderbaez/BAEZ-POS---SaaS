@@ -6,6 +6,7 @@
 // Variable global para el modal de recuperación
 let modalRecuperacionInstance;
 const API_AUTH_BASE = 'https://baez-pos-saas.onrender.com/api/v1/auth';
+
 // 1. Verificación de Setup Inicial al cargar la página
 document.addEventListener('DOMContentLoaded', async () => {
     try {

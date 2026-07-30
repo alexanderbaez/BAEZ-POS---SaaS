@@ -463,9 +463,15 @@ async function ejecutarEliminacion(id) {
 }
 
 function filtrarEmpresas(termino) {
-    const filas = document.querySelectorAll('#tablaEmpresas tr');
     const t = termino.toLowerCase().trim();
-    filas.forEach(fila => {
-        fila.style.display = fila.innerText.toLowerCase().includes(t) ? '' : 'none';
-    });
+    if (!t) {
+        renderizarTabla(todasLasEmpresas);
+        return;
+    }
+    const filtradas = todasLasEmpresas.filter(empresa =>
+        (empresa.name && empresa.name.toLowerCase().includes(t)) ||
+        (empresa.email && empresa.email.toLowerCase().includes(t)) ||
+        (empresa.taxId && empresa.taxId.toLowerCase().includes(t))
+    );
+    renderizarTabla(filtradas);
 }

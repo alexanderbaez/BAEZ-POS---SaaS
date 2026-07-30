@@ -6,6 +6,30 @@
 // URL base de tu backend en Render
 const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
 
+/**
+ * FUNCIÓN HELPER API-FETCH INTELIGENTE
+ * Añade automáticamente el prefijo /api/v1 y el token de autenticación del SaaS.
+ */
+async function apiFetch(endpoint, options = {}) {
+    const token = localStorage.getItem('baezpos_token') || '';
+
+    const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        ...(options.headers || {})
+    };
+
+    let url;
+    if (endpoint.startsWith('http')) {
+        url = endpoint;
+    } else {
+        const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+        url = `${BACKEND_URL}/api/v1${cleanEndpoint}`;
+    }
+
+    return await fetch(url, { ...options, headers });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Verificar si es ADMIN
     const userRole = localStorage.getItem('baezpos_user_role');

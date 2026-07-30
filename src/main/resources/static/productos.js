@@ -2,7 +2,8 @@
  * BÁEZ POS - GESTIÓN DE INVENTARIO (SAAS MULTITENANT)
  */
 
-const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
+// NOTA: BACKEND_URL ya viene declarado en el script de seguridad anterior.
+// Usamos directamente las rutas basadas en ese scope global.
 const API_BASE = `${BACKEND_URL}/api/v1/products`;
 const API_CAT = `${BACKEND_URL}/api/v1/categories`;
 
