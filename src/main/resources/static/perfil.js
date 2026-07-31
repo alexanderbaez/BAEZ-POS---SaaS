@@ -1,11 +1,14 @@
 /**
- * BÁEZ POS - PERFIL DE LA EMPRESA & CONFIGURACIÓN
+ * BÁEZ POS - PERFIL DE LA EMPRESA & CONFIGURACIÓN (SaaS)
  * Alexander Baez - 2026
  */
 
-//const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
-const API_URL = `${BACKEND_URL}/api/v1/admin/my-company/profile`;
+// Ruta relativa del endpoint de perfil
+const ENDPOINT_PROFILE = '/admin/my-company/profile';
 
+// ==========================================
+// 1. INICIALIZACIÓN
+// ==========================================
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Cargar datos de la empresa desde la BD
     cargarDatosEmpresa();
@@ -17,11 +20,14 @@ document.addEventListener('DOMContentLoaded', () => {
     vincularSwitchFiscal();
 });
 
+// ==========================================
+// 2. CARGA DE DATOS Y VENCIMIENTO
+// ==========================================
 async function cargarDatosEmpresa() {
     try {
-        const resp = await apiFetch(API_URL);
+        const resp = await apiFetch(ENDPOINT_PROFILE);
 
-        if (!resp || !resp.ok) throw new Error("No se pudo obtener la información.");
+        if (!resp || !resp.ok) throw new Error("No se pudo obtener la información de la empresa.");
 
         const emp = await resp.json();
 
@@ -30,38 +36,40 @@ async function cargarDatosEmpresa() {
         localStorage.setItem('DATOS_EMPRESA', JSON.stringify(emp));
 
         // Llenado de formulario principal
-        document.getElementById('empNombre').value = emp.name || '';
-        document.getElementById('empCuit').value = emp.taxId || '';
-        document.getElementById('empTel').value = emp.phone || '';
-        document.getElementById('empEmail').value = emp.email || '';
-        document.getElementById('empDireccion').value = emp.address || '';
-        document.getElementById('empTicketMsg').value = emp.ticketMessage || '';
+        if (document.getElementById('empNombre')) document.getElementById('empNombre').value = emp.name || '';
+        if (document.getElementById('empCuit')) document.getElementById('empCuit').value = emp.taxId || '';
+        if (document.getElementById('empTel')) document.getElementById('empTel').value = emp.phone || '';
+        if (document.getElementById('empEmail')) document.getElementById('empEmail').value = emp.email || '';
+        if (document.getElementById('empDireccion')) document.getElementById('empDireccion').value = emp.address || '';
+        if (document.getElementById('empTicketMsg')) document.getElementById('empTicketMsg').value = emp.ticketMessage || '';
 
         // Carga de campos fiscales para ARCA / AFIP
-        document.getElementById('empIibb').value = emp.iibb || '';
-        document.getElementById('empInicioAct').value = emp.inicioActividades || '';
-        document.getElementById('empIva').value = emp.condicionIva || 'Responsable Monotributo';
+        if (document.getElementById('empIibb')) document.getElementById('empIibb').value = emp.iibb || '';
+        if (document.getElementById('empInicioAct')) document.getElementById('empInicioAct').value = emp.inicioActividades || '';
+        if (document.getElementById('empIva')) document.getElementById('empIva').value = emp.condicionIva || 'Responsable Monotributo';
 
         // Cargar estado del Switch (Respeta el booleano real guardado en la BD)
         const checkFiscal = document.getElementById('checkMostrarFiscal');
-        checkFiscal.checked = emp.hasTaxData !== undefined ? Boolean(emp.hasTaxData) : true;
+        if (checkFiscal) {
+            checkFiscal.checked = emp.hasTaxData !== undefined ? Boolean(emp.hasTaxData) : true;
+            aplicarEstadoFiscal(checkFiscal.checked);
+        }
 
-        // Actualizar el nombre en el sidebar con el dato real de la DB
+        // Actualizar el nombre en el sidebar/navbar con el dato real de la DB
         const elCompanyNav = document.getElementById('companyNameNav');
         if (elCompanyNav) elCompanyNav.innerText = (emp.name || 'MI NEGOCIO').toUpperCase();
 
         // Gestión de suscripción y vencimiento
         procesarVencimiento(emp.expirationDate);
 
-        // Sincronizar estado del switch y vista previa inicial
-        aplicarEstadoFiscal(checkFiscal.checked);
+        // Actualizar la vista previa inicial
         actualizarPreview();
 
     } catch (err) {
         console.error("Error al cargar perfil:", err);
         Swal.fire({
             title: 'Error de Carga',
-            text: 'No logramos conectar con el servidor para traer tus datos.',
+            text: 'No logramos conectar con el servidor para traer los datos del negocio.',
             icon: 'error',
             confirmButtonColor: '#2563eb'
         });
@@ -71,11 +79,14 @@ async function cargarDatosEmpresa() {
 function procesarVencimiento(fechaStr) {
     if (!fechaStr) return;
 
-    // Soportar cadenas 'YYYY-MM-DD' de manera segura
-    const partes = fechaStr.split('-');
-    const fechaVenc = partes.length === 3
-        ? new Date(partes[0], partes[1] - 1, partes[2])
-        : new Date(fechaStr);
+    // Parseo seguro evitando desfasajes de zona horaria UTC
+    let fechaVenc;
+    if (fechaStr.includes('-')) {
+        const partes = fechaStr.split('T')[0].split('-');
+        fechaVenc = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
+    } else {
+        fechaVenc = new Date(fechaStr);
+    }
 
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
@@ -118,8 +129,11 @@ function procesarVencimiento(fechaStr) {
     }
 }
 
+// ==========================================
+// 3. PERSISTENCIA DE CAMBIOS
+// ==========================================
 async function actualizarEmpresa(silencioso = false) {
-    const nombre = document.getElementById('empNombre').value.trim();
+    const nombre = document.getElementById('empNombre')?.value.trim();
     if (!nombre) {
         Swal.fire('Atención', 'El nombre del negocio es obligatorio.', 'warning');
         return;
@@ -127,15 +141,15 @@ async function actualizarEmpresa(silencioso = false) {
 
     const data = {
         name: nombre,
-        taxId: document.getElementById('empCuit').value.trim(),
-        phone: document.getElementById('empTel').value.trim(),
-        email: document.getElementById('empEmail').value.trim(),
-        address: document.getElementById('empDireccion').value.trim(),
-        ticketMessage: document.getElementById('empTicketMsg').value.trim(),
-        hasTaxData: document.getElementById('checkMostrarFiscal').checked,
-        iibb: document.getElementById('empIibb').value.trim(),
-        inicioActividades: document.getElementById('empInicioAct').value,
-        condicionIva: document.getElementById('empIva').value
+        taxId: document.getElementById('empCuit')?.value.trim() || '',
+        phone: document.getElementById('empTel')?.value.trim() || '',
+        email: document.getElementById('empEmail')?.value.trim() || '',
+        address: document.getElementById('empDireccion')?.value.trim() || '',
+        ticketMessage: document.getElementById('empTicketMsg')?.value.trim() || '',
+        hasTaxData: Boolean(document.getElementById('checkMostrarFiscal')?.checked),
+        iibb: document.getElementById('empIibb')?.value.trim() || '',
+        inicioActividades: document.getElementById('empInicioAct')?.value || '',
+        condicionIva: document.getElementById('empIva')?.value || 'Responsable Monotributo'
     };
 
     try {
@@ -147,17 +161,17 @@ async function actualizarEmpresa(silencioso = false) {
             });
         }
 
-        const resp = await apiFetch(API_URL, {
+        const resp = await apiFetch(ENDPOINT_PROFILE, {
             method: 'PUT',
             body: JSON.stringify(data)
         });
 
         if (resp && resp.ok) {
-            // Sincronizar LocalStorage
+            // Sincronizar LocalStorage para consumo dinámico
             localStorage.setItem('config_comercio', JSON.stringify(data));
             localStorage.setItem('DATOS_EMPRESA', JSON.stringify(data));
 
-            // Actualizar nombre en Navbar
+            // Actualizar nombre en Navbar si existe
             const elCompanyNav = document.getElementById('companyNameNav');
             if (elCompanyNav) elCompanyNav.innerText = nombre.toUpperCase();
 
@@ -191,6 +205,47 @@ async function actualizarEmpresa(silencioso = false) {
     }
 }
 
+async function cambiarPassword() {
+    const pass = document.getElementById('nuevaPass')?.value;
+    const confirm = document.getElementById('confirmarPass')?.value;
+
+    if (!pass || pass.length < 6) {
+        Swal.fire('Atención', 'La contraseña debe tener al menos 6 caracteres.', 'warning');
+        return;
+    }
+
+    if (pass !== confirm) {
+        Swal.fire('Error', 'Las contraseñas no coinciden.', 'error');
+        return;
+    }
+
+    try {
+        Swal.fire({
+            title: 'Actualizando seguridad...',
+            didOpen: () => Swal.showLoading()
+        });
+
+        const resp = await apiFetch("/users/update-password", {
+            method: 'PATCH',
+            body: JSON.stringify({ newPassword: pass })
+        });
+
+        if (resp && resp.ok) {
+            Swal.fire('¡Éxito!', 'Contraseña actualizada correctamente.', 'success');
+            if (document.getElementById('nuevaPass')) document.getElementById('nuevaPass').value = '';
+            if (document.getElementById('confirmarPass')) document.getElementById('confirmarPass').value = '';
+        } else {
+            throw new Error();
+        }
+    } catch (err) {
+        console.error("Error al actualizar contraseña:", err);
+        Swal.fire('Error', 'No se pudo cambiar la contraseña. Revisa el servidor.', 'error');
+    }
+}
+
+// ==========================================
+// 4. LÓGICA DE VISTA PREVIA DEL TICKET
+// ==========================================
 function vincularSwitchFiscal() {
     const switchFiscal = document.getElementById('checkMostrarFiscal');
     if (!switchFiscal) return;
@@ -253,7 +308,7 @@ function vincularInputsPreview() {
             } else if (idInput === 'empInicioAct') {
                 if (val) {
                     const parts = val.split('-');
-                    targetEl.innerText = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    targetEl.innerText = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : val;
                 } else {
                     targetEl.innerText = '-';
                 }
@@ -272,77 +327,47 @@ function vincularInputsPreview() {
     }
 }
 
-async function cambiarPassword() {
-    const pass = document.getElementById('nuevaPass').value;
-    const confirm = document.getElementById('confirmarPass').value;
-
-    if (!pass || pass.length < 6) {
-        Swal.fire('Atención', 'La contraseña debe tener al menos 6 caracteres.', 'warning');
-        return;
-    }
-
-    if (pass !== confirm) {
-        Swal.fire('Error', 'Las contraseñas no coinciden.', 'error');
-        return;
-    }
-
-    try {
-        Swal.fire({
-            title: 'Actualizando seguridad...',
-            didOpen: () => Swal.showLoading()
-        });
-
-        const resp = await apiFetch("/users/update-password", {
-            method: 'PATCH',
-            body: JSON.stringify({ newPassword: pass })
-        });
-
-        if (resp && resp.ok) {
-            Swal.fire('¡Éxito!', 'Contraseña actualizada correctamente.', 'success');
-            document.getElementById('nuevaPass').value = '';
-            document.getElementById('confirmarPass').value = '';
-        } else {
-            throw new Error();
-        }
-    } catch (err) {
-        Swal.fire('Error', 'No se pudo cambiar la contraseña. Revisa el servidor.', 'error');
-    }
-}
-
 function actualizarPreview() {
     const elNombre = document.getElementById('previewNombre');
-    if (elNombre) elNombre.innerText = (document.getElementById('empNombre').value || 'TU NEGOCIO').toUpperCase();
+    if (elNombre) elNombre.innerText = (document.getElementById('empNombre')?.value || 'TU NEGOCIO').toUpperCase();
 
     const elDir = document.getElementById('previewDir');
-    if (elDir) elDir.innerText = document.getElementById('empDireccion').value || 'Tu Dirección';
+    if (elDir) elDir.innerText = document.getElementById('empDireccion')?.value || 'Tu Dirección';
 
     const elTel = document.getElementById('previewTel');
-    if (elTel) elTel.innerText = 'Tel: ' + (document.getElementById('empTel').value || '000-000');
+    if (elTel) elTel.innerText = 'Tel: ' + (document.getElementById('empTel')?.value || '000-000');
 
-    const emailVal = document.getElementById('empEmail').value;
+    const emailVal = document.getElementById('empEmail')?.value;
     const elEmail = document.getElementById('previewEmail');
     if (elEmail) elEmail.innerText = emailVal ? `Email: ${emailVal}` : '';
 
     const elCuit = document.getElementById('previewCuit');
-    if (elCuit) elCuit.innerText = document.getElementById('empCuit').value || '-';
+    if (elCuit) elCuit.innerText = document.getElementById('empCuit')?.value || '-';
 
     const elIibb = document.getElementById('previewIibb');
-    if (elIibb) elIibb.innerText = document.getElementById('empIibb').value || '-';
+    if (elIibb) elIibb.innerText = document.getElementById('empIibb')?.value || '-';
 
     const elMsg = document.getElementById('previewMsg');
-    if (elMsg) elMsg.innerText = document.getElementById('empTicketMsg').value || '¡Gracias por su compra!';
+    if (elMsg) elMsg.innerText = document.getElementById('empTicketMsg')?.value || '¡Gracias por su compra!';
 
     const elIva = document.getElementById('previewIva');
-    if (elIva) elIva.innerText = document.getElementById('empIva').value || 'Responsable Monotributo';
+    if (elIva) elIva.innerText = document.getElementById('empIva')?.value || 'Responsable Monotributo';
 
-    const initAct = document.getElementById('empInicioAct').value;
+    const initAct = document.getElementById('empInicioAct')?.value;
     const elInicio = document.getElementById('previewInicio');
     if (elInicio) {
         if (initAct) {
             const parts = initAct.split('-');
-            elInicio.innerText = `${parts[2]}/${parts[1]}/${parts[0]}`;
+            elInicio.innerText = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : initAct;
         } else {
             elInicio.innerText = '-';
         }
     }
 }
+
+// ==========================================
+// 5. EXPOSICIÓN AL SCOPE GLOBAL
+// ==========================================
+window.actualizarEmpresa = actualizarEmpresa;
+window.cambiarPassword = cambiarPassword;
+window.actualizarPreview = actualizarPreview;

@@ -1,9 +1,19 @@
+/**
+ * BÁEZ POS - MÓDULO DE GESTIÓN DE EGRESOS (SaaS)
+ * Alexander Baez - 2026
+ */
+
 // ==========================================
-// 1. CONFIGURACIÓN Y VARIABLES GLOBALES
+// 1. ESTADO GLOBAL Y CONFIGURACIÓN
 // ==========================================
-//const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
-const API_EXPENSES = `${BACKEND_URL}/api/v1/expenses`;
 let gastosGlobales = [];
+
+// Formateador de moneda optimizado para reutilización
+const fmtARS = new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 2
+});
 
 // ==========================================
 // 2. INICIALIZACIÓN Y EVENT LISTENERS
@@ -17,9 +27,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Filtros dinámicos en tiempo real
-    document.getElementById('filtroTexto').addEventListener('input', aplicarFiltros);
-    document.getElementById('filtroCategoria').addEventListener('change', aplicarFiltros);
-    document.getElementById('filtroMetodoPago').addEventListener('change', aplicarFiltros);
+    const filtroTexto = document.getElementById('filtroTexto');
+    const filtroCategoria = document.getElementById('filtroCategoria');
+    const filtroMetodo = document.getElementById('filtroMetodoPago');
+
+    if (filtroTexto) filtroTexto.addEventListener('input', aplicarFiltros);
+    if (filtroCategoria) filtroCategoria.addEventListener('change', aplicarFiltros);
+    if (filtroMetodo) filtroMetodo.addEventListener('change', aplicarFiltros);
 });
 
 // ==========================================
@@ -27,8 +41,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================
 async function cargarGastos() {
     try {
-        const res = await apiFetch(API_EXPENSES);
-        if (!res.ok) throw new Error("Error al obtener la lista de gastos del servidor.");
+        const res = await apiFetch('/expenses');
+        if (!res || !res.ok) throw new Error("Error al obtener la lista de gastos del servidor.");
 
         gastosGlobales = await res.json();
         renderizarGastos(gastosGlobales);
@@ -37,7 +51,7 @@ async function cargarGastos() {
         console.error("Error cargando gastos:", err);
         const tbody = document.getElementById('listaGastos');
         if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger p-5"><i class="bi bi-exclamation-triangle me-2"></i> Error al conectar con el servidor backend.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger p-5"><i class="bi bi-exclamation-triangle fs-3 d-block mb-2"></i> Error al conectar con el servidor backend.</td></tr>';
         }
     }
 }
@@ -46,9 +60,9 @@ async function cargarGastos() {
 // 4. FILTRADO Y RENDERIZADO VISUAL
 // ==========================================
 function aplicarFiltros() {
-    const texto = document.getElementById('filtroTexto').value.toLowerCase().trim();
-    const cat = document.getElementById('filtroCategoria').value;
-    const metodo = document.getElementById('filtroMetodoPago').value;
+    const texto = (document.getElementById('filtroTexto')?.value || '').toLowerCase().trim();
+    const cat = document.getElementById('filtroCategoria')?.value || '';
+    const metodo = document.getElementById('filtroMetodoPago')?.value || '';
 
     const filtrados = gastosGlobales.filter(g => {
         const matchTexto = (g.description || '').toLowerCase().includes(texto) || (g.reference || '').toLowerCase().includes(texto);
@@ -61,9 +75,9 @@ function aplicarFiltros() {
 }
 
 function limpiarFiltros() {
-    document.getElementById('filtroTexto').value = '';
-    document.getElementById('filtroCategoria').value = '';
-    document.getElementById('filtroMetodoPago').value = '';
+    if (document.getElementById('filtroTexto')) document.getElementById('filtroTexto').value = '';
+    if (document.getElementById('filtroCategoria')) document.getElementById('filtroCategoria').value = '';
+    if (document.getElementById('filtroMetodoPago')) document.getElementById('filtroMetodoPago').value = '';
     renderizarGastos(gastosGlobales);
 }
 
@@ -78,20 +92,27 @@ function renderizarGastos(gastos) {
         return;
     }
 
+    // Usar fragmento para minimizar reflows del DOM
+    const fragment = document.createDocumentFragment();
+
     gastos.sort((a, b) => b.id - a.id).forEach(g => {
         const fechaObj = g.date ? new Date(g.date) : new Date();
         const fechaFormateada = fechaObj.toLocaleDateString('es-AR', {
             day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
         }) + ' hs';
 
+        // Sanitización contra inyección XSS
+        const descSegura = (g.description || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const refSegura = (g.reference || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
         // Estilos para categorías
         let badgeClass = 'bg-light text-dark border';
         if (g.category === 'PROVEEDOR') badgeClass = 'bg-primary-subtle text-primary border-primary-subtle';
-        if (g.category === 'SERVICIOS') badgeClass = 'bg-warning-subtle text-warning-emphasis border-warning-subtle';
-        if (g.category === 'LOGISTICA') badgeClass = 'bg-info-subtle text-info-emphasis border-info-subtle';
-        if (g.category === 'SUELDOS') badgeClass = 'bg-success-subtle text-success-emphasis border-success-subtle';
-        if (g.category === 'MANTENIMIENTO') badgeClass = 'bg-secondary-subtle text-secondary-emphasis border-secondary-subtle';
-        if (g.category === 'CAJA_CHICA') badgeClass = 'bg-danger-subtle text-danger-emphasis border-danger-subtle';
+        else if (g.category === 'SERVICIOS') badgeClass = 'bg-warning-subtle text-warning-emphasis border-warning-subtle';
+        else if (g.category === 'LOGISTICA') badgeClass = 'bg-info-subtle text-info-emphasis border-info-subtle';
+        else if (g.category === 'SUELDOS') badgeClass = 'bg-success-subtle text-success-emphasis border-success-subtle';
+        else if (g.category === 'MANTENIMIENTO') badgeClass = 'bg-secondary-subtle text-secondary-emphasis border-secondary-subtle';
+        else if (g.category === 'CAJA_CHICA') badgeClass = 'bg-danger-subtle text-danger-emphasis border-danger-subtle';
 
         // Etiquetas amigables para medios de pago
         let metodoTexto = 'Efectivo Caja';
@@ -108,13 +129,13 @@ function renderizarGastos(gastos) {
         tr.innerHTML = `
             <td class="ps-3 text-muted small">${fechaFormateada}</td>
             <td>
-                <span class="fw-bold text-dark d-block">${g.description}</span>
-                ${g.reference ? `<small class="text-muted"><i class="bi bi-receipt me-1"></i>Ref: ${g.reference}</small>` : ''}
+                <span class="fw-bold text-dark d-block">${descSegura}</span>
+                ${refSegura ? `<small class="text-muted"><i class="bi bi-receipt me-1"></i>Ref: ${refSegura}</small>` : ''}
             </td>
             <td><span class="badge ${badgeClass} px-2 py-1" style="font-size: 11px;">${g.category}</span></td>
             <td><span class="small text-secondary"><i class="bi ${iconoMetodo} me-1"></i>${metodoTexto}</span></td>
             <td class="text-end fw-bold text-danger fs-6">
-                -$${(g.amount || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                -${fmtARS.format(g.amount || 0)}
             </td>
             <td class="text-center pe-3">
                 <button class="btn btn-sm btn-light border" title="Eliminar registro" onclick="confirmarEliminarGasto(${g.id})">
@@ -122,8 +143,10 @@ function renderizarGastos(gastos) {
                 </button>
             </td>
         `;
-        tbody.appendChild(tr);
+        fragment.appendChild(tr);
     });
+
+    tbody.appendChild(fragment);
 }
 
 // ==========================================
@@ -131,20 +154,23 @@ function renderizarGastos(gastos) {
 // ==========================================
 function calcularResumenGastos(gastos) {
     const lista = gastos || [];
-    const total = lista.reduce((acc, g) => acc + (parseFloat(g.amount) || 0), 0);
 
-    const totalProveedores = lista
-        .filter(g => g.category === 'PROVEEDOR')
-        .reduce((acc, g) => acc + (parseFloat(g.amount) || 0), 0);
+    let total = 0, totalProveedores = 0, totalOperativos = 0;
 
-    const totalOperativos = lista
-        .filter(g => g.category !== 'PROVEEDOR')
-        .reduce((acc, g) => acc + (parseFloat(g.amount) || 0), 0);
+    for (let i = 0; i < lista.length; i++) {
+        const monto = parseFloat(lista[i].amount) || 0;
+        total += monto;
+        if (lista[i].category === 'PROVEEDOR') {
+            totalProveedores += monto;
+        } else {
+            totalOperativos += monto;
+        }
+    }
 
-    document.getElementById('txtTotalGastos').innerText = `$${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
-    document.getElementById('txtCantidadGastos').innerText = `${lista.length} operaciones registradas`;
-    document.getElementById('txtTotalProveedores').innerText = `$${totalProveedores.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
-    document.getElementById('txtTotalOperativos').innerText = `$${totalOperativos.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+    if (document.getElementById('txtTotalGastos')) document.getElementById('txtTotalGastos').innerText = fmtARS.format(total);
+    if (document.getElementById('txtCantidadGastos')) document.getElementById('txtCantidadGastos').innerText = `${lista.length} operaciones registradas`;
+    if (document.getElementById('txtTotalProveedores')) document.getElementById('txtTotalProveedores').innerText = fmtARS.format(totalProveedores);
+    if (document.getElementById('txtTotalOperativos')) document.getElementById('txtTotalOperativos').innerText = fmtARS.format(totalOperativos);
 }
 
 // ==========================================
@@ -153,12 +179,15 @@ function calcularResumenGastos(gastos) {
 async function guardarGasto(e) {
     e.preventDefault();
 
-    const monto = parseFloat(document.getElementById('montoGasto').value);
+    const montoInput = document.getElementById('montoGasto').value;
+    // Reemplaza coma por punto por si el usuario escribe en formato local
+    const monto = parseFloat(montoInput.replace(',', '.'));
+
     if (isNaN(monto) || monto <= 0) {
         return Swal.fire({
             icon: 'warning',
             title: 'Monto inválido',
-            text: 'Por favor, ingresá un monto superior a cero.',
+            text: 'Por favor, ingresá un monto numérico superior a cero.',
             confirmButtonColor: '#dc3545'
         });
     }
@@ -178,12 +207,12 @@ async function guardarGasto(e) {
     };
 
     try {
-        const res = await apiFetch(API_EXPENSES, {
+        const res = await apiFetch('/expenses', {
             method: 'POST',
             body: JSON.stringify(nuevoGasto)
         });
 
-        if (res.ok) {
+        if (res && res.ok) {
             Swal.fire({
                 toast: true, position: 'top-end', icon: 'success',
                 title: 'Egreso registrado correctamente',
@@ -191,14 +220,21 @@ async function guardarGasto(e) {
             });
 
             document.getElementById('formGasto').reset();
+
             const modalEl = document.getElementById('modalNuevoGasto');
-            const modalInstance = bootstrap.Modal.getInstance(modalEl);
-            if (modalInstance) modalInstance.hide();
+            if (modalEl) {
+                const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modalInstance.hide();
+            }
 
             cargarGastos();
         } else {
-            const errorData = await res.json();
-            throw new Error(errorData.message || "No se pudo procesar el registro del egreso.");
+            let errorMsg = "No se pudo procesar el registro del egreso.";
+            try {
+                const errorData = await res.json();
+                errorMsg = errorData.message || errorData.error || errorMsg;
+            } catch (e) { /* Fallback al default */ }
+            throw new Error(errorMsg);
         }
     } catch (err) {
         Swal.fire({
@@ -212,8 +248,8 @@ async function guardarGasto(e) {
 
 async function confirmarEliminarGasto(id) {
     const result = await Swal.fire({
-        title: '¿Eliminar este registro de gasto?',
-        text: "Esta acción ajustará las métricas y el balance de caja correspondiente.",
+        title: '¿Eliminar este registro?',
+        text: "Esta acción ajustará las métricas y el balance de caja correspondiente de forma irreversible.",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#dc3545',
@@ -224,11 +260,9 @@ async function confirmarEliminarGasto(id) {
 
     if (result.isConfirmed) {
         try {
-            const res = await apiFetch(`${API_EXPENSES}/${id}`, {
-                method: 'DELETE'
-            });
+            const res = await apiFetch(`/expenses/${id}`, { method: 'DELETE' });
 
-            if (res.ok) {
+            if (res && res.ok) {
                 Swal.fire({
                     toast: true, position: 'top-end', icon: 'success',
                     title: 'Gasto eliminado con éxito',
@@ -236,11 +270,20 @@ async function confirmarEliminarGasto(id) {
                 });
                 cargarGastos();
             } else {
-                const errData = await res.json();
-                Swal.fire('Error', errData.message || 'No se pudo eliminar el gasto.', 'error');
+                let errorMsg = 'No se pudo eliminar el gasto.';
+                try {
+                    const errData = await res.json();
+                    errorMsg = errData.message || errData.error || errorMsg;
+                } catch (e) { /* Ignorar parse error */ }
+                Swal.fire('Error', errorMsg, 'error');
             }
         } catch (err) {
+            console.error("Error al eliminar gasto:", err);
             Swal.fire('Error de conexión', 'No se pudo conectar con el servidor.', 'error');
         }
     }
 }
+
+// Exposición en el scope global para los eventos en el HTML
+window.confirmarEliminarGasto = confirmarEliminarGasto;
+window.limpiarFiltros = limpiarFiltros;

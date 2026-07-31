@@ -1,9 +1,6 @@
 // ==========================================
 // 1. CONFIGURACIÓN Y VARIABLES GLOBALES
 // ==========================================
-//const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
-const API_SALES = `${BACKEND_URL}/api/v1/sales`;
-
 let VENTA_SELECCIONADA = null;
 let VENTAS_GLOBALES = [];
 let DATOS_EMPRESA = null;
@@ -51,13 +48,12 @@ async function cargarVentas() {
         return Swal.fire('Atención', 'Por favor selecciona el rango de fechas completo.', 'warning');
     }
 
-    const url = `${API_SALES}?desde=${desde}&hasta=${hasta}`;
-
     try {
         const tbody = document.getElementById('listaVentas');
         if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center p-5 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Buscando transacciones...</td></tr>';
 
-        const res = await apiFetch(url);
+        // ✅ Ruta relativa directa procesada por apiFetch
+        const res = await apiFetch(`/sales?desde=${desde}&hasta=${hasta}`);
         if (!res.ok) throw new Error("Error al obtener el historial");
 
         const ventas = await res.json();
@@ -159,6 +155,7 @@ async function confirmarAnulacion(id) {
 
     if (result.isConfirmed) {
         try {
+            // ✅ Ruta relativa directa procesada por apiFetch
             const res = await apiFetch(`/sales/${id}/cancel`, {
                 method: 'PUT'
             });

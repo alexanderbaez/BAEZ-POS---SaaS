@@ -1,14 +1,24 @@
 /**
  * BÁEZ POS - GESTIÓN DE INVENTARIO (SAAS MULTITENANT)
+ * Alexander Baez - 2026
  */
 
-// NOTA: BACKEND_URL ya viene declarado en el script de seguridad anterior.
-// Usamos directamente las rutas basadas en ese scope global.
-const API_BASE = `${BACKEND_URL}/api/v1/products`;
-const API_CAT = `${BACKEND_URL}/api/v1/categories`;
+// Rutas relativas del módulo
+const ENDPOINT_PRODUCTS = '/products';
+const ENDPOINT_CATEGORIES = '/categories';
 
 let PRODUCTOS_LOCAL = [];
 
+// Formateador de moneda reutilizable
+const fmtARS = new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 2
+});
+
+// ==========================================
+// 1. INICIALIZACIÓN
+// ==========================================
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Carga inicial de datos multitenant
     listarProductos();
@@ -16,6 +26,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const form = document.getElementById('formProducto');
     if (form) form.addEventListener('submit', guardarProducto);
+
+    // Eventos de búsqueda y filtrado
+    const buscador = document.getElementById('buscador');
+    const filtroCat = document.getElementById('filtroCategoria');
+
+    if (buscador) buscador.addEventListener('input', filtrarProductos);
+    if (filtroCat) filtroCat.addEventListener('change', filtrarProductos);
 
     // 2. Receptor de Scanner / Búsqueda Externa vía URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -43,10 +60,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// --- CATEGORÍAS ---
+// ==========================================
+// 2. GESTIÓN DE CATEGORÍAS
+// ==========================================
 async function cargarCategorias() {
     try {
-        const res = await apiFetch(API_CAT);
+        const res = await apiFetch(ENDPOINT_CATEGORIES);
         if (!res || !res.ok) return [];
         const categorias = await res.json();
 
@@ -57,7 +76,8 @@ async function cargarCategorias() {
         let optionsFiltro = '<option value="">Todas las categorías</option>';
 
         categorias.forEach(c => {
-            const opt = `<option value="${c.id}">${c.name}</option>`;
+            const nameSeguro = (c.name || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            const opt = `<option value="${c.id}">${nameSeguro}</option>`;
             options += opt;
             optionsFiltro += opt;
         });
@@ -78,15 +98,18 @@ async function abrirModalCategoria() {
     let listadoHtml = `
         <div class="list-group list-group-flush mb-3" style="max-height: 200px; overflow-y: auto;">
             ${categorias.length === 0 ? '<div class="text-center p-3 text-muted">Sin categorías registradas</div>' : ''}
-            ${categorias.map(c => `
+            ${categorias.map(c => {
+                const nameSeguro = (c.name || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                const nameEscapado = (c.name || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                return `
                 <div class="list-group-item d-flex justify-content-between align-items-center bg-light rounded-3 mb-2 border-0">
-                    <span class="fw-bold" id="cat-label-${c.id}">${c.name}</span>
+                    <span class="fw-bold" id="cat-label-${c.id}">${nameSeguro}</span>
                     <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-primary border-0" onclick="prepararEdicionCat(${c.id}, '${c.name.replace(/'/g, "\\'")}')"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-outline-primary border-0" onclick="prepararEdicionCat(${c.id}, '${nameEscapado}')"><i class="bi bi-pencil"></i></button>
                         <button class="btn btn-outline-danger border-0" onclick="eliminarCategoria(${c.id})"><i class="bi bi-trash"></i></button>
                     </div>
-                </div>
-            `).join('')}
+                </div>`;
+            }).join('')}
         </div>
         <div class="p-3 bg-primary bg-opacity-10 rounded-4">
             <label class="form-label fw-bold small text-primary">NUEVA / EDITAR CATEGORÍA</label>
@@ -113,21 +136,21 @@ async function abrirModalCategoria() {
 }
 
 function prepararEdicionCat(id, nombre) {
-    document.getElementById('editCatId').value = id;
-    document.getElementById('swalCatNombre').value = nombre;
-    document.getElementById('btnGuardarCat').innerText = "Actualizar Nombre";
-    document.getElementById('swalCatNombre').focus();
+    if (document.getElementById('editCatId')) document.getElementById('editCatId').value = id;
+    if (document.getElementById('swalCatNombre')) document.getElementById('swalCatNombre').value = nombre;
+    if (document.getElementById('btnGuardarCat')) document.getElementById('btnGuardarCat').innerText = "Actualizar Nombre";
+    if (document.getElementById('swalCatNombre')) document.getElementById('swalCatNombre').focus();
 }
 
 async function guardarCategoria() {
-    const id = document.getElementById('editCatId').value;
+    const id = document.getElementById('editCatId')?.value;
     const nombreInput = document.getElementById('swalCatNombre');
     const nombre = nombreInput ? nombreInput.value.trim() : "";
 
     if (!nombre) return Swal.fire('Atención', "Escribe un nombre para la categoría", 'warning');
 
     try {
-        const url = id ? `${API_CAT}/${id}` : API_CAT;
+        const url = id ? `${ENDPOINT_CATEGORIES}/${id}` : ENDPOINT_CATEGORIES;
         const metodo = id ? 'PUT' : 'POST';
 
         const res = await apiFetch(url, {
@@ -166,7 +189,7 @@ async function eliminarCategoria(id) {
 
     if (confirm.isConfirmed) {
         try {
-            const res = await apiFetch(`${API_CAT}/${id}`, { method: 'DELETE' });
+            const res = await apiFetch(`${ENDPOINT_CATEGORIES}/${id}`, { method: 'DELETE' });
             if (res && res.ok) {
                 await cargarCategorias();
                 abrirModalCategoria();
@@ -179,10 +202,12 @@ async function eliminarCategoria(id) {
     }
 }
 
-// --- PRODUCTOS ---
+// ==========================================
+// 3. GESTIÓN DE PRODUCTOS
+// ==========================================
 async function listarProductos() {
     try {
-        const res = await apiFetch(API_BASE);
+        const res = await apiFetch(ENDPOINT_PRODUCTS);
         if (!res || !res.ok) return;
         PRODUCTOS_LOCAL = await res.json();
         renderizarTabla(PRODUCTOS_LOCAL);
@@ -201,41 +226,49 @@ function renderizarTabla(lista) {
         return;
     }
 
+    const fragment = document.createDocumentFragment();
+
     lista.forEach(p => {
-        const catName = p.categoryName || 'S/C';
+        const nombreSeguro = (p.name || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const barcodeSeguro = (p.barcode || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const catName = (p.categoryName || 'S/C').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
         const stockClase = p.stock <= p.minStock ? 'bg-danger bg-opacity-10 text-danger' : 'bg-success bg-opacity-10 text-success';
         const costo = parseFloat(p.cost) || 0;
         const precio = parseFloat(p.price) || 0;
         const margen = costo > 0 ? (((precio - costo) / costo) * 100).toFixed(0) : 0;
 
-        tabla.innerHTML += `
-            <tr>
-                <td class="ps-4">
-                    <p class="product-name">${p.name}</p>
-                    <span class="product-code"><i class="bi bi-barcode me-1"></i>${p.barcode || 'Sin código'}</span>
-                </td>
-                <td><span class="badge bg-light text-dark border-0 p-2 px-3 rounded-pill">${catName}</span></td>
-                <td class="text-muted">$${costo.toFixed(2)}</td>
-                <td class="fw-bold text-dark">$${precio.toFixed(2)}</td>
-                <td><span class="text-success small fw-bold">+${margen}%</span></td>
-                <td><span class="badge ${stockClase} p-2 px-3 rounded-pill" style="font-size: 0.8rem;">${p.stock} un.</span></td>
-                <td class="text-end pe-4">
-                    <div class="btn-group shadow-sm rounded-3">
-                        <button class="btn btn-white btn-sm border-end" title="Etiqueta" onclick="imprimirEtiqueta(${p.id})"><i class="bi bi-printer text-primary"></i></button>
-                        <button class="btn btn-white btn-sm border-end" title="Editar" onclick="editarProducto(${p.id})"><i class="bi bi-pencil-square text-primary"></i></button>
-                        <button class="btn btn-white btn-sm" title="Eliminar" onclick="eliminarProducto(${p.id})"><i class="bi bi-trash3 text-danger"></i></button>
-                    </div>
-                </td>
-            </tr>`;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="ps-4">
+                <p class="product-name fw-bold mb-0">${nombreSeguro}</p>
+                <span class="product-code text-muted small"><i class="bi bi-barcode me-1"></i>${barcodeSeguro || 'Sin código'}</span>
+            </td>
+            <td><span class="badge bg-light text-dark border-0 p-2 px-3 rounded-pill">${catName}</span></td>
+            <td class="text-muted">${fmtARS.format(costo)}</td>
+            <td class="fw-bold text-dark">${fmtARS.format(precio)}</td>
+            <td><span class="text-success small fw-bold">+${margen}%</span></td>
+            <td><span class="badge ${stockClase} p-2 px-3 rounded-pill" style="font-size: 0.8rem;">${p.stock} un.</span></td>
+            <td class="text-end pe-4">
+                <div class="btn-group shadow-sm rounded-3">
+                    <button class="btn btn-white btn-sm border-end" title="Etiqueta" onclick="imprimirEtiqueta(${p.id})"><i class="bi bi-printer text-primary"></i></button>
+                    <button class="btn btn-white btn-sm border-end" title="Editar" onclick="editarProducto(${p.id})"><i class="bi bi-pencil-square text-primary"></i></button>
+                    <button class="btn btn-white btn-sm" title="Eliminar" onclick="eliminarProducto(${p.id})"><i class="bi bi-trash3 text-danger"></i></button>
+                </div>
+            </td>
+        `;
+        fragment.appendChild(tr);
     });
+
+    tabla.appendChild(fragment);
 }
 
 function filtrarProductos() {
-    const texto = document.getElementById('buscador').value.toLowerCase().trim();
-    const catId = document.getElementById('filtroCategoria').value;
+    const texto = (document.getElementById('buscador')?.value || '').toLowerCase().trim();
+    const catId = document.getElementById('filtroCategoria')?.value || '';
 
     const filtrados = PRODUCTOS_LOCAL.filter(p => {
-        const coincideTexto = p.name.toLowerCase().includes(texto) || (p.barcode && p.barcode.toLowerCase().includes(texto));
+        const coincideTexto = (p.name || '').toLowerCase().includes(texto) || (p.barcode && p.barcode.toLowerCase().includes(texto));
         const coincideCat = catId === "" || p.categoryId == catId;
         return coincideTexto && coincideCat;
     });
@@ -265,15 +298,18 @@ async function guardarProducto(e) {
     };
 
     try {
-        const res = await apiFetch(id ? `${API_BASE}/${id}` : API_BASE, {
+        const url = id ? `${ENDPOINT_PRODUCTS}/${id}` : ENDPOINT_PRODUCTS;
+        const res = await apiFetch(url, {
             method: id ? 'PUT' : 'POST',
             body: JSON.stringify(body)
         });
 
         if (res && res.ok) {
             const modalEl = document.getElementById('modalProducto');
-            const modalInstance = bootstrap.Modal.getInstance(modalEl);
-            if (modalInstance) modalInstance.hide();
+            if (modalEl) {
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance) modalInstance.hide();
+            }
 
             await listarProductos();
             Swal.fire({ icon: 'success', title: id ? 'Actualizado' : 'Creado', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
@@ -287,35 +323,40 @@ async function guardarProducto(e) {
 }
 
 function prepararFormulario() {
-    document.getElementById('formProducto').reset();
-    document.getElementById('prodId').value = '';
-    document.getElementById('modalTitulo').innerText = "Nuevo Producto";
-    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalProducto')).show();
+    const form = document.getElementById('formProducto');
+    if (form) form.reset();
+    if (document.getElementById('prodId')) document.getElementById('prodId').value = '';
+    if (document.getElementById('modalTitulo')) document.getElementById('modalTitulo').innerText = "Nuevo Producto";
+
+    const modalEl = document.getElementById('modalProducto');
+    if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
 }
 
 function editarProducto(id) {
     const p = PRODUCTOS_LOCAL.find(prod => prod.id === id);
     if (!p) return;
 
-    document.getElementById('prodId').value = p.id;
-    document.getElementById('prodNombre').value = p.name || '';
-    document.getElementById('prodBarcode').value = p.barcode || '';
-    document.getElementById('prodCosto').value = p.cost || 0;
-    document.getElementById('prodPrecio').value = p.price || 0;
-    document.getElementById('prodStock').value = p.stock || 0;
-    document.getElementById('prodMinStock').value = p.minStock || 0;
+    if (document.getElementById('prodId')) document.getElementById('prodId').value = p.id;
+    if (document.getElementById('prodNombre')) document.getElementById('prodNombre').value = p.name || '';
+    if (document.getElementById('prodBarcode')) document.getElementById('prodBarcode').value = p.barcode || '';
+    if (document.getElementById('prodCosto')) document.getElementById('prodCosto').value = p.cost || 0;
+    if (document.getElementById('prodPrecio')) document.getElementById('prodPrecio').value = p.price || 0;
+    if (document.getElementById('prodStock')) document.getElementById('prodStock').value = p.stock || 0;
+    if (document.getElementById('prodMinStock')) document.getElementById('prodMinStock').value = p.minStock || 0;
 
     const selectCat = document.getElementById('prodCategoria');
     if (selectCat) selectCat.value = p.categoryId || "";
 
-    document.getElementById('modalTitulo').innerText = "Editar Producto";
-    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalProducto')).show();
+    if (document.getElementById('modalTitulo')) document.getElementById('modalTitulo').innerText = "Editar Producto";
+
+    const modalEl = document.getElementById('modalProducto');
+    if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
 }
 
 async function eliminarProducto(id) {
     const result = await Swal.fire({
         title: '¿Mover a la papelera?',
-        text: "Podrás restaurarlo en cualquier momento",
+        text: "Podrás restaurarlo en cualquier momento.",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Sí, borrar',
@@ -324,7 +365,7 @@ async function eliminarProducto(id) {
 
     if (result.isConfirmed) {
         try {
-            const res = await apiFetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+            const res = await apiFetch(`${ENDPOINT_PRODUCTS}/${id}`, { method: 'DELETE' });
             if (res && res.ok) {
                 await listarProductos();
                 Swal.fire('Eliminado', 'Producto movido a la papelera', 'success');
@@ -335,28 +376,39 @@ async function eliminarProducto(id) {
     }
 }
 
+// ==========================================
+// 4. PAPELERA Y RESTAURACIÓN
+// ==========================================
 async function abrirPapelera() {
     try {
-        const res = await apiFetch(`${API_BASE}/deleted`);
+        const res = await apiFetch(`${ENDPOINT_PRODUCTS}/deleted`);
         if (!res || !res.ok) return;
         const borrados = await res.json();
         const tabla = document.getElementById('listaBorrados');
+        if (!tabla) return;
+
         tabla.innerHTML = '';
 
         if (!borrados || borrados.length === 0) {
             tabla.innerHTML = '<tr><td colspan="2" class="text-center p-4 text-muted">La papelera está vacía</td></tr>';
         } else {
+            const fragment = document.createDocumentFragment();
             borrados.forEach(p => {
-                tabla.innerHTML += `
-                    <tr>
-                        <td class="ps-3"><b>${p.name}</b><br><small class="text-muted">${p.barcode || 'S/C'}</small></td>
-                        <td class="text-end pe-3">
-                            <button class="btn btn-sm btn-success fw-bold" onclick="restaurarProducto(${p.id})">Restaurar</button>
-                        </td>
-                    </tr>`;
+                const nameSeguro = (p.name || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="ps-3"><b>${nameSeguro}</b><br><small class="text-muted">${p.barcode || 'S/C'}</small></td>
+                    <td class="text-end pe-3">
+                        <button class="btn btn-sm btn-success fw-bold" onclick="restaurarProducto(${p.id})">Restaurar</button>
+                    </td>
+                `;
+                fragment.appendChild(tr);
             });
+            tabla.appendChild(fragment);
         }
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPapelera')).show();
+
+        const modalEl = document.getElementById('modalPapelera');
+        if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
     } catch (err) {
         console.error("Error leyendo papelera:", err);
     }
@@ -364,11 +416,13 @@ async function abrirPapelera() {
 
 async function restaurarProducto(id) {
     try {
-        const res = await apiFetch(`${API_BASE}/${id}/activate`, { method: 'PATCH' });
+        const res = await apiFetch(`${ENDPOINT_PRODUCTS}/${id}/activate`, { method: 'PATCH' });
         if (res && res.ok) {
             const modalEl = document.getElementById('modalPapelera');
-            const instance = bootstrap.Modal.getInstance(modalEl);
-            if (instance) instance.hide();
+            if (modalEl) {
+                const instance = bootstrap.Modal.getInstance(modalEl);
+                if (instance) instance.hide();
+            }
 
             await listarProductos();
             Swal.fire('Restaurado', 'El producto vuelve a estar activo', 'success');
@@ -378,7 +432,9 @@ async function restaurarProducto(id) {
     }
 }
 
-// --- TECLADO Y ESCANEO ---
+// ==========================================
+// 5. TECLADO Y ESCANEO
+// ==========================================
 document.addEventListener('keydown', (e) => {
     const buscador = document.getElementById('buscador');
     const modalProducto = document.getElementById('modalProducto');
@@ -387,7 +443,8 @@ document.addEventListener('keydown', (e) => {
     if (modalProducto && modalProducto.classList.contains('show')) {
         if (e.key === 'Enter' && document.activeElement === inputCodigo) {
             e.preventDefault();
-            document.getElementById('prodNombre').focus();
+            const inputNombre = document.getElementById('prodNombre');
+            if (inputNombre) inputNombre.focus();
         }
     } else {
         if (/[0-9]/.test(e.key) && document.activeElement !== buscador) {
@@ -399,18 +456,24 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// --- IMPRESIÓN DE ETIQUETA ---
+// ==========================================
+// 6. IMPRESIÓN DE ETIQUETA
+// ==========================================
 function imprimirEtiqueta(id) {
     const p = PRODUCTOS_LOCAL.find(prod => prod.id === id);
     if (!p || !p.barcode) return Swal.fire('Atención', 'El producto no tiene un código de barras registrado', 'warning');
 
     const ventana = window.open('', 'PRINT', 'height=400,width=600');
+    if (!ventana) return Swal.fire('Error', 'Por favor habilita las ventanas emergentes en tu navegador.', 'error');
+
     const precio = parseFloat(p.price) || 0;
+    const nameSeguro = (p.name || '').replace(/"/g, '&quot;');
 
     ventana.document.write(`
+        <!DOCTYPE html>
         <html>
             <head>
-                <title>Etiqueta - ${p.name}</title>
+                <title>Etiqueta - ${nameSeguro}</title>
                 <style>
                     body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
                     .etiqueta {
@@ -425,9 +488,9 @@ function imprimirEtiqueta(id) {
             </head>
             <body>
                 <div class="etiqueta">
-                    <div class="nombre">${p.name.toUpperCase()}</div>
+                    <div class="nombre">${nameSeguro.toUpperCase()}</div>
                     <svg id="barcode-svg" class="barcode"></svg>
-                    <div class="precio">$${precio.toFixed(2)}</div>
+                    <div class="precio">${fmtARS.format(precio)}</div>
                 </div>
                 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
                 <script>
@@ -454,3 +517,18 @@ document.addEventListener('focusin', (e) => {
         e.stopImmediatePropagation();
     }
 }, true);
+
+// ==========================================
+// 7. EXPOSICIÓN AL SCOPE GLOBAL
+// ==========================================
+window.abrirModalCategoria = abrirModalCategoria;
+window.prepararEdicionCat = prepararEdicionCat;
+window.guardarCategoria = guardarCategoria;
+window.eliminarCategoria = eliminarCategoria;
+window.prepararFormulario = prepararFormulario;
+window.editarProducto = editarProducto;
+window.eliminarProducto = eliminarProducto;
+window.abrirPapelera = abrirPapelera;
+window.restaurarProducto = restaurarProducto;
+window.imprimirEtiqueta = imprimirEtiqueta;
+window.filtrarProductos = filtrarProductos;

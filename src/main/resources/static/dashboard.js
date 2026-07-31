@@ -1,34 +1,11 @@
 /**
  * BÁEZ POS - DASHBOARD DE GESTIÓN SAAS
+ * Alexander Baez - 2026
  */
 
-// URL base de tu backend en Render
-//const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
-
-/**
- * FUNCIÓN HELPER API-FETCH INTELIGENTE
- * Añade automáticamente el prefijo /api/v1 y el token de autenticación del SaaS.
- */
-async function apiFetch(endpoint, options = {}) {
-    const token = localStorage.getItem('baezpos_token') || '';
-
-    const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        ...(options.headers || {})
-    };
-
-    let url;
-    if (endpoint.startsWith('http')) {
-        url = endpoint;
-    } else {
-        const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-        url = `${BACKEND_URL}/api/v1${cleanEndpoint}`;
-    }
-
-    return await fetch(url, { ...options, headers });
-}
-
+// ==========================================
+// 1. INICIALIZACIÓN
+// ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Mostrar nombre de usuario
     const elUserLabel = document.getElementById('userNameLabel');
@@ -45,16 +22,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // 3. Ejecutar cargas asíncronas
-    await cargarDatosDashboard();
-    await cargarAlertasStock();
-    await cargarDatosGrafico();
+    // 3. Ejecutar cargas asíncronas en paralelo controlado
+    await Promise.allSettled([
+        cargarDatosDashboard(),
+        cargarAlertasStock(),
+        cargarDatosGrafico()
+    ]);
 });
 
+// ==========================================
+// 2. CARGA DE KPIS DEL DASHBOARD
+// ==========================================
 async function cargarDatosDashboard() {
     try {
         const response = await apiFetch('/sales/report/box?period=today');
-        if (!response.ok) return;
+        if (!response || !response.ok) return;
 
         const data = await response.json();
 
@@ -103,10 +85,13 @@ async function cargarDatosDashboard() {
     }
 }
 
+// ==========================================
+// 3. GRÁFICO SEMANAL
+// ==========================================
 async function cargarDatosGrafico() {
     try {
         const response = await apiFetch('/sales/report/chart');
-        if (!response.ok) return;
+        if (!response || !response.ok) return;
 
         const data = await response.json();
 
@@ -167,10 +152,13 @@ function renderizarGraficoSemanal(etiquetas, valores) {
     });
 }
 
+// ==========================================
+// 4. ALERTAS DE STOCK
+// ==========================================
 async function cargarAlertasStock() {
     try {
         const res = await apiFetch('/products');
-        if (!res.ok) return;
+        if (!res || !res.ok) return;
 
         const productos = await res.json();
         const criticos = productos.filter(p => p.stock <= 10);
@@ -193,7 +181,7 @@ async function cargarAlertasStock() {
         container.innerHTML = criticos.map(p => `
             <div class="d-flex align-items-center p-3 mb-2 rounded-3 border-start border-4 ${p.stock <= 3 ? 'border-danger bg-danger bg-opacity-10' : 'border-warning bg-warning bg-opacity-10'}">
                 <div class="flex-grow-1">
-                    <h6 class="mb-0 fw-bold small text-dark">${p.name.toUpperCase()}</h6>
+                    <h6 class="mb-0 fw-bold small text-dark">${(p.name || '').toUpperCase()}</h6>
                     <small class="text-muted">Quedan ${p.stock} unidades</small>
                 </div>
                 <span class="badge ${p.stock <= 3 ? 'bg-danger' : 'bg-warning'} rounded-pill">${p.stock}</span>

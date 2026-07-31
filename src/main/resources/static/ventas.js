@@ -3,13 +3,6 @@
  * Alexander Baez - 2026
  */
 
-//const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
-const API_BASE = `${BACKEND_URL}/api/v1/sales`;
-const API_PRODUCTS = `${BACKEND_URL}/api/v1/products`;
-const API_CUSTOMERS = `${BACKEND_URL}/api/v1/customers`;
-const API_STATUS = `${BACKEND_URL}/api/v1/admin/my-company/status`;
-const companyId = localStorage.getItem('baezpos_company_id');
-
 let sistemaBloqueado = false;
 let mensajeTicketServidor = "";
 
@@ -26,20 +19,13 @@ let clienteSeleccionado = null;
 let indiceSeleccionado = -1;
 let ULTIMA_VENTA_EXITOSA = null;
 let DATOS_EMPRESA = null;
+
 // ==========================================
 // INICIALIZACIÓN PRINCIPAL
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Verificación de licencia obligatoria primero
-    if (typeof chequearEstadoLicencia === 'function') {
-        await chequearEstadoLicencia();
-    }
-    if (sistemaBloqueado) return;
-
-    // 2. Carga segura de datos iniciales
-    if (typeof cargarInfoEmpresa === 'function') {
-        await cargarInfoEmpresa();
-    }
+    // 1. Carga segura de datos iniciales
+    await cargarInfoEmpresa();
     await cargarProductos();
 
     const buscador = document.getElementById('buscadorVenta');
@@ -67,9 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 (p.barcode && p.barcode.includes(term))
             ).slice(0, 8);
 
-            if (typeof renderizarSugerencias === 'function') {
-                renderizarSugerencias(filtrados);
-            }
+            renderizarSugerencias(filtrados);
         });
 
         // Navegación por teclado
@@ -81,14 +65,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 e.preventDefault();
                 if (items.length > 0) {
                     indiceSeleccionado = (indiceSeleccionado + 1) % items.length;
-                    if (typeof actualizarFocoSugerencia === 'function') actualizarFocoSugerencia(items);
+                    actualizarFocoSugerencia(items);
                 }
             }
             else if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 if (items.length > 0) {
                     indiceSeleccionado = (indiceSeleccionado - 1 + items.length) % items.length;
-                    if (typeof actualizarFocoSugerencia === 'function') actualizarFocoSugerencia(items);
+                    actualizarFocoSugerencia(items);
                 }
             }
             else if (e.key === 'Enter') {
@@ -97,7 +81,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     items[indiceSeleccionado].click();
                 } else {
                     const term = buscador.value.trim();
-                    if (typeof buscarYAgregar === 'function') buscarYAgregar(term);
+                    buscarYAgregar(term);
                 }
                 if (sugerenciasDiv) sugerenciasDiv.style.display = 'none';
             }
@@ -115,8 +99,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (term.length < 2) { sugCli.style.display = 'none'; return; }
 
             try {
-                const res = await apiFetch(`${API_CUSTOMERS}`);
-                if (!res.ok) return;
+                // apiFetch gestiona la url y el token Bearer automáticamente
+                const res = await apiFetch('/customers');
+                if (!res || !res.ok) return;
+
                 const todos = await res.json();
                 const filtrados = todos.filter(c =>
                     c.name.toLowerCase().includes(term.toLowerCase())
@@ -126,7 +112,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <button type="button" class="list-group-item list-group-item-action small" onclick='seleccionarCliente(${JSON.stringify(c)})'>
                         <div class="d-flex justify-content-between">
                             <span>${c.name}</span>
-                            <span class="${c.currentBalance >= c.creditLimit ? 'text-danger' : 'text-success'} fw-bold">$${c.currentBalance.toFixed(2)}</span>
+                            <span class="${(c.currentBalance || 0) >= (c.creditLimit || 0) ? 'text-danger' : 'text-success'} fw-bold">$${(c.currentBalance || 0).toFixed(2)}</span>
                         </div>
                     </button>
                 `).join('');
@@ -138,23 +124,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Listeners de Interfaz
     const inputPagaCon = document.getElementById('pagaCon');
     if (inputPagaCon) {
-        inputPagaCon.addEventListener('input', () => {
-            if (typeof calcularVuelto === 'function') calcularVuelto();
-        });
+        inputPagaCon.addEventListener('input', () => calcularVuelto());
     }
 
     const inputDesc = document.getElementById('inputDescuento');
     if (inputDesc) {
-        inputDesc.addEventListener('input', () => {
-            if (typeof renderizarCarrito === 'function') renderizarCarrito();
-        });
+        inputDesc.addEventListener('input', () => renderizarCarrito());
     }
 
     const tipoDesc = document.getElementById('tipoDescuento');
     if (tipoDesc) {
-        tipoDesc.addEventListener('change', () => {
-            if (typeof renderizarCarrito === 'function') renderizarCarrito();
-        });
+        tipoDesc.addEventListener('change', () => renderizarCarrito());
     }
 
     // Atajos Globales (F12, F4, F2, F8, Escape)
@@ -162,7 +142,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (sistemaBloqueado) return;
         if (e.key === 'F12') { e.preventDefault(); if (typeof finalizarVenta === 'function') finalizarVenta(); }
         if (e.key === 'F4') { e.preventDefault(); const p = document.getElementById('pagaCon'); if(p) p.focus(); }
-        if (e.key === 'F2') { e.preventDefault(); if (typeof cancelarVenta === 'function') cancelarVenta(); }
+        if (e.key === 'F2') { e.preventDefault(); cancelarVenta(); }
         if (e.key === 'Escape') {
             const buscador = document.getElementById('buscadorVenta');
             if(buscador) buscador.focus();
@@ -170,59 +150,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             const sugCli = document.getElementById('sugerenciasClientes');
             if(sugCli) sugCli.style.display = 'none';
         }
-        if (e.key === 'F8') { e.preventDefault(); if (typeof agregarProductoManual === 'function') agregarProductoManual(); }
+        if (e.key === 'F8') { e.preventDefault(); agregarProductoManual(); }
     });
-
-    // Verificación de estado SaaS periódica
-    if (typeof chequearEstadoLicencia === 'function') {
-        setInterval(chequearEstadoLicencia, 30000);
-    }
 });
-
-// --- CONTROL DE LICENCIA SAAS ---
-async function chequearEstadoLicencia() {
-    try {
-        const res = await apiFetch(API_STATUS);
-        if (!res || !res.ok) return;
-
-        const data = await res.json();
-
-        if (data.vencido === true || data.active === false) {
-            mostrarCartelBloqueo(data.message || "Tu cuenta se encuentra suspendida.");
-        } else {
-            sistemaBloqueado = false;
-        }
-    } catch (err) {
-        console.error("Error al verificar estado de la licencia SaaS:", err);
-    }
-}
-
-function mostrarCartelBloqueo(mensaje = "Tu suscripción ha vencido o tu cuenta está inactiva.") {
-    sistemaBloqueado = true;
-    CARRITO = [];
-    renderizarCarrito();
-
-    Swal.fire({
-        title: '¡CUENTA SUSPENDIDA!',
-        html: `${mensaje}<br><br><b>Contacta a Alexander Báez para habilitar el servicio.</b>`,
-        icon: 'error',
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        confirmButtonColor: '#25D366',
-        confirmButtonText: '<i class="bi bi-whatsapp"></i> Hablar con Alexander',
-    }).then((result) => {
-        if (result.isConfirmed) {
-            window.open(`https://wa.me/${MI_WHATSAPP}?text=Hola Alexander, mi sistema aparece como suspendido.`);
-            setTimeout(() => mostrarCartelBloqueo(mensaje), 500);
-        }
-    });
-}
 
 // --- GESTIÓN DE EMPRESA Y PRODUCTOS ---
 async function cargarInfoEmpresa() {
     try {
         const resp = await apiFetch('/admin/my-company/profile');
-        if (resp.ok) {
+        if (resp && resp.ok) {
             DATOS_EMPRESA = await resp.json();
             localStorage.setItem('config_comercio', JSON.stringify(DATOS_EMPRESA));
             localStorage.setItem('DATOS_EMPRESA', JSON.stringify(DATOS_EMPRESA));
@@ -231,7 +167,7 @@ async function cargarInfoEmpresa() {
             if (dataGuardada) DATOS_EMPRESA = JSON.parse(dataGuardada);
         }
     } catch (err) {
-        console.error("Error de conexión:", err);
+        console.error("Error de conexión al cargar datos de empresa:", err);
     }
 }
 
@@ -240,15 +176,9 @@ async function cargarInfoEmpresa() {
 // ==========================================
 async function cargarProductos() {
     try {
-        const res = await apiFetch(API_PRODUCTS);
-        if (!res) return;
-        if (res.status === 403) return;
-        if (res.status === 401) {
-            localStorage.removeItem('baezpos_token');
-            window.location.href = 'login.html?error=expired';
-            return;
-        }
-        if (!res.ok) throw new Error("Error al obtener productos");
+        const res = await apiFetch('/products');
+        if (!res || !res.ok) return;
+
         PRODUCTOS_DB = await res.json();
     } catch (err) {
         console.error("Error de conexión al cargar productos:", err);
@@ -532,7 +462,6 @@ async function buscarYAgregar(query) {
         PRODUCTOS_DB = [];
     }
 
-    // CORRECCIÓN CLAVE: Búsqueda flexible por código de barras O coincidencia parcial de nombre
     const p = PRODUCTOS_DB.find(prod =>
         (prod.barcode && prod.barcode.toLowerCase() === term) ||
         (prod.name && prod.name.toLowerCase().includes(term))
@@ -543,6 +472,7 @@ async function buscarYAgregar(query) {
     } else {
         if (/^\d{7,14}$/.test(term)) {
             try {
+                // Consulta a la API pública externa de OpenFoodFacts
                 const response = await fetch(`https://world.openfoodfacts.org/api/v2/product/${term}.json?fields=product_name,product_name_es,brands,quantity`);
                 const data = await response.json();
 
@@ -701,23 +631,32 @@ function agregarProductoManual() {
                 cantidad: 1
             });
             renderizarCarrito();
-            if (window.sndSuccess) window.sndSuccess.play().catch(() => {});
+            if (sndSuccess) sndSuccess.play().catch(() => {});
         }
     });
 }
 
-// --- FINALIZACIÓN Y COBRO DE VENTAS ---
+// ==========================================
+// FINALIZACIÓN Y COBRO DE VENTAS
+// ==========================================
+// ==========================================
+// FINALIZACIÓN Y COBRO DE VENTAS
+// ==========================================
 async function finalizarVenta() {
-    if (typeof sistemaBloqueado !== 'undefined' && sistemaBloqueado) {
+    // 1. Integración con el Centinela de Licenciamiento (auth.js)
+    const overlayBloqueo = document.getElementById('bloqueo-pos-overlay');
+    if (overlayBloqueo || (typeof sistemaBloqueado !== 'undefined' && sistemaBloqueado)) {
         if (typeof mostrarCartelBloqueo === 'function') mostrarCartelBloqueo();
         return;
     }
 
+    // 2. Validación de Carrito
     if (!CARRITO || CARRITO.length === 0) {
         Swal.fire('Carrito vacío', 'Agrega productos para cobrar', 'info');
         return;
     }
 
+    // 3. Sanitización y Parseo de Montos
     const totalVentaEl = document.getElementById('totalVenta');
     const totalRaw = totalVentaEl ? totalVentaEl.innerText : '0';
     const totalLimpio = totalRaw.replace('$', '').replace(/\./g, '').replace(',', '.').trim();
@@ -735,6 +674,7 @@ async function finalizarVenta() {
     let porcentajeRecargo = 0;
     let montoRecargo = 0;
 
+    // 4. Reglas de Negocio para Libreta / Cuenta Corriente
     if (METODO_PAGO === 'CUENTA_CORRIENTE') {
         if (!clienteSeleccionado) {
             Swal.fire('Atención', 'Debes seleccionar un cliente para vender a la libreta', 'warning');
@@ -751,8 +691,12 @@ async function finalizarVenta() {
             confirmButtonText: 'Confirmar y Cobrar',
             cancelButtonText: 'Cancelar',
             preConfirm: (value) => {
-                if (value < 0) Swal.showValidationMessage('El porcentaje no puede ser negativo');
-                return parseFloat(value) || 0;
+                const val = parseFloat(value);
+                if (isNaN(val) || val < 0) {
+                    Swal.showValidationMessage('El porcentaje no puede ser negativo');
+                    return false;
+                }
+                return val;
             }
         });
 
@@ -774,10 +718,12 @@ async function finalizarVenta() {
         }
     }
 
-    const configLocal = JSON.parse(localStorage.getItem('config_comercio') || localStorage.getItem('DATOS_EMPRESA') || '{}');
-    const esFiscalActivo = (typeof DATOS_EMPRESA !== 'undefined' && DATOS_EMPRESA && (DATOS_EMPRESA.hasTaxData === true || DATOS_EMPRESA.hasTaxData === "true")) ||
-                           (configLocal.hasTaxData === true || configLocal.hasTaxData === "true");
+    // 5. Configuración de Entorno Fiscal (Normalizado con auth.js)
+    const configLocal = JSON.parse(localStorage.getItem('config_comercio') || '{}');
+    const datosEmpresaContext = (typeof DATOS_EMPRESA !== 'undefined' && DATOS_EMPRESA) ? DATOS_EMPRESA : configLocal;
+    const esFiscalActivo = String(datosEmpresaContext.hasTaxData) === "true";
 
+    // 6. Construcción del Payload DTO
     const saleRequestDTO = {
         items: CARRITO.map(item => ({
             productId: typeof item.id === 'number' ? item.id : null,
@@ -800,14 +746,18 @@ async function finalizarVenta() {
     if (btnFinalizar) btnFinalizar.disabled = true;
 
     try {
-        const res = await apiFetch(API_BASE, {
+        // 7. Petición HTTP usando apiFetch de auth.js
+        const res = await apiFetch('/sales', {
             method: 'POST',
             body: JSON.stringify(saleRequestDTO)
         });
 
+        // Si auth.js detectó 401/403, redirigirá la página. Detenemos la ejecución aquí.
+        if (res.status === 401 || res.status === 403) return;
+
         let data = {};
         const contentType = res.headers.get("content-type");
-        if (contentType && contentType.indexOf("application/json") !== -1) {
+        if (contentType && contentType.includes("application/json")) {
             data = await res.json();
         }
 
@@ -833,6 +783,7 @@ async function finalizarVenta() {
                 }
             });
 
+            // Limpieza de interfaz
             CARRITO = [];
             clienteSeleccionado = null;
             const infoCli = document.getElementById('infoClienteSeleccionado');
@@ -846,7 +797,7 @@ async function finalizarVenta() {
             if (typeof cargarProductos === 'function') await cargarProductos();
 
         } else {
-            throw new Error(data.message || "Error al procesar la venta en el servidor.");
+            throw new Error(data.message || `Error ${res.status}: No se pudo procesar la venta en el servidor.`);
         }
     } catch (err) {
         console.error("Error en finalizarVenta:", err);
@@ -859,43 +810,50 @@ async function finalizarVenta() {
     }
 }
 
-// --- IMPRESIÓN DE TICKETS Y TIKETERA ---
+// ==========================================
+// IMPRESIÓN DE TICKETS Y TIKETERA
+// ==========================================
 function imprimirTicket(venta) {
+    if (!venta) return;
+
     const ventana = window.open('', 'PRINT', 'height=700,width=400');
     if (!ventana) {
         Swal.fire({ icon: 'warning', title: 'Popup bloqueado', text: 'Permití las ventanas emergentes en tu navegador.' });
         return;
     }
 
+    // Garantizar aislamiento multi-tenant usando los datos retornados por el backend en la venta
     const infoEmpresa = (typeof DATOS_EMPRESA !== 'undefined' && DATOS_EMPRESA !== null) ? DATOS_EMPRESA : {};
-    const fiscalActivo = infoEmpresa.hasTaxData === true || infoEmpresa.hasTaxData === "true";
+    const fiscalActivo = String(venta.isFiscal !== undefined ? venta.isFiscal : infoEmpresa.hasTaxData) === "true";
 
-    const nombreLocal = (infoEmpresa.name || venta.companyName || 'MI NEGOCIO').toUpperCase();
-    const direccionLocal = infoEmpresa.address || venta.companyAddress || '';
-    const telefonoLocal = infoEmpresa.phone || venta.companyPhone || '';
-    const emailLocal = infoEmpresa.email || venta.companyEmail || '';
-    const mensajePie = infoEmpresa.ticketMessage || venta.ticketMessage || '¡Gracias por su compra!';
+    const nombreLocal = (venta.companyName || infoEmpresa.name || 'MI NEGOCIO').toUpperCase();
+    const direccionLocal = venta.companyAddress || infoEmpresa.address || '';
+    const telefonoLocal = venta.companyPhone || infoEmpresa.phone || '';
+    const emailLocal = venta.companyEmail || infoEmpresa.email || '';
+    const mensajePie = venta.ticketMessage || infoEmpresa.ticketMessage || '¡Gracias por su compra!';
 
-    const cuitLocal = infoEmpresa.taxId || infoEmpresa.cuit || venta.companyCuit || '';
-    const iibbLocal = infoEmpresa.iibb || venta.companyIibb || '';
-    const condicionIva = (infoEmpresa.condicionIva || 'RESPONSABLE MONOTRIBUTO').toUpperCase();
+    const cuitLocal = venta.companyCuit || infoEmpresa.taxId || infoEmpresa.cuit || '';
+    const iibbLocal = venta.companyIibb || infoEmpresa.iibb || '';
+    const condicionIva = (venta.condicionIva || infoEmpresa.condicionIva || 'RESPONSABLE MONOTRIBUTO').toUpperCase();
 
-    let inicioActividades = infoEmpresa.inicioActividades || infoEmpresa.inicioAct || '';
+    let inicioActividades = venta.inicioActividades || infoEmpresa.inicioActividades || infoEmpresa.inicioAct || '';
     if (inicioActividades && inicioActividades.includes('-')) {
         const parts = inicioActividades.split('-');
-        inicioActividades = `${parts[2]}/${parts[1]}/${parts[0]}`;
+        if (parts.length === 3) {
+            inicioActividades = `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
     }
 
     const tipoComprobante = fiscalActivo
         ? (venta.tipoComprobante || infoEmpresa.tipoComprobante || 'FACTURA C').toUpperCase()
         : (venta.tipoComprobante || 'TICKET INTERNO');
 
-    const cae = venta.cae || infoEmpresa.caePrueba || '';
-    const caeVto = venta.caeVto || infoEmpresa.caeVtoPrueba || '';
+    const cae = venta.cae || '';
+    const caeVto = venta.caeVto || '';
 
     const nroComprobante = venta.nroComprobante || `00001-${String(venta.id || 1).padStart(8, '0')}`;
     const fechaVenta = venta.saleDate ? new Date(venta.saleDate).toLocaleString('es-AR') : new Date().toLocaleString('es-AR');
-    const metodoPago = (venta.paymentMethod || 'EFECTIVO').replace('_', ' ').toUpperCase();
+    const metodoPago = (venta.paymentMethod || 'EFECTIVO').replace(/_/g, ' ').toUpperCase();
 
     const nombreCliente = (venta.clienteNombre || (clienteSeleccionado ? clienteSeleccionado.name : 'CONSUMIDOR FINAL')).toUpperCase();
     const cuitCliente = venta.clienteCuit || (clienteSeleccionado ? clienteSeleccionado.cuit : '') || '';
@@ -1073,7 +1031,7 @@ document.addEventListener('keydown', (e) => {
     const inputsLibres = ['pagaCon', 'inputDescuento', 'buscarClientePos', 'manualNombreBusqueda', 'manualPrecio'];
 
     if (!inputsLibres.includes(idActivo)) {
-        if (e.key.length === 1 && !e.ctrlKey && !e.altKey) {
+        if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
             if (document.activeElement !== buscador && buscador) {
                 buscador.focus();
             }

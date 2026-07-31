@@ -1,52 +1,30 @@
 /**
- * BÁEZ POS - PANEL MAESTRO SUPER ADMIN (SaaS)
+ * BÁEZ POS - PANEL MAESTRO SUPER ADMIN & SEGURIDAD SAAS
  * Alexander Baez - 2026
  * Control Central de Empresas / Clientes Multi-Tenant
  */
 
-// URL base de tu backend en Render
-const BACKEND_URL = "https://baez-pos-saas.onrender.com";
-
-// Rutas completas apuntando a la nube (Corregido con /api/v1)
-const API_BASE = `${BACKEND_URL}/api/v1/super-admin/companies`;
-const LOGS_BASE = `${BACKEND_URL}/api/v1/logs`;
-
-/**
- * FUNCIÓN HELPER API-FETCH
- * Gestiona automáticamente el token de autenticación y las cabeceras HTTP.
- */
-async function apiFetch(endpoint, options = {}) {
-    const token = localStorage.getItem('baezpos_token') || '';
-
-    const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        ...(options.headers || {})
-    };
-
-    const config = {
-        ...options,
-        headers
-    };
-
-    const url = endpoint.startsWith('http') ? endpoint : `${BACKEND_URL}${endpoint}`;
-    return await fetch(url, config);
-}
+// Rutas relativas consumidas directamente a través del apiFetch global de auth.js
+const API_BASE = '/super-admin/companies';
+const LOGS_BASE = '/logs';
 
 let modalEdicion;
 let modalMovimientos;
 let todasLasEmpresas = [];
 
+// ==========================================
+// 1. INICIALIZACIÓN DEL DOM Y EVENTOS
+// ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-    const role = (localStorage.getItem('baezpos_user_role') || '').toUpperCase().trim();
-    const esSuperAdmin = role === 'SUPER_ADMIN' || role === 'SUPERADMIN';
-
-    if (!esSuperAdmin) {
+    // Doble control de seguridad por rol por si acaso
+    const rolActual = (localStorage.getItem('baezpos_user_role') || '').toUpperCase().trim();
+    if (!rolActual.includes('SUPER_ADMIN') && !rolActual.includes('SUPERADMIN')) {
         console.error("Acceso denegado: Se requiere rol SUPER_ADMIN.");
         window.location.href = 'login.html';
         return;
     }
 
+    // Sincronizar intervalos de actualización automática de logs cada 30 segundos
     setInterval(() => {
         cargarLogs();
     }, 30000);
@@ -73,7 +51,7 @@ function cargarTodo() {
 async function cargarEmpresas() {
     try {
         const resp = await apiFetch(API_BASE);
-        if (!resp.ok) return;
+        if (!resp || !resp.ok) return;
 
         const empresas = await resp.json();
         todasLasEmpresas = empresas;
@@ -89,7 +67,7 @@ function renderizarTabla(empresas) {
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    if (empresas.length === 0) {
+    if (!empresas || empresas.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-muted">No hay comercios registrados aún.</td></tr>';
         return;
     }
@@ -145,7 +123,9 @@ function renderizarTabla(empresas) {
     });
 }
 
-// 🚀 Función para sumar 30 días de suscripción con un solo clic y alerta blindada
+// ==========================================
+// 2. ACCIONES DE GESTIÓN (Renovar, Alta, Editar, Logs)
+// ==========================================
 async function renovarSuscripcion(id) {
     const empresa = todasLasEmpresas.find(e => e.id === id);
     if (!empresa) return;
@@ -201,7 +181,7 @@ async function procesarRenovacion(id, empresa, nuevaFechaStr) {
             body: JSON.stringify(payload)
         });
 
-        if (resp.ok) {
+        if (resp && resp.ok) {
             if (typeof Swal !== 'undefined') {
                 Swal.fire('¡Renovado!', 'La suscripción se extendió por 30 días exitosamente.', 'success');
             }
@@ -243,13 +223,13 @@ function actualizarKpis(empresas) {
     if (document.getElementById('kpiVencidos')) document.getElementById('kpiVencidos').innerText = vencidos;
 }
 
-// Alta de Comercio
+// Formulario de Alta
 const formNueva = document.getElementById('formNuevaEmpresa');
 if (formNueva) {
     formNueva.addEventListener('submit', async (e) => {
         e.preventDefault();
         const btnSubmit = e.target.querySelector('button[type="submit"]');
-        btnSubmit.disabled = true;
+        if (btnSubmit) btnSubmit.disabled = true;
 
         const nuevaEmpresaRequest = {
             companyName: document.getElementById('masterNombre').value,
@@ -268,7 +248,7 @@ if (formNueva) {
                 body: JSON.stringify(nuevaEmpresaRequest)
             });
 
-            if (resp.ok) {
+            if (resp && resp.ok) {
                 if (typeof Swal !== 'undefined') Swal.fire('¡Registrado!', 'Comercio creado con éxito.', 'success');
                 cargarTodo();
                 e.target.reset();
@@ -278,7 +258,7 @@ if (formNueva) {
         } catch (err) {
             if (typeof Swal !== 'undefined') Swal.fire('Error de Red', 'Fallo en la comunicación.', 'error');
         } finally {
-            btnSubmit.disabled = false;
+            if (btnSubmit) btnSubmit.disabled = false;
         }
     });
 }
@@ -325,7 +305,7 @@ if (formEdit) {
                 body: JSON.stringify(payload)
             });
 
-            if (resp.ok) {
+            if (resp && resp.ok) {
                 if (newPass) {
                     await apiFetch(`${API_BASE}/${id}/reset-password`, {
                         method: 'PATCH',
@@ -344,7 +324,9 @@ if (formEdit) {
     });
 }
 
-// Ver Movimientos y Auditoría del Cliente Específico
+// ==========================================
+// 3. MOVIMIENTOS Y LOGS (El botón del "Ojo")
+// ==========================================
 async function verMovimientos(id, nombreComercio) {
     document.getElementById('lblClienteMov').innerText = nombreComercio;
     document.getElementById('detTotalVentas').innerText = "—";
@@ -358,7 +340,7 @@ async function verMovimientos(id, nombreComercio) {
 
     try {
         const resp = await apiFetch(LOGS_BASE);
-        if (!resp.ok) return;
+        if (!resp || !resp.ok) return;
 
         const logs = await resp.json();
         const logsCliente = logs.filter(l =>
@@ -391,7 +373,7 @@ async function verMovimientos(id, nombreComercio) {
 async function cargarLogs() {
     try {
         const resp = await apiFetch(LOGS_BASE);
-        if (!resp.ok) return;
+        if (!resp || !resp.ok) return;
 
         const logs = await resp.json();
         const tbodyLogs = document.getElementById('tablaLogsCompleta');
@@ -422,7 +404,6 @@ async function cargarLogs() {
     }
 }
 
-// Función de eliminación con alerta SweetAlert2 totalmente blindada
 async function eliminarEmpresa(id) {
     if (typeof Swal !== 'undefined') {
         const result = await Swal.fire({
@@ -449,7 +430,7 @@ async function eliminarEmpresa(id) {
 async function ejecutarEliminacion(id) {
     try {
         const resp = await apiFetch(`${API_BASE}/${id}`, { method: 'DELETE' });
-        if (resp.ok) {
+        if (resp && resp.ok) {
             if (typeof Swal !== 'undefined') {
                 Swal.fire('Eliminado', 'Comercio eliminado con éxito.', 'success');
             }
@@ -475,3 +456,10 @@ function filtrarEmpresas(termino) {
     );
     renderizarTabla(filtradas);
 }
+
+// Exposición global para asegurar llamadas desde el HTML
+window.renovarSuscripcion = renovarSuscripcion;
+window.verMovimientos = verMovimientos;
+window.prepararEdicion = prepararEdicion;
+window.eliminarEmpresa = eliminarEmpresa;
+window.cargarLogs = cargarLogs;

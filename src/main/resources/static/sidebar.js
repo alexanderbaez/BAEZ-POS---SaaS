@@ -1,27 +1,31 @@
 /**
- * BÁEZ POS - COMPONENTE SIDEBAR Y NAVBAR DINÁMICO (SaaS)
+ * BÁEZ POS - COMPONENTE SIDEBAR Y NAVBAR DINÁMICO (SaaS Multi-tenant)
  * Alexander Baez - 2026
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Recuperar datos de sesión limpios sincronizados por el token
-    const userRole = (localStorage.getItem('baezpos_user_role') || 'EMPLEADO').toUpperCase().trim();
-    const userName = localStorage.getItem('baezpos_user_name') || 'Usuario';
-    const tenantName = localStorage.getItem('baezpos_tenant_name') || userName; // Nombre del comercio/negocio
+    // 1. Recuperar y sanitizar datos de sesión
+    const rawRole = (localStorage.getItem('baezpos_user_role') || 'EMPLEADO').toUpperCase().trim();
+    const rawName = localStorage.getItem('baezpos_user_name') || 'Usuario';
+    const rawTenant = localStorage.getItem('baezpos_tenant_name') || rawName;
 
-    // BLINDAJE ABSOLUTO DE ROL
-    const isSuperAdmin = (userRole === 'SUPER_ADMIN');
-    const isAdmin = isSuperAdmin || userRole === 'ADMIN' || userRole === 'ADMINISTRADOR' || userRole === 'OWNER';
+    const userRole = escapeHTML(rawRole);
+    const userName = escapeHTML(rawName);
+    const tenantName = escapeHTML(rawTenant);
 
-    // 2. SINCRONIZAR AUTOMÁTICAMENTE LA NAVBAR SUPERIOR
+    // BLINDAJE DE ROL
+    const isSuperAdmin = (rawRole === 'SUPER_ADMIN');
+    const isAdmin = isSuperAdmin || rawRole === 'ADMIN' || rawRole === 'ADMINISTRADOR' || rawRole === 'OWNER';
+
+    // 2. SINCRONIZAR NAVBAR SUPERIOR
     const elUserName = document.getElementById('userName');
     const elUserRoleBadge = document.getElementById('userRoleBadge');
 
     if (elUserName) {
-        elUserName.textContent = tenantName;
+        elUserName.textContent = rawTenant;
     }
     if (elUserRoleBadge) {
-        elUserRoleBadge.textContent = userRole;
+        elUserRoleBadge.textContent = rawRole;
         elUserRoleBadge.className = `badge text-uppercase ${isSuperAdmin ? 'bg-warning text-dark' : (isAdmin ? 'bg-primary' : 'bg-secondary')}`;
         elUserRoleBadge.style.fontSize = '0.65rem';
     }
@@ -32,58 +36,61 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const paginaActual = window.location.pathname.split("/").pop() || "dashboard.html";
 
-    // Inyectar estilos CSS del Sidebar
-    const estilos = document.createElement('style');
-    estilos.innerHTML = `
-        #sidebar {
-            width: 250px;
-            height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            background: #1e293b !important;
-            z-index: 1000;
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-        .nav-link-custom {
-            color: #94a3b8 !important;
-            padding: 10px 16px;
-            border-radius: 8px;
-            margin: 2px 12px;
-            display: flex;
-            align-items: center;
-            text-decoration: none;
-            font-size: 0.95rem;
-            font-weight: 500;
-            transition: all 0.2s ease;
-        }
-        .nav-link-custom:hover {
-            color: #ffffff !important;
-            background: rgba(255, 255, 255, 0.08) !important;
-            transform: translateX(3px);
-        }
-        .nav-link-custom.active-page {
-            background-color: #2563eb !important;
-            color: #ffffff !important;
-            font-weight: 600;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-        }
-        .user-badge {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 10px 15px;
-            margin: 10px 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        @media (max-width: 768px) {
-            #sidebar { left: -250px !important; }
-            #sidebar.active { left: 0 !important; }
-        }
-    `;
-    document.head.appendChild(estilos);
+    // Inyectar estilos CSS (controlando duplicados)
+    if (!document.getElementById('sidebar-styles')) {
+        const estilos = document.createElement('style');
+        estilos.id = 'sidebar-styles';
+        estilos.innerHTML = `
+            #sidebar {
+                width: 250px;
+                height: 100vh;
+                position: fixed;
+                top: 0;
+                left: 0;
+                background: #1e293b !important;
+                z-index: 1000;
+                transition: all 0.3s ease;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+            }
+            .nav-link-custom {
+                color: #94a3b8 !important;
+                padding: 10px 16px;
+                border-radius: 8px;
+                margin: 2px 12px;
+                display: flex;
+                align-items: center;
+                text-decoration: none;
+                font-size: 0.95rem;
+                font-weight: 500;
+                transition: all 0.2s ease;
+            }
+            .nav-link-custom:hover {
+                color: #ffffff !important;
+                background: rgba(255, 255, 255, 0.08) !important;
+                transform: translateX(3px);
+            }
+            .nav-link-custom.active-page {
+                background-color: #2563eb !important;
+                color: #ffffff !important;
+                font-weight: 600;
+                box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            }
+            .user-badge {
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 12px;
+                padding: 10px 15px;
+                margin: 10px 12px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            @media (max-width: 768px) {
+                #sidebar { left: -250px !important; }
+                #sidebar.active { left: 0 !important; }
+            }
+        `;
+        document.head.appendChild(estilos);
+    }
 
     // Inyectar HTML del Menú
     sidebarContainer.innerHTML = `
@@ -154,7 +161,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
 
-            <!-- Botón con ID y data-action para control absoluto -->
             <a href="#" id="btnCerrarSesion" class="nav-link-custom text-danger">
               <i class="bi bi-box-arrow-left me-3 fs-5"></i> Cerrar Sesión
             </a>
@@ -164,19 +170,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
- * Interceptor en fase de CAPTURA (true):
- * Esto frena el clic antes de que cualquier otro script de la página o del navegador lo reciba.
+ * Interceptor de Cierre de Sesión en fase de Captura
  */
 document.addEventListener('click', async (event) => {
     const btnLogout = event.target.closest('#btnCerrarSesion');
     if (!btnLogout) return;
 
-    // Detenemos absolutamente cualquier comportamiento nativo o propagación externa
     event.preventDefault();
     event.stopImmediatePropagation();
     event.stopPropagation();
 
-    // Verificamos SweetAlert2
     if (typeof Swal !== 'undefined') {
         const resultado = await Swal.fire({
             title: '¿Cerrar sesión?',
@@ -193,15 +196,31 @@ document.addEventListener('click', async (event) => {
             ejecutarCierreDeSesion();
         }
     } else {
-        // Respaldo nativo estricto
         if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
             ejecutarCierreDeSesion();
         }
     }
-}, { capture: true }); // <--- CLAVE: El parámetro 'capture: true' intercepta el evento primero que nadie.
+}, { capture: true });
 
-// Función auxiliar interna para limpiar y redirigir
+// Toggle responsivo opcional
+document.addEventListener('click', (event) => {
+    const btnToggle = event.target.closest('#btnToggleSidebar');
+    if (btnToggle) {
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar) sidebar.classList.toggle('active');
+    }
+});
+
 function ejecutarCierreDeSesion() {
     localStorage.clear();
-    window.location.href = 'index.html';
+    window.location.href = 'login.html';
+}
+
+function escapeHTML(str) {
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }

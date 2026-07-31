@@ -1,10 +1,11 @@
 /**
  * BÁEZ POS - GESTIÓN DE CLIENTES Y CUENTA CORRIENTE (LIBRETA)
+ * Alexander Baez - 2026
  */
 
-//const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
-const API_CUSTOMERS = `${BACKEND_URL}/api/v1/customers`;
-const API_PERFIL = `${BACKEND_URL}/api/v1/admin/my-company/profile`;
+// Rutas relativas procesadas por el apiFetch global de auth.js
+const API_CUSTOMERS = '/api/v1/customers';
+const API_PERFIL = '/api/v1/admin/my-company/profile';
 
 let modalClienteInstance = null;
 let modalHistorialInstance = null;
@@ -157,7 +158,7 @@ function abrirModalNuevoCliente() {
     document.getElementById('modalClienteTitulo').innerText = 'Nuevo Cliente';
 
     const modalEl = document.getElementById('modalNuevoCliente');
-    modalClienteInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+    modalClienteInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
     modalClienteInstance.show();
 }
 
@@ -173,7 +174,7 @@ function abrirModalEditar(id) {
     document.getElementById('custLimite').value = cliente.creditLimit || 0;
 
     const modalEl = document.getElementById('modalNuevoCliente');
-    modalClienteInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+    modalClienteInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
     modalClienteInstance.show();
 }
 
@@ -264,7 +265,7 @@ async function verHistorial(id, nombre, telefono) {
         renderizarTablaMovimientos();
 
         const modalEl = document.getElementById('modalHistorialCliente');
-        modalHistorialInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modalHistorialInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
         modalHistorialInstance.show();
 
     } catch (err) {
@@ -520,7 +521,7 @@ async function registrarPago(id) {
 // 6. UTILIDADES E INTEGRACIÓN CON WHATSAPP
 // ==========================================
 
-window.toggleDetalle = function(index) {
+function toggleDetalle(index) {
     const el = document.getElementById(`detalle-${index}`);
     const icono = document.getElementById(`icon-${index}`);
     if (el) {
@@ -532,9 +533,9 @@ window.toggleDetalle = function(index) {
             if (icono) icono.classList.replace('bi-chevron-up', 'bi-chevron-down');
         }
     }
-};
+}
 
-window.compartirWhatsApp = function(nombreCliente, telefono, fecha, total, itemsEncoded, descuento = 0, recargo = 0) {
+function compartirWhatsApp(nombreCliente, telefono, fecha, total, itemsEncoded, descuento = 0, recargo = 0) {
     if (!telefono || telefono === "null" || telefono === "") {
         return Swal.fire('Atención', 'El cliente no tiene un teléfono registrado.', 'warning');
     }
@@ -600,7 +601,7 @@ window.compartirWhatsApp = function(nombreCliente, telefono, fecha, total, items
 
     const numLimpio = telefono.replace(/\D/g, '');
     window.open(`https://wa.me/${numLimpio}?text=${encodeURIComponent(texto)}`, '_blank');
-};
+}
 
 // Exposición explícita en window para llamadas desde HTML
 window.abrirModalEditar = abrirModalEditar;
@@ -612,3 +613,5 @@ window.guardarCliente = guardarCliente;
 window.filtrarClientes = filtrarClientes;
 window.aplicarFiltroFechas = aplicarFiltroFechas;
 window.limpiarFiltroFechas = limpiarFiltroFechas;
+window.toggleDetalle = toggleDetalle;
+window.compartirWhatsApp = compartirWhatsApp;
