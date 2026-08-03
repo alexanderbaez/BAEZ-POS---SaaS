@@ -49,8 +49,18 @@ public class SaleController {
     }
 
     @GetMapping("/report/box")
-    public ResponseEntity<BoxReportDTO> getBoxReport(@RequestParam(required = false, defaultValue = "hoy") String period) {
-        return ResponseEntity.ok(saleService.getBoxReport(period));
+    public ResponseEntity<BoxReportDTO> getBoxReport(
+            @RequestParam(required = false, defaultValue = "hoy") String period,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+
+        // Si desde JS vienen con startDate/endDate los mapeamos a desde/hasta
+        LocalDate desde = (from != null) ? from : startDate;
+        LocalDate hasta = (to != null) ? to : endDate;
+
+        return ResponseEntity.ok(saleService.getBoxReport(period, desde, hasta));
     }
 
     @GetMapping("/report/chart")

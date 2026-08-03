@@ -12,7 +12,10 @@ public interface SaleService {
     SaleResponseDTO createSale(SaleRequestDTO saleDTO, Long userId);
     SaleResponseDTO getSaleById(Long id);
     List<SaleResponseDTO> getAllSales();
-    BoxReportDTO getBoxReport(String period);
+
+    // FIRMA ACTUALIZADA PARA ACEPTAR RANGO DE FECHAS
+    BoxReportDTO getBoxReport(String period, LocalDate from, LocalDate to);
+
     List<ChartDataDTO> getSalesChartData();
     void cancelSale(Long saleId);
     List<SaleResponseDTO> getSalesByDateRange(LocalDate desde, LocalDate hasta);

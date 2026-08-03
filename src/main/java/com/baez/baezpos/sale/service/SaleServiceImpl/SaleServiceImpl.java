@@ -211,19 +211,32 @@ public class SaleServiceImpl implements SaleService {
 
     @Override
     @Transactional(readOnly = true)
-    public BoxReportDTO getBoxReport(String period) {
+    public BoxReportDTO getBoxReport(String period, LocalDate from, LocalDate to) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
 
+        // 1. Fechas fijas para métricas de "HOY"
         LocalDateTime startToday = LocalDate.now().atStartOfDay();
-        LocalDateTime endToday = LocalDate.now().atTime(23, 59, 59);
-        LocalDateTime startMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
-        LocalDateTime endMonth = LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()).atTime(23, 59, 59);
+        LocalDateTime endToday = LocalDate.now().atTime(LocalTime.MAX);
 
-        List<Sale> monthlySales;
-        if (companyId != null) {
-            monthlySales = saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, startMonth, endMonth);
+        // 2. Fechas dinámicas para el rango/mes solicitado
+        LocalDateTime startRange;
+        LocalDateTime endRange;
+
+        if (from != null && to != null) {
+            startRange = from.atStartOfDay();
+            endRange = to.atTime(LocalTime.MAX);
         } else {
-            monthlySales = saleRepository.findBySaleDateBetweenOrderBySaleDateDesc(startMonth, endMonth);
+            // Fallback por defecto: Mes Actual
+            startRange = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+            endRange = LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()).atTime(LocalTime.MAX);
+        }
+
+        // Consultar ventas en el rango dinámico
+        List<Sale> rangeSales;
+        if (companyId != null) {
+            rangeSales = saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, startRange, endRange);
+        } else {
+            rangeSales = saleRepository.findBySaleDateBetweenOrderBySaleDateDesc(startRange, endRange);
         }
 
         BigDecimal vCash = BigDecimal.ZERO;
@@ -234,9 +247,10 @@ public class SaleServiceImpl implements SaleService {
         BigDecimal mCostAccumulator = BigDecimal.ZERO;
         long mCount = 0;
 
-        for (Sale s : monthlySales) {
+        for (Sale s : rangeSales) {
             if (s.getCanceled()) continue;
 
+            // Acumuladores del periodo seleccionado (Calendario)
             mSales = mSales.add(s.getTotal());
             mCount++;
 
@@ -246,6 +260,7 @@ public class SaleServiceImpl implements SaleService {
                 mCostAccumulator = mCostAccumulator.add(itemCostTotal);
             }
 
+            // Filtro exclusivo para caja del día actual (Top Cards)
             if (!s.getSaleDate().isBefore(startToday) && !s.getSaleDate().isAfter(endToday)) {
                 if ("EFECTIVO".equals(s.getPaymentMethod())) {
                     vCash = vCash.add(s.getTotal());
