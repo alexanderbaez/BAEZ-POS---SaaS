@@ -1,18 +1,20 @@
 package com.baez.baezpos.company.service.CompanyServiceImpl;
 
 import com.baez.baezpos.company.dto.CompanyDTO;
-import com.baez.baezpos.company.dto.MasterRegistrationRequest;
 import com.baez.baezpos.company.entity.Company;
 import com.baez.baezpos.company.repository.CompanyRepository;
 import com.baez.baezpos.company.service.CompanyService.CompanyService;
 import com.baez.baezpos.log.service.AuditService;
+import com.baez.baezpos.mail.EmailService;
 import com.baez.baezpos.user.dto.UserDTO;
 import com.baez.baezpos.user.entity.User;
 import com.baez.baezpos.user.entity.Role;
 import com.baez.baezpos.user.repository.UserRepository;
 import com.baez.baezpos.shared.exception.ResourceNotFoundException;
+import com.baez.baezpos.security.util.SecurityUtils;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.context.SecurityContextHolder;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,16 +25,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import com.baez.baezpos.security.util.SecurityUtils;
-
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CompanyServiceImpl implements CompanyService {
 
     private final CompanyRepository companyRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
+    private final EmailService emailService;
 
     private Company getAuthenticatedCompanyEntity() {
         Long companyId = SecurityUtils.getCurrentCompanyId();
@@ -53,8 +55,6 @@ public class CompanyServiceImpl implements CompanyService {
     @Transactional
     public CompanyDTO updateAuthenticatedCompany(CompanyDTO dto) {
         Company company = getAuthenticatedCompanyEntity();
-
-        // Guardamos el nombre viejo para detallarlo en la bitácora
         String nombreAntiguo = company.getName();
 
         company.setName(dto.getName());
@@ -71,15 +71,13 @@ public class CompanyServiceImpl implements CompanyService {
 
         Company savedCompany = companyRepository.save(company);
 
-        // ✅ 2. Registrar el evento en la bitácora del sistema
         try {
             auditService.logAction(
                     "ACTUALIZACIÓN DE PERFIL",
                     "El comercio '" + nombreAntiguo + "' actualizó sus datos de configuración. Nuevo nombre: '" + savedCompany.getName() + "'."
             );
         } catch (Exception e) {
-            // Evitamos que falle la actualización principal si el log falla por algún motivo de contexto
-            System.err.println("No se pudo registrar el log: " + e.getMessage());
+            log.warn("No se pudo registrar el log de auditoría: {}", e.getMessage());
         }
 
         return convertToDTOClient(savedCompany);
@@ -93,8 +91,6 @@ public class CompanyServiceImpl implements CompanyService {
 
         boolean isExpired = company.getExpirationDate() != null && hoy.isAfter(company.getExpirationDate());
         boolean isManualActive = Boolean.TRUE.equals(company.getActive());
-
-        // La empresa está activa SOLO si el flag de la BD es true Y no está vencida
         boolean isActive = isManualActive && !isExpired;
 
         long diasRestantes = 0;
@@ -134,7 +130,22 @@ public class CompanyServiceImpl implements CompanyService {
         employee.setRole(Role.VENDEDOR);
         employee.setCompany(company);
         employee.setActive(true);
-        return convertToUserDTO(userRepository.save(employee));
+
+        User savedEmployee = userRepository.save(employee);
+
+        // Envío de correo de bienvenida para el vendedor
+        try {
+            emailService.enviarMailBienvenida(
+                    savedEmployee.getEmail(),
+                    company.getName(),
+                    savedEmployee.getName(),
+                    dto.getPassword()
+            );
+        } catch (Exception e) {
+            log.error("Error al enviar email al vendedor {}: {}", savedEmployee.getEmail(), e.getMessage());
+        }
+
+        return convertToUserDTO(savedEmployee);
     }
 
     @Override
@@ -155,12 +166,25 @@ public class CompanyServiceImpl implements CompanyService {
 
         employee.setName(dto.getName());
         employee.setEmail(dto.getEmail());
+
+        // Si se especificó una nueva contraseña para el vendedor
         if (dto.getPassword() != null && !dto.getPassword().trim().isEmpty()) {
             employee.setPassword(passwordEncoder.encode(dto.getPassword()));
+            try {
+                emailService.enviarMailResetPassword(
+                        employee.getEmail(),
+                        employee.getName(),
+                        dto.getPassword()
+                );
+            } catch (Exception e) {
+                log.error("Error al notificar nueva contraseña al vendedor {}: {}", employee.getEmail(), e.getMessage());
+            }
         }
+
         if (dto.getActive() != null) {
             employee.setActive(dto.getActive());
         }
+
         return convertToUserDTO(userRepository.save(employee));
     }
 

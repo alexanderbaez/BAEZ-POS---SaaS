@@ -2,6 +2,7 @@ package com.baez.baezpos.security.controller;
 
 import com.baez.baezpos.security.dto.AuthenticationRequest;
 import com.baez.baezpos.security.dto.AuthenticationResponse;
+import com.baez.baezpos.security.dto.ForgotPasswordRequest;
 import com.baez.baezpos.security.dto.SetupRequest;
 import com.baez.baezpos.security.service.AuthService;
 import lombok.RequiredArgsConstructor;
@@ -35,5 +36,13 @@ public class AuthController {
             @RequestBody SetupRequest request
     ) {
         return ResponseEntity.ok(authService.setup(request));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(
+            @RequestBody ForgotPasswordRequest request
+    ) {
+        authService.processForgotPassword(request);
+        return ResponseEntity.ok(Map.of("message", "Se ha enviado una nueva contraseña temporal a su correo electrónico."));
     }
 }

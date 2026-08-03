@@ -14,6 +14,8 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -30,8 +32,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final CustomUserDetailsService userDetailsService;
-    private final PasswordEncoder passwordEncoder;
+    private final CustomUserDetailsService customUserDetailsService;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -41,8 +42,28 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/login.html", "/index.html", "/*.html", "/css/**", "/js/**", "/images/**", "/*.js", "/*.css", "/favicon.ico", "/error").permitAll()
-                        .requestMatchers("/api/v1/auth/authenticate", "/api/v1/auth/setup-status", "/api/v1/auth/setup").permitAll()
+                        // Recurso estáticos y HTMLs de frontend
+                        .requestMatchers(
+                                "/",
+                                "/login.html",
+                                "/index.html",
+                                "/*.html",
+                                "/css/**",
+                                "/js/**",
+                                "/images/**",
+                                "/*.js",
+                                "/*.css",
+                                "/favicon.ico",
+                                "/error"
+                        ).permitAll()
+
+                        // Endpoints públicos de autenticación y setup
+                        .requestMatchers(
+                                "/api/v1/auth/authenticate",
+                                "/api/v1/auth/setup-status",
+                                "/api/v1/auth/setup",
+                                "/api/v1/auth/forgot-password"
+                        ).permitAll()
 
                         // 1. Exclusivo para Super Admin
                         .requestMatchers("/api/v1/super-admin/**").hasRole("SUPER_ADMIN")
@@ -53,26 +74,37 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/sales/**").hasAnyRole("ADMIN", "VENDEDOR")
                         .requestMatchers("/api/v1/customers/**").hasAnyRole("ADMIN", "VENDEDOR")
 
-                        // 3. Módulos de administración del negocio ( ADMIN)
+                        // 3. Módulos de administración del negocio (solo ADMIN)
                         .requestMatchers("/api/v1/users/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/inventory/**").hasRole("ADMIN")
 
-                        // IMPORTANTE: Colocar /api/v1/admin/ al final de las reglas de ADMIN para que no bloquee los GET de arriba
+                        // Regla general para el resto de la API de administración
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
 
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
     @Bean
+    public UserDetailsService userDetailsService() {
+        return customUserDetailsService;
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder);
+        authProvider.setUserDetailsService(customUserDetailsService);
+        authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }
 
@@ -88,6 +120,7 @@ public class SecurityConfig {
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;

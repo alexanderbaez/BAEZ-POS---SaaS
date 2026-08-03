@@ -31,21 +31,6 @@ public class MasterAdminService implements MasterAdmin {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
-    // Eliminamos SystemLogRepository para que compile
-
-    private String generarPlantilla(String titulo, String contenido) {
-        return """
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
-            <div style="background: #1a202c; color: #ffffff; padding: 30px; text-align: center;">
-                <h1 style="margin: 0; font-size: 24px;">BÁEZ POS</h1>
-            </div>
-            <div style="padding: 40px; background: #ffffff; color: #2d3748;">
-                <h3 style="border-bottom: 2px solid #edf2f7; padding-bottom: 15px;">%s</h3>
-                <div style="line-height: 1.6;">%s</div>
-            </div>
-        </div>
-        """.formatted(titulo, contenido);
-    }
 
     @Override
     @Transactional
@@ -59,10 +44,15 @@ public class MasterAdminService implements MasterAdmin {
 
         // 1. Guardar la configuración del negocio
         Company company = Company.builder()
-                .name(req.getCompanyName()).taxId(req.getTaxId()).address(req.getAddress())
-                .phone(req.getPhone()).email(req.getOwnerEmail())
+                .name(req.getCompanyName())
+                .taxId(req.getTaxId())
+                .address(req.getAddress())
+                .phone(req.getPhone())
+                .email(req.getOwnerEmail())
                 .expirationDate(req.getExpirationDate() != null ? req.getExpirationDate() : LocalDate.now().plusDays(15))
-                .active(true).ticketMessage(req.getTicketMessage()).build();
+                .active(true)
+                .ticketMessage(req.getTicketMessage())
+                .build();
 
         Company savedCompany = companyRepository.save(company);
 
@@ -77,6 +67,18 @@ public class MasterAdminService implements MasterAdmin {
                 .build();
 
         userRepository.save(owner);
+
+        // 3. Notificación de bienvenida asíncrona al dueño de la cuenta
+        try {
+            emailService.enviarMailBienvenida(
+                    owner.getEmail(),
+                    savedCompany.getName(),
+                    owner.getName(),
+                    req.getOwnerPassword() // contraseña temporal/inicial enviada en el alta
+            );
+        } catch (Exception e) {
+            log.error("No se pudo enviar el correo de bienvenida a {}: {}", owner.getEmail(), e.getMessage());
+        }
     }
 
     @Override
@@ -85,7 +87,6 @@ public class MasterAdminService implements MasterAdmin {
         Company company = companyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
 
-        // Validar unicidad de taxId si cambió
         if (dto.getTaxId() != null && !dto.getTaxId().equals(company.getTaxId())) {
             if (companyRepository.existsByTaxId(dto.getTaxId())) {
                 throw new RuntimeException("El CUIT/TaxID ya está registrado en otra empresa.");
@@ -107,7 +108,6 @@ public class MasterAdminService implements MasterAdmin {
     public void deleteCompanyMaster(Long id) {
         Company company = companyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
-        // Aplicamos borrado lógico acorde a la entidad BaseEntity / @SQLDelete
         company.setActive(false);
         companyRepository.save(company);
     }
@@ -147,6 +147,17 @@ public class MasterAdminService implements MasterAdmin {
 
         owner.setPassword(passwordEncoder.encode(newRawPassword));
         userRepository.save(owner);
+
+        // Notificación de reseteo de clave al dueño
+        try {
+            emailService.enviarMailResetPassword(
+                    owner.getEmail(),
+                    owner.getName(),
+                    newRawPassword
+            );
+        } catch (Exception e) {
+            log.error("Error al enviar email de reset de password a {}: {}", owner.getEmail(), e.getMessage());
+        }
     }
 
     private CompanyDTO convertToDTOMaster(Company c) {
