@@ -95,6 +95,14 @@ function aplicarPresetFecha(preset) {
     } else if (preset === '3_MESES') {
         desde = new Date(hoy.getFullYear(), hoy.getMonth() - 2, 1);
         hasta = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+    } else if (preset === 'ESTE_ANO') {
+        // Desde el 1 de Enero del año en curso hasta hoy
+        desde = new Date(hoy.getFullYear(), 0, 1);
+        hasta = hoy;
+    } else if (preset === 'ANO_PASADO') {
+        // Desde el 1 de Enero hasta el 31 de Diciembre del año anterior
+        desde = new Date(hoy.getFullYear() - 1, 0, 1);
+        hasta = new Date(hoy.getFullYear() - 1, 11, 31);
     }
 
     if (desde && hasta) {
@@ -117,7 +125,6 @@ async function consultarPorFechas() {
     }
 
     try {
-        // Enviar parámetros limpios de fecha local (YYYY-MM-DD)
         const params = new URLSearchParams({
             startDate: desdeVal,
             endDate: hastaVal,
@@ -130,20 +137,27 @@ async function consultarPorFechas() {
 
         const data = await response.json();
 
-        // Renderizar los datos en pantalla
+        // CORRECCIÓN CRÍTICA DE PRIORIDAD:
+        // Primero consumimos 'monthSales' / 'monthProfit' (Rango) para evitar solapar los de Hoy
+        const totalVentasRango = data.monthSales ?? data.totalSales ?? 0;
+        const totalGananciaRango = data.monthProfit ?? data.totalProfit ?? 0;
+        const costoReposicionRango = data.monthReplacementCost ?? data.replacementCost ?? 0;
+        const operacionesRango = data.monthOperations ?? data.totalOperations ?? 0;
+
+        // Renderizar en las tarjetas del histórico
         if (document.getElementById('txtRecaudacionMes'))
-            document.getElementById('txtRecaudacionMes').innerText = fmtMoneda(data.totalSales || data.monthSales);
+            document.getElementById('txtRecaudacionMes').innerText = fmtMoneda(totalVentasRango);
 
         if (document.getElementById('txtGananciaMes'))
-            document.getElementById('txtGananciaMes').innerText = fmtMoneda(data.totalProfit || data.monthProfit);
+            document.getElementById('txtGananciaMes').innerText = fmtMoneda(totalGananciaRango);
 
         if (document.getElementById('txtReposicionMes'))
-            document.getElementById('txtReposicionMes').innerText = fmtMoneda(data.replacementCost || data.monthReplacementCost);
+            document.getElementById('txtReposicionMes').innerText = fmtMoneda(costoReposicionRango);
 
         if (document.getElementById('txtVentasCountMes'))
-            document.getElementById('txtVentasCountMes').innerText = data.totalOperations || data.monthOperations || 0;
+            document.getElementById('txtVentasCountMes').innerText = operacionesRango;
 
-        // Formatear mensaje visual de rango activo
+        // Actualizar la etiqueta del rango visualizado
         const f1 = desdeVal.split('-').reverse().join('/');
         const f2 = hastaVal.split('-').reverse().join('/');
         const lblRango = document.getElementById('lblRangoActivo');
