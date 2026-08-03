@@ -20,6 +20,9 @@ public class EmailService {
     @Value("${spring.mail.username:alexanderbaez146@gmail.com}")
     private String senderEmail;
 
+    // ==========================================
+    // MOTOR BÁSICO DE ENVÍO HTML
+    // ==========================================
     @Async
     public void enviarCorreoPro(String destinatario, String asunto, String contenidoHtml) {
         if (destinatario == null || destinatario.isBlank()) {
@@ -40,14 +43,14 @@ public class EmailService {
             log.info("Email enviado con éxito a: {}", destinatario);
 
         } catch (MessagingException e) {
-            log.error("Error al enviar correo a {}. Detalle: {}", destinatario, e.getMessage());
+            log.error("Error SMTP al enviar correo a {}. Detalle: {}", destinatario, e.getMessage());
         } catch (Exception e) {
             log.error("Error inesperado en el servicio de e-mail para {}: {}", destinatario, e.getMessage());
         }
     }
 
     // ==========================================
-    // NOTIFICACIÓN DE BIENVENIDA / ONBOARDING
+    // NOTIFICACIÓN DE BIENVENIDA CON CONTRASEÑA (Para SuperAdmin / MasterAdminService)
     // ==========================================
     @Async
     public void enviarMailBienvenida(String destinatario, String nombreEmpresa, String nombreUsuario, String passwordTemporal) {
@@ -75,6 +78,38 @@ public class EmailService {
                 </div>
             </div>
             """.formatted(nombreUsuario, nombreEmpresa, destinatario, passwordTemporal);
+
+        enviarCorreoPro(destinatario, asunto, contenidoHtml);
+    }
+
+    // ==========================================
+    // NOTIFICACIÓN DE BIENVENIDA SIN CONTRASEÑA (Para Setup Inicial / AuthService)
+    // ==========================================
+    @Async
+    public void enviarMailBienvenida(String destinatario, String nombreUsuario, String nombreEmpresa) {
+        String asunto = "¡Bienvenido a BAEZ POS! - Configuración de Cuenta";
+
+        String contenidoHtml = """
+            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1e293b; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                <div style="background-color: #2563eb; padding: 24px; text-align: center;">
+                    <h1 style="color: #ffffff; margin: 0; font-size: 24px;">¡Bienvenido a BÁEZ POS!</h1>
+                </div>
+                <div style="padding: 32px; background-color: #ffffff;">
+                    <p style="font-size: 16px; margin-top: 0;">Hola <strong>%s</strong>,</p>
+                    <p style="font-size: 15px; color: #475569;">Tu cuenta para el comercio <strong>%s</strong> ha sido configurada correctamente en nuestro sistema.</p>
+
+                    <div style="background-color: #f8fafc; border-left: 4px solid #2563eb; padding: 16px; border-radius: 4px; margin: 24px 0;">
+                        <p style="margin: 0; font-weight: 600; color: #1e293b; font-size: 14px;">Tu usuario de acceso:</p>
+                        <p style="margin: 8px 0 0 0; font-size: 14px;"><strong>Email:</strong> %s</p>
+                    </div>
+
+                    <p style="font-size: 14px; color: #64748b;">Ya podés ingresar a la plataforma con las credenciales creadas durante la configuración.</p>
+                </div>
+                <div style="background-color: #f1f5f9; padding: 16px; text-align: center; border-top: 1px solid #e2e8f0;">
+                    <p style="font-size: 12px; color: #94a3b8; margin: 0;">BÁEZ POS - Sistema de Gestión Comercial Multi-tenant</p>
+                </div>
+            </div>
+            """.formatted(nombreUsuario, nombreEmpresa, destinatario);
 
         enviarCorreoPro(destinatario, asunto, contenidoHtml);
     }

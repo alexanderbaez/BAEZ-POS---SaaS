@@ -111,6 +111,18 @@ public class AuthService {
                 .build();
         userRepository.save(adminUser);
 
+        // --- ENVÍO DEL EMAIL DE BIENVENIDA ---
+        try {
+            emailService.enviarMailBienvenida(
+                    adminUser.getEmail(),
+                    adminUser.getName(),
+                    savedCompany.getName()
+            );
+            log.info("Correo de bienvenida enviado exitosamente a {}", adminUser.getEmail());
+        } catch (Exception e) {
+            log.error("Error al enviar correo de bienvenida a {}: {}", adminUser.getEmail(), e.getMessage());
+        }
+
         String jwtToken = jwtService.generateToken(adminUser);
 
         return AuthenticationResponse.builder()
