@@ -1,13 +1,16 @@
 /**
- * BÁEZ POS - DASHBOARD DE GESTIÓN SAAS
+ * BÁEZ POS - DASHBOARD DE GESTIÓN SAAS MULTI-TENANT
  * Alexander Baez - 2026
  */
+
+// Cache de reportes históricos
+let REPORTES_MESES_CACHE = {};
 
 // ==========================================
 // 1. INICIALIZACIÓN
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Mostrar nombre de usuario
+    // 1. Nombre de usuario
     const elUserLabel = document.getElementById('userNameLabel');
     if (elUserLabel) {
         const nombreUsuario = localStorage.getItem('baezpos_user_name');
@@ -22,71 +25,120 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // 3. Ejecutar cargas asíncronas en paralelo controlado
+    // 3. Cargar datos en paralelo
     await Promise.allSettled([
-        cargarDatosDashboard(),
+        cargarDatosDashboardHoy(),
+        cargarRangoHistoricoMensual(0),
         cargarAlertasStock(),
         cargarDatosGrafico()
     ]);
 });
 
+// Helper de formato de moneda ARS
+function fmtMoneda(val) {
+    return new Intl.NumberFormat('es-AR', {
+        style: 'currency',
+        currency: 'ARS',
+        minimumFractionDigits: 2
+    }).format(val || 0);
+}
+
 // ==========================================
-// 2. CARGA DE KPIS DEL DASHBOARD
+// 2. CARGA DE KPIS DEL DÍA (HOY)
 // ==========================================
-async function cargarDatosDashboard() {
+async function cargarDatosDashboardHoy() {
     try {
         const response = await apiFetch('/sales/report/box?period=today');
         if (!response || !response.ok) return;
 
         const data = await response.json();
 
-        // Formateador de moneda en ARS
-        const fmt = (val) => new Intl.NumberFormat('es-AR', {
-            style: 'currency',
-            currency: 'ARS',
-            signDisplay: 'auto'
-        }).format(val || 0);
-
-        // Totales Diarios
+        // Totales comerciales y caja de hoy
         if (document.getElementById('txtRecaudacion'))
-            document.getElementById('txtRecaudacion').innerText = fmt(data.totalSales);
-
-        if (document.getElementById('cardBalanceReal'))
-            document.getElementById('cardBalanceReal').innerText = fmt(data.realBalance);
+            document.getElementById('txtRecaudacion').innerText = fmtMoneda(data.totalSales);
 
         if (document.getElementById('txtEfectivoHoy'))
-            document.getElementById('txtEfectivoHoy').innerText = fmt(data.cashSales);
+            document.getElementById('txtEfectivoHoy').innerText = fmtMoneda(data.cashSales);
 
         if (document.getElementById('txtTransfHoy'))
-            document.getElementById('txtTransfHoy').innerText = fmt(data.transferSales);
+            document.getElementById('txtTransfHoy').innerText = fmtMoneda(data.transferSales);
 
-        // Cuentas Corrientes (Libreta)
-        if (document.getElementById('cardLibreta')) {
-            const elLibreta = document.getElementById('cardLibreta');
-            const saldoLibreta = data.tCredit || 0;
-            elLibreta.innerText = fmt(saldoLibreta);
-        }
+        if (document.getElementById('txtCobrosLibretaHoy'))
+            document.getElementById('txtCobrosLibretaHoy').innerText = fmtMoneda(data.creditPaymentsToday || data.cobrosLibretaHoy || 0);
 
-        // Métricas Mensuales
-        if (document.getElementById('txtRecaudacionMes'))
-            document.getElementById('txtRecaudacionMes').innerText = fmt(data.monthSales);
+        // Deuda acumulada en libreta y saldo real disponible en caja
+        if (document.getElementById('cardLibreta'))
+            document.getElementById('cardLibreta').innerText = fmtMoneda(data.tCredit || data.totalPendingCredit || 0);
 
-        if (document.getElementById('txtGananciaMes'))
-            document.getElementById('txtGananciaMes').innerText = fmt(data.monthProfit);
-
-        if (document.getElementById('txtReposicionMes'))
-            document.getElementById('txtReposicionMes').innerText = fmt(data.monthReplacementCost);
-
-        if (document.getElementById('txtVentasCountMes'))
-            document.getElementById('txtVentasCountMes').innerText = data.monthOperations || 0;
+        if (document.getElementById('cardBalanceReal'))
+            document.getElementById('cardBalanceReal').innerText = fmtMoneda(data.realBalance);
 
     } catch (err) {
-        console.error("Error al cargar KPIs del Dashboard:", err);
+        console.error("Error al cargar KPIs de Hoy:", err);
     }
 }
 
 // ==========================================
-// 3. GRÁFICO SEMANAL
+// 3. CONSULTA Y SELECTOR HISTÓRICO MENSUAL
+// ==========================================
+async function cambiarRangoHistorico(offsetMeses) {
+    const offset = parseInt(offsetMeses) || 0;
+    await cargarRangoHistoricoMensual(offset);
+}
+
+async function cargarRangoHistoricoMensual(offsetMeses = 0) {
+    try {
+        // Calcular rango de fechas según offset (0 = este mes, 1 = mes pasado, etc.)
+        const fechaBase = new Date();
+        fechaBase.setMonth(fechaBase.getMonth() - offsetMeses);
+
+        const primerDia = new Date(fechaBase.getFullYear(), fechaBase.getMonth(), 1);
+        const ultimoDia = new Date(fechaBase.getFullYear(), fechaBase.getMonth() + 1, 0);
+
+        const fromStr = primerDia.toISOString().split('T')[0];
+        const toStr = ultimoDia.toISOString().split('T')[0];
+
+        let data = null;
+
+        // Intento 1: Endpoint de rango específico
+        const res = await apiFetch(`/sales/report/box?from=${fromStr}&to=${toStr}`);
+        if (res && res.ok) {
+            data = await res.json();
+        } else {
+            // Intento 2: Fallback por query parameter period / offset
+            const resPeriod = await apiFetch(`/sales/report/box?monthOffset=${offsetMeses}`);
+            if (resPeriod && resPeriod.ok) data = await resPeriod.json();
+        }
+
+        if (!data) return;
+
+        // Renderizar métricas en las tarjetas
+        if (document.getElementById('txtRecaudacionMes'))
+            document.getElementById('txtRecaudacionMes').innerText = fmtMoneda(data.monthSales || data.totalSales);
+
+        if (document.getElementById('txtGananciaMes'))
+            document.getElementById('txtGananciaMes').innerText = fmtMoneda(data.monthProfit || data.totalProfit);
+
+        if (document.getElementById('txtReposicionMes'))
+            document.getElementById('txtReposicionMes').innerText = fmtMoneda(data.monthReplacementCost || data.replacementCost);
+
+        if (document.getElementById('txtVentasCountMes'))
+            document.getElementById('txtVentasCountMes').innerText = data.monthOperations || data.totalOperations || 0;
+
+        // Actualizar etiqueta del título
+        const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+        const lblTitulo = document.getElementById('lblTituloRecaudacion');
+        if (lblTitulo) {
+            lblTitulo.innerText = `RECAUDACIÓN (${nombresMeses[fechaBase.getMonth()].toUpperCase()} ${fechaBase.getFullYear()})`;
+        }
+
+    } catch (err) {
+        console.error("Error al cargar reporte mensual histórico:", err);
+    }
+}
+
+// ==========================================
+// 4. GRÁFICO DE EVOLUCIÓN DE VENTAS
 // ==========================================
 async function cargarDatosGrafico() {
     try {
@@ -119,8 +171,8 @@ function renderizarGraficoSemanal(etiquetas, valores) {
 
     const ctx = canvas.getContext('2d');
     const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-    gradient.addColorStop(0, 'rgba(37, 99, 235, 0.2)');
-    gradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
+    gradient.addColorStop(0, 'rgba(37, 99, 235, 0.25)');
+    gradient.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
 
     if (window.myChart) window.myChart.destroy();
 
@@ -135,17 +187,31 @@ function renderizarGraficoSemanal(etiquetas, valores) {
                 borderWidth: 3,
                 backgroundColor: gradient,
                 fill: true,
-                tension: 0.3,
-                pointRadius: 4,
+                tension: 0.35,
+                pointRadius: 5,
+                pointHoverRadius: 7,
                 pointBackgroundColor: '#2563eb'
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ` Ventas: ${fmtMoneda(ctx.raw)}`
+                    }
+                }
+            },
             scales: {
-                y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#f1f5f9' },
+                    ticks: {
+                        callback: (value) => '$' + value.toLocaleString('es-AR')
+                    }
+                },
                 x: { grid: { display: false } }
             }
         }
@@ -153,7 +219,7 @@ function renderizarGraficoSemanal(etiquetas, valores) {
 }
 
 // ==========================================
-// 4. ALERTAS DE STOCK
+// 5. ALERTAS DE INVENTARIO Y STOCK CRÍTICO
 // ==========================================
 async function cargarAlertasStock() {
     try {
@@ -173,7 +239,7 @@ async function cargarAlertasStock() {
             container.innerHTML = `
                 <div class="text-center py-4 opacity-75">
                     <i class="bi bi-check-circle fs-1 text-success"></i>
-                    <p class="mt-2 small text-muted">Stock al día. Sin alertas.</p>
+                    <p class="mt-2 small text-muted">Stock al día. Sin alertas de reposición.</p>
                 </div>`;
             return;
         }
@@ -192,3 +258,6 @@ async function cargarAlertasStock() {
         console.error("Error al cargar alertas de stock:", err);
     }
 }
+
+// Exposición global para llamados desde HTML
+window.cambiarRangoHistorico = cambiarRangoHistorico;
