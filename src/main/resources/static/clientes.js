@@ -3,9 +3,9 @@
  * Alexander Baez - 2026
  */
 
-// Rutas relativas procesadas por el apiFetch global de auth.js
-const API_CUSTOMERS = '/api/v1/customers';
-const API_PERFIL = '/api/v1/admin/my-company/profile';
+// Rutas relativas ajustadas para consumir BASE_URL de auth.js (/api/v1 ya está incluido ahí)
+const API_CUSTOMERS = '/customers';
+const API_PERFIL = '/admin/my-company/profile';
 
 let modalClienteInstance = null;
 let modalHistorialInstance = null;
@@ -295,7 +295,6 @@ function renderizarTablaMovimientos() {
     const fechaDesde = desdeVal ? new Date(`${desdeVal}T00:00:00`) : null;
     const fechaHasta = hastaVal ? new Date(`${hastaVal}T23:59:59`) : null;
 
-    // Ordenamiento cronológico previo para el cálculo acumulado
     let movs = [...MOVIMIENTOS_CACHE].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
     let saldoAcumulado = 0;
