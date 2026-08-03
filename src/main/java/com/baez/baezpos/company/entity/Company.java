@@ -49,7 +49,14 @@ public class Company extends BaseEntity {
     private String email;
 
     // ==========================================
-    // CAMPOS FISCALES ARCA / AFIP (CORREGIDO)
+    // SECUENCIA MULTI-TENANT DE COMPROBANTES
+    // ==========================================
+    @Builder.Default
+    @Column(name = "last_ticket_number", nullable = false)
+    private Long lastTicketNumber = 0L;
+
+    // ==========================================
+    // CAMPOS FISCALES ARCA / AFIP
     // ==========================================
     @Builder.Default
     @Column(name = "has_tax_data")

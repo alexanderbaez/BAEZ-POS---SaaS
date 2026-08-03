@@ -53,10 +53,7 @@ public class SaleServiceImpl implements SaleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public SaleResponseDTO createSale(SaleRequestDTO saleDTO, Long userId) {
-        Long companyId = SecurityUtils.getCurrentCompanyId();
-        if (companyId == null) {
-            throw new BadRequestException("No se puede registrar una venta sin estar asociado a una empresa.");
-        }
+        Long companyId = requireCompanyContext();
 
         if (saleDTO.items() == null || saleDTO.items().isEmpty()) {
             throw new BadRequestException("La venta debe contener al menos un producto.");
@@ -76,6 +73,15 @@ public class SaleServiceImpl implements SaleService {
             throw new BadRequestException("Los valores de recargo y descuento deben ser positivos.");
         }
 
+        // ==========================================
+        // GENERACIÓN DE NÚMERO DE TICKET MULTI-TENANT
+        // ==========================================
+        Long siguienteNumeroTicket = (company.getLastTicketNumber() != null ? company.getLastTicketNumber() : 0L) + 1L;
+        company.setLastTicketNumber(siguienteNumeroTicket);
+        companyRepository.save(company);
+
+        String nroComprobanteFormateado = String.format("00001-%08d", siguienteNumeroTicket);
+
         Sale sale = Sale.builder()
                 .user(user)
                 .saleDate(LocalDateTime.now())
@@ -85,6 +91,7 @@ public class SaleServiceImpl implements SaleService {
                 .surchargeRate(porcentajeRecargo)
                 .paymentMethod(saleDTO.paymentMethod())
                 .canceled(false)
+                .nroComprobante(nroComprobanteFormateado)
                 .build();
 
         sale.setCompany(company);
@@ -130,16 +137,15 @@ public class SaleServiceImpl implements SaleService {
         BigDecimal totalFinal = subtotalAcumulado.add(recargo).subtract(descuento);
         sale.setTotal(totalFinal.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : totalFinal);
 
+        // Guardamos la venta una sola vez con su correlativo asignado
         Sale savedSale = saleRepository.save(sale);
-        savedSale.setNroComprobante(String.format("00001-%08d", savedSale.getId()));
-        savedSale = saleRepository.save(savedSale);
 
         for (SaleItem item : savedSale.getItems()) {
             inventoryService.registerMovement(
                     item.getProduct().getId(),
                     item.getQuantity(),
                     MovementType.SALE,
-                    "Venta #" + savedSale.getId()
+                    "Venta #" + savedSale.getNroComprobante()
             );
         }
 
@@ -147,7 +153,7 @@ public class SaleServiceImpl implements SaleService {
             handleCreditSale(saleDTO.customerId(), savedSale, companyId);
         }
 
-        log.info("Venta procesada ID: {} - Total: ${} - Empresa: {}", savedSale.getId(), savedSale.getTotal(), company.getName());
+        log.info("Venta procesada Ticket: {} - Total: ${} - Empresa: {}", savedSale.getNroComprobante(), savedSale.getTotal(), company.getName());
         return mapToResponseDTO(savedSale);
     }
 
@@ -169,7 +175,7 @@ public class SaleServiceImpl implements SaleService {
                 customer.getId(),
                 savedSale.getTotal(),
                 "DEBITO",
-                "Venta en libreta #" + savedSale.getId(),
+                "Venta en libreta Ticket #" + savedSale.getNroComprobante(),
                 savedSale,
                 savedSale.getPaymentMethod()
         );
@@ -178,33 +184,17 @@ public class SaleServiceImpl implements SaleService {
     @Override
     @Transactional(readOnly = true)
     public SaleResponseDTO getSaleById(Long id) {
-        Long companyId = SecurityUtils.getCurrentCompanyId();
-        Sale sale;
-
-        if (companyId != null) {
-            sale = saleRepository.findByIdAndCompanyId(id, companyId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada"));
-        } else {
-            sale = saleRepository.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada"));
-        }
-
+        Long companyId = requireCompanyContext();
+        Sale sale = saleRepository.findByIdAndCompanyId(id, companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada en su empresa"));
         return mapToResponseDTO(sale);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<SaleResponseDTO> getAllSales() {
-        Long companyId = SecurityUtils.getCurrentCompanyId();
-        List<Sale> sales;
-
-        if (companyId != null) {
-            sales = saleRepository.findByCompanyIdOrderBySaleDateDesc(companyId);
-        } else {
-            sales = saleRepository.findAllByOrderBySaleDateDesc();
-        }
-
-        return sales.stream()
+        Long companyId = requireCompanyContext();
+        return saleRepository.findByCompanyIdOrderBySaleDateDesc(companyId).stream()
                 .map(this::mapToResponseDTO)
                 .toList();
     }
@@ -212,13 +202,11 @@ public class SaleServiceImpl implements SaleService {
     @Override
     @Transactional(readOnly = true)
     public BoxReportDTO getBoxReport(String period, LocalDate from, LocalDate to) {
-        Long companyId = SecurityUtils.getCurrentCompanyId();
+        Long companyId = requireCompanyContext();
 
-        // 1. Fechas fijas para métricas de "HOY"
         LocalDateTime startToday = LocalDate.now().atStartOfDay();
         LocalDateTime endToday = LocalDate.now().atTime(LocalTime.MAX);
 
-        // 2. Fechas dinámicas para el rango/mes solicitado
         LocalDateTime startRange;
         LocalDateTime endRange;
 
@@ -226,18 +214,11 @@ public class SaleServiceImpl implements SaleService {
             startRange = from.atStartOfDay();
             endRange = to.atTime(LocalTime.MAX);
         } else {
-            // Fallback por defecto: Mes Actual
             startRange = LocalDate.now().withDayOfMonth(1).atStartOfDay();
             endRange = LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()).atTime(LocalTime.MAX);
         }
 
-        // Consultar ventas en el rango dinámico
-        List<Sale> rangeSales;
-        if (companyId != null) {
-            rangeSales = saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, startRange, endRange);
-        } else {
-            rangeSales = saleRepository.findBySaleDateBetweenOrderBySaleDateDesc(startRange, endRange);
-        }
+        List<Sale> rangeSales = saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, startRange, endRange);
 
         BigDecimal vCash = BigDecimal.ZERO;
         BigDecimal vTransfer = BigDecimal.ZERO;
@@ -248,9 +229,8 @@ public class SaleServiceImpl implements SaleService {
         long mCount = 0;
 
         for (Sale s : rangeSales) {
-            if (s.getCanceled()) continue;
+            if (Boolean.TRUE.equals(s.getCanceled())) continue;
 
-            // Acumuladores del periodo seleccionado (Calendario)
             mSales = mSales.add(s.getTotal());
             mCount++;
 
@@ -260,7 +240,6 @@ public class SaleServiceImpl implements SaleService {
                 mCostAccumulator = mCostAccumulator.add(itemCostTotal);
             }
 
-            // Filtro exclusivo para caja del día actual (Top Cards)
             if (!s.getSaleDate().isBefore(startToday) && !s.getSaleDate().isAfter(endToday)) {
                 if ("EFECTIVO".equals(s.getPaymentMethod())) {
                     vCash = vCash.add(s.getTotal());
@@ -278,13 +257,8 @@ public class SaleServiceImpl implements SaleService {
             }
         }
 
-        BigDecimal cobrosEfe = BigDecimal.ZERO;
-        BigDecimal cobrosTra = BigDecimal.ZERO;
-
-        if (companyId != null) {
-            cobrosEfe = customerMovementRepository.sumPaymentsByMethodAndCompanyId("EFECTIVO", companyId, startToday, endToday);
-            cobrosTra = customerMovementRepository.sumPaymentsByMethodAndCompanyId("TRANSFERENCIA", companyId, startToday, endToday);
-        }
+        BigDecimal cobrosEfe = customerMovementRepository.sumPaymentsByMethodAndCompanyId("EFECTIVO", companyId, startToday, endToday);
+        BigDecimal cobrosTra = customerMovementRepository.sumPaymentsByMethodAndCompanyId("TRANSFERENCIA", companyId, startToday, endToday);
 
         if (cobrosEfe == null) cobrosEfe = BigDecimal.ZERO;
         if (cobrosTra == null) cobrosTra = BigDecimal.ZERO;
@@ -304,11 +278,7 @@ public class SaleServiceImpl implements SaleService {
         BigDecimal totalProfitReal = tProfitDirecto.add(gananciaCobrosLibreta);
 
         BigDecimal mProfit = mSales.subtract(mCostAccumulator);
-        BigDecimal deudaTotalHistorica = BigDecimal.ZERO;
-
-        if (companyId != null) {
-            deudaTotalHistorica = customerRepository.sumAllBalancesByCompanyId(companyId);
-        }
+        BigDecimal deudaTotalHistorica = customerRepository.sumAllBalancesByCompanyId(companyId);
 
         if (deudaTotalHistorica == null) deudaTotalHistorica = BigDecimal.ZERO;
 
@@ -329,7 +299,7 @@ public class SaleServiceImpl implements SaleService {
     @Override
     @Transactional(readOnly = true)
     public List<ChartDataDTO> getSalesChartData() {
-        Long companyId = SecurityUtils.getCurrentCompanyId();
+        Long companyId = requireCompanyContext();
         LocalDate today = LocalDate.now();
         Map<LocalDate, BigDecimal> last7Days = new LinkedHashMap<>();
 
@@ -340,12 +310,7 @@ public class SaleServiceImpl implements SaleService {
         LocalDateTime start = today.minusDays(6).atStartOfDay();
         LocalDateTime end = today.atTime(23, 59, 59);
 
-        List<Sale> recentSales;
-        if (companyId != null) {
-            recentSales = saleRepository.findByCompanyIdAndSaleDateBetweenAndCanceledFalse(companyId, start, end);
-        } else {
-            recentSales = saleRepository.findBySaleDateBetweenAndCanceledFalse(start, end);
-        }
+        List<Sale> recentSales = saleRepository.findByCompanyIdAndSaleDateBetweenAndCanceledFalse(companyId, start, end);
 
         for (Sale sale : recentSales) {
             LocalDate localDate = sale.getSaleDate().toLocalDate();
@@ -361,16 +326,9 @@ public class SaleServiceImpl implements SaleService {
     @Override
     @Transactional
     public void cancelSale(Long saleId) {
-        Long companyId = SecurityUtils.getCurrentCompanyId();
-        Sale sale;
-
-        if (companyId != null) {
-            sale = saleRepository.findByIdAndCompanyId(saleId, companyId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada"));
-        } else {
-            sale = saleRepository.findById(saleId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada"));
-        }
+        Long companyId = requireCompanyContext();
+        Sale sale = saleRepository.findByIdAndCompanyId(saleId, companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada en su empresa"));
 
         if (Boolean.TRUE.equals(sale.getCanceled())) {
             throw new BadRequestException("La venta ya se encuentra anulada.");
@@ -390,20 +348,21 @@ public class SaleServiceImpl implements SaleService {
     @Override
     @Transactional(readOnly = true)
     public List<SaleResponseDTO> getSalesByDateRange(LocalDate desde, LocalDate hasta) {
-        Long companyId = SecurityUtils.getCurrentCompanyId();
+        Long companyId = requireCompanyContext();
         LocalDateTime start = desde.atStartOfDay();
         LocalDateTime end = hasta.atTime(LocalTime.MAX);
 
-        List<Sale> sales;
-        if (companyId != null) {
-            sales = saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, start, end);
-        } else {
-            sales = saleRepository.findBySaleDateBetweenOrderBySaleDateDesc(start, end);
-        }
-
-        return sales.stream()
+        return saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, start, end).stream()
                 .map(this::mapToResponseDTO)
                 .toList();
+    }
+
+    private Long requireCompanyContext() {
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        if (companyId == null) {
+            throw new BadRequestException("Acceso denegado: Operación requiere un contexto de empresa válido.");
+        }
+        return companyId;
     }
 
     private SaleResponseDTO mapToResponseDTO(Sale sale) {
