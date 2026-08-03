@@ -16,7 +16,7 @@ let todasLasEmpresas = [];
 // 1. INICIALIZACIÓN DEL DOM Y EVENTOS
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Doble control de seguridad por rol por si acaso
+    // Doble control de seguridad por rol
     const rolActual = (localStorage.getItem('baezpos_user_role') || '').toUpperCase().trim();
     if (!rolActual.includes('SUPER_ADMIN') && !rolActual.includes('SUPERADMIN')) {
         console.error("Acceso denegado: Se requiere rol SUPER_ADMIN.");
@@ -223,7 +223,9 @@ function actualizarKpis(empresas) {
     if (document.getElementById('kpiVencidos')) document.getElementById('kpiVencidos').innerText = vencidos;
 }
 
-// Formulario de Alta
+// ==========================================
+// FORMULARIO DE ALTA DE EMPRESA (CORREGIDO)
+// ==========================================
 const formNueva = document.getElementById('formNuevaEmpresa');
 if (formNueva) {
     formNueva.addEventListener('submit', async (e) => {
@@ -231,15 +233,28 @@ if (formNueva) {
         const btnSubmit = e.target.querySelector('button[type="submit"]');
         if (btnSubmit) btnSubmit.disabled = true;
 
+        // Lectura de inputs con fallback seguro para ownerName
+        const inputNombre = document.getElementById('masterNombre');
+        const inputOwnerName = document.getElementById('masterNombreOwner');
+        const inputEmail = document.getElementById('masterEmail');
+        const inputPass = document.getElementById('masterPass');
+        const inputTaxId = document.getElementById('masterTaxId');
+        const inputTelefono = document.getElementById('masterTelefono');
+        const inputDireccion = document.getElementById('masterDireccion');
+        const inputVenc = document.getElementById('masterVenc');
+
+        const companyName = inputNombre ? inputNombre.value.trim() : '';
+        const ownerName = inputOwnerName && inputOwnerName.value.trim() ? inputOwnerName.value.trim() : companyName;
+
         const nuevaEmpresaRequest = {
-            companyName: document.getElementById('masterNombre').value,
-            taxId: document.getElementById('masterTaxId').value,
-            phone: document.getElementById('masterTelefono').value,
-            address: document.getElementById('masterDireccion').value,
-            ownerName: document.getElementById('masterNombre').value,
-            ownerEmail: document.getElementById('masterEmail').value,
-            ownerPassword: document.getElementById('masterPass').value,
-            expirationDate: document.getElementById('masterVenc').value || null
+            companyName: companyName,
+            taxId: inputTaxId ? inputTaxId.value.trim() : '',
+            phone: inputTelefono ? inputTelefono.value.trim() : '',
+            address: inputDireccion ? inputDireccion.value.trim() : '',
+            ownerName: ownerName,
+            ownerEmail: inputEmail ? inputEmail.value.trim() : '',
+            ownerPassword: inputPass ? inputPass.value.trim() : '',
+            expirationDate: inputVenc && inputVenc.value ? inputVenc.value : null
         };
 
         try {
@@ -249,7 +264,9 @@ if (formNueva) {
             });
 
             if (resp && resp.ok) {
-                if (typeof Swal !== 'undefined') Swal.fire('¡Registrado!', 'Comercio creado con éxito.', 'success');
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire('¡Registrado!', 'Comercio creado con éxito. Se ha enviado el correo de bienvenida.', 'success');
+                }
                 cargarTodo();
                 e.target.reset();
             } else {
@@ -289,11 +306,11 @@ if (formEdit) {
         const newPass = document.getElementById('editPass').value.trim();
 
         const payload = {
-            name: document.getElementById('editNombre').value,
-            taxId: document.getElementById('editTaxId').value,
-            email: document.getElementById('editEmail').value,
-            phone: document.getElementById('editPhone').value,
-            address: document.getElementById('editAddress').value,
+            name: document.getElementById('editNombre').value.trim(),
+            taxId: document.getElementById('editTaxId').value.trim(),
+            email: document.getElementById('editEmail').value.trim(),
+            phone: document.getElementById('editPhone').value.trim(),
+            address: document.getElementById('editAddress').value.trim(),
             expirationDate: document.getElementById('editVencimiento').value,
             ticketMessage: document.getElementById('editTicketMessage').value,
             active: document.getElementById('editActive').value === "true"
@@ -325,7 +342,7 @@ if (formEdit) {
 }
 
 // ==========================================
-// 3. MOVIMIENTOS Y LOGS (El botón del "Ojo")
+// 3. MOVIMIENTOS Y LOGS
 // ==========================================
 async function verMovimientos(id, nombreComercio) {
     document.getElementById('lblClienteMov').innerText = nombreComercio;
