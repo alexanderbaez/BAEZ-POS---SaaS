@@ -124,28 +124,50 @@
     </div>
   </div>
 
-  <!-- RENDIMIENTO MENSUAL E HISTÓRICO CON SELECTOR -->
+  <!-- RENDIMIENTO HISTÓRICO Y FILTRO POR CALENDARIO (SOLO ADMINS) -->
   <div class="only-admin">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h6 class="fw-bold text-uppercase text-muted m-0 small">Rendimiento Histórico Mensual</h6>
-      <div class="d-flex align-items-center gap-2">
-        <label for="selectRangoMeses" class="form-label mb-0 small text-muted fw-bold">Periodo:</label>
-        <select id="selectRangoMeses" class="form-select form-select-sm border-0 shadow-sm bg-white fw-bold text-primary" style="width: auto;" onchange="cambiarRangoHistorico(this.value)">
-          <option value="0" selected>Mes Actual</option>
-          <option value="1">Mes Pasado</option>
-          <option value="2">Hace 2 Meses</option>
-          <option value="3">Hace 3 Meses</option>
-        </select>
+    <div class="card border-0 shadow-sm p-3 mb-4 bg-white rounded-4">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+          <h6 class="fw-bold text-uppercase text-muted m-0 small">Rendimiento e Histórico de Ventas</h6>
+          <small class="text-muted" id="lblRangoActivo">Mostrando datos del mes actual</small>
+        </div>
+
+        <!-- FILTROS DE FECHA EN LÍNEA -->
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <!-- Presets Rápidos -->
+          <select id="selectPresetFechas" class="form-select form-select-sm border-0 bg-light fw-bold text-primary" style="width: auto;" onchange="aplicarPresetFecha(this.value)">
+            <option value="ESTE_MES" selected>Este Mes</option>
+            <option value="MES_PASADO">Mes Pasado</option>
+            <option value="3_MESES">Últimos 3 Meses</option>
+          </select>
+
+          <!-- Calendario Desde / Hasta -->
+          <div class="d-flex align-items-center gap-1 bg-light px-2 py-1 rounded border">
+            <span class="small text-muted fw-bold">Desde:</span>
+            <input type="date" id="fechaDesde" class="form-control form-control-sm border-0 bg-transparent p-0" style="width: 115px;">
+          </div>
+
+          <div class="d-flex align-items-center gap-1 bg-light px-2 py-1 rounded border">
+            <span class="small text-muted fw-bold">Hasta:</span>
+            <input type="date" id="fechaHasta" class="form-control form-control-sm border-0 bg-transparent p-0" style="width: 115px;">
+          </div>
+
+          <button class="btn btn-sm btn-primary px-3 rounded-3 fw-bold" onclick="consultarPorFechas()">
+            <i class="bi bi-filter me-1"></i> Filtrar
+          </button>
+        </div>
       </div>
     </div>
 
+    <!-- TARJETAS DE MÉTRICAS -->
     <div class="row g-4 mb-4">
-      <!-- RECAUDACIÓN DEL MES -->
+      <!-- RECAUDACIÓN EN RANGO -->
       <div class="col-md-6 col-lg-3">
         <div class="card stat-card shadow-sm p-3 border-0 border-start border-dark border-4 h-100 bg-white">
           <div class="d-flex align-items-center justify-content-between px-2">
             <div>
-              <small class="text-muted fw-bold" style="font-size: 0.75rem;" id="lblTituloRecaudacion">RECAUDACIÓN TOTAL</small>
+              <small class="text-muted fw-bold" style="font-size: 0.75rem;">RECAUDACIÓN TOTAL</small>
               <h3 class="mb-0 fw-bold text-dark mt-1" id="txtRecaudacionMes">$0,00</h3>
             </div>
             <i class="bi bi-calendar-check fs-2 text-muted opacity-50"></i>
@@ -153,7 +175,7 @@
         </div>
       </div>
 
-      <!-- GANANCIA REAL -->
+      <!-- GANANCIA REAL EN RANGO -->
       <div class="col-md-6 col-lg-3">
         <div class="card stat-card shadow-sm p-3 border-0 border-start border-success border-4 h-100 bg-white">
           <div class="d-flex align-items-center justify-content-between px-2">

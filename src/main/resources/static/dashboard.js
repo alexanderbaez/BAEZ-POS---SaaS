@@ -3,21 +3,16 @@
  * Alexander Baez - 2026
  */
 
-// Cache de reportes históricos
-let REPORTES_MESES_CACHE = {};
-
 // ==========================================
 // 1. INICIALIZACIÓN
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Nombre de usuario
     const elUserLabel = document.getElementById('userNameLabel');
     if (elUserLabel) {
         const nombreUsuario = localStorage.getItem('baezpos_user_name');
         elUserLabel.innerText = nombreUsuario ? nombreUsuario.toUpperCase() : "USUARIO";
     }
 
-    // 2. Fecha actual formateada
     if (document.getElementById('fechaActual')) {
         const hoy = new Date();
         document.getElementById('fechaActual').innerText = hoy.toLocaleDateString('es-AR', {
@@ -25,22 +20,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // 3. Cargar datos en paralelo
+    // Inicializar fechas por defecto (Este mes)
+    aplicarPresetFecha('ESTE_MES');
+
     await Promise.allSettled([
         cargarDatosDashboardHoy(),
-        cargarRangoHistoricoMensual(0),
         cargarAlertasStock(),
         cargarDatosGrafico()
     ]);
 });
 
-// Helper de formato de moneda ARS
 function fmtMoneda(val) {
     return new Intl.NumberFormat('es-AR', {
         style: 'currency',
         currency: 'ARS',
         minimumFractionDigits: 2
     }).format(val || 0);
+}
+
+// Formatea fecha Date a String 'YYYY-MM-DD' en HOY LOCAL (Evita desfases de toISOString UTC)
+function formatDateLocal(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 // ==========================================
@@ -53,7 +56,6 @@ async function cargarDatosDashboardHoy() {
 
         const data = await response.json();
 
-        // Totales comerciales y caja de hoy
         if (document.getElementById('txtRecaudacion'))
             document.getElementById('txtRecaudacion').innerText = fmtMoneda(data.totalSales);
 
@@ -66,7 +68,6 @@ async function cargarDatosDashboardHoy() {
         if (document.getElementById('txtCobrosLibretaHoy'))
             document.getElementById('txtCobrosLibretaHoy').innerText = fmtMoneda(data.creditPaymentsToday || data.cobrosLibretaHoy || 0);
 
-        // Deuda acumulada en libreta y saldo real disponible en caja
         if (document.getElementById('cardLibreta'))
             document.getElementById('cardLibreta').innerText = fmtMoneda(data.tCredit || data.totalPendingCredit || 0);
 
@@ -79,61 +80,78 @@ async function cargarDatosDashboardHoy() {
 }
 
 // ==========================================
-// 3. CONSULTA Y SELECTOR HISTÓRICO MENSUAL
+// 3. CONSULTA POR FECHAS LIBRES / PRESETS
 // ==========================================
-async function cambiarRangoHistorico(offsetMeses) {
-    const offset = parseInt(offsetMeses) || 0;
-    await cargarRangoHistoricoMensual(offset);
+function aplicarPresetFecha(preset) {
+    const hoy = new Date();
+    let desde, hasta;
+
+    if (preset === 'ESTE_MES') {
+        desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        hasta = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+    } else if (preset === 'MES_PASADO') {
+        desde = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+        hasta = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+    } else if (preset === '3_MESES') {
+        desde = new Date(hoy.getFullYear(), hoy.getMonth() - 2, 1);
+        hasta = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+    }
+
+    if (desde && hasta) {
+        document.getElementById('fechaDesde').value = formatDateLocal(desde);
+        document.getElementById('fechaHasta').value = formatDateLocal(hasta);
+        consultarPorFechas();
+    }
 }
 
-async function cargarRangoHistoricoMensual(offsetMeses = 0) {
+async function consultarPorFechas() {
+    const desdeVal = document.getElementById('fechaDesde').value;
+    const hastaVal = document.getElementById('fechaHasta').value;
+
+    if (!desdeVal || !hastaVal) {
+        return Swal.fire('Atención', 'Por favor selecciona ambas fechas (Desde y Hasta)', 'warning');
+    }
+
+    if (desdeVal > hastaVal) {
+        return Swal.fire('Error', 'La fecha "Desde" no puede ser mayor que "Hasta"', 'error');
+    }
+
     try {
-        // Calcular rango de fechas según offset (0 = este mes, 1 = mes pasado, etc.)
-        const fechaBase = new Date();
-        fechaBase.setMonth(fechaBase.getMonth() - offsetMeses);
+        // Enviar parámetros limpios de fecha local (YYYY-MM-DD)
+        const params = new URLSearchParams({
+            startDate: desdeVal,
+            endDate: hastaVal,
+            from: desdeVal,
+            to: hastaVal
+        });
 
-        const primerDia = new Date(fechaBase.getFullYear(), fechaBase.getMonth(), 1);
-        const ultimoDia = new Date(fechaBase.getFullYear(), fechaBase.getMonth() + 1, 0);
+        const response = await apiFetch(`/sales/report/box?${params.toString()}`);
+        if (!response || !response.ok) throw new Error("Error al consultar reporte por fecha");
 
-        const fromStr = primerDia.toISOString().split('T')[0];
-        const toStr = ultimoDia.toISOString().split('T')[0];
+        const data = await response.json();
 
-        let data = null;
-
-        // Intento 1: Endpoint de rango específico
-        const res = await apiFetch(`/sales/report/box?from=${fromStr}&to=${toStr}`);
-        if (res && res.ok) {
-            data = await res.json();
-        } else {
-            // Intento 2: Fallback por query parameter period / offset
-            const resPeriod = await apiFetch(`/sales/report/box?monthOffset=${offsetMeses}`);
-            if (resPeriod && resPeriod.ok) data = await resPeriod.json();
-        }
-
-        if (!data) return;
-
-        // Renderizar métricas en las tarjetas
+        // Renderizar los datos en pantalla
         if (document.getElementById('txtRecaudacionMes'))
-            document.getElementById('txtRecaudacionMes').innerText = fmtMoneda(data.monthSales || data.totalSales);
+            document.getElementById('txtRecaudacionMes').innerText = fmtMoneda(data.totalSales || data.monthSales);
 
         if (document.getElementById('txtGananciaMes'))
-            document.getElementById('txtGananciaMes').innerText = fmtMoneda(data.monthProfit || data.totalProfit);
+            document.getElementById('txtGananciaMes').innerText = fmtMoneda(data.totalProfit || data.monthProfit);
 
         if (document.getElementById('txtReposicionMes'))
-            document.getElementById('txtReposicionMes').innerText = fmtMoneda(data.monthReplacementCost || data.replacementCost);
+            document.getElementById('txtReposicionMes').innerText = fmtMoneda(data.replacementCost || data.monthReplacementCost);
 
         if (document.getElementById('txtVentasCountMes'))
-            document.getElementById('txtVentasCountMes').innerText = data.monthOperations || data.totalOperations || 0;
+            document.getElementById('txtVentasCountMes').innerText = data.totalOperations || data.monthOperations || 0;
 
-        // Actualizar etiqueta del título
-        const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-        const lblTitulo = document.getElementById('lblTituloRecaudacion');
-        if (lblTitulo) {
-            lblTitulo.innerText = `RECAUDACIÓN (${nombresMeses[fechaBase.getMonth()].toUpperCase()} ${fechaBase.getFullYear()})`;
-        }
+        // Formatear mensaje visual de rango activo
+        const f1 = desdeVal.split('-').reverse().join('/');
+        const f2 = hastaVal.split('-').reverse().join('/');
+        const lblRango = document.getElementById('lblRangoActivo');
+        if (lblRango) lblRango.innerText = `Rango activo: ${f1} al ${f2}`;
 
     } catch (err) {
-        console.error("Error al cargar reporte mensual histórico:", err);
+        console.error("Error al obtener datos por fecha:", err);
+        Swal.fire('Error', 'No se pudieron recuperar los datos para el rango seleccionado', 'error');
     }
 }
 
@@ -259,5 +277,6 @@ async function cargarAlertasStock() {
     }
 }
 
-// Exposición global para llamados desde HTML
-window.cambiarRangoHistorico = cambiarRangoHistorico;
+// Exposición global
+window.aplicarPresetFecha = aplicarPresetFecha;
+window.consultarPorFechas = consultarPorFechas;
