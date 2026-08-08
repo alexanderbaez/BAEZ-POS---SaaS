@@ -38,24 +38,30 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
+        if (request.getEmail() == null || request.getEmail().isBlank()) {
+            throw new BadCredentialsException("Credenciales incorrectas. Verifique email y contraseña.");
+        }
+
+        String cleanEmail = request.getEmail().trim().toLowerCase();
+
         // 1. Buscar usuario por Email
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmail(cleanEmail)
                 .orElseThrow(() -> new BadCredentialsException("Credenciales incorrectas. Verifique email y contraseña."));
 
-        // 2. CHECK DE SEGURIDAD: Validación de expiración de clave temporal de recupero (10 min)
+        // 2. CHECK DE SEGURIDAD: Si la cuenta está en flujo de reset, validar la ventana de 10 minutos
         if (user.getPasswordResetAt() != null) {
             LocalDateTime resetAt = user.getPasswordResetAt();
             if (resetAt.plusMinutes(10).isBefore(LocalDateTime.now())) {
-                throw new BadCredentialsException("La contraseña temporal ha expirado. Por favor solicite una nueva.");
+                throw new BadCredentialsException("La contraseña temporal ha expirado. Solicite una nueva recuperación.");
             }
         }
 
         // 3. Autenticar en Spring Security
         try {
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+                    new UsernamePasswordAuthenticationToken(cleanEmail, request.getPassword())
             );
         } catch (Exception e) {
             throw new BadCredentialsException("Credenciales incorrectas. Verifique email y contraseña.");
@@ -66,7 +72,13 @@ public class AuthService {
             throw new BadRequestException("La cuenta de usuario se encuentra desactivada.");
         }
 
-        // 5. Generar JWT y responder
+        // 5. ÉXITO EN LOGIN: Limpiar la marca de reset temporal para reactivar el ciclo normal del usuario
+        if (user.getPasswordResetAt() != null) {
+            user.setPasswordResetAt(null);
+            userRepository.save(user);
+        }
+
+        // 6. Generar JWT y responder
         String jwtToken = jwtService.generateToken(user);
         Long companyId = (user.getCompany() != null) ? user.getCompany().getId() : null;
 
@@ -103,7 +115,7 @@ public class AuthService {
 
         User adminUser = User.builder()
                 .name(request.getUserName())
-                .email(request.getEmail())
+                .email(request.getEmail().trim().toLowerCase())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.ADMIN)
                 .company(savedCompany)
@@ -142,14 +154,13 @@ public class AuthService {
 
         String cleanEmail = request.getEmail().trim().toLowerCase();
 
-        // Buscar usuario sin importar si escribió con mayúsculas o minúsculas
         User user = userRepository.findByEmail(cleanEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("No existe ninguna cuenta asociada al correo: " + cleanEmail));
 
         // Generar contraseña temporal de 8 caracteres
         String temporaryPassword = generateRandomPassword(8);
 
-        // Guardar la nueva clave
+        // Guardar la nueva clave y la marca de tiempo
         user.setPassword(passwordEncoder.encode(temporaryPassword));
         user.setPasswordResetAt(LocalDateTime.now());
         userRepository.save(user);
@@ -163,7 +174,7 @@ public class AuthService {
                     temporaryPassword
             );
         } catch (Exception e) {
-            log.error("Fallo crítico en el servidor de correo SMTP para {}: {}", cleanEmail, e.getMessage());
+            log.error("Fallo en el envío SMTP para {}: {}", cleanEmail, e.getMessage());
         }
     }
 
