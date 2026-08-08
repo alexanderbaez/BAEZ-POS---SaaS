@@ -3,14 +3,13 @@
  * Alexander Baez - 2026
  */
 
-// Variable global para el modal de recuperación
 let modalRecuperacionInstance;
-const API_AUTH_BASE = '/api/v1/auth'; // Usar ruta relativa para mayor compatibilidad de entornos
 
 // 1. Verificación de Setup Inicial al cargar la página
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        const res = await fetch(`${API_AUTH_BASE}/setup-status`);
+        // Usa apiFetch para derivar automáticamente a Render/Localhost
+        const res = await apiFetch('/auth/setup-status');
         if (res.ok) {
             const data = await res.json();
             if (data.isSetupRequired === true) {
@@ -26,7 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 document.getElementById('loginForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
-    // Limpieza preventiva total de cualquier sesión previa en este navegador
+    // Limpieza preventiva total de cualquier sesión previa
     localStorage.clear();
 
     const email = document.getElementById('email').value.trim();
@@ -42,9 +41,9 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
     btn.classList.add('disabled');
 
     try {
-        const response = await fetch(`${API_AUTH_BASE}/authenticate`, {
+        // Llamada segura vía apiFetch para apuntar al backend real mediante POST
+        const response = await apiFetch('/auth/authenticate', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: email, password: password })
         });
 
@@ -162,9 +161,8 @@ async function enviarRecuperacion() {
     if (btn) btn.classList.add('disabled');
 
     try {
-        const response = await fetch(`${API_AUTH_BASE}/forgot-password`, {
+        const response = await apiFetch('/auth/forgot-password', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: email })
         });
 

@@ -48,7 +48,7 @@ const MI_WHATSAPP = "5492645468570";
     }
 })();
 
-// 2. Fetch Helper Universal
+// 2. Fetch Helper Universal Corregido
 async function apiFetch(path, options = {}) {
     const headers = options.headers ? new Headers(options.headers) : new Headers();
     if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
@@ -60,14 +60,26 @@ async function apiFetch(path, options = {}) {
         headers.set('Authorization', `Bearer ${currentToken}`);
     }
 
+    // Normalizar la ruta: asegurar '/' inicial y eliminar '/' final para evitar error 404
+    let cleanPath = path.startsWith('/') ? path : `/${path}`;
+    if (cleanPath.endsWith('/') && cleanPath.length > 1) {
+        cleanPath = cleanPath.slice(0, -1);
+    }
+
+    // Si no es una URL absoluta HTTP/HTTPS, fuerza el prefijo BASE_URL (Render / Localhost)
+    const url = path.startsWith('http') ? path : `${BASE_URL}${cleanPath}`;
+
     const config = { ...options, headers };
-    const url = path.startsWith('http') ? path : `${BASE_URL}${path.startsWith('/') ? path : '/' + path}`;
 
     try {
         const response = await fetch(url, config);
+
         if (response.status === 401 || response.status === 403) {
-            localStorage.clear();
-            window.location.href = 'login.html';
+            // No redirigir si ya estamos intentando autenticarnos en la pantalla de login
+            if (!window.location.pathname.endsWith('login.html')) {
+                localStorage.clear();
+                window.location.href = 'login.html';
+            }
         }
         return response;
     } catch (err) {
@@ -171,7 +183,6 @@ function mostrarNotificacionVencimientoGlobal(dias) {
         banner = document.createElement('div');
         banner.id = 'baezpos-vencimiento-banner';
 
-        // CSS inyectado con responsive query para no colisionar con el Navbar ni con el Sidebar (250px)
         const estilosBanner = document.createElement('style');
         estilosBanner.id = 'baezpos-vencimiento-styles';
         estilosBanner.innerHTML = `
