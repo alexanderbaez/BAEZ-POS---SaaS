@@ -136,37 +136,34 @@ public class AuthService {
 
     @Transactional
     public void processForgotPassword(ForgotPasswordRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("No existe ninguna cuenta asociada a este correo electrónico."));
-
-        // Bloqueo de seguridad: Vendedores no pueden usar este módulo
-        if (user.getRole() == Role.VENDEDOR) {
-            throw new BadRequestException("Los vendedores no tienen permitido reestablecer contraseña vía correo. Solicítela al Administrador de su empresa.");
+        if (request.getEmail() == null || request.getEmail().isBlank()) {
+            throw new BadRequestException("Debe ingresar un correo electrónico válido.");
         }
 
-        // Generar contraseña temporal de 8 caracteres alfanuméricos
+        String cleanEmail = request.getEmail().trim().toLowerCase();
+
+        // Buscar usuario sin importar si escribió con mayúsculas o minúsculas
+        User user = userRepository.findByEmail(cleanEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("No existe ninguna cuenta asociada al correo: " + cleanEmail));
+
+        // Generar contraseña temporal de 8 caracteres
         String temporaryPassword = generateRandomPassword(8);
 
-        // 1. Persistir la nueva contraseña ANTES de disparar el mail.
-        //    Si el SMTP falla, el usuario igual puede ingresar con la nueva clave.
-        //    El @Transactional hace commit aquí; el mail es asíncrono e independiente.
+        // Guardar la nueva clave
         user.setPassword(passwordEncoder.encode(temporaryPassword));
         user.setPasswordResetAt(LocalDateTime.now());
         userRepository.save(user);
 
-        // 2. Envío asíncrono — si falla el SMTP solo se loguea; NO se hace rollback.
-        //    La transacción ya fue committed en el paso anterior.
+        // Disparar correo asíncrono
         try {
+            log.info("Intentando enviar correo de restablecimiento a: {}", cleanEmail);
             emailService.enviarMailResetPassword(
                     user.getEmail(),
                     user.getName(),
                     temporaryPassword
             );
-            log.info("Correo de reset de contraseña enviado a {}", user.getEmail());
         } catch (Exception e) {
-            log.error("SMTP: No se pudo enviar correo de recuperación a {}. El cambio de contraseña fue aplicado igualmente. Detalle: {}",
-                    user.getEmail(), e.getMessage());
-            // No relanzamos la excepción: la contraseña ya fue guardada correctamente.
+            log.error("Fallo crítico en el servidor de correo SMTP para {}: {}", cleanEmail, e.getMessage());
         }
     }
 
