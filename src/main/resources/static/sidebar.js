@@ -202,9 +202,9 @@ document.addEventListener('click', async (event) => {
     }
 }, { capture: true });
 
-// Toggle responsivo opcional
+// Toggle responsivo (Soporta id="sidebarCollapse" y "btnToggleSidebar")
 document.addEventListener('click', (event) => {
-    const btnToggle = event.target.closest('#btnToggleSidebar');
+    const btnToggle = event.target.closest('#sidebarCollapse, #btnToggleSidebar');
     if (btnToggle) {
         const sidebar = document.getElementById('sidebar');
         if (sidebar) sidebar.classList.toggle('active');

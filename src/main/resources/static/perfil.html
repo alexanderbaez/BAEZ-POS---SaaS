@@ -39,7 +39,7 @@
     /* Comportamiento responsivo unificado para el sidebar dinámico */
     @media (max-width: 768px) {
         #sidebar { left: calc(var(--sidebar-width) * -1) !important; }
-        #content { margin-left: 0; width: 100%; }
+        #content { margin-left: 0; width: 100%; padding: 1rem; }
         #sidebar.active { left: 0 !important; }
     }
 
@@ -61,7 +61,7 @@
 
   <div id="alertaVencimiento" class="alert alert-danger d-none border-0 shadow-sm mb-4" style="border-radius: 15px;">
     <div class="d-flex align-items-center">
-      <i class="bi bi-exclamation-triangle-fill fs-3 me-3"></i>
+      <i class="bi bi-exclamation-triangle-fill fs-3 me-3 flex-shrink-0"></i>
       <div>
         <h6 class="fw-bold mb-0">Atención con tu Suscripción</h6>
         <p class="mb-0 small" id="mensajeDias">Tu servicio vence pronto. Contactá a Alexander para renovar.</p>
@@ -69,63 +69,65 @@
     </div>
   </div>
 
-  <div class="d-flex justify-content-between align-items-center mb-4">
+  <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
     <div>
-      <h2 class="fw-bold m-0 text-dark">Configuración del Negocio</h2>
+      <h2 class="fw-bold m-0 text-dark fs-3 fs-md-2">Configuración del Negocio</h2>
       <p class="text-muted small mb-0">Gestioná la identidad de tu comercio y tu suscripción.</p>
     </div>
-    <div id="badgeEstado" class="badge rounded-pill p-2 px-4 bg-success shadow-sm">
-      SERVICIO ACTIVO
+    <div>
+      <span id="badgeEstado" class="badge rounded-pill p-2 px-4 bg-success shadow-sm d-inline-block">
+        SERVICIO ACTIVO
+      </span>
     </div>
   </div>
 
   <div class="row g-4">
-    <div class="col-md-8">
-      <div class="card shadow-sm p-4">
+    <div class="col-12 col-lg-8">
+      <div class="card shadow-sm p-3 p-md-4">
         <form id="formEmpresa">
           <div class="row g-3">
-            <div class="col-md-6">
-              <label class="small fw-bold text-muted" for="empNombre">Nombre del Negocio</label>
+            <div class="col-12 col-md-6">
+              <label class="small fw-bold text-muted mb-1" for="empNombre">Nombre del Negocio</label>
               <input type="text" id="empNombre" class="form-control bg-light border-0 p-3">
             </div>
-            <div class="col-md-6">
-              <label class="small fw-bold text-muted" for="empCuit">CUIT / CUIL</label>
+            <div class="col-12 col-md-6">
+              <label class="small fw-bold text-muted mb-1" for="empCuit">CUIT / CUIL</label>
               <input type="text" id="empCuit" class="form-control bg-light border-0 p-3">
             </div>
-            <div class="col-md-6">
-              <label class="small fw-bold text-muted" for="empTel">Teléfono</label>
+            <div class="col-12 col-md-6">
+              <label class="small fw-bold text-muted mb-1" for="empTel">Teléfono</label>
               <input type="text" id="empTel" class="form-control bg-light border-0 p-3">
             </div>
-            <div class="col-md-6">
-              <label class="small fw-bold text-muted" for="empEmail">Correo Electrónico</label>
+            <div class="col-12 col-md-6">
+              <label class="small fw-bold text-muted mb-1" for="empEmail">Correo Electrónico</label>
               <input type="email" id="empEmail" class="form-control bg-light border-0 p-3">
             </div>
             <div class="col-12">
-              <label class="small fw-bold text-muted" for="empDireccion">Dirección</label>
+              <label class="small fw-bold text-muted mb-1" for="empDireccion">Dirección</label>
               <input type="text" id="empDireccion" class="form-control bg-light border-0 p-3">
             </div>
 
             <!-- INTERRUPTOR/SWITCH PARA ACTIVAR O DESACTIVAR DATOS FISCALES -->
             <div class="col-12 mt-4">
-              <div class="form-check form-switch p-3 bg-light rounded-3 d-flex align-items-center justify-content-between border">
-                <label class="form-check-label fw-bold text-dark m-0 cursor-pointer" for="checkMostrarFiscal">
+              <div class="form-check form-switch p-3 bg-light rounded-3 d-flex align-items-center justify-content-between border m-0">
+                <label class="form-check-label fw-bold text-dark m-0 cursor-pointer pe-2" for="checkMostrarFiscal">
                   <i class="bi bi-receipt me-2 text-primary"></i> Incluir Datos Fiscales y Facturación (ARCA / AFIP)
                 </label>
-                <input class="form-check-input fs-4 m-0" type="checkbox" id="checkMostrarFiscal" checked>
+                <input class="form-check-input fs-4 m-0 flex-shrink-0" type="checkbox" id="checkMostrarFiscal" checked>
               </div>
             </div>
 
             <!-- CAMPOS FISCALES COMPLETOS PARA ARCA -->
-            <div class="col-md-4">
-              <label class="small fw-bold text-muted" for="empIibb">Nro. Ingresos Brutos (IIBB)</label>
+            <div class="col-12 col-md-4">
+              <label class="small fw-bold text-muted mb-1" for="empIibb">Nro. Ingresos Brutos (IIBB)</label>
               <input type="text" id="empIibb" class="form-control bg-light border-0 p-3" placeholder="Exento o Nro Convenio">
             </div>
-            <div class="col-md-4">
-              <label class="small fw-bold text-muted" for="empInicioAct">Inicio de Actividades</label>
+            <div class="col-12 col-md-4">
+              <label class="small fw-bold text-muted mb-1" for="empInicioAct">Inicio de Actividades</label>
               <input type="date" id="empInicioAct" class="form-control bg-light border-0 p-3">
             </div>
-            <div class="col-md-4">
-              <label class="small fw-bold text-muted" for="empIva">Condición Frente al IVA</label>
+            <div class="col-12 col-md-4">
+              <label class="small fw-bold text-muted mb-1" for="empIva">Condición Frente al IVA</label>
               <select id="empIva" class="form-select bg-light border-0 p-3 text-dark">
                 <option value="Responsable Monotributo">Responsable Monotributo</option>
                 <option value="Responsable Inscripto">Responsable Inscripto</option>
@@ -134,28 +136,28 @@
             </div>
 
             <div class="col-12">
-              <label class="small fw-bold text-muted" for="empTicketMsg">Mensaje en Tickets (Pie de página)</label>
+              <label class="small fw-bold text-muted mb-1" for="empTicketMsg">Mensaje en Tickets (Pie de página)</label>
               <textarea id="empTicketMsg" class="form-control bg-light border-0 p-3" rows="3"></textarea>
             </div>
           </div>
 
-          <div class="card shadow-sm p-4 mt-4 border-start border-danger border-4">
-            <div class="d-flex align-items-center mb-3">
+          <div class="card shadow-sm p-3 p-md-4 mt-4 border-start border-danger border-4">
+            <div class="d-flex align-items-center mb-2">
               <i class="bi bi-shield-lock fs-4 text-danger me-2"></i>
               <h5 class="fw-bold m-0">Seguridad de la Cuenta</h5>
             </div>
-            <p class="text-muted small">Cambiá tu contraseña regularmente para mantener el sistema seguro.</p>
+            <p class="text-muted small mb-3">Cambiá tu contraseña regularmente para mantener el sistema seguro.</p>
 
             <div class="row g-3">
-              <div class="col-md-5">
-                <label class="small fw-bold text-muted" for="nuevaPass">Nueva Contraseña</label>
-                <input type="password" id="nuevaPass" class="form-control bg-light border-0 p-3" placeholder="Mínimo 6 caracteres">
+              <div class="col-12 col-md-5">
+                <label class="small fw-bold text-muted mb-1" for="nuevaPass">Nueva Contraseña</label>
+                <input type="password" id="nuevaPass" class="form-control bg-light border-0 p-3" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
               </div>
-              <div class="col-md-5">
-                <label class="small fw-bold text-muted" for="confirmarPass">Confirmar Contraseña</label>
-                <input type="password" id="confirmarPass" class="form-control bg-light border-0 p-3" placeholder="Repetí la contraseña">
+              <div class="col-12 col-md-5">
+                <label class="small fw-bold text-muted mb-1" for="confirmarPass">Confirmar Contraseña</label>
+                <input type="password" id="confirmarPass" class="form-control bg-light border-0 p-3" placeholder="Repetí la contraseña" autocomplete="new-password">
               </div>
-              <div class="col-md-2 d-flex align-items-end">
+              <div class="col-12 col-md-2 d-flex align-items-end">
                 <button type="button" class="btn btn-outline-danger w-100 p-3 fw-bold" onclick="cambiarPassword()">
                   Actualizar
                 </button>
@@ -163,12 +165,12 @@
             </div>
           </div>
 
-          <div class="mt-4 p-3 bg-light border-start border-primary border-4 d-flex justify-content-between align-items-center" style="border-radius: 8px;">
+          <div class="mt-4 p-3 bg-light border-start border-primary border-4 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3" style="border-radius: 8px;">
             <div>
               <small class="text-muted d-block fw-bold">VENCIMIENTO DE ABONO</small>
               <span id="vencimientoTexto" class="fw-bold text-dark fs-5">-</span>
             </div>
-            <button type="button" class="btn btn-primary px-5 py-2 fw-bold" onclick="actualizarEmpresa()">
+            <button type="button" class="btn btn-primary px-4 px-md-5 py-2 fw-bold w-100 w-sm-auto shadow-sm" onclick="actualizarEmpresa()">
               <i class="bi bi-save me-2"></i> Guardar Cambios
             </button>
           </div>
@@ -177,9 +179,9 @@
     </div>
 
     <!-- VISTA PREVIA DEL TICKET TÉRMICO COMPLETA Y DINÁMICA -->
-    <div class="col-md-4">
+    <div class="col-12 col-lg-4">
       <h6 class="fw-bold text-muted small text-uppercase mb-3">Vista Previa de Ticket</h6>
-      <div class="card preview-ticket p-4 shadow-sm">
+      <div class="card preview-ticket p-3 p-md-4 shadow-sm">
         <div class="text-center">
           <i class="bi bi-shop fs-1 text-primary opacity-25 mb-2"></i>
           <h5 class="fw-bold mb-0" id="previewNombre">Nombre Negocio</h5>

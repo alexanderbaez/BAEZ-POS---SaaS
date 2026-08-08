@@ -103,6 +103,7 @@
     .table-responsive {
         background-color: transparent !important;
         overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     .table thead th {
@@ -192,6 +193,23 @@
         box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8);
         color: var(--text-main);
     }
+
+    /* AJUSTES RESPONSIVE MÓVIL */
+    @media (max-width: 767.98px) {
+        .master-header {
+            padding: 1rem;
+        }
+        .revenue-badge {
+            width: 100%;
+            justify-content: center;
+        }
+        .card {
+            padding: 1.25rem !important;
+        }
+        .table-responsive table {
+            min-width: 650px; /* Asegura que la tabla no se aplaste en móvil */
+        }
+    }
   </style>
 </head>
 
@@ -199,16 +217,16 @@
 
 <!-- HEADER PRINCIPAL FLUIDO -->
 <div class="master-header">
-  <div class="container-fluid px-2 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+  <div class="container-fluid px-0 px-md-2 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
     <div>
-      <h3 class="fw-extrabold m-0 text-white d-flex align-items-center gap-2 fs-4">
+      <h3 class="fw-extrabold m-0 text-white d-flex align-items-center gap-2 fs-4 flex-wrap">
         <span>BÁEZ</span> <span class="text-primary">POS</span>
         <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fs-7 px-2 py-0.5 fw-bold">MASTER ADMIN</span>
       </h3>
       <p class="text-muted small m-0 mt-1">Panel de control centralizado y supervisión de red SaaS de alto rendimiento.</p>
     </div>
 
-    <div class="d-flex align-items-center gap-3">
+    <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 gap-sm-3">
       <div class="revenue-badge shadow-sm">
         <i class="bi bi-wallet2 fs-5"></i>
         <span>RECAUDACIÓN: <strong id="kpiGanancia" class="text-white">$ 0,00</strong></span>
@@ -220,12 +238,12 @@
   </div>
 </div>
 
-<!-- CONTENEDOR PRINCIPAL FLUIDO (Aprovecha 100% de la pantalla) -->
-<div class="container-fluid px-4">
+<!-- CONTENEDOR PRINCIPAL FLUIDO -->
+<div class="container-fluid px-2 px-md-4">
 
-  <!-- TARJETAS KPI (4 Columnas responsivas perfectamente equilibradas) -->
+  <!-- TARJETAS KPI (4 Columnas responsivas) -->
   <div class="row g-3 mb-4">
-    <div class="col-xl-3 col-md-6">
+    <div class="col-12 col-sm-6 col-xl-3">
       <div class="card p-3 kpi-card" style="border-left-color: var(--primary);">
         <div class="d-flex justify-content-between align-items-center">
           <div>
@@ -238,7 +256,7 @@
         </div>
       </div>
     </div>
-    <div class="col-xl-3 col-md-6">
+    <div class="col-12 col-sm-6 col-xl-3">
       <div class="card p-3 kpi-card" style="border-left-color: var(--accent);">
         <div class="d-flex justify-content-between align-items-center">
           <div>
@@ -251,7 +269,7 @@
         </div>
       </div>
     </div>
-    <div class="col-xl-3 col-md-6">
+    <div class="col-12 col-sm-6 col-xl-3">
       <div class="card p-3 kpi-card" style="border-left-color: var(--warning);">
         <div class="d-flex justify-content-between align-items-center">
           <div>
@@ -264,7 +282,7 @@
         </div>
       </div>
     </div>
-    <div class="col-xl-3 col-md-6">
+    <div class="col-12 col-sm-6 col-xl-3">
       <div class="card p-3 kpi-card" style="border-left-color: var(--danger);">
         <div class="d-flex justify-content-between align-items-center">
           <div>
@@ -279,11 +297,11 @@
     </div>
   </div>
 
-  <!-- SECCIÓN PRINCIPAL: FORMULARIO (3 cols) Y TABLA DE COMERCIOS (9 cols) -->
+  <!-- SECCIÓN PRINCIPAL: FORMULARIO Y TABLA DE COMERCIOS -->
   <div class="row g-4">
 
-    <!-- Columna Izquierda: Formulario de Alta optimizado -->
-    <div class="col-xl-3 col-lg-4">
+    <!-- Columna Izquierda: Formulario de Alta -->
+    <div class="col-12 col-lg-4 col-xl-3">
       <div class="card p-4 h-100">
         <h5 class="fw-bold mb-3 text-white d-flex align-items-center gap-2 fs-6">
           <i class="bi bi-plus-circle-fill text-primary"></i> Dar de Alta Comercio
@@ -294,11 +312,11 @@
             <input type="text" id="masterNombre" class="form-control" placeholder="Ej: Central Market" required>
           </div>
           <div class="row g-2">
-            <div class="col-6 mb-3">
+            <div class="col-12 col-sm-6 col-lg-12 col-xl-6 mb-3">
               <label class="form-label">CUIT / TaxID</label>
               <input type="text" id="masterTaxId" class="form-control" placeholder="20-XXXXXXXX-9" required>
             </div>
-            <div class="col-6 mb-3">
+            <div class="col-12 col-sm-6 col-lg-12 col-xl-6 mb-3">
               <label class="form-label">Teléfono</label>
               <input type="text" id="masterTelefono" class="form-control" placeholder="1122334455" required>
             </div>
@@ -326,8 +344,8 @@
       </div>
     </div>
 
-    <!-- Columna Derecha: Listado Amplio de Comercios (9 cols para aprovechar toda la pantalla) -->
-    <div class="col-xl-9 col-lg-8">
+    <!-- Columna Derecha: Listado de Comercios -->
+    <div class="col-12 col-lg-8 col-xl-9">
       <div class="card p-4 h-100">
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 border-bottom pb-3 border-secondary border-opacity-15">
           <h5 class="fw-bold m-0 text-white d-flex align-items-center gap-2 fs-5">
@@ -364,11 +382,11 @@
   <div class="row mt-4">
     <div class="col-12">
       <div class="card p-4">
-        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-3 border-secondary border-opacity-15">
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3 border-bottom pb-3 border-secondary border-opacity-15">
           <h5 class="fw-bold m-0 text-white d-flex align-items-center gap-2 fs-6">
             <i class="bi bi-activity text-primary"></i> Bitácora General de Auditoría del Sistema
           </h5>
-          <button class="btn btn-sm btn-outline-secondary px-3 rounded-pill fw-bold text-white" onclick="cargarLogs()" title="Actualizar logs">
+          <button class="btn btn-sm btn-outline-secondary px-3 rounded-pill fw-bold text-white align-self-start align-self-sm-auto" onclick="cargarLogs()" title="Actualizar logs">
             <i class="bi bi-arrow-repeat me-1"></i> Actualizar Logs
           </button>
         </div>
@@ -403,15 +421,15 @@
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body p-4">
+      <div class="modal-body p-3 p-md-4">
         <form id="formEditarEmpresa">
           <input type="hidden" id="editId">
           <div class="row g-3">
-            <div class="col-md-6">
+            <div class="col-12 col-md-6">
               <label class="form-label">Nombre Comercial</label>
               <input type="text" id="editNombre" class="form-control" required>
             </div>
-            <div class="col-md-6">
+            <div class="col-12 col-md-6">
               <label class="form-label">CUIT / TaxID</label>
               <input type="text" id="editTaxId" class="form-control">
             </div>
@@ -419,26 +437,26 @@
               <label class="form-label">Email de Contacto</label>
               <input type="email" id="editEmail" class="form-control" required>
             </div>
-            <div class="col-md-6">
+            <div class="col-12 col-md-6">
               <label class="form-label text-warning">Contraseña Nueva <small class="text-muted">(Dejar vacío si no cambia)</small></label>
               <input type="password" id="editPass" class="form-control" placeholder="••••••••">
             </div>
-            <div class="col-md-6">
+            <div class="col-12 col-md-6">
               <label class="form-label text-info">Estado de Licencia</label>
               <select id="editActive" class="form-select border-info border-opacity-50">
                 <option value="true">ACTIVO / HABILITADO</option>
                 <option value="false">SUSPENDIDO / BLOQUEADO</option>
               </select>
             </div>
-            <div class="col-md-6">
+            <div class="col-12 col-md-6">
               <label class="form-label">Teléfono / WhatsApp</label>
               <input type="text" id="editPhone" class="form-control">
             </div>
-            <div class="col-md-6">
+            <div class="col-12 col-md-6">
               <label class="form-label">Dirección</label>
               <input type="text" id="editAddress" class="form-control">
             </div>
-            <div class="col-md-6">
+            <div class="col-12 col-md-6">
               <label class="form-label text-warning fw-bold">Fecha de Vencimiento</label>
               <input type="date" id="editVencimiento" class="form-control border-warning border-opacity-50">
             </div>
@@ -447,7 +465,7 @@
               <textarea id="editTicketMessage" class="form-control" rows="2" placeholder="Ej: Gracias por su compra."></textarea>
             </div>
           </div>
-          <div class="d-flex gap-2 mt-4 pt-3 border-top border-secondary border-opacity-15">
+          <div class="d-flex flex-column flex-sm-row gap-2 mt-4 pt-3 border-top border-secondary border-opacity-15">
             <button type="submit" class="btn btn-primary w-100 py-2.5 fw-bold shadow-sm">GUARDAR CAMBIOS</button>
             <button type="button" class="btn btn-outline-secondary w-100" data-bs-dismiss="modal">CANCELAR</button>
           </div>
@@ -462,26 +480,26 @@
   <div class="modal-dialog modal-xl modal-dialog-centered">
     <div class="modal-content p-2">
       <div class="modal-header border-0 pb-0">
-        <h5 class="modal-title fw-bold text-white d-flex align-items-center gap-2">
+        <h5 class="modal-title fw-bold text-white d-flex align-items-center gap-2 fs-6 fs-md-5">
           <i class="bi bi-graph-up-arrow text-success"></i> Detalle de Movimientos y Actividad: <span id="lblClienteMov" class="text-primary"></span>
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body p-4">
+      <div class="modal-body p-3 p-md-4">
         <div class="row g-3 mb-4">
-          <div class="col-md-4">
+          <div class="col-12 col-md-4">
             <div class="p-3 rounded-3 bg-dark border border-secondary border-opacity-25">
               <span class="text-muted small text-uppercase fw-bold">Total Acciones Registradas</span>
               <h4 id="detTotalVentas" class="text-white mb-0 mt-1">0</h4>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-12 col-md-4">
             <div class="p-3 rounded-3 bg-dark border border-secondary border-opacity-25">
               <span class="text-muted small text-uppercase fw-bold">Volumen Facturado</span>
               <h4 id="detVolumen" class="text-success mb-0 mt-1">$ 0,00</h4>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-12 col-md-4">
             <div class="p-3 rounded-3 bg-dark border border-secondary border-opacity-25">
               <span class="text-muted small text-uppercase fw-bold">Última Conexión / Actividad</span>
               <h4 id="detUltimaAct" class="text-warning mb-0 mt-1 fs-6">N/A</h4>

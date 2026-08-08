@@ -24,8 +24,10 @@
         .product-name { font-weight: 600; margin-bottom: 0; color: #1e293b; }
         .product-code { font-size: 0.75rem; color: #64748b; }
 
+        /* AJUSTES RESPONSIVE MÓVIL Y TABLET */
         @media (max-width: 768px) {
             #content { margin-left: 0; width: 100%; }
+            .table-responsive-mobile { min-width: 700px; }
         }
 
         @media print { .no-print { display: none !important; } }
@@ -40,13 +42,13 @@
 <div id="content">
     <!-- Navbar / User info -->
     <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom p-3">
-        <div class="container-fluid">
+        <div class="container-fluid p-0">
             <button type="button" id="sidebarCollapse" class="btn btn-outline-primary d-md-none me-2">
                 <i class="bi bi-list"></i>
             </button>
             <div class="ms-auto d-flex align-items-center">
-                <div class="text-end me-3">
-                    <div id="userName" class="fw-bold text-dark text-capitalize">Usuario</div>
+                <div class="text-end me-2 me-md-3">
+                    <div id="userName" class="fw-bold text-dark text-capitalize fs-6">Usuario</div>
                     <small id="userRoleBadge" class="badge bg-secondary text-uppercase" style="font-size: 0.65rem;">Cargando...</small>
                 </div>
                 <i class="bi bi-person-circle fs-3 text-primary"></i>
@@ -54,11 +56,11 @@
         </div>
     </nav>
 
-    <div class="container-fluid p-4">
+    <div class="container-fluid p-2 p-md-4">
         <!-- Barra superior de acciones y filtros -->
-        <div class="row g-3 mb-4 align-items-center">
+        <div class="row g-2 g-md-3 mb-3 mb-md-4 align-items-center">
             <div class="col-12 col-md-3">
-                <h2 class="fw-bold m-0 text-dark">Productos</h2>
+                <h2 class="fw-bold m-0 text-dark fs-3 fs-md-2">Productos</h2>
             </div>
             <div class="col-12 col-sm-6 col-md-3">
                 <div class="input-group shadow-sm">
@@ -73,12 +75,12 @@
             </div>
             <div class="col-6 col-md-2">
                 <button class="btn btn-outline-secondary shadow-sm w-100" onclick="abrirPapelera()">
-                    <i class="bi bi-trash3 me-2"></i>Papelera
+                    <i class="bi bi-trash3 me-1 me-md-2"></i>Papelera
                 </button>
             </div>
             <div class="col-6 col-md-2">
                 <button class="btn btn-primary shadow-sm w-100 fw-bold" onclick="prepararFormulario()">
-                    <i class="bi bi-plus-lg me-2"></i>Nuevo
+                    <i class="bi bi-plus-lg me-1 me-md-2"></i>Nuevo
                 </button>
             </div>
         </div>
@@ -87,7 +89,7 @@
         <div class="card border-0 shadow-sm rounded-4">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0 table-responsive-mobile">
                         <thead class="bg-light">
                         <tr>
                             <th class="ps-4">Detalle</th>
@@ -110,13 +112,13 @@
 
     <!-- MODAL PRODUCTO -->
     <div class="modal fade" id="modalProducto" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow-lg rounded-4">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title fw-bold" id="modalTitulo">Nuevo Producto</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body p-4">
+                <div class="modal-body p-3 p-md-4">
                     <form id="formProducto">
                         <input type="hidden" id="prodId">
                         <div class="mb-3">
@@ -124,7 +126,7 @@
                             <input type="text" id="prodNombre" class="form-control" required placeholder="Ej: Coca Cola 2.25L">
                         </div>
                         <div class="row">
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label class="form-label small fw-bold">Código de Barras</label>
                                 <div class="input-group">
                                     <input type="text" id="prodBarcode" class="form-control" placeholder="EAN / Autogenerado">
@@ -134,7 +136,7 @@
                                 </div>
                                 <div class="form-text text-muted" style="font-size: 0.7rem;">Vacío = Autogenerado al guardar.</div>
                             </div>
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label class="form-label small fw-bold">Categoría</label>
                                 <div class="input-group">
                                     <select id="prodCategoria" class="form-select" required></select>
@@ -143,23 +145,23 @@
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label class="form-label small fw-bold">Costo ($)</label>
-                                <input type="number" step="0.01" id="prodCosto" class="form-control" required placeholder="0.00">
+                                <input type="number" inputmode="decimal" step="0.01" id="prodCosto" class="form-control" required placeholder="0.00">
                             </div>
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label class="form-label small fw-bold">Precio Venta ($)</label>
-                                <input type="number" step="0.01" id="prodPrecio" class="form-control" required placeholder="0.00">
+                                <input type="number" inputmode="decimal" step="0.01" id="prodPrecio" class="form-control" required placeholder="0.00">
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label class="form-label small fw-bold">Stock Actual</label>
-                                <input type="number" step="any" id="prodStock" class="form-control" value="0">
+                                <input type="number" inputmode="decimal" step="any" id="prodStock" class="form-control" value="0">
                             </div>
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label class="form-label small fw-bold">Stock Mínimo</label>
-                                <input type="number" step="any" id="prodMinStock" class="form-control" value="5">
+                                <input type="number" inputmode="decimal" step="any" id="prodMinStock" class="form-control" value="5">
                             </div>
                         </div>
                         <div class="form-check form-switch mb-3">
@@ -187,15 +189,17 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-0">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="bg-light">
-                        <tr>
-                            <th class="ps-3">Producto</th>
-                            <th class="text-end pe-3">Acción</th>
-                        </tr>
-                        </thead>
-                        <tbody id="listaBorrados"></tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                            <tr>
+                                <th class="ps-3">Producto</th>
+                                <th class="text-end pe-3">Acción</th>
+                            </tr>
+                            </thead>
+                            <tbody id="listaBorrados"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>

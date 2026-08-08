@@ -19,8 +19,9 @@
         /* Comportamiento responsivo unificado para el sidebar dinámico */
         @media (max-width: 768px) {
             #sidebar { left: calc(var(--sidebar-width) * -1) !important; }
-            #content { margin-left: 0; width: 100%; }
+            #content { margin-left: 0; width: 100%; padding: 1rem; }
             #sidebar.active { left: 0 !important; }
+            .table-responsive-mobile { min-width: 600px; }
         }
 
         .nav-link.active-page { background-color: var(--primary-blue) !important; font-weight: bold; color: white !important; }
@@ -31,22 +32,27 @@
 <div id="sidebar-container"></div>
 
 <div id="content">
-    <button type="button" id="sidebarCollapse" class="btn btn-outline-primary d-md-none mb-3"><i class="bi bi-list"></i></button>
+    <button type="button" id="sidebarCollapse" class="btn btn-outline-primary d-md-none mb-3">
+        <i class="bi bi-list"></i>
+    </button>
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <!-- CABECERA OPTIMIZADA: Alineación contenida para evitar deformaciones en PC -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
         <div>
-            <h2 class="fw-bold m-0 text-dark">Gestión de Empleados</h2>
+            <h2 class="fw-bold m-0 text-dark fs-3 fs-md-2">Gestión de Empleados</h2>
             <p class="text-muted small mb-0">Administra los accesos al sistema</p>
         </div>
-        <button class="btn btn-primary shadow-sm rounded-3 fw-bold" data-bs-toggle="modal" data-bs-target="#modalEmpleado">
-            <i class="bi bi-person-plus-fill me-2"></i> Nuevo Empleado
-        </button>
+        <div>
+            <button class="btn btn-primary shadow-sm rounded-3 fw-bold px-4 py-2 w-100 w-md-auto" data-bs-toggle="modal" data-bs-target="#modalEmpleado">
+                <i class="bi bi-person-plus-fill me-2"></i> Nuevo Empleado
+            </button>
+        </div>
     </div>
 
     <div class="card card-main overflow-hidden">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0 table-responsive-mobile">
                     <thead class="table-light">
                     <tr>
                         <th class="ps-4">Nombre / Alias</th>
@@ -56,6 +62,7 @@
                     </tr>
                     </thead>
                     <tbody id="tablaEmpleados">
+                    <tr><td colspan="4" class="text-center p-4 text-muted">Cargando datos de empleados...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -70,20 +77,20 @@
                 <h5 class="modal-title fw-bold text-dark"><i class="bi bi-person-badge me-2 text-primary"></i> Datos del Empleado</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4">
+            <div class="modal-body p-3 p-md-4">
                 <form id="formEmpleado">
                     <input type="hidden" id="empleadoId">
                     <div class="mb-3">
                         <label class="form-label fw-bold small text-muted">Nombre Completo</label>
-                        <input type="text" class="form-control" id="empNombre" required>
+                        <input type="text" class="form-control" id="empNombre" required placeholder="Ej: Juan Pérez">
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold small text-muted">Correo (Usuario de Acceso)</label>
-                        <input type="email" class="form-control" id="empEmail" required>
+                        <input type="email" class="form-control" id="empEmail" required placeholder="usuario@empresa.com">
                     </div>
                     <div class="mb-3" id="passwordContainer">
                         <label class="form-label fw-bold small text-muted">Contraseña</label>
-                        <input type="password" class="form-control" id="empPassword">
+                        <input type="password" class="form-control" id="empPassword" autocomplete="new-password">
                         <small class="text-muted" style="font-size: 0.8rem;">Deja en blanco para no cambiarla (si estás editando).</small>
                     </div>
                     <div class="mb-4">
@@ -101,8 +108,6 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<!-- SweetAlert2 CSS y JS -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="sidebar.js"></script>
 <script src="auth.js"></script>
 <script src="empleados.js"></script>

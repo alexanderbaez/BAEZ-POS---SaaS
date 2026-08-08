@@ -12,7 +12,12 @@
         body { background-color: #f1f5f9; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
 
         /* Contenedor alineado con el sidebar dinámico */
-        #content { margin-left: var(--sidebar-width); min-height: 100vh; transition: all 0.3s; }
+        #content {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            transition: all 0.3s;
+            width: calc(100% - var(--sidebar-width));
+        }
 
         .card-pos { height: calc(100vh - 100px); border: none; border-radius: 15px; }
         .total-display { font-size: 3.5rem; font-weight: 900; color: var(--primary-color); line-height: 1; }
@@ -32,41 +37,67 @@
         }
         #alertaSuscripcion .alert { border-radius: 0; border-bottom: 2px solid #f59e0b; }
 
-        /* Comportamiento responsivo unificado para el sidebar dinámico */
+        .nav-link.active-page { background-color: var(--primary-blue) !important; font-weight: bold; color: white !important; }
+
+        /* AJUSTES RESPONSIVE PARA DISPOSITIVOS MÓVILES Y TABLETS */
         @media (max-width: 768px) {
             #sidebar { left: calc(var(--sidebar-width) * -1) !important; }
             #content { margin-left: 0; width: 100%; }
-            #sidebar.active { left: 0 !important; }
-        }
 
-        .nav-link.active-page { background-color: var(--primary-blue) !important; font-weight: bold; color: white !important; }
+            .card-pos { height: auto !important; min-height: initial; }
+            .table-responsive { height: auto; max-height: 300px; }
+            .total-display { font-size: 2.5rem; }
+
+            .metodo-pago { padding: 8px 4px; }
+            .metodo-pago i { font-size: 1.25rem; }
+            .metodo-pago small { font-size: 0.75rem; }
+        }
     </style>
 </head>
 <body>
 
+<!-- Sidebar Dinámico -->
 <div id="sidebar-container"></div>
 
+<!-- Contenedor Principal -->
 <div id="content">
-    <div class="container-fluid p-4">
-        <div class="row g-4">
-            <div class="col-md-8">
+    <!-- Navbar Superior con Botón Menú Responsivo -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom p-3">
+        <div class="container-fluid p-0">
+            <button type="button" id="sidebarCollapse" class="btn btn-outline-primary d-md-none me-2">
+                <i class="bi bi-list"></i>
+            </button>
+            <div class="ms-auto d-flex align-items-center">
+                <div class="text-end me-2 me-md-3">
+                    <div id="userName" class="fw-bold text-dark text-capitalize fs-6">Usuario</div>
+                    <small id="userRoleBadge" class="badge bg-secondary text-uppercase" style="font-size: 0.65rem;">Cargando...</small>
+                </div>
+                <i class="bi bi-person-circle fs-3 text-primary"></i>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid p-2 p-md-4">
+        <div class="row g-3 g-md-4">
+            <!-- PANEL IZQUIERDO: BÚSQUEDA Y CARRITO -->
+            <div class="col-12 col-md-7 col-lg-8">
                 <div class="card card-pos shadow-sm p-3">
                     <!-- Buscador Principal -->
                     <div class="mb-3 position-relative">
                         <div class="input-group input-group-lg shadow-sm">
                             <span class="input-group-text bg-white border-end-0"><i class="bi bi-upc-scan text-primary"></i></span>
-                            <input type="text" id="buscadorVenta" class="form-control border-start-0" placeholder="Escanea o escribe para buscar..." autofocus autocomplete="off">
+                            <input type="text" id="buscadorVenta" class="form-control border-start-0 fs-6 fs-md-5" placeholder="Escanea o escribe para buscar..." autofocus autocomplete="off">
                         </div>
                         <div id="listaSugerencias" class="list-group position-absolute w-100 shadow-lg sugerencias-box"></div>
                     </div>
 
                     <!-- Grilla del Carrito de Ventas -->
                     <div class="table-responsive">
-                        <table class="table align-middle table-hover">
-                            <thead class="text-muted small border-bottom">
+                        <table class="table align-middle table-hover mb-0">
+                            <thead class="text-muted small border-bottom sticky-top bg-white">
                             <tr>
                                 <th>PRODUCTO</th>
-                                <th class="text-center">CANTIDAD</th>
+                                <th class="text-center">CANT.</th>
                                 <th class="text-end">PRECIO</th>
                                 <th class="text-end">SUBTOTAL</th>
                                 <th class="text-end"></th>
@@ -78,17 +109,21 @@
                 </div>
             </div>
 
-            <div class="col-md-4">
-                <div class="card card-pos shadow-sm p-4 d-flex flex-column justify-content-between">
+            <!-- PANEL DERECHO: TOTALES Y COBRO -->
+            <div class="col-12 col-md-5 col-lg-4">
+                <div class="card card-pos shadow-sm p-3 p-md-4 d-flex flex-column justify-content-between">
                     <div>
-                        <h6 class="text-muted mb-1 text-uppercase fw-bold small">Total Final</h6>
-                        <div class="total-display mb-3" id="totalVenta">$0.00</div>
+                        <div class="d-flex justify-content-between align-items-baseline mb-1">
+                            <h6 class="text-muted text-uppercase fw-bold small m-0">Total Final</h6>
+                            <button class="btn btn-sm btn-link text-danger d-md-none p-0 text-decoration-none" onclick="cancelarVenta()">Vaciar</button>
+                        </div>
+                        <div class="total-display mb-3 text-break" id="totalVenta">$0.00</div>
 
                         <div class="bg-light p-2 rounded-3 border mb-3">
                             <label class="small fw-bold text-muted text-uppercase mb-1 d-block" style="font-size: 0.7rem;">Aplicar Descuento</label>
                             <div class="row g-1">
                                 <div class="col-7">
-                                    <input type="number" id="inputDescuento" class="form-control form-control-sm fw-bold" placeholder="Monto o %" oninput="renderizarCarrito()">
+                                    <input type="number" inputmode="decimal" pattern="[0-9]*" id="inputDescuento" class="form-control form-control-sm fw-bold" placeholder="Monto o %" oninput="renderizarCarrito()">
                                 </div>
                                 <div class="col-5">
                                     <select id="tipoDescuento" class="form-select form-select-sm" onchange="renderizarCarrito()">
@@ -103,17 +138,17 @@
                         <div class="row g-2 mb-3">
                             <div class="col-4">
                                 <div id="btnEfectivo" class="metodo-pago active" onclick="setMetodo('EFECTIVO', this)">
-                                    <i class="bi bi-cash"></i><br><small>Efectivo</small>
+                                    <i class="bi bi-cash d-block"></i><small>Efectivo</small>
                                 </div>
                             </div>
                             <div class="col-4">
                                 <div id="btnTransf" class="metodo-pago" onclick="setMetodo('TRANSFERENCIA', this)">
-                                    <i class="bi bi-phone"></i><br><small>Transf/QR</small>
+                                    <i class="bi bi-phone d-block"></i><small>Transf/QR</small>
                                 </div>
                             </div>
                             <div class="col-4">
                                 <div id="btnFiado" class="metodo-pago" onclick="setMetodo('CUENTA_CORRIENTE', this)">
-                                    <i class="bi bi-journal-bookmark"></i><br><small>Libreta</small>
+                                    <i class="bi bi-journal-bookmark d-block"></i><small>Libreta</small>
                                 </div>
                             </div>
                         </div>
@@ -140,24 +175,24 @@
                                 <label class="small fw-bold text-muted text-uppercase">Paga con:</label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-white border-end-0 text-muted">$</span>
-                                    <input type="number" id="pagaCon" class="form-control form-control-lg fw-bold border-start-0" placeholder="0.00">
+                                    <input type="number" inputmode="decimal" pattern="[0-9]*" id="pagaCon" class="form-control form-control-lg fw-bold border-start-0" placeholder="0.00">
                                 </div>
                             </div>
                             <div class="d-flex justify-content-between align-items-center mt-3">
                                 <span class="fw-bold text-muted small">VUELTO:</span>
                                 <span class="h3 mb-0 fw-bold text-success" id="vueltoVenta">$0.00</span>
                             </div>
-                            <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="reimprimirUltimoTicket()">
-                                <i class="bi bi-printer"></i> Reimprimir Último Ticket
+                            <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-3" onclick="reimprimirUltimoTicket()">
+                                <i class="bi bi-printer me-1"></i> Reimprimir Último Ticket
                             </button>
                         </div>
                     </div>
 
-                    <div class="mt-auto">
+                    <div class="mt-2">
                         <button id="btnFinalizarVenta" class="btn btn-primary btn-lg w-100 py-3 fw-bold shadow-sm" onclick="finalizarVenta()">
                             <i class="bi bi-check2-all me-2"></i>CONFIRMAR VENTA
                         </button>
-                        <button class="btn btn-outline-danger w-100 mt-2 border-0" onclick="cancelarVenta()">
+                        <button class="btn btn-outline-danger w-100 mt-2 border-0 d-none d-md-block" onclick="cancelarVenta()">
                             Cancelar Venta
                         </button>
                     </div>

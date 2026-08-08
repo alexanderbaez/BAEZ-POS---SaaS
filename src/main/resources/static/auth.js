@@ -2,7 +2,6 @@
  * BÁEZ POS - CENTINELA DE SEGURIDAD Y LICENCIAMIENTO QUIRÚRGICO (SaaS)
  * Alexander Baez - 2026
  */
-// Detecta automáticamente si estás probando en tu máquina o si está en producción
 const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
 const BACKEND_URL = IS_LOCAL
@@ -11,11 +10,6 @@ const BACKEND_URL = IS_LOCAL
 
 const BASE_URL = `${BACKEND_URL}/api/v1`;
 const MI_WHATSAPP = "5492645468570";
-
-
-//const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
-//const BASE_URL = `${BACKEND_URL}/api/v1`;
-//const MI_WHATSAPP = "5492645468570"; // <--- Tu número de WhatsApp sin espacios ni símbolo +
 
 // 1. Verificación, decodificación estricta del Token JWT y Sincronización de Identidad
 (function verificarSesionInicial() {
@@ -30,14 +24,12 @@ const MI_WHATSAPP = "5492645468570";
     try {
         const payload = JSON.parse(atob(token.split('.')[1]));
 
-        // Verificar expiración del token
         if (Date.now() >= payload.exp * 1000) {
             localStorage.clear();
             window.location.href = 'login.html';
             return;
         }
 
-        // Sincronizar de forma inalterable el rol y el nombre desde el Token JWT del backend
         const rolBackend = payload.role || payload.roles || 'EMPLEADO';
         const rolLimpio = Array.isArray(rolBackend) ? rolBackend[0] : rolBackend;
         localStorage.setItem('baezpos_user_role', rolLimpio.replace('ROLE_', '').toUpperCase().trim());
@@ -99,12 +91,10 @@ async function chequearEstadoLicencia() {
 
             // Si la empresa está inactiva o vencida
             if (data.active === false || data.vencido === true) {
-                // Si el usuario está parado en la pantalla de ventas, bloqueamos quirúrgicamente el POS
                 if (window.location.pathname.includes('ventas.html')) {
                     bloquearPantallaVentas(data.message || "Tu suscripción/licencia se encuentra vencida.");
                 }
             } else {
-                // Si está activo, removemos cualquier bloqueo previo
                 removerBloqueoVentas();
             }
 
@@ -125,10 +115,8 @@ function bloquearPantallaVentas(mensaje) {
     const contentDiv = document.getElementById('content');
     if (!contentDiv) return;
 
-    // Evitar duplicar el overlay si ya está activo
     if (document.getElementById('bloqueo-pos-overlay')) return;
 
-    // Vaciar el carrito de ventas por seguridad si existe
     if (typeof CARRITO !== 'undefined') {
         CARRITO = [];
         if (typeof renderizarCarrito === 'function') renderizarCarrito();
@@ -174,22 +162,59 @@ function removerBloqueoVentas() {
     if (overlay) overlay.remove();
 }
 
+/**
+ * NOTIFICACIÓN FLOTANTE DE VENCIMIENTO REUBICADA Y ADAPTADA AL LAYOUT RESPONSIVO
+ */
 function mostrarNotificacionVencimientoGlobal(dias) {
     let banner = document.getElementById('baezpos-vencimiento-banner');
     if (!banner) {
         banner = document.createElement('div');
         banner.id = 'baezpos-vencimiento-banner';
-        banner.style.cssText = `
-            position: fixed; top: 12px; right: 20px; z-index: 999999;
-            background: #fff5f5; color: #c53030; border: 1px solid #feb2b2;
-            padding: 8px 16px; border-radius: 30px; font-weight: 600; font-size: 0.85rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px;
+
+        // CSS inyectado con responsive query para no colisionar con el Navbar ni con el Sidebar (250px)
+        const estilosBanner = document.createElement('style');
+        estilosBanner.id = 'baezpos-vencimiento-styles';
+        estilosBanner.innerHTML = `
+            #baezpos-vencimiento-banner {
+                position: fixed;
+                top: 12px;
+                right: 20px;
+                z-index: 1040;
+                background: #fff5f5;
+                color: #c53030;
+                border: 1px solid #feb2b2;
+                padding: 8px 16px;
+                border-radius: 30px;
+                font-weight: 600;
+                font-size: 0.85rem;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                animation: fadeInDown 0.3s ease;
+            }
+            @media (max-width: 768px) {
+                #baezpos-vencimiento-banner {
+                    top: 60px;
+                    left: 15px;
+                    right: 15px;
+                    justify-content: center;
+                    font-size: 0.78rem;
+                }
+            }
         `;
+        if (!document.getElementById('baezpos-vencimiento-styles')) {
+            document.head.appendChild(estilosBanner);
+        }
+
         document.body.appendChild(banner);
     }
+
+    const textoDias = dias === 0 ? 'vence <strong>HOY</strong>' : `vence en <strong>${dias} ${dias === 1 ? 'día' : 'días'}</strong>`;
+
     banner.innerHTML = `
         <i class="bi bi-exclamation-triangle-fill text-danger fs-6"></i>
-        <span>Atención: Tu suscripción vence en <strong>${dias} ${dias === 1 ? 'día' : 'días'}</strong>. Recordá regularizar el pago.</span>
+        <span>Atención: Tu suscripción ${textoDias}. Recordá regularizar el pago.</span>
     `;
 }
 

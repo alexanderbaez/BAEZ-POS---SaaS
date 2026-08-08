@@ -32,8 +32,10 @@
     .table thead th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #6c757d; }
     .dashed { border-top: 2px dashed #dee2e6; opacity: 1; }
 
+    /* AJUSTES RESPONSIVE MÓVIL Y TABLET */
     @media (max-width: 768px) {
         #content { margin-left: 0; width: 100%; }
+        .table-responsive-mobile { min-width: 750px; }
     }
   </style>
 </head>
@@ -46,13 +48,13 @@
 <div id="content">
   <!-- Navbar con Información de Usuario / Tenant -->
   <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom p-3">
-    <div class="container-fluid">
+    <div class="container-fluid p-0">
       <button type="button" id="sidebarCollapse" class="btn btn-outline-primary d-md-none me-2">
         <i class="bi bi-list"></i>
       </button>
       <div class="ms-auto d-flex align-items-center">
-        <div class="text-end me-3">
-          <div id="userName" class="fw-bold text-dark text-capitalize">Usuario</div>
+        <div class="text-end me-2 me-md-3">
+          <div id="userName" class="fw-bold text-dark text-capitalize fs-6">Usuario</div>
           <small id="userRoleBadge" class="badge bg-secondary text-uppercase" style="font-size: 0.65rem;">Cargando...</small>
         </div>
         <i class="bi bi-person-circle fs-3 text-primary"></i>
@@ -60,21 +62,21 @@
     </div>
   </nav>
 
-  <div class="container-fluid p-4">
+  <div class="container-fluid p-2 p-md-4">
     <!-- Encabezado de la Sección y Botones de Exportación -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
       <div>
-        <h2 class="fw-bold text-dark mb-0"><i class="bi bi-clock-history text-primary me-2"></i>Historial de Ventas</h2>
+        <h2 class="fw-bold text-dark mb-0 fs-3 fs-md-2"><i class="bi bi-clock-history text-primary me-2"></i>Historial de Ventas</h2>
         <p class="text-muted small mb-0">Auditoría de transacciones y control de métodos de pago.</p>
       </div>
-      <div class="d-flex flex-wrap gap-2">
-        <button class="btn btn-success border shadow-sm px-3 fw-bold" onclick="exportarExcelPro()">
-          <i class="bi bi-file-earmark-excel me-1"></i> Excel Completo
+      <div class="d-flex flex-wrap gap-2 w-100 w-md-auto">
+        <button class="btn btn-success border shadow-sm px-3 fw-bold flex-grow-1 flex-md-grow-0" onclick="exportarExcelPro()">
+          <i class="bi bi-file-earmark-excel me-1"></i> Excel
         </button>
-        <button class="btn btn-danger border shadow-sm px-3 fw-bold" onclick="exportarPDF()">
+        <button class="btn btn-danger border shadow-sm px-3 fw-bold flex-grow-1 flex-md-grow-0" onclick="exportarPDF()">
           <i class="bi bi-file-earmark-pdf me-1"></i> Reporte PDF
         </button>
-        <button class="btn btn-white bg-white border shadow-sm px-3 fw-bold" onclick="cargarVentas()">
+        <button class="btn btn-white bg-white border shadow-sm px-3 fw-bold flex-grow-1 flex-md-grow-0" onclick="cargarVentas()">
           <i class="bi bi-arrow-clockwise me-1"></i> Refrescar
         </button>
       </div>
@@ -103,33 +105,37 @@
     </div>
 
     <!-- Barra de Filtros -->
-    <div class="d-flex flex-wrap gap-3 mb-4 bg-white p-3 rounded-4 shadow-sm align-items-center">
-      <div class="d-flex align-items-center gap-2">
-        <label class="small fw-bold text-muted text-uppercase" for="fechaDesde">Desde:</label>
-        <input type="date" id="fechaDesde" class="form-control form-control-sm border-0 bg-light">
+    <div class="bg-white p-3 rounded-4 shadow-sm mb-4">
+      <div class="row g-2 g-md-3 align-items-center">
+        <div class="col-6 col-md-3">
+          <label class="small fw-bold text-muted text-uppercase mb-1 d-block" for="fechaDesde">Desde:</label>
+          <input type="date" id="fechaDesde" class="form-control form-control-sm border-0 bg-light">
+        </div>
+        <div class="col-6 col-md-3">
+          <label class="small fw-bold text-muted text-uppercase mb-1 d-block" for="fechaHasta">Hasta:</label>
+          <input type="date" id="fechaHasta" class="form-control form-control-sm border-0 bg-light">
+        </div>
+        <div class="col-12 col-sm-6 col-md-4">
+          <label class="small fw-bold text-muted text-uppercase mb-1 d-block" for="filtroMetodo">Pago:</label>
+          <select id="filtroMetodo" class="form-select form-select-sm border-0 bg-light" onchange="cargarVentasFiltradas()">
+            <option value="TODOS">Todos</option>
+            <option value="EFECTIVO">Efectivo</option>
+            <option value="TRANSFERENCIA">Transferencia</option>
+            <option value="CUENTA_CORRIENTE">Libreta</option>
+          </select>
+        </div>
+        <div class="col-12 col-sm-6 col-md-2 d-flex align-items-end pt-2 pt-md-0">
+          <button class="btn btn-primary btn-sm px-4 fw-bold shadow-sm w-100" onclick="cargarVentas()">
+            <i class="bi bi-search me-1"></i> Buscar
+          </button>
+        </div>
       </div>
-      <div class="d-flex align-items-center gap-2">
-        <label class="small fw-bold text-muted text-uppercase" for="fechaHasta">Hasta:</label>
-        <input type="date" id="fechaHasta" class="form-control form-control-sm border-0 bg-light">
-      </div>
-      <div class="d-flex align-items-center gap-2">
-        <label class="small fw-bold text-muted text-uppercase" for="filtroMetodo">Pago:</label>
-        <select id="filtroMetodo" class="form-select form-select-sm border-0 bg-light" style="min-width: 150px;" onchange="cargarVentasFiltradas()">
-          <option value="TODOS">Todos</option>
-          <option value="EFECTIVO">Efectivo</option>
-          <option value="TRANSFERENCIA">Transferencia</option>
-          <option value="CUENTA_CORRIENTE">Libreta</option>
-        </select>
-      </div>
-      <button class="btn btn-primary btn-sm px-4 fw-bold shadow-sm ms-auto ms-md-0" onclick="cargarVentas()">
-        <i class="bi bi-search me-1"></i> Buscar
-      </button>
     </div>
 
     <!-- Tabla de Ventas -->
-    <div class="card shadow-sm p-3">
+    <div class="card shadow-sm p-2 p-md-3">
       <div class="table-responsive" style="min-height: 400px;">
-        <table class="table table-hover align-middle mb-0">
+        <table class="table table-hover align-middle mb-0 table-responsive-mobile">
           <thead class="bg-light">
           <tr>
             <th class="ps-4">ID</th>
@@ -157,7 +163,7 @@
           <h5 class="modal-title fw-bold">Comprobante #<span id="txtIdVenta"></span></h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
-        <div class="modal-body p-4">
+        <div class="modal-body p-3 p-md-4">
           <div id="contenedorItems"></div>
           <hr class="dashed my-3">
           <div class="d-flex justify-content-between mb-1">
@@ -192,7 +198,6 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-
 
 <script src="sidebar.js"></script>
 <script src="auth.js"></script>

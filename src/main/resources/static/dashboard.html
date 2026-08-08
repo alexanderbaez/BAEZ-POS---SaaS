@@ -70,8 +70,23 @@
     }
     .stock-item:last-child { border-bottom: none; }
 
+    /* AJUSTES RESPONSIVE MÓVIL */
     @media (max-width: 768px) {
       #content { margin-left: 0; padding: 1rem; }
+
+      .kpi-value {
+        font-size: 1.3rem;
+      }
+
+      .filter-box-mobile {
+        width: 100% !important;
+      }
+
+      .filter-box-mobile > div,
+      .filter-box-mobile > select,
+      .filter-box-mobile > button {
+        width: 100% !important;
+      }
     }
   </style>
 </head>
@@ -83,26 +98,28 @@
 <!-- Contenido Principal -->
 <div id="content">
 
-  <!-- TOPBAR / ENCABEZADO PRINCIPAL -->
-  <div class="d-flex flex-wrap justify-content-between align-items-center pb-3 mb-4 border-bottom gap-3">
-    <div>
-      <h3 class="fw-bold m-0 text-dark">Panel de Control</h3>
-      <p class="text-muted small mb-0"><i class="bi bi-calendar3 me-1"></i><span id="fechaActual">Cargando fecha...</span></p>
-    </div>
+  <!-- TOPBAR / ENCABEZADO PRINCIPAL CORREGIDO -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center pb-3 mb-4 border-bottom gap-3">
+    <div class="d-flex justify-content-between align-items-center w-100 w-md-auto">
+      <div>
+        <h3 class="fw-bold m-0 text-dark fs-4 fs-md-3">Panel de Control</h3>
+        <p class="text-muted small mb-0"><i class="bi bi-calendar3 me-1"></i><span id="fechaActual">Cargando fecha...</span></p>
+      </div>
 
-    <div class="d-flex align-items-center gap-3">
-      <button class="btn btn-outline-secondary d-md-none" id="sidebarCollapse">
+      <button class="btn btn-outline-secondary d-md-none ms-auto" id="sidebarCollapse">
         <i class="bi bi-list fs-5"></i>
       </button>
+    </div>
 
-      <!-- Badge Comercio Activo -->
-      <div class="d-flex align-items-center gap-2 bg-white px-3 py-1.5 rounded-3 border shadow-sm">
-        <div class="icon-box-soft bg-primary bg-opacity-10 text-primary" style="width:32px; height:32px;">
+    <!-- Contenedor del Comercio Activo con ancho contenido (w-auto) -->
+    <div class="d-flex align-items-center gap-3 w-100 w-md-auto justify-content-start justify-content-md-end">
+      <div class="d-flex align-items-center gap-2 bg-white px-3 py-1.5 rounded-3 border shadow-sm w-auto">
+        <div class="icon-box-soft bg-primary bg-opacity-10 text-primary flex-shrink-0" style="width:32px; height:32px;">
           <i class="bi bi-shop fs-6"></i>
         </div>
-        <div>
+        <div class="text-truncate" style="max-width: 260px;">
           <span class="d-block text-muted" style="font-size: 0.68rem; line-height: 1;">Comercio Activo</span>
-          <span class="fw-bold text-dark" id="userNameLabel" style="font-size: 0.85rem;">Cargando...</span>
+          <span class="fw-bold text-dark text-truncate d-block" id="userNameLabel" style="font-size: 0.85rem;">Cargando...</span>
         </div>
       </div>
     </div>
@@ -179,30 +196,30 @@
 
     <!-- BALANCE Y DEUDA EN CAJA (HERO WIDGETS) -->
     <div class="row g-3 mt-1">
-      <div class="col-md-6">
+      <div class="col-12 col-md-6">
         <div class="dashboard-card p-3 border-start border-4 border-primary bg-white">
           <div class="d-flex align-items-center justify-content-between">
             <div>
               <span class="kpi-title text-primary">Balance Real Disponible en Caja</span>
-              <h3 class="fw-bold mb-0 text-dark mt-1" id="cardBalanceReal">$0,00</h3>
-              <small class="text-muted" style="font-size: 0.75rem;">(Efectivo Ventas + Cobros Cta. Cte. - Gastos)</small>
+              <h3 class="fw-bold mb-0 text-dark mt-1 fs-4 fs-md-3" id="cardBalanceReal">$0,00</h3>
+              <small class="text-muted d-block" style="font-size: 0.75rem;">(Efectivo Ventas + Cobros Cta. Cte. - Gastos)</small>
             </div>
-            <div class="icon-box-soft bg-primary text-white rounded-circle">
+            <div class="icon-box-soft bg-primary text-white rounded-circle flex-shrink-0">
               <i class="bi bi-wallet2"></i>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="col-md-6">
+      <div class="col-12 col-md-6">
         <div class="dashboard-card p-3 border-start border-4 border-warning bg-white">
           <div class="d-flex align-items-center justify-content-between">
             <div>
               <span class="kpi-title text-warning-emphasis">Deuda Pendiente en Cta. Cte.</span>
-              <h3 class="fw-bold mb-0 text-dark mt-1" id="cardLibreta">$0,00</h3>
-              <small class="text-muted" style="font-size: 0.75rem;">Monto acumulado a cobrar en fiados</small>
+              <h3 class="fw-bold mb-0 text-dark mt-1 fs-4 fs-md-3" id="cardLibreta">$0,00</h3>
+              <small class="text-muted d-block" style="font-size: 0.75rem;">Monto acumulado a cobrar en fiados</small>
             </div>
-            <div class="icon-box-soft bg-warning bg-opacity-20 text-warning-emphasis rounded-circle">
+            <div class="icon-box-soft bg-warning bg-opacity-20 text-warning-emphasis rounded-circle flex-shrink-0">
               <i class="bi bi-journal-bookmark"></i>
             </div>
           </div>
@@ -214,14 +231,14 @@
   <!-- SECCIÓN 2: FILTRO HISTÓRICO Y MÉTICAS COMERCIALES (SOLO ADMINS) -->
   <div class="only-admin mb-4">
     <div class="dashboard-card p-3 mb-3">
-      <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
         <div>
           <h6 class="fw-bold text-dark mb-0">Rendimiento Comercial e Histórico</h6>
           <small class="text-muted" id="lblRangoActivo">Cargando período...</small>
         </div>
 
-        <!-- FILTROS UNIFICADOS -->
-        <div class="d-flex flex-wrap align-items-center gap-2">
+        <!-- FILTROS UNIFICADOS RESPONSIVE -->
+        <div class="d-flex flex-column flex-sm-row flex-wrap align-items-stretch align-items-sm-center gap-2 filter-box-mobile">
           <select id="selectPresetFechas" class="form-select form-select-sm border-secondary-subtle fw-semibold" style="width: auto;" onchange="aplicarPresetFecha(this.value)">
             <option value="ESTE_MES" selected>Este Mes</option>
             <option value="MES_PASADO">Mes Pasado</option>
@@ -230,12 +247,12 @@
             <option value="ANO_PASADO">Año Pasado</option>
           </select>
 
-          <div class="d-flex align-items-center gap-1 bg-light px-2 py-1 rounded border">
+          <div class="d-flex align-items-center justify-content-between gap-1 bg-light px-2 py-1 rounded border">
             <span class="small text-muted">Desde:</span>
             <input type="date" id="fechaDesde" class="form-control form-control-sm border-0 bg-transparent p-0" style="width: 110px;">
           </div>
 
-          <div class="d-flex align-items-center gap-1 bg-light px-2 py-1 rounded border">
+          <div class="d-flex align-items-center justify-content-between gap-1 bg-light px-2 py-1 rounded border">
             <span class="small text-muted">Hasta:</span>
             <input type="date" id="fechaHasta" class="form-control form-control-sm border-0 bg-transparent p-0" style="width: 110px;">
           </div>
@@ -272,7 +289,7 @@
 
       <div class="col-12 col-sm-6 col-xl-3">
         <div class="dashboard-card p-3">
-          <div class="d-flex justify-content-between">
+          <div class="d-flex justify-content-between align-items-center">
             <div>
               <span class="kpi-title">Operaciones</span>
               <h4 class="fw-bold text-primary mb-0 mt-1" id="txtVentasCountMes">0</h4>
@@ -290,23 +307,23 @@
   <!-- SECCIÓN 3: ANALÍTICA VISUAL & ESTADO DEL INVENTARIO -->
   <div class="row g-4">
     <!-- GRÁFICO DE EVOLUCIÓN -->
-    <div class="col-lg-8">
-      <div class="dashboard-card p-4 h-100">
+    <div class="col-12 col-lg-8">
+      <div class="dashboard-card p-3 p-md-4 h-100">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <div>
             <h6 class="fw-bold text-dark m-0"><i class="bi bi-graph-up-arrow me-2 text-primary"></i>Evolución Semanal de Ventas</h6>
             <small class="text-muted">Total facturado en los últimos 7 días</small>
           </div>
         </div>
-        <div style="height: 290px;">
+        <div style="position: relative; height: 290px; width: 100%;">
           <canvas id="chartSemanal"></canvas>
         </div>
       </div>
     </div>
 
     <!-- ALERTAS DE STOCK CRÍTICO -->
-    <div class="col-lg-4">
-      <div class="dashboard-card p-4 h-100">
+    <div class="col-12 col-lg-4">
+      <div class="dashboard-card p-3 p-md-4 h-100">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h6 class="fw-bold text-dark m-0"><i class="bi bi-exclamation-triangle me-2 text-danger"></i>Stock Crítico</h6>
           <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5" id="badgeStockCount">0</span>
