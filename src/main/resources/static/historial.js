@@ -174,6 +174,42 @@ async function confirmarAnulacion(id) {
 }
 
 // ==========================================
+// HELPER GLOBAL DE FORMATEO DE CANTIDAD Y PESO
+// ==========================================
+function fmtCantidadGlobal(item) {
+    const qty = parseFloat(item.quantity || item.cantidad || 1);
+    const nombreProd = (item.productName || item.nombre || '').toUpperCase();
+
+    // Palabras clave comunes para detectar productos pesables si el backend/objeto no envía el flag explícito
+    const palabrasPesables = ['PAN', 'QUESO', 'CARNE', 'POLLO', 'ASADO', 'FIAMBRE', 'PALETA', 'JAMON', 'MILANESA', 'FRUTA', 'VERDURA', 'VERDURAS', 'FRUTAS', 'KG', 'KILO'];
+    const coincideNombre = palabrasPesables.some(p => nombreProd.includes(p));
+
+    // Detección robusta de producto pesable/fraccionado
+    const esFraccionado = Boolean(
+        item.isFractional ||
+        item.unitOfMeasure === 'KG' ||
+        item.unitOfMeasure === 'GRAM' ||
+        item.unitType === 'KG' ||
+        coincideNombre ||
+        (qty % 1 !== 0) // Tiene decimales (ej: 0.5, 1.250)
+    );
+
+    if (esFraccionado) {
+        if (qty < 1 && qty > 0) {
+            const gramos = Math.round(qty * 1000);
+            return `${gramos} gr`;
+        }
+        const qtyFormatted = qty.toLocaleString('es-AR', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 3
+        });
+        return `${qtyFormatted} Kg`;
+    }
+
+    return `${qty} un.`;
+}
+
+// ==========================================
 // 6. VER DETALLE (MODAL TICKET)
 // ==========================================
 function verDetalle(idVenta) {
@@ -194,15 +230,19 @@ function verDetalle(idVenta) {
         container.innerHTML = '';
         let sumaSubtotales = 0;
         (venta.items || []).forEach(item => {
-            const subtotalItem = item.subtotal !== undefined ? item.subtotal : ((item.price || item.precio || 0) * item.quantity);
+            const cant = parseFloat(item.quantity || item.cantidad || 1);
+            const prec = parseFloat(item.price || item.precio || 0);
+            const subtotalItem = item.subtotal !== undefined ? parseFloat(item.subtotal) : (prec * cant);
             sumaSubtotales += subtotalItem;
+
+            const cantTexto = fmtCantidadGlobal(item);
 
             const itemDiv = document.createElement('div');
             itemDiv.className = "d-flex justify-content-between align-items-center mb-2 border-bottom pb-2";
             itemDiv.innerHTML = `
                 <div style="flex: 1;">
                     <span class="fw-bold text-uppercase" style="font-size: 12px;">${item.productName || item.nombre || 'PRODUCTO'}</span><br>
-                    <small class="text-muted">${item.quantity} un. x $${(item.price || item.precio || 0).toLocaleString('es-AR', {minimumFractionDigits: 2})}</small>
+                    <small class="text-muted">${cantTexto} x $${prec.toLocaleString('es-AR', {minimumFractionDigits: 2})}</small>
                 </div>
                 <div class="fw-bold">$${subtotalItem.toLocaleString('es-AR', {minimumFractionDigits: 2})}</div>
             `;
@@ -215,7 +255,6 @@ function verDetalle(idVenta) {
         setSafeText('txtSubtotalModal', `$${sumaSubtotales.toLocaleString('es-AR', {minimumFractionDigits: 2})}`);
         setSafeText('txtDescuentoModal', `-$${descuento.toLocaleString('es-AR', {minimumFractionDigits: 2})}`);
 
-        // Si existe un elemento en el modal para mostrar recargos:
         const elRecargo = document.getElementById('txtRecargoModal');
         if (elRecargo) {
             elRecargo.innerText = `+$${recargo.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
@@ -341,24 +380,26 @@ function exportarPDF() {
             filas.push([
                 `#${v.id}`,
                 fechaFmt,
-                v.customerName || 'Consumidor Final',
+                v.customerName || v.clienteNombre || 'Consumidor Final',
                 'SIN DETALLE DE PRODUCTOS',
-                1,
-                `$${totalVenta.toFixed(2)}`,
-                `$${totalVenta.toFixed(2)}`,
+                '1 un.',
+                `$${totalVenta.toLocaleString('es-AR', {minimumFractionDigits: 2})}`,
+                `$${totalVenta.toLocaleString('es-AR', {minimumFractionDigits: 2})}`,
                 v.paymentMethod === 'CUENTA_CORRIENTE' ? 'LIBRETA' : (v.paymentMethod || 'EFECTIVO')
             ]);
         } else {
-            // Imprimir TODOS los productos individualmente
             items.forEach((item, index) => {
-                const subtotalItem = item.subtotal !== undefined ? item.subtotal : ((item.price || item.precio || 0) * item.quantity);
+                const cant = parseFloat(item.quantity || item.cantidad || 1);
+                const prec = parseFloat(item.price || item.precio || 0);
+                const subtotalItem = item.subtotal !== undefined ? parseFloat(item.subtotal) : (cant * prec);
+
                 filas.push([
                     index === 0 ? `#${v.id}` : "",
                     index === 0 ? fechaFmt : "",
-                    index === 0 ? (v.customerName || 'Consumidor Final') : "",
+                    index === 0 ? (v.customerName || v.clienteNombre || 'Consumidor Final') : "",
                     (item.productName || item.nombre || 'PRODUCTO').toUpperCase(),
-                    item.quantity,
-                    `$${(item.price || item.precio || 0).toLocaleString('es-AR', {minimumFractionDigits: 2})}`,
+                    fmtCantidadGlobal(item),
+                    `$${prec.toLocaleString('es-AR', {minimumFractionDigits: 2})}`,
                     `$${subtotalItem.toLocaleString('es-AR', {minimumFractionDigits: 2})}`,
                     index === 0 ? (v.paymentMethod === 'CUENTA_CORRIENTE' ? 'LIBRETA' : (v.paymentMethod || 'EFECTIVO')) : ""
                 ]);
@@ -392,7 +433,7 @@ function exportarPDF() {
             1: { cellWidth: 26 },
             2: { cellWidth: 28 },
             3: { cellWidth: 'auto' },
-            4: { cellWidth: 12, halign: 'center' },
+            4: { cellWidth: 16, halign: 'center' },
             5: { cellWidth: 20, halign: 'right' },
             6: { cellWidth: 22, halign: 'right' },
             7: { cellWidth: 22, halign: 'center' }
@@ -442,7 +483,6 @@ function exportarExcelPro() {
     let lib = 0;
     let descTot = 0;
     let recTot = 0;
-    let totalUnidadesVendidas = 0;
 
     const dataExcel = [];
 
@@ -469,9 +509,9 @@ function exportarExcelPro() {
             dataExcel.push({
                 "N° Venta": v.id,
                 "Fecha / Hora": new Date(v.saleDate).toLocaleString('es-AR'),
-                "Cliente": v.customerName || 'Consumidor Final',
+                "Cliente": v.customerName || v.clienteNombre || 'Consumidor Final',
                 "Producto": 'SIN DETALLE',
-                "Cantidad": 1,
+                "Cantidad / Peso": '1 un.',
                 "Precio Unitario": totalVenta,
                 "Subtotal Ítem": totalVenta,
                 "Descuento Venta": desc,
@@ -481,17 +521,16 @@ function exportarExcelPro() {
             });
         } else {
             items.forEach((item) => {
-                const cant = item.quantity || 1;
-                const prec = item.price || item.precio || 0;
-                const subt = item.subtotal !== undefined ? item.subtotal : (cant * prec);
-                totalUnidadesVendidas += cant;
+                const cant = parseFloat(item.quantity || item.cantidad || 1);
+                const prec = parseFloat(item.price || item.precio || 0);
+                const subt = item.subtotal !== undefined ? parseFloat(item.subtotal) : (cant * prec);
 
                 dataExcel.push({
                     "N° Venta": v.id,
                     "Fecha / Hora": new Date(v.saleDate).toLocaleString('es-AR'),
-                    "Cliente": v.customerName || 'Consumidor Final',
+                    "Cliente": v.customerName || v.clienteNombre || 'Consumidor Final',
                     "Producto": (item.productName || item.nombre || 'PRODUCTO').toUpperCase(),
-                    "Cantidad": cant,
+                    "Cantidad / Peso": fmtCantidadGlobal(item),
                     "Precio Unitario": prec,
                     "Subtotal Ítem": subt,
                     "Descuento Venta": desc,
@@ -509,7 +548,6 @@ function exportarExcelPro() {
     // Filas de Resumen Final
     dataExcel.push({});
     dataExcel.push({ "Producto": "--- RESUMEN DE AUDITORÍA DE CAJA ---" });
-    dataExcel.push({ "Producto": "TOTAL UNIDADES VENDIDAS:", "Cantidad": totalUnidadesVendidas });
     dataExcel.push({ "Producto": "TOTAL DESCUENTOS APLICADOS:", "Subtotal Ítem": descTot });
     dataExcel.push({ "Producto": "TOTAL RECARGOS LIBRETA:", "Subtotal Ítem": recTot });
     dataExcel.push({ "Producto": "TOTAL EFECTIVO (CAJA):", "Subtotal Ítem": efe });
@@ -524,7 +562,7 @@ function exportarExcelPro() {
         { wch: 18 },
         { wch: 22 },
         { wch: 35 },
-        { wch: 10 },
+        { wch: 16 },
         { wch: 14 },
         { wch: 14 },
         { wch: 14 },
@@ -553,36 +591,37 @@ function reimprimirTicket() {
     }
 
     const infoEmpresa = (typeof DATOS_EMPRESA !== 'undefined' && DATOS_EMPRESA !== null) ? DATOS_EMPRESA : {};
+    const fiscalActivo = String(venta.isFiscal !== undefined ? venta.isFiscal : infoEmpresa.hasTaxData) === "true";
 
-    const fiscalActivo = infoEmpresa.hasTaxData === true || infoEmpresa.hasTaxData === "true" || !!venta.cae;
+    const nombreLocal = (venta.companyName || infoEmpresa.name || 'MI NEGOCIO').toUpperCase();
+    const direccionLocal = venta.companyAddress || infoEmpresa.address || '';
+    const telefonoLocal = venta.companyPhone || infoEmpresa.phone || '';
+    const emailLocal = venta.companyEmail || infoEmpresa.email || '';
+    const mensajePie = venta.ticketMessage || infoEmpresa.ticketMessage || '¡Gracias por su compra!';
 
-    const nombreLocal = (infoEmpresa.name || venta.companyName || 'MI NEGOCIO').toUpperCase();
-    const direccionLocal = infoEmpresa.address || venta.companyAddress || '';
-    const telefonoLocal = infoEmpresa.phone || venta.companyPhone || '';
-    const emailLocal = infoEmpresa.email || venta.companyEmail || '';
-    const mensajePie = infoEmpresa.ticketMessage || venta.ticketMessage || '¡Gracias por su compra!';
+    const cuitLocal = venta.companyCuit || infoEmpresa.taxId || infoEmpresa.cuit || '';
+    const iibbLocal = venta.companyIibb || infoEmpresa.iibb || '';
+    const condicionIva = (venta.condicionIva || infoEmpresa.condicionIva || 'RESPONSABLE MONOTRIBUTO').toUpperCase();
 
-    const cuitLocal = infoEmpresa.taxId || infoEmpresa.cuit || venta.companyCuit || '';
-    const iibbLocal = infoEmpresa.iibb || venta.companyIibb || '';
-    const condicionIva = (infoEmpresa.condicionIva || 'RESPONSABLE MONOTRIBUTO').toUpperCase();
-
-    let inicioActividades = infoEmpresa.inicioActividades || infoEmpresa.inicioAct || '';
-    if (inicioActividades.includes('-')) {
+    let inicioActividades = venta.inicioActividades || infoEmpresa.inicioActividades || infoEmpresa.inicioAct || '';
+    if (inicioActividades && inicioActividades.includes('-')) {
         const parts = inicioActividades.split('-');
-        inicioActividades = `${parts[2]}/${parts[1]}/${parts[0]}`;
+        if (parts.length === 3) {
+            inicioActividades = `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
     }
 
     const tipoComprobante = fiscalActivo
         ? (venta.tipoComprobante || infoEmpresa.tipoComprobante || 'FACTURA C').toUpperCase()
-        : (venta.tipoComprobante || 'TICKET DE VENTA');
+        : (venta.tipoComprobante || 'TICKET INTERNO');
 
-    const cae = venta.cae || infoEmpresa.caePrueba || '';
-    const caeVto = venta.caeVto || infoEmpresa.caeVtoPrueba || '';
+    const cae = venta.cae || '';
+    const caeVto = venta.caeVto || '';
 
     const nroComprobante = venta.nroComprobante || `00001-${String(venta.id || 1).padStart(8, '0')}`;
     const fechaVenta = venta.saleDate ? new Date(venta.saleDate).toLocaleString('es-AR') : new Date().toLocaleString('es-AR');
-    let metodoPago = (venta.paymentMethod || 'EFECTIVO').replace('_', ' ').toUpperCase();
-    if (metodoPago === 'CUENTA CORRIENTE') metodoPago = 'LIBRETA / CUENTA CORRIENTE';
+    let metodoPago = (venta.paymentMethod || 'EFECTIVO').replace(/_/g, ' ').toUpperCase();
+    if (metodoPago === 'CUENTA CORRIENTE') metodoPago = 'LIBRETA';
 
     const nombreCliente = (venta.customerName || venta.clienteNombre || 'CONSUMIDOR FINAL').toUpperCase();
     const cuitCliente = venta.clienteCuit || venta.customerCuit || '';
@@ -614,8 +653,19 @@ function reimprimirTicket() {
             tipoCodAut: "E",
             codAut: Number(cae) || 0
         };
-        qrText = `https://www.afip.gob.ar/fe/qr/?p=${btoa(JSON.stringify(datosQr))}`;
+        try {
+            qrText = `https://www.afip.gob.ar/fe/qr/?p=${btoa(JSON.stringify(datosQr))}`;
+        } catch(e) {
+            qrText = '';
+        }
     }
+
+    // Usamos el formateador unificado
+    const fmtCantidadTicket = (item) => {
+        const cantStr = fmtCantidadGlobal(item);
+        // Si termina en 'un.', para el ticket impreso se limpia o se mantiene según formato POS
+        return cantStr.endsWith('un.') ? `${parseFloat(item.quantity || item.cantidad || 1)} ` : `${cantStr} `;
+    };
 
     ventana.document.write(`
         <!DOCTYPE html>
@@ -625,56 +675,38 @@ function reimprimirTicket() {
                 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
                 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
                 <style>
-                    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+                    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
                     @page { margin: 0; }
-                    body {
-                        font-family: 'Inter', sans-serif;
-                        width: 58mm;
-                        padding: 10px;
-                        margin: 0;
-                        color: #1e293b;
-                        background: #fff;
-                        line-height: 1.2;
-                    }
+                    body { font-family: 'Inter', sans-serif; width: 58mm; padding: 8px; margin: 0; color: #0f172a; background: #fff; line-height: 1.25; }
                     .center { text-align: center; }
-                    .ticket-header { border-bottom: 1px dashed #cbd5e1; padding-bottom: 8px; margin-bottom: 8px; }
-                    .business-name { font-weight: 900; font-size: 15px; margin: 3px 0; text-transform: uppercase; color: #0f172a; }
-                    .small-info { font-size: 10px; color: #475569; margin: 2px 0; }
-                    .fiscal-header { font-size: 9px; color: #334155; text-align: left; background: #f8fafc; padding: 4px; border-radius: 4px; margin-top: 5px; }
-                    .item-row { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 4px; }
-                    .item-name { font-weight: 700; text-transform: uppercase; flex: 1; padding-right: 5px; }
-                    .line { border-top: 1px dashed #cbd5e1; margin: 8px 0; }
-                    .total-container {
-                        border-top: 2px solid #0f172a;
-                        margin-top: 8px;
-                        padding-top: 8px;
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                    }
-                    .total-label { font-weight: 900; font-size: 16px; color: #0f172a; }
-                    .total-amount { font-weight: 900; font-size: 16px; color: #2563eb; }
-
-                    .arca-container { border-top: 1px solid #0f172a; margin-top: 12px; padding-top: 10px; text-align: center; }
-                    .arca-logo { font-weight: 900; font-size: 12px; letter-spacing: 2px; color: #0f172a; margin-bottom: 5px; }
-                    .qr-box { display: flex; justify-content: center; margin: 8px 0; }
-                    .cae-info { font-size: 9px; font-weight: 700; text-align: left; color: #0f172a; margin-top: 4px; }
-
-                    .ticket-footer { text-align: center; margin-top: 10px; border-top: 1px dashed #cbd5e1; padding-top: 10px; }
-                    .msg-pie { font-style: italic; font-size: 11px; color: #475569; margin-bottom: 8px; display: block; }
-                    .payment-method { font-weight: 800; font-size: 10px; color: #0f172a; border: 1px solid #e2e8f0; padding: 3px; display: inline-block; border-radius: 4px; margin-bottom: 8px; }
-                    .powered { font-size: 7px; font-weight: 700; opacity: 0.4; margin-top: 8px; letter-spacing: 1px; }
-                    .watermark-reprint { font-size: 8px; font-weight: 800; color: #475569; background: #f1f5f9; padding: 2px 4px; border-radius: 3px; display: inline-block; margin: 3px 0; border: 1px solid #e2e8f0; }
-                    i.bi-shop { display: block; font-size: 20px; color: #2563eb; opacity: 0.5; }
+                    .ticket-header { border-bottom: 1px dashed #94a3b8; padding-bottom: 8px; margin-bottom: 8px; }
+                    .business-name { font-weight: 900; font-size: 14px; margin: 2px 0; text-transform: uppercase; letter-spacing: -0.2px; }
+                    .small-info { font-size: 9.5px; color: #334155; margin: 1.5px 0; }
+                    .fiscal-header { font-size: 8.5px; color: #334155; text-align: left; background: #f1f5f9; padding: 4px 6px; border-radius: 4px; margin-top: 5px; }
+                    .item-row { display: flex; justify-content: space-between; align-items: flex-start; font-size: 10px; margin-bottom: 5px; word-break: break-word; }
+                    .item-qty-name { font-weight: 700; text-transform: uppercase; flex: 1; padding-right: 6px; }
+                    .item-price { font-weight: 700; white-space: nowrap; }
+                    .line { border-top: 1px dashed #94a3b8; margin: 8px 0; }
+                    .total-container { border-top: 2px solid #0f172a; margin-top: 8px; padding-top: 6px; display: flex; justify-content: space-between; align-items: center; }
+                    .total-label { font-weight: 900; font-size: 15px; }
+                    .total-amount { font-weight: 900; font-size: 15px; color: #0f172a; }
+                    .arca-container { border-top: 1px solid #0f172a; margin-top: 10px; padding-top: 8px; text-align: center; }
+                    .arca-logo { font-weight: 900; font-size: 11px; letter-spacing: 2px; }
+                    .qr-box { display: flex; justify-content: center; margin: 6px 0; }
+                    .cae-info { font-size: 8.5px; font-weight: 700; text-align: left; }
+                    .ticket-footer { text-align: center; margin-top: 10px; border-top: 1px dashed #94a3b8; padding-top: 8px; }
+                    .msg-pie { font-style: italic; font-size: 10px; color: #475569; margin-bottom: 6px; display: block; }
+                    .payment-method { font-weight: 800; font-size: 9.5px; border: 1px solid #cbd5e1; padding: 3px 6px; display: inline-block; border-radius: 4px; margin-bottom: 6px; }
+                    .powered { font-size: 7px; font-weight: 700; opacity: 0.5; margin-top: 6px; letter-spacing: 0.5px; }
+                    .watermark-reprint { font-size: 8px; font-weight: 800; color: #475569; background: #f1f5f9; padding: 2px 4px; border-radius: 3px; display: inline-block; margin: 3px 0; border: 1px solid #cbd5e1; }
                 </style>
             </head>
             <body>
                 <div class="ticket-header center">
-                    <i class="bi bi-shop"></i>
                     <div class="business-name">${nombreLocal}</div>
                     ${direccionLocal ? `<div class="small-info">${direccionLocal}</div>` : ''}
                     ${telefonoLocal ? `<div class="small-info">Tel: ${telefonoLocal}</div>` : ''}
-                    ${emailLocal ? `<div class="small-info">Email: ${emailLocal}</div>` : ''}
+                    ${emailLocal ? `<div class="small-info">${emailLocal}</div>` : ''}
 
                     ${fiscalActivo ? `
                         <div class="fiscal-header">
@@ -694,11 +726,14 @@ function reimprimirTicket() {
 
                 <div class="ticket-body">
                     ${venta.items ? venta.items.map(item => {
-                        const subtotalItem = item.subtotal !== undefined ? item.subtotal : ((item.price || item.precio || 0) * item.quantity);
+                        const cant = parseFloat(item.quantity || item.cantidad || 1);
+                        const prec = parseFloat(item.price || item.precio || 0);
+                        const subtotalItem = item.subtotal !== undefined ? parseFloat(item.subtotal) : (prec * cant);
+                        const prefijoCantidad = fmtCantidadTicket(item);
                         return `
                             <div class="item-row">
-                                <span class="item-name">${item.quantity}x ${(item.productName || item.nombre || '').toUpperCase()}</span>
-                                <span style="font-weight:700;">$${parseFloat(subtotalItem).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                <span class="item-qty-name">${prefijoCantidad}${(item.productName || item.nombre || '').toUpperCase()}</span>
+                                <span class="item-price">$${subtotalItem.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                             </div>
                         `;
                     }).join('') : ''}
@@ -706,20 +741,20 @@ function reimprimirTicket() {
                     ${descuentoMonto > 0 ? `
                         <div class="line"></div>
                         <div class="item-row" style="color: #dc3545;">
-                            <span class="item-name">DESCUENTO:</span>
-                            <span>-$${descuentoMonto.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                            <span class="item-qty-name">DESCUENTO:</span>
+                            <span class="item-price">-$${descuentoMonto.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                         </div>
                     ` : ''}
 
                     ${recargoMonto > 0 ? `
                         <div class="line"></div>
-                        <div class="item-row" style="color: #6c757d; font-size: 9px;">
-                            <span class="item-name">SUBTOTAL PRODUCTOS:</span>
-                            <span>$${subtotalProductos.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        <div class="item-row" style="color: #64748b; font-size: 8.5px;">
+                            <span class="item-qty-name">SUBTOTAL PRODUCTOS:</span>
+                            <span class="item-price">$${subtotalProductos.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                         </div>
                         <div class="item-row" style="color: #d97706; font-weight: bold;">
-                            <span class="item-name">RECARGO LIBRETA (${recargoPorcentaje}%):</span>
-                            <span>+$${recargoMonto.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                            <span class="item-qty-name">RECARGO LIBRETA (${recargoPorcentaje}%):</span>
+                            <span class="item-price">+$${recargoMonto.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                         </div>
                     ` : ''}
 
@@ -746,15 +781,17 @@ function reimprimirTicket() {
                 </div>
 
                 <script>
-                    if (${Boolean(fiscalActivo && cae)}) {
-                        new QRCode(document.getElementById("qrcode"), {
-                            text: "${qrText}",
-                            width: 90,
-                            height: 90,
-                            colorDark : "#000000",
-                            colorLight : "#ffffff",
-                            correctLevel : QRCode.CorrectLevel.M
-                        });
+                    if (${Boolean(fiscalActivo && cae && qrText)}) {
+                        try {
+                            new QRCode(document.getElementById("qrcode"), {
+                                text: "${qrText}",
+                                width: 85,
+                                height: 85,
+                                colorDark : "#000000",
+                                colorLight : "#ffffff",
+                                correctLevel : QRCode.CorrectLevel.M
+                            });
+                        } catch(e) {}
                     }
 
                     setTimeout(() => {

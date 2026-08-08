@@ -147,20 +147,26 @@ public class AuthService {
         // Generar contraseña temporal de 8 caracteres alfanuméricos
         String temporaryPassword = generateRandomPassword(8);
 
+        // 1. Persistir la nueva contraseña ANTES de disparar el mail.
+        //    Si el SMTP falla, el usuario igual puede ingresar con la nueva clave.
+        //    El @Transactional hace commit aquí; el mail es asíncrono e independiente.
         user.setPassword(passwordEncoder.encode(temporaryPassword));
         user.setPasswordResetAt(LocalDateTime.now());
         userRepository.save(user);
 
-        // Envío asíncrono de correo real
+        // 2. Envío asíncrono — si falla el SMTP solo se loguea; NO se hace rollback.
+        //    La transacción ya fue committed en el paso anterior.
         try {
             emailService.enviarMailResetPassword(
                     user.getEmail(),
                     user.getName(),
                     temporaryPassword
             );
+            log.info("Correo de reset de contraseña enviado a {}", user.getEmail());
         } catch (Exception e) {
-            log.error("No se pudo enviar el correo de recuperación a {}: {}", user.getEmail(), e.getMessage());
-            throw new RuntimeException("Error al enviar el correo de recuperación. Intente nuevamente.");
+            log.error("SMTP: No se pudo enviar correo de recuperación a {}. El cambio de contraseña fue aplicado igualmente. Detalle: {}",
+                    user.getEmail(), e.getMessage());
+            // No relanzamos la excepción: la contraseña ya fue guardada correctamente.
         }
     }
 

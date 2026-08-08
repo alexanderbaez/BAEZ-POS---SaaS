@@ -3,20 +3,72 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BaezPOS - Dashboard</title>
+  <title>BaezPOS - Panel de Control</title>
   <!-- Framework UI & Iconos -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <style>
-    :root { --sidebar-width: 250px; --primary-blue: #2563eb; }
-    body { background-color: #f8fafc; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+    :root {
+      --sidebar-width: 250px;
+      --bg-main: #f8fafc;
+      --card-border: #e2e8f0;
+      --text-muted: #64748b;
+      --primary: #2563eb;
+    }
 
-    #content { margin-left: var(--sidebar-width); min-height: 100vh; padding: 2rem; }
+    body {
+      background-color: var(--bg-main);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      color: #0f172a;
+    }
 
-    .stat-card { border: none; border-radius: 16px; transition: all 0.2s ease; }
-    .stat-card:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.05) !important; }
-    .icon-box { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+    #content { margin-left: var(--sidebar-width); min-height: 100vh; padding: 1.75rem 2rem; }
+
+    /* UI Cards */
+    .dashboard-card {
+      background: #ffffff;
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.04);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .dashboard-card:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .kpi-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .kpi-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .icon-box-soft {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+    }
+
+    /* Tablas / Listas */
+    .stock-item {
+      border-bottom: 1px solid #f1f5f9;
+      padding: 0.75rem 0;
+    }
+    .stock-item:last-child { border-bottom: none; }
 
     @media (max-width: 768px) {
       #content { margin-left: 0; padding: 1rem; }
@@ -30,11 +82,12 @@
 
 <!-- Contenido Principal -->
 <div id="content">
-  <!-- Topbar / Encabezado -->
-  <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+
+  <!-- TOPBAR / ENCABEZADO PRINCIPAL -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-3 mb-4 border-bottom gap-3">
     <div>
-      <h2 class="fw-bold m-0 text-dark">Panel de Control</h2>
-      <p class="text-muted small mb-0" id="fechaActual"></p>
+      <h3 class="fw-bold m-0 text-dark">Panel de Control</h3>
+      <p class="text-muted small mb-0"><i class="bi bi-calendar3 me-1"></i><span id="fechaActual">Cargando fecha...</span></p>
     </div>
 
     <div class="d-flex align-items-center gap-3">
@@ -42,208 +95,229 @@
         <i class="bi bi-list fs-5"></i>
       </button>
 
-      <div class="text-end d-flex align-items-center gap-2 bg-white px-3 py-2 rounded-4 shadow-sm border">
-        <i class="bi bi-person-circle fs-3 text-primary"></i>
-        <div class="text-start">
-          <small class="text-muted d-block" style="font-size: 0.7rem; line-height: 1;">Comercio Activo</small>
-          <span class="fw-bold text-dark" id="userNameLabel" style="font-size: 0.9rem;">Cargando...</span>
+      <!-- Badge Comercio Activo -->
+      <div class="d-flex align-items-center gap-2 bg-white px-3 py-1.5 rounded-3 border shadow-sm">
+        <div class="icon-box-soft bg-primary bg-opacity-10 text-primary" style="width:32px; height:32px;">
+          <i class="bi bi-shop fs-6"></i>
+        </div>
+        <div>
+          <span class="d-block text-muted" style="font-size: 0.68rem; line-height: 1;">Comercio Activo</span>
+          <span class="fw-bold text-dark" id="userNameLabel" style="font-size: 0.85rem;">Cargando...</span>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- MÉTRICAS DE HOY (FLUJO REAL Y VENTAS SEPARADAS) -->
-  <h6 class="fw-bold text-uppercase text-muted mb-3 small">Resumen Diario de Caja y Comercial</h6>
-  <div class="row g-4 mb-4">
-    <div class="col-md-3">
-      <div class="card stat-card shadow-sm p-3 border-0 border-start border-primary border-4 bg-white">
-        <div class="d-flex align-items-center">
-          <div class="icon-box bg-primary bg-opacity-10 text-primary me-3"><i class="bi bi-bag-check fs-4"></i></div>
-          <div>
-            <small class="text-muted fw-bold">VENTAS DEL DÍA</small>
-            <h4 class="mb-0 fw-bold text-dark" id="txtRecaudacion">$0,00</h4>
+  <!-- SECCIÓN 1: RESUMEN DIARIO DE CAJA Y COBROS -->
+  <div class="mb-4">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <h6 class="fw-bold text-uppercase text-secondary small m-0"><i class="bi bi-lightning-charge me-1"></i> Flujo Diario de Caja</h6>
+      <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">En Vivo</span>
+    </div>
+
+    <div class="row g-3">
+      <!-- Ventas del Día -->
+      <div class="col-12 col-sm-6 col-xl-3">
+        <div class="dashboard-card p-3">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <span class="kpi-title">Ventas Totales Hoy</span>
+              <div class="kpi-value text-dark mt-1" id="txtRecaudacion">$0,00</div>
+            </div>
+            <div class="icon-box-soft bg-primary bg-opacity-10 text-primary">
+              <i class="bi bi-bag-check"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Efectivo Hoy -->
+      <div class="col-12 col-sm-6 col-xl-3">
+        <div class="dashboard-card p-3">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <span class="kpi-title">Efectivo en Caja</span>
+              <div class="kpi-value text-dark mt-1" id="txtEfectivoHoy">$0,00</div>
+            </div>
+            <div class="icon-box-soft bg-success bg-opacity-10 text-success">
+              <i class="bi bi-cash-stack"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transferencia / QR -->
+      <div class="col-12 col-sm-6 col-xl-3">
+        <div class="dashboard-card p-3">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <span class="kpi-title">Transferencias / QR</span>
+              <div class="kpi-value text-dark mt-1" id="txtTransfHoy">$0,00</div>
+            </div>
+            <div class="icon-box-soft bg-info bg-opacity-10 text-info">
+              <i class="bi bi-qr-code-scan"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cobros Cta Cte Hoy -->
+      <div class="col-12 col-sm-6 col-xl-3">
+        <div class="dashboard-card p-3">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <span class="kpi-title">Cobros Cta. Cte. Hoy</span>
+              <div class="kpi-value text-dark mt-1" id="txtCobrosLibretaHoy">$0,00</div>
+            </div>
+            <div class="icon-box-soft bg-warning bg-opacity-10 text-warning">
+              <i class="bi bi-arrow-down-left-square"></i>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="col-md-3">
-      <div class="card stat-card shadow-sm p-3 border-0 border-start border-success border-4 bg-white">
-        <div class="d-flex align-items-center">
-          <div class="icon-box bg-success bg-opacity-10 text-success me-3"><i class="bi bi-cash-stack fs-4"></i></div>
-          <div>
-            <small class="text-muted fw-bold">EFECTIVO HOY</small>
-            <h4 class="mb-0 fw-bold text-dark" id="txtEfectivoHoy">$0,00</h4>
+    <!-- BALANCE Y DEUDA EN CAJA (HERO WIDGETS) -->
+    <div class="row g-3 mt-1">
+      <div class="col-md-6">
+        <div class="dashboard-card p-3 border-start border-4 border-primary bg-white">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <span class="kpi-title text-primary">Balance Real Disponible en Caja</span>
+              <h3 class="fw-bold mb-0 text-dark mt-1" id="cardBalanceReal">$0,00</h3>
+              <small class="text-muted" style="font-size: 0.75rem;">(Efectivo Ventas + Cobros Cta. Cte. - Gastos)</small>
+            </div>
+            <div class="icon-box-soft bg-primary text-white rounded-circle">
+              <i class="bi bi-wallet2"></i>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="col-md-3">
-      <div class="card stat-card shadow-sm p-3 border-0 border-start border-info border-4 bg-white">
-        <div class="d-flex align-items-center">
-          <div class="icon-box bg-info bg-opacity-10 text-info me-3"><i class="bi bi-qr-code-scan fs-4"></i></div>
-          <div>
-            <small class="text-muted fw-bold">TRANSF / QR HOY</small>
-            <h4 class="mb-0 fw-bold text-dark" id="txtTransfHoy">$0,00</h4>
+      <div class="col-md-6">
+        <div class="dashboard-card p-3 border-start border-4 border-warning bg-white">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <span class="kpi-title text-warning-emphasis">Deuda Pendiente en Cta. Cte.</span>
+              <h3 class="fw-bold mb-0 text-dark mt-1" id="cardLibreta">$0,00</h3>
+              <small class="text-muted" style="font-size: 0.75rem;">Monto acumulado a cobrar en fiados</small>
+            </div>
+            <div class="icon-box-soft bg-warning bg-opacity-20 text-warning-emphasis rounded-circle">
+              <i class="bi bi-journal-bookmark"></i>
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-3">
-      <div class="card stat-card shadow-sm p-3 border-0 border-start border-warning border-4 bg-white">
-        <div class="d-flex align-items-center">
-          <div class="icon-box bg-warning bg-opacity-10 text-warning me-3"><i class="bi bi-arrow-down-left-square fs-4"></i></div>
-          <div>
-            <small class="text-muted fw-bold">COBROS LIBRETA HOY</small>
-            <h4 class="mb-0 fw-bold text-dark" id="txtCobrosLibretaHoy">$0,00</h4>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-6">
-      <div class="card bg-warning bg-opacity-10 border-0 shadow-sm rounded-4 h-100">
-        <div class="card-body text-center p-4">
-          <h6 class="text-uppercase text-warning-emphasis fw-bold small">Deuda Total Pendiente en Libreta (Cta Cte)</h6>
-          <h2 id="cardLibreta" class="fw-bold my-2 text-warning-emphasis">$0,00</h2>
-          <small class="text-muted d-block">Monto acumulado por cobrar a clientes</small>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-6">
-      <div class="card bg-primary bg-opacity-10 border-0 shadow-sm rounded-4 h-100">
-        <div class="card-body text-center p-4">
-          <h6 class="text-uppercase text-primary fw-bold small">Efectivo / Balance Disponible en Caja</h6>
-          <h2 id="cardBalanceReal" class="fw-bold my-2 text-primary">$0,00</h2>
-          <small class="text-muted d-block">Dinero real disponible (Ventas Efectivo + Cobros - Gastos)</small>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- RENDIMIENTO HISTÓRICO Y FILTRO POR CALENDARIO (SOLO ADMINS) -->
-  <div class="only-admin">
-    <div class="card border-0 shadow-sm p-3 mb-4 bg-white rounded-4">
+  <!-- SECCIÓN 2: FILTRO HISTÓRICO Y MÉTICAS COMERCIALES (SOLO ADMINS) -->
+  <div class="only-admin mb-4">
+    <div class="dashboard-card p-3 mb-3">
       <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
         <div>
-          <h6 class="fw-bold text-uppercase text-muted m-0 small">Rendimiento e Histórico de Ventas</h6>
-          <small class="text-muted" id="lblRangoActivo">Mostrando datos del mes actual</small>
+          <h6 class="fw-bold text-dark mb-0">Rendimiento Comercial e Histórico</h6>
+          <small class="text-muted" id="lblRangoActivo">Cargando período...</small>
         </div>
 
-        <!-- FILTROS DE FECHA EN LÍNEA -->
+        <!-- FILTROS UNIFICADOS -->
         <div class="d-flex flex-wrap align-items-center gap-2">
-          <!-- Presets Rápidos -->
-          <select id="selectPresetFechas" class="form-select form-select-sm border-0 bg-light fw-bold text-primary" style="width: auto;" onchange="aplicarPresetFecha(this.value)">
+          <select id="selectPresetFechas" class="form-select form-select-sm border-secondary-subtle fw-semibold" style="width: auto;" onchange="aplicarPresetFecha(this.value)">
             <option value="ESTE_MES" selected>Este Mes</option>
             <option value="MES_PASADO">Mes Pasado</option>
             <option value="3_MESES">Últimos 3 Meses</option>
-            <option value="ESTE_ANO">Año Actual (Ene - Hoy)</option>
-            <option value="ANO_PASADO">Año Pasado Completo</option>
+            <option value="ESTE_ANO">Año Actual</option>
+            <option value="ANO_PASADO">Año Pasado</option>
           </select>
 
-          <!-- Calendario Desde / Hasta -->
           <div class="d-flex align-items-center gap-1 bg-light px-2 py-1 rounded border">
-            <span class="small text-muted fw-bold">Desde:</span>
-            <input type="date" id="fechaDesde" class="form-control form-control-sm border-0 bg-transparent p-0" style="width: 115px;">
+            <span class="small text-muted">Desde:</span>
+            <input type="date" id="fechaDesde" class="form-control form-control-sm border-0 bg-transparent p-0" style="width: 110px;">
           </div>
 
           <div class="d-flex align-items-center gap-1 bg-light px-2 py-1 rounded border">
-            <span class="small text-muted fw-bold">Hasta:</span>
-            <input type="date" id="fechaHasta" class="form-control form-control-sm border-0 bg-transparent p-0" style="width: 115px;">
+            <span class="small text-muted">Hasta:</span>
+            <input type="date" id="fechaHasta" class="form-control form-control-sm border-0 bg-transparent p-0" style="width: 110px;">
           </div>
 
-          <button class="btn btn-sm btn-primary px-3 rounded-3 fw-bold" onclick="consultarPorFechas()">
-            <i class="bi bi-filter me-1"></i> Filtrar
+          <button class="btn btn-sm btn-primary px-3 rounded-2 fw-medium" onclick="consultarPorFechas()">
+            <i class="bi bi-funnel me-1"></i> Filtrar
           </button>
         </div>
       </div>
     </div>
 
-    <!-- TARJETAS DE MÉTRICAS HISTÓRICAS EN RANGO -->
-    <div class="row g-4 mb-4">
-      <!-- RECAUDACIÓN EN RANGO -->
-      <div class="col-md-6 col-lg-3">
-        <div class="card stat-card shadow-sm p-3 border-0 border-start border-dark border-4 h-100 bg-white">
-          <div class="d-flex align-items-center justify-content-between px-2">
-            <div>
-              <small class="text-muted fw-bold" style="font-size: 0.75rem;">RECAUDACIÓN TOTAL</small>
-              <h3 class="mb-0 fw-bold text-dark mt-1" id="txtRecaudacionMes">$0,00</h3>
-            </div>
-            <i class="bi bi-calendar-check fs-2 text-muted opacity-50"></i>
-          </div>
+    <!-- TARJETAS DE MÉTICAS DE RANGO -->
+    <div class="row g-3">
+      <div class="col-12 col-sm-6 col-xl-3">
+        <div class="dashboard-card p-3">
+          <span class="kpi-title">Recaudación Rango</span>
+          <h4 class="fw-bold text-dark mb-0 mt-1" id="txtRecaudacionMes">$0,00</h4>
         </div>
       </div>
 
-      <!-- GANANCIA REAL EN RANGO -->
-      <div class="col-md-6 col-lg-3">
-        <div class="card stat-card shadow-sm p-3 border-0 border-start border-success border-4 h-100 bg-white">
-          <div class="d-flex align-items-center justify-content-between px-2">
-            <div>
-              <small class="text-success fw-bold" style="font-size: 0.75rem;">GANANCIA NETO</small>
-              <h3 class="mb-0 fw-bold text-success mt-1" id="txtGananciaMes">$0,00</h3>
-            </div>
-            <i class="bi bi-graph-up-arrow fs-2 text-success opacity-50"></i>
-          </div>
+      <div class="col-12 col-sm-6 col-xl-3">
+        <div class="dashboard-card p-3">
+          <span class="kpi-title text-success">Ganancia Neta Est.</span>
+          <h4 class="fw-bold text-success mb-0 mt-1" id="txtGananciaMes">$0,00</h4>
         </div>
       </div>
 
-      <!-- CAPITAL DE REPOSICIÓN -->
-      <div class="col-md-6 col-lg-3">
-        <div class="card stat-card shadow-sm p-3 border-0 border-start border-warning border-4 h-100 bg-white">
-          <div class="d-flex align-items-center justify-content-between px-2">
-            <div>
-              <small class="fw-bold text-warning-emphasis" style="font-size: 0.75rem;">REPOSICIÓN DE STOCK</small>
-              <h3 class="mb-0 fw-bold mt-1 text-warning-emphasis" id="txtReposicionMes">$0,00</h3>
-            </div>
-            <i class="bi bi-arrow-repeat fs-2 text-warning opacity-50"></i>
-          </div>
+      <div class="col-12 col-sm-6 col-xl-3">
+        <div class="dashboard-card p-3">
+          <span class="kpi-title text-warning-emphasis">Costo Reposición</span>
+          <h4 class="fw-bold text-dark mb-0 mt-1" id="txtReposicionMes">$0,00</h4>
         </div>
       </div>
 
-      <!-- OPERACIONES -->
-      <div class="col-md-6 col-lg-3">
-        <div class="card stat-card shadow-sm p-3 border-0 border-start border-primary border-4 h-100 bg-white">
-          <div class="d-flex align-items-center justify-content-between px-2">
+      <div class="col-12 col-sm-6 col-xl-3">
+        <div class="dashboard-card p-3">
+          <div class="d-flex justify-content-between">
             <div>
-              <small class="text-primary fw-bold" style="font-size: 0.75rem;">OPERACIONES</small>
-              <h3 class="mb-0 fw-bold text-primary mt-1" id="txtVentasCountMes">0</h3>
+              <span class="kpi-title">Operaciones</span>
+              <h4 class="fw-bold text-primary mb-0 mt-1" id="txtVentasCountMes">0</h4>
             </div>
-            <i class="bi bi-bag-check fs-2 text-primary opacity-50"></i>
+            <div class="text-end border-start ps-3">
+              <span class="kpi-title">Ticket Prom.</span>
+              <h5 class="fw-bold text-dark mb-0 mt-1" id="txtTicketPromedio">$0,00</h5>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- GRÁFICO & ALERTAS DE INVENTARIO -->
+  <!-- SECCIÓN 3: ANALÍTICA VISUAL & ESTADO DEL INVENTARIO -->
   <div class="row g-4">
-    <div class="col-md-8">
-      <div class="card border-0 shadow-sm p-4 rounded-4 bg-white">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-          <h5 class="fw-bold m-0 text-dark"><i class="bi bi-bar-chart-line me-2 text-primary"></i>Evolución de Ventas</h5>
-          <span class="badge bg-light text-secondary border">Últimos 7 días</span>
+    <!-- GRÁFICO DE EVOLUCIÓN -->
+    <div class="col-lg-8">
+      <div class="dashboard-card p-4 h-100">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <h6 class="fw-bold text-dark m-0"><i class="bi bi-graph-up-arrow me-2 text-primary"></i>Evolución Semanal de Ventas</h6>
+            <small class="text-muted">Total facturado en los últimos 7 días</small>
+          </div>
         </div>
-        <div style="height: 320px;">
+        <div style="height: 290px;">
           <canvas id="chartSemanal"></canvas>
         </div>
       </div>
     </div>
 
-    <div class="col-md-4">
-      <div class="card border-0 shadow-sm p-4 rounded-4 bg-white">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-          <h5 class="fw-bold m-0"><i class="bi bi-exclamation-octagon me-2 text-danger"></i>Stock Crítico</h5>
-          <span class="badge bg-danger rounded-pill fs-6" id="badgeStockCount">0</span>
+    <!-- ALERTAS DE STOCK CRÍTICO -->
+    <div class="col-lg-4">
+      <div class="dashboard-card p-4 h-100">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="fw-bold text-dark m-0"><i class="bi bi-exclamation-triangle me-2 text-danger"></i>Stock Crítico</h6>
+          <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5" id="badgeStockCount">0</span>
         </div>
-        <div id="listaAlertasStock" style="max-height: 320px; overflow-y: auto;">
+        <div id="listaAlertasStock" style="max-height: 290px; overflow-y: auto;">
           <p class="text-muted small text-center py-4">Analizando inventario...</p>
         </div>
       </div>
     </div>
   </div>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

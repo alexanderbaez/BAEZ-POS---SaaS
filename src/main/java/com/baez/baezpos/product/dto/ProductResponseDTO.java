@@ -8,11 +8,12 @@ import java.math.BigDecimal;
 public record ProductResponseDTO(
         Long id,
         String name,
-        String categoryName, // Para la tabla
-        Long categoryId,     // PARA EL SELECT EN EDICIÓN
+        String categoryName,    // Para la tabla
+        Long categoryId,        // PARA EL SELECT EN EDICIÓN
         BigDecimal price,
-        BigDecimal cost,      // PARA EL CAMPO COSTO EN EDICIÓN
-        Integer stock,
-        Integer minStock,    // PARA EL CAMPO MÍNIMO EN EDICIÓN
-        String barcode       // Unificado en minúsculas para coincidir con el Request
+        BigDecimal cost,        // PARA EL CAMPO COSTO EN EDICIÓN
+        BigDecimal stock,       // BigDecimal para soportar fraccionables
+        BigDecimal minStock,    // BigDecimal para soportar fraccionables
+        String barcode,
+        Boolean isFractional    // El POS usa este campo para mostrar el modal de fracción
 ) {}

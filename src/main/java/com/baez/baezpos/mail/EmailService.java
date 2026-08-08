@@ -21,7 +21,10 @@ public class EmailService {
     private String senderEmail;
 
     // ==========================================
-    // MOTOR BÁSICO DE ENVÍO HTML
+    // MOTOR BÁSICO DE ENVÍO HTML — @Async SOLO AQUÍ
+    // NOTA: Los métodos de conveniencia deben llamar a este directamente.
+    //       @Async en métodos que llaman a otro @Async del mismo bean no funciona
+    //       porque Spring AOP no intercepta llamadas internas (this.metodo()).
     // ==========================================
     @Async
     public void enviarCorreoPro(String destinatario, String asunto, String contenidoHtml) {
@@ -43,16 +46,16 @@ public class EmailService {
             log.info("Email enviado con éxito a: {}", destinatario);
 
         } catch (MessagingException e) {
-            log.error("Error SMTP al enviar correo a {}. Detalle: {}", destinatario, e.getMessage());
+            log.error("Error SMTP al enviar correo a {}. Detalle: {}", destinatario, e.getMessage(), e);
         } catch (Exception e) {
-            log.error("Error inesperado en el servicio de e-mail para {}: {}", destinatario, e.getMessage());
+            log.error("Error inesperado en el servicio de e-mail para {}: {}", destinatario, e.getMessage(), e);
         }
     }
 
     // ==========================================
     // NOTIFICACIÓN DE BIENVENIDA CON CONTRASEÑA (Para SuperAdmin / MasterAdminService)
+    // SIN @Async — la llamada asíncrona la gestiona enviarCorreoPro()
     // ==========================================
-    @Async
     public void enviarMailBienvenida(String destinatario, String nombreEmpresa, String nombreUsuario, String passwordTemporal) {
         String asunto = "¡Bienvenido a BAEZ POS! - Accesos a tu cuenta";
 
@@ -79,13 +82,14 @@ public class EmailService {
             </div>
             """.formatted(nombreUsuario, nombreEmpresa, destinatario, passwordTemporal);
 
+        // Delega al método @Async — el proxy de Spring lo intercepta correctamente aquí
         enviarCorreoPro(destinatario, asunto, contenidoHtml);
     }
 
     // ==========================================
     // NOTIFICACIÓN DE BIENVENIDA SIN CONTRASEÑA (Para Setup Inicial / AuthService)
+    // SIN @Async — la llamada asíncrona la gestiona enviarCorreoPro()
     // ==========================================
-    @Async
     public void enviarMailBienvenida(String destinatario, String nombreUsuario, String nombreEmpresa) {
         String asunto = "¡Bienvenido a BAEZ POS! - Configuración de Cuenta";
 
@@ -116,8 +120,8 @@ public class EmailService {
 
     // ==========================================
     // NOTIFICACIÓN DE RESETEO DE CONTRASEÑA
+    // SIN @Async — la llamada asíncrona la gestiona enviarCorreoPro()
     // ==========================================
-    @Async
     public void enviarMailResetPassword(String destinatario, String nombreUsuario, String nuevaPassword) {
         String asunto = "BAEZ POS - Restablecimiento de Contraseña";
 
@@ -128,7 +132,7 @@ public class EmailService {
                 </div>
                 <div style="padding: 32px; background-color: #ffffff;">
                     <p style="font-size: 16px; margin-top: 0;">Hola <strong>%s</strong>,</p>
-                    <p style="font-size: 15px; color: #475569;">Se ha generado una nueva contraseña para tu cuenta de acceso.</p>
+                    <p style="font-size: 15px; color: #475569;">Se ha generado una nueva contraseña temporal para tu cuenta de acceso.</p>
                     
                     <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 16px; border-radius: 4px; margin: 24px 0;">
                         <p style="margin: 0; font-weight: 600; color: #991b1b; font-size: 14px;">Tu nueva contraseña temporal:</p>

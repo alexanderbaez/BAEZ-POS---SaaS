@@ -79,37 +79,37 @@
   </div>
 </div>
 
+<!-- MODAL DE RECUPERACIÓN DE CONTRASEÑA VIA EMAIL -->
 <div class="modal fade" id="modalRecuperacion" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow" style="border-radius: 16px;">
-      <div class="modal-header border-0 pb-0">
-        <h5 class="modal-title fw-bold text-dark"><i class="bi bi-headset me-2"></i>Soporte de Recuperación</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <p class="text-muted small mb-3">Para resetear su acceso, proporcione el siguiente Identificador de Equipo al desarrollador:</p>
-
-        <div class="p-3 rounded-3 text-id-display text-center mb-4 position-relative">
-          <span id="pcIdDisplay" class="fw-bold">CARGANDO ID...</span>
-          <button class="btn btn-sm btn-link p-0 ms-2 text-decoration-none" onclick="copiarId()" title="Copiar ID">
-            <i class="bi bi-copy"></i>
-          </button>
+    <div class="modal-content border-0 shadow" style="border-radius: 16px; overflow: hidden;">
+      <div class="modal-header border-0 pb-0" style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); padding: 24px;">
+        <div>
+          <h5 class="modal-title fw-bold text-white mb-1"><i class="bi bi-envelope-at me-2"></i>Recuperar Contraseña</h5>
+          <p class="text-white mb-0" style="opacity: 0.8; font-size: 0.8rem;">Solo disponible para administradores</p>
         </div>
-
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div id="msgRecuperacion"></div>
+        <p class="text-muted small mb-4">
+          <i class="bi bi-info-circle me-1 text-primary"></i>
+          Ingresá tu email de administrador. Recibirás una contraseña temporal para acceder al sistema.
+        </p>
         <div class="mb-3">
-          <label class="form-label text-uppercase">Llave de Desbloqueo</label>
+          <label class="form-label text-uppercase" style="font-size: 0.75rem; font-weight: 600; color: #4b5563;">Email de Administrador</label>
           <div class="input-group">
-            <span class="input-group-text"><i class="bi bi-key"></i></span>
-            <input type="text" id="llaveMaestraInput" class="form-control" placeholder="Ingrese el código de 6 dígitos" maxlength="6">
+            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+            <input type="email" id="emailRecuperacion" class="form-control" placeholder="admin@comercio.com">
           </div>
         </div>
-
-        <button type="button" class="btn btn-primary btn-login w-100 mt-2" onclick="validarLlaveOffline()" id="btnValidarLlave">
-          Validar y Resetear Acceso
+        <button type="button" class="btn btn-primary btn-login w-100 mt-2" onclick="enviarRecuperacion()" id="btnEnviarRecuperacion">
+          <span id="txtBtnRecup"><i class="bi bi-send me-2"></i>Enviar Contraseña Temporal</span>
+          <div class="spinner-border spinner-border-sm d-none" id="loaderRecup" role="status"></div>
         </button>
       </div>
       <div class="modal-footer border-0 pt-0 justify-content-center">
-        <p class="text-muted" style="font-size: 0.7rem;">BaezPOS Security System &bull; Modo Offline</p>
+        <p class="text-muted" style="font-size: 0.7rem;"><i class="bi bi-shield-lock me-1"></i>BAEZ POS Security • Solo usuarios ADMIN</p>
       </div>
     </div>
   </div>

@@ -2,10 +2,20 @@
  * BÁEZ POS - CENTINELA DE SEGURIDAD Y LICENCIAMIENTO QUIRÚRGICO (SaaS)
  * Alexander Baez - 2026
  */
+// Detecta automáticamente si estás probando en tu máquina o si está en producción
+const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
+const BACKEND_URL = IS_LOCAL
+    ? 'http://localhost:8080'
+    : 'https://baez-pos-saas.onrender.com';
+
 const BASE_URL = `${BACKEND_URL}/api/v1`;
-const MI_WHATSAPP = "5492645468570"; // <--- Tu número de WhatsApp sin espacios ni símbolo +
+const MI_WHATSAPP = "5492645468570";
+
+
+//const BACKEND_URL = 'https://baez-pos-saas.onrender.com';
+//const BASE_URL = `${BACKEND_URL}/api/v1`;
+//const MI_WHATSAPP = "5492645468570"; // <--- Tu número de WhatsApp sin espacios ni símbolo +
 
 // 1. Verificación, decodificación estricta del Token JWT y Sincronización de Identidad
 (function verificarSesionInicial() {

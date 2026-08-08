@@ -73,8 +73,9 @@ public class ProductServiceImpl implements ProductService {
                 .barcode(dto.barcode() != null ? dto.barcode().trim() : null)
                 .cost(dto.cost())
                 .price(dto.price())
-                .stock(dto.stock() != null ? dto.stock() : 0)
-                .minStock(dto.minStock() != null ? dto.minStock() : 0)
+                .stock(dto.stock() != null ? dto.stock() : BigDecimal.ZERO)
+                .minStock(dto.minStock() != null ? dto.minStock() : BigDecimal.ZERO)
+                .isFractional(dto.isFractional() != null && dto.isFractional())
                 .category(category)
                 .company(company)
                 .active(true)
@@ -143,8 +144,9 @@ public class ProductServiceImpl implements ProductService {
         p.setBarcode(dto.barcode() != null ? dto.barcode().trim() : null);
         p.setCost(dto.cost());
         p.setPrice(dto.price());
-        p.setStock(dto.stock() != null ? dto.stock() : 0);
-        p.setMinStock(dto.minStock() != null ? dto.minStock() : 0);
+        p.setStock(dto.stock() != null ? dto.stock() : BigDecimal.ZERO);
+        p.setMinStock(dto.minStock() != null ? dto.minStock() : BigDecimal.ZERO);
+        p.setIsFractional(dto.isFractional() != null && dto.isFractional());
         p.setCategory(cat);
     }
 
@@ -243,7 +245,8 @@ public class ProductServiceImpl implements ProductService {
                 p.getCost(),
                 p.getStock(),
                 p.getMinStock(),
-                p.getBarcode()
+                p.getBarcode(),
+                p.getIsFractional() != null && p.getIsFractional()
         );
     }
 

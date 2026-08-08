@@ -3,9 +3,6 @@
  * Alexander Baez - 2026
  */
 
-// ==========================================
-// 1. INICIALIZACIÓN
-// ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
     const elUserLabel = document.getElementById('userNameLabel');
     if (elUserLabel) {
@@ -38,7 +35,24 @@ function fmtMoneda(val) {
     }).format(val || 0);
 }
 
-// Formatea fecha Date a String 'YYYY-MM-DD' en HOY LOCAL (Evita desfases de toISOString UTC)
+function fmtStock(cant, producto = {}) {
+    const stockVal = parseFloat(cant) || 0;
+    const esFraccionado = producto.isFractional ||
+                         producto.unitOfMeasure === 'KG' ||
+                         producto.unitOfMeasure === 'GRAM' ||
+                         producto.unitType === 'KG';
+
+    if (esFraccionado) {
+        if (stockVal < 1 && stockVal > 0) {
+            const gramos = Math.round(stockVal * 1000);
+            return `${gramos} gr`;
+        }
+        return `${stockVal.toLocaleString('es-AR', { maximumFractionDigits: 3 })} Kg`;
+    }
+
+    return `${stockVal.toLocaleString('es-AR', { maximumFractionDigits: 2 })} u.`;
+}
+
 function formatDateLocal(date) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -47,7 +61,7 @@ function formatDateLocal(date) {
 }
 
 // ==========================================
-// 2. CARGA DE KPIS DEL DÍA (HOY)
+// 1. CARGA DE KPIS DEL DÍA (HOY)
 // ==========================================
 async function cargarDatosDashboardHoy() {
     try {
@@ -80,7 +94,7 @@ async function cargarDatosDashboardHoy() {
 }
 
 // ==========================================
-// 3. CONSULTA POR FECHAS LIBRES / PRESETS
+// 2. CONSULTA POR FECHAS LIBRES / PRESETS
 // ==========================================
 function aplicarPresetFecha(preset) {
     const hoy = new Date();
@@ -96,11 +110,9 @@ function aplicarPresetFecha(preset) {
         desde = new Date(hoy.getFullYear(), hoy.getMonth() - 2, 1);
         hasta = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
     } else if (preset === 'ESTE_ANO') {
-        // Desde el 1 de Enero del año en curso hasta hoy
         desde = new Date(hoy.getFullYear(), 0, 1);
         hasta = hoy;
     } else if (preset === 'ANO_PASADO') {
-        // Desde el 1 de Enero hasta el 31 de Diciembre del año anterior
         desde = new Date(hoy.getFullYear() - 1, 0, 1);
         hasta = new Date(hoy.getFullYear() - 1, 11, 31);
     }
@@ -137,14 +149,14 @@ async function consultarPorFechas() {
 
         const data = await response.json();
 
-        // CORRECCIÓN CRÍTICA DE PRIORIDAD:
-        // Primero consumimos 'monthSales' / 'monthProfit' (Rango) para evitar solapar los de Hoy
         const totalVentasRango = data.monthSales ?? data.totalSales ?? 0;
         const totalGananciaRango = data.monthProfit ?? data.totalProfit ?? 0;
         const costoReposicionRango = data.monthReplacementCost ?? data.replacementCost ?? 0;
         const operacionesRango = data.monthOperations ?? data.totalOperations ?? 0;
 
-        // Renderizar en las tarjetas del histórico
+        // Cálculo de KPI Derivado: Ticket Medio
+        const ticketMedio = operacionesRango > 0 ? (totalVentasRango / operacionesRango) : 0;
+
         if (document.getElementById('txtRecaudacionMes'))
             document.getElementById('txtRecaudacionMes').innerText = fmtMoneda(totalVentasRango);
 
@@ -157,11 +169,13 @@ async function consultarPorFechas() {
         if (document.getElementById('txtVentasCountMes'))
             document.getElementById('txtVentasCountMes').innerText = operacionesRango;
 
-        // Actualizar la etiqueta del rango visualizado
+        if (document.getElementById('txtTicketPromedio'))
+            document.getElementById('txtTicketPromedio').innerText = fmtMoneda(ticketMedio);
+
         const f1 = desdeVal.split('-').reverse().join('/');
         const f2 = hastaVal.split('-').reverse().join('/');
         const lblRango = document.getElementById('lblRangoActivo');
-        if (lblRango) lblRango.innerText = `Rango activo: ${f1} al ${f2}`;
+        if (lblRango) lblRango.innerText = `Mostrando datos del ${f1} al ${f2}`;
 
     } catch (err) {
         console.error("Error al obtener datos por fecha:", err);
@@ -170,7 +184,7 @@ async function consultarPorFechas() {
 }
 
 // ==========================================
-// 4. GRÁFICO DE EVOLUCIÓN DE VENTAS
+// 3. GRÁFICO DE EVOLUCIÓN
 // ==========================================
 async function cargarDatosGrafico() {
     try {
@@ -202,8 +216,8 @@ function renderizarGraficoSemanal(etiquetas, valores) {
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
-    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-    gradient.addColorStop(0, 'rgba(37, 99, 235, 0.25)');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 280);
+    gradient.addColorStop(0, 'rgba(37, 99, 235, 0.18)');
     gradient.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
 
     if (window.myChart) window.myChart.destroy();
@@ -216,13 +230,15 @@ function renderizarGraficoSemanal(etiquetas, valores) {
                 label: 'Ventas ($)',
                 data: valores,
                 borderColor: '#2563eb',
-                borderWidth: 3,
+                borderWidth: 2.5,
                 backgroundColor: gradient,
                 fill: true,
-                tension: 0.35,
-                pointRadius: 5,
-                pointHoverRadius: 7,
-                pointBackgroundColor: '#2563eb'
+                tension: 0.3,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: '#2563eb',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2
             }]
         },
         options: {
@@ -231,6 +247,11 @@ function renderizarGraficoSemanal(etiquetas, valores) {
             plugins: {
                 legend: { display: false },
                 tooltip: {
+                    backgroundColor: '#0f172a',
+                    titleFont: { size: 13, weight: 'bold' },
+                    bodyFont: { size: 12 },
+                    padding: 10,
+                    cornerRadius: 8,
                     callbacks: {
                         label: (ctx) => ` Ventas: ${fmtMoneda(ctx.raw)}`
                     }
@@ -241,17 +262,21 @@ function renderizarGraficoSemanal(etiquetas, valores) {
                     beginAtZero: true,
                     grid: { color: '#f1f5f9' },
                     ticks: {
+                        color: '#64748b',
                         callback: (value) => '$' + value.toLocaleString('es-AR')
                     }
                 },
-                x: { grid: { display: false } }
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#64748b' }
+                }
             }
         }
     });
 }
 
 // ==========================================
-// 5. ALERTAS DE INVENTARIO Y STOCK CRÍTICO
+// 4. INVENTARIO CRÍTICO
 // ==========================================
 async function cargarAlertasStock() {
     try {
@@ -269,28 +294,34 @@ async function cargarAlertasStock() {
 
         if (criticos.length === 0) {
             container.innerHTML = `
-                <div class="text-center py-4 opacity-75">
-                    <i class="bi bi-check-circle fs-1 text-success"></i>
-                    <p class="mt-2 small text-muted">Stock al día. Sin alertas de reposición.</p>
+                <div class="text-center py-4">
+                    <i class="bi bi-check-circle-fill fs-2 text-success opacity-75"></i>
+                    <p class="mt-2 mb-0 small text-muted">Stock en niveles óptimos.</p>
                 </div>`;
             return;
         }
 
-        container.innerHTML = criticos.map(p => `
-            <div class="d-flex align-items-center p-3 mb-2 rounded-3 border-start border-4 ${p.stock <= 3 ? 'border-danger bg-danger bg-opacity-10' : 'border-warning bg-warning bg-opacity-10'}">
-                <div class="flex-grow-1">
-                    <h6 class="mb-0 fw-bold small text-dark">${(p.name || '').toUpperCase()}</h6>
-                    <small class="text-muted">Quedan ${p.stock} unidades</small>
+        container.innerHTML = criticos.map(p => {
+            const textoStock = fmtStock(p.stock, p);
+            const esMuyCritico = p.stock <= 3;
+            return `
+            <div class="stock-item d-flex align-items-center justify-content-between">
+                <div class="pe-2">
+                    <span class="d-block fw-semibold text-dark small text-truncate" style="max-width: 180px;">
+                        ${(p.name || '').toUpperCase()}
+                    </span>
+                    <small class="text-muted" style="font-size: 0.75rem;">Mínimo recomendado: 10 u.</small>
                 </div>
-                <span class="badge ${p.stock <= 3 ? 'bg-danger' : 'bg-warning'} rounded-pill">${p.stock}</span>
+                <span class="badge ${esMuyCritico ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-warning-subtle text-warning-emphasis border border-warning-subtle'} rounded-pill">
+                    ${textoStock}
+                </span>
             </div>
-        `).join('');
+        `}).join('');
 
     } catch (err) {
         console.error("Error al cargar alertas de stock:", err);
     }
 }
 
-// Exposición global
 window.aplicarPresetFecha = aplicarPresetFecha;
 window.consultarPorFechas = consultarPorFechas;

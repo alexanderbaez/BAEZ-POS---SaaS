@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 
 public record SaleItemResponseDTO(
         String productName,
-        Integer quantity,
+        BigDecimal quantity, // BigDecimal para mostrar fracciones correctamente en historial
         BigDecimal price,
         BigDecimal subtotal
 ) {}

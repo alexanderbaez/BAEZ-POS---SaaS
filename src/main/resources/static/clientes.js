@@ -1,9 +1,8 @@
 /**
  * BÁEZ POS - GESTIÓN DE CLIENTES Y CUENTA CORRIENTE (LIBRETA)
- * Alexander Baez - 2026
+ * Refactorizado: Seguridad XSS, Manejo defensivo de estado, soporte para pesables (isFractional) e interoperabilidad SaaS
  */
 
-// Rutas relativas ajustadas para consumir BASE_URL de auth.js (/api/v1 ya está incluido ahí)
 const API_CUSTOMERS = '/customers';
 const API_PERFIL = '/admin/my-company/profile';
 
@@ -16,11 +15,44 @@ let MOVIMIENTOS_CACHE = [];
 let CLIENTE_ACTUAL = { id: null, nombre: '', telefono: '' };
 
 // ==========================================
+// UTILS & HELPERS SEGURIDAD
+// ==========================================
+
+function sanitizeHTML(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function formatCurrency(amount) {
+    const val = parseFloat(amount) || 0;
+    return `$${val.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+/**
+ * Formatea la cantidad considerando si el producto se vende por fracción/peso o por unidad entera.
+ */
+function formatQuantity(quantity, isFractional) {
+    const qty = parseFloat(quantity) || 0;
+    if (isFractional) {
+        if (qty < 1) {
+            const grams = Math.round(qty * 1000);
+            return `${grams} GR`;
+        }
+        return `${qty.toFixed(3).replace(/\.?0+$/, '')} KG`;
+    }
+    return `${Math.floor(qty)}`;
+}
+
+// ==========================================
 // 1. INICIALIZACIÓN
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
-    await cargarDatosEmpresa();
-    await cargarClientes();
+    await Promise.all([cargarDatosEmpresa(), cargarClientes()]);
 });
 
 async function cargarDatosEmpresa() {
@@ -29,8 +61,8 @@ async function cargarDatosEmpresa() {
         if (resp && resp.ok) {
             DATOS_EMPRESA = await resp.json();
             const compEl = document.getElementById('companyName');
-            if (compEl && DATOS_EMPRESA.name) {
-                compEl.innerText = DATOS_EMPRESA.name.toUpperCase();
+            if (compEl && DATOS_EMPRESA?.name) {
+                compEl.textContent = DATOS_EMPRESA.name.toUpperCase();
             }
         }
     } catch (err) {
@@ -65,74 +97,79 @@ function renderizarClientes(clientes) {
     tbody.innerHTML = '';
     let totalDeuda = 0;
 
-    if (!clientes || clientes.length === 0) {
+    if (!Array.isArray(clientes) || clientes.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-muted">No se encontraron clientes registrados.</td></tr>';
         const totalEl = document.getElementById('totalDeudaClientes');
-        if (totalEl) totalEl.innerText = '$0,00';
+        if (totalEl) totalEl.textContent = formatCurrency(0);
         return;
     }
+
+    const fragment = document.createDocumentFragment();
 
     clientes.forEach(c => {
         const saldo = parseFloat(c.currentBalance) || 0;
         totalDeuda += saldo;
 
         const badgeClass = saldo > 0 ? 'bg-danger bg-opacity-10 text-danger' : 'bg-success bg-opacity-10 text-success';
-        const msgWsCaja = `Hola ${c.name}, te recordamos tu saldo pendiente de $${saldo.toLocaleString('es-AR', { minimumFractionDigits: 2 })}. Saludos de ${DATOS_EMPRESA?.name || 'BaezPOS'}!`;
+        const msgWsCaja = `Hola ${c.name}, te recordamos tu saldo pendiente de ${formatCurrency(saldo)}. Saludos de ${DATOS_EMPRESA?.name || 'BaezPOS'}!`;
         const numTelefono = c.phone ? c.phone.replace(/\D/g, '') : '';
         const linkWs = numTelefono ? `https://wa.me/${numTelefono}?text=${encodeURIComponent(msgWsCaja)}` : '#';
-
-        const nombreSeguro = (c.name || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-        const phoneSeguro = (c.phone || '').replace(/'/g, "\\'");
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td class="ps-4">
-                <div class="fw-bold text-dark">${c.name}</div>
-                <small class="text-muted" style="font-size: 0.75rem;">Límite: $${(c.creditLimit || 0).toLocaleString('es-AR')}</small>
+                <div class="fw-bold text-dark">${sanitizeHTML(c.name)}</div>
+                <small class="text-muted" style="font-size: 0.75rem;">Límite: ${formatCurrency(c.creditLimit)}</small>
             </td>
-            <td class="text-muted small">${c.dniCuit || '<span class="opacity-25">-</span>'}</td>
+            <td class="text-muted small">${c.dniCuit ? sanitizeHTML(c.dniCuit) : '<span class="opacity-25">-</span>'}</td>
             <td>
                 ${numTelefono ?
-                    `<a href="${linkWs}" target="_blank" class="btn btn-sm btn-outline-success border-0 rounded-pill px-3 fw-bold" style="font-size: 0.75rem;">
+                    `<a href="${linkWs}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-success border-0 rounded-pill px-3 fw-bold" style="font-size: 0.75rem;">
                         <i class="bi bi-whatsapp me-1"></i> Recordatorio
                     </a>` :
                     '<span class="text-muted small">Sin contacto</span>'
                 }
             </td>
             <td>
-                <span class="balance-badge ${badgeClass}">
-                    $${saldo.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                </span>
+                <span class="balance-badge ${badgeClass}">${formatCurrency(saldo)}</span>
             </td>
             <td class="text-end pe-4">
                 <div class="d-flex justify-content-end gap-2">
-                    <button class="btn-action" onclick="abrirModalEditar(${c.id})" title="Editar">
+                    <button class="btn-action" data-action="editar" data-id="${c.id}" title="Editar">
                         <i class="bi bi-pencil text-warning"></i>
                     </button>
-                    <button class="btn-action" onclick="verHistorial(${c.id}, '${nombreSeguro}', '${phoneSeguro}')" title="Ver Libreta">
+                    <button class="btn-action" data-action="historial" data-id="${c.id}" title="Ver Libreta">
                         <i class="bi bi-journal-text text-primary"></i>
                     </button>
-                    <button class="btn-action" onclick="registrarPago(${c.id})" title="Cobrar">
+                    <button class="btn-action" data-action="pagar" data-id="${c.id}" title="Cobrar">
                         <i class="bi bi-cash-coin text-success"></i>
                     </button>
-                    <button class="btn-action" onclick="eliminarCliente(${c.id}, '${nombreSeguro}')" title="Eliminar Cliente">
+                    <button class="btn-action" data-action="eliminar" data-id="${c.id}" title="Eliminar Cliente">
                         <i class="bi bi-trash text-danger"></i>
                     </button>
                 </div>
             </td>
         `;
-        tbody.appendChild(tr);
+
+        tr.querySelector('[data-action="editar"]').onclick = () => abrirModalEditar(c.id);
+        tr.querySelector('[data-action="historial"]').onclick = () => verHistorial(c.id, c.name, c.phone);
+        tr.querySelector('[data-action="pagar"]').onclick = () => registrarPago(c.id);
+        tr.querySelector('[data-action="eliminar"]').onclick = () => eliminarCliente(c.id, c.name);
+
+        fragment.appendChild(tr);
     });
+
+    tbody.appendChild(fragment);
 
     const totalEl = document.getElementById('totalDeudaClientes');
     if (totalEl) {
-        totalEl.innerText = `$${totalDeuda.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+        totalEl.textContent = formatCurrency(totalDeuda);
     }
 }
 
 function filtrarClientes() {
-    const texto = document.getElementById('buscarCliente').value.toLowerCase().trim();
-    const soloDeudores = document.getElementById('filtroDeudores').checked;
+    const texto = (document.getElementById('buscarCliente')?.value || '').toLowerCase().trim();
+    const soloDeudores = document.getElementById('filtroDeudores')?.checked || false;
 
     const filtrados = CLIENTES_CACHE.filter(c => {
         const nombre = (c.name || '').toLowerCase();
@@ -153,9 +190,9 @@ function filtrarClientes() {
 // ==========================================
 
 function abrirModalNuevoCliente() {
-    document.getElementById('formNuevoCliente').reset();
+    document.getElementById('formNuevoCliente')?.reset();
     document.getElementById('custId').value = '';
-    document.getElementById('modalClienteTitulo').innerText = 'Nuevo Cliente';
+    document.getElementById('modalClienteTitulo').textContent = 'Nuevo Cliente';
 
     const modalEl = document.getElementById('modalNuevoCliente');
     modalClienteInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -166,7 +203,7 @@ function abrirModalEditar(id) {
     const cliente = CLIENTES_CACHE.find(c => c.id === id);
     if (!cliente) return;
 
-    document.getElementById('modalClienteTitulo').innerText = 'Editar Cliente';
+    document.getElementById('modalClienteTitulo').textContent = 'Editar Cliente';
     document.getElementById('custId').value = cliente.id;
     document.getElementById('custNombre').value = cliente.name || '';
     document.getElementById('custDni').value = cliente.dniCuit || '';
@@ -199,10 +236,7 @@ async function guardarCliente() {
         });
 
         if (resp && resp.ok) {
-            const modalEl = document.getElementById('modalNuevoCliente');
-            const modalInstance = bootstrap.Modal.getInstance(modalEl);
-            if (modalInstance) modalInstance.hide();
-
+            if (modalClienteInstance) modalClienteInstance.hide();
             Swal.fire({ icon: 'success', title: '¡Éxito!', text: 'Cliente guardado correctamente.', timer: 1500, showConfirmButton: false });
             await cargarClientes();
         } else if (resp) {
@@ -218,7 +252,7 @@ async function guardarCliente() {
 async function eliminarCliente(id, nombre) {
     const result = await Swal.fire({
         title: '¿Eliminar cliente?',
-        html: `¿Estás seguro de que deseas eliminar a <b>${nombre}</b>?<br><small class="text-muted">Esta acción no se puede deshacer.</small>`,
+        html: `¿Estás seguro de que deseas eliminar a <b>${sanitizeHTML(nombre)}</b>?<br><small class="text-muted">Esta acción no se puede deshacer.</small>`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#dc3545',
@@ -258,7 +292,7 @@ async function verHistorial(id, nombre, telefono) {
         MOVIMIENTOS_CACHE = await resp.json();
         CLIENTE_ACTUAL = { id, nombre, telefono };
 
-        document.getElementById('historialTitulo').innerText = `Libreta: ${nombre.toUpperCase()}`;
+        document.getElementById('historialTitulo').textContent = `Libreta: ${nombre.toUpperCase()}`;
         document.getElementById('filtroFechaDesde').value = '';
         document.getElementById('filtroFechaHasta').value = '';
 
@@ -274,10 +308,7 @@ async function verHistorial(id, nombre, telefono) {
     }
 }
 
-function aplicarFiltroFechas() {
-    renderizarTablaMovimientos();
-}
-
+function aplicarFiltroFechas() { renderizarTablaMovimientos(); }
 function limpiarFiltroFechas() {
     document.getElementById('filtroFechaDesde').value = '';
     document.getElementById('filtroFechaHasta').value = '';
@@ -310,8 +341,8 @@ function renderizarTablaMovimientos() {
         const fechaMov = new Date(m.createdAt);
         let incluir = true;
 
-        if (fechaDesde && fechaMov < fechaDesde) incluir = false;
-        if (fechaHasta && fechaMov > fechaHasta) incluir = false;
+        if (fechaDesde && !isNaN(fechaDesde) && fechaMov < fechaDesde) incluir = false;
+        if (fechaHasta && !isNaN(fechaHasta) && fechaMov > fechaHasta) incluir = false;
 
         if (incluir) {
             movimientosAProcesar.push({
@@ -338,8 +369,8 @@ function renderizarTablaMovimientos() {
             const montoFinal = parseFloat(m.amount) || 0;
             const idx = m.originalIndex;
 
-            let subtotalPuro = 0;
-            if (esVenta && m.itemsDetail && m.itemsDetail.length > 0) {
+            let subtotalPuro = parseFloat(m.subtotal) || 0;
+            if (subtotalPuro === 0 && esVenta && Array.isArray(m.itemsDetail)) {
                 subtotalPuro = m.itemsDetail.reduce((acc, item) => {
                     const sub = item.subtotal !== undefined ? parseFloat(item.subtotal) : ((parseFloat(item.price) || 0) * (parseFloat(item.quantity) || 1));
                     return acc + sub;
@@ -347,11 +378,12 @@ function renderizarTablaMovimientos() {
             }
 
             let descuento = parseFloat(m.discount || m.discountAmount) || 0;
-            let recargo = parseFloat(m.surcharge || m.surchargeAmount || m.recargo) || 0;
+            let recargo = parseFloat(m.surchargeAmount || m.surcharge || m.recargo) || 0;
+            let porcentajeRecargo = parseFloat(m.surchargePercentage || m.surchargeRate) || 0;
 
-            if (esVenta && subtotalPuro > 0) {
+            if (esVenta && subtotalPuro > 0 && recargo === 0) {
                 const diferencia = montoFinal - (subtotalPuro - descuento);
-                if (diferencia > 0.01 && recargo === 0) recargo = diferencia;
+                if (diferencia > 0.01) recargo = diferencia;
             }
 
             const icono = esVenta
@@ -360,40 +392,50 @@ function renderizarTablaMovimientos() {
 
             let badgesAdicionales = '';
             if (esVenta) {
-                if (descuento > 0) badgesAdicionales += `<span class="badge bg-danger-subtle text-danger ms-1" style="font-size: 0.65rem;">DESC. -$${descuento.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>`;
-                if (recargo > 0) badgesAdicionales += `<span class="badge bg-warning-subtle text-warning-emphasis ms-1" style="font-size: 0.65rem;">RECARGO +$${recargo.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>`;
+                if (descuento > 0) badgesAdicionales += `<span class="badge bg-danger-subtle text-danger ms-1" style="font-size: 0.65rem;">DESC. -${formatCurrency(descuento)}</span>`;
+                if (recargo > 0) badgesAdicionales += `<span class="badge bg-warning-subtle text-warning-emphasis ms-1" style="font-size: 0.65rem;">RECARGO +${formatCurrency(recargo)}</span>`;
             }
 
-            const filaPrincipal = `
-                <tr class="align-middle" style="cursor: ${esVenta ? 'pointer' : 'default'};" ${esVenta ? `onclick="toggleDetalle(${idx})"` : ''}>
-                    <td class="ps-4 text-muted" style="font-size: 0.75rem;">${fecha}</td>
-                    <td>
-                        <div class="d-flex align-items-center">
-                            ${icono}
-                            <div>
-                                <span class="${esVenta ? 'text-dark' : 'text-success fw-bold'}">${m.description || (esVenta ? 'Venta' : 'Pago libreta')}</span>
-                                ${badgesAdicionales}
-                            </div>
-                            ${esVenta ? `<i id="icon-${idx}" class="bi bi-chevron-down ms-2 text-primary small"></i>` : ''}
+            const trPrincipal = document.createElement('tr');
+            trPrincipal.className = 'align-middle';
+            trPrincipal.style.cursor = esVenta ? 'pointer' : 'default';
+            if (esVenta) trPrincipal.onclick = () => toggleDetalle(idx);
+
+            trPrincipal.innerHTML = `
+                <td class="ps-4 text-muted" style="font-size: 0.75rem;">${fecha}</td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        ${icono}
+                        <div>
+                            <span class="${esVenta ? 'text-dark' : 'text-success fw-bold'}">${sanitizeHTML(m.description || (esVenta ? 'Venta' : 'Pago libreta'))}</span>
+                            ${badgesAdicionales}
                         </div>
-                    </td>
-                    <td class="text-end text-danger fw-bold">${esVenta ? '+$' + montoFinal.toLocaleString('es-AR', { minimumFractionDigits: 2 }) : ''}</td>
-                    <td class="text-end text-success fw-bold">${!esVenta ? '-$' + montoFinal.toLocaleString('es-AR', { minimumFractionDigits: 2 }) : ''}</td>
-                    <td class="pe-4 text-end fw-bold text-secondary">$${m.saldoMomentaneo.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
-                </tr>
+                        ${esVenta ? `<i id="icon-${idx}" class="bi bi-chevron-down ms-2 text-primary small"></i>` : ''}
+                    </div>
+                </td>
+                <td class="text-end text-danger fw-bold">${esVenta ? '+' + formatCurrency(montoFinal) : ''}</td>
+                <td class="text-end text-success fw-bold">${!esVenta ? '-' + formatCurrency(montoFinal) : ''}</td>
+                <td class="pe-4 text-end fw-bold text-secondary">${formatCurrency(m.saldoMomentaneo)}</td>
             `;
 
-            let detalleHtml = '';
+            tbody.appendChild(trPrincipal);
+
             if (esVenta) {
+                const trDetalle = document.createElement('tr');
+                trDetalle.id = `detalle-${idx}`;
+                trDetalle.className = 'd-none bg-light';
+
                 let itemsLista = '<p class="text-muted small p-2 m-0">Detalle de productos no disponible.</p>';
 
-                if (m.itemsDetail && m.itemsDetail.length > 0) {
+                if (Array.isArray(m.itemsDetail) && m.itemsDetail.length > 0) {
                     itemsLista = m.itemsDetail.map(i => {
                         const subItem = i.subtotal !== undefined ? parseFloat(i.subtotal) : ((parseFloat(i.price) || 0) * (parseFloat(i.quantity) || 1));
+                        const cantidadFormateada = formatQuantity(i.quantity, i.isFractional);
+
                         return `
                             <div class="d-flex justify-content-between border-bottom py-1">
-                                <span class="text-uppercase" style="font-size: 0.75rem;">${i.quantity}x ${(i.productName || i.nombre || 'Producto')}</span>
-                                <span class="fw-bold small">$${subItem.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                                <span class="text-uppercase" style="font-size: 0.75rem;">${cantidadFormateada} ${sanitizeHTML(i.productName || i.nombre || 'Producto')}</span>
+                                <span class="fw-bold small">${formatCurrency(subItem)}</span>
                             </div>
                         `;
                     }).join('');
@@ -402,53 +444,63 @@ function renderizarTablaMovimientos() {
                         <div class="mt-3 p-2 bg-white border rounded border-dashed">
                             <div class="d-flex justify-content-between small text-muted">
                                 <span>Subtotal Productos:</span>
-                                <span>$${subtotalPuro.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                                <span>${formatCurrency(subtotalPuro)}</span>
                             </div>
                             ${descuento > 0 ? `
                             <div class="d-flex justify-content-between small text-danger fw-bold mt-1">
                                 <span>Descuento aplicado:</span>
-                                <span>-$${descuento.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                                <span>-${formatCurrency(descuento)}</span>
                             </div>` : ''}
                             ${recargo > 0 ? `
                             <div class="d-flex justify-content-between small text-warning fw-bold mt-1">
-                                <span>Recargo Aplicado:</span>
-                                <span>+$${recargo.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                                <span>Recargo Libreta ${porcentajeRecargo > 0 ? `(${porcentajeRecargo}%)` : ''}:</span>
+                                <span>+${formatCurrency(recargo)}</span>
                             </div>` : ''}
                             <div class="d-flex justify-content-between mt-2 border-top border-secondary pt-1">
                                 <span class="fw-bold text-dark text-uppercase small">Impacto en Libreta:</span>
-                                <span class="fw-bold text-primary fs-5">$${montoFinal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                                <span class="fw-bold text-primary fs-5">${formatCurrency(montoFinal)}</span>
                             </div>
                         </div>
                     `;
                 }
 
-                const nombreSeguro = CLIENTE_ACTUAL.nombre.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-
-                detalleHtml = `
-                    <tr id="detalle-${idx}" class="d-none bg-light">
-                        <td colspan="5" class="p-3">
-                            <div class="card card-body border-0 shadow-sm mx-4" style="background-color: #fdfdfd; border-left: 4px solid #1e3a8a !important;">
-                                <h6 class="small fw-bold text-primary mb-3"><i class="bi bi-box-seam me-1"></i> DETALLE DE COMPRA:</h6>
-                                ${itemsLista}
-                                <div class="text-end mt-3">
-                                    <button class="btn btn-sm btn-success px-3 shadow-sm rounded-pill fw-bold"
-                                        onclick="event.stopPropagation(); compartirWhatsApp('${nombreSeguro}', '${CLIENTE_ACTUAL.telefono}', '${fecha}', ${montoFinal}, '${encodeURIComponent(JSON.stringify(m.itemsDetail || []))}', ${descuento}, ${recargo})">
-                                        <i class="bi bi-whatsapp me-1"></i> Enviar ticket
-                                    </button>
-                                </div>
+                trDetalle.innerHTML = `
+                    <td colspan="5" class="p-3">
+                        <div class="card card-body border-0 shadow-sm mx-4" style="background-color: #fdfdfd; border-left: 4px solid #1e3a8a !important;">
+                            <h6 class="small fw-bold text-primary mb-3"><i class="bi bi-box-seam me-1"></i> DETALLE DE COMPRA:</h6>
+                            ${itemsLista}
+                            <div class="text-end mt-3">
+                                <button class="btn btn-sm btn-success px-3 shadow-sm rounded-pill fw-bold btn-ws">
+                                    <i class="bi bi-whatsapp me-1"></i> Enviar ticket
+                                </button>
                             </div>
-                        </td>
-                    </tr>
+                        </div>
+                    </td>
                 `;
-            }
 
-            tbody.innerHTML += filaPrincipal + detalleHtml;
+                trDetalle.querySelector('.btn-ws').onclick = (e) => {
+                    e.stopPropagation();
+                    compartirWhatsApp(
+                        CLIENTE_ACTUAL.nombre,
+                        CLIENTE_ACTUAL.telefono,
+                        fecha,
+                        montoFinal,
+                        m.itemsDetail || [],
+                        descuento,
+                        recargo,
+                        porcentajeRecargo,
+                        subtotalPuro
+                    );
+                };
+
+                tbody.appendChild(trDetalle);
+            }
         });
     }
 
     const subEl = document.getElementById('historialSubtitulo');
     if (subEl) {
-        subEl.innerText = `Deuda Total Actual: $${saldoAcumulado.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+        subEl.textContent = `Deuda Total Actual: ${formatCurrency(saldoAcumulado)}`;
     }
 }
 
@@ -500,7 +552,7 @@ async function registrarPago(id) {
             });
 
             if (resp && resp.ok) {
-                Swal.fire('¡Ingreso Registrado!', `Se ingresaron $${formValues.monto.toLocaleString('es-AR', { minimumFractionDigits: 2 })} a tu caja (${formValues.metodo})`, 'success');
+                Swal.fire('¡Ingreso Registrado!', `Se ingresaron ${formatCurrency(formValues.monto)} a tu caja (${formValues.metodo})`, 'success');
                 await cargarClientes();
 
                 if (typeof cargarDatosDashboard === "function") cargarDatosDashboard();
@@ -524,85 +576,75 @@ function toggleDetalle(index) {
     const el = document.getElementById(`detalle-${index}`);
     const icono = document.getElementById(`icon-${index}`);
     if (el) {
-        if (el.classList.contains('d-none')) {
-            el.classList.remove('d-none');
-            if (icono) icono.classList.replace('bi-chevron-down', 'bi-chevron-up');
-        } else {
-            el.classList.add('d-none');
-            if (icono) icono.classList.replace('bi-chevron-up', 'bi-chevron-down');
+        const isHidden = el.classList.contains('d-none');
+        el.classList.toggle('d-none');
+        if (icono) {
+            icono.classList.toggle('bi-chevron-down', !isHidden);
+            icono.classList.toggle('bi-chevron-up', isHidden);
         }
     }
 }
 
-function compartirWhatsApp(nombreCliente, telefono, fecha, total, itemsEncoded, descuento = 0, recargo = 0) {
+function compartirWhatsApp(nombreCliente, telefono, fecha, total, items = [], descuento = 0, recargo = 0, porcentajeRecargo = 0, subtotal = 0) {
     if (!telefono || telefono === "null" || telefono === "") {
         return Swal.fire('Atención', 'El cliente no tiene un teléfono registrado.', 'warning');
-    }
-
-    let items = [];
-    try {
-        items = JSON.parse(decodeURIComponent(itemsEncoded));
-    } catch (e) {
-        items = [];
     }
 
     const local = DATOS_EMPRESA?.name?.toUpperCase() || "BAEZ POS";
     const direccion = DATOS_EMPRESA?.address || "";
     const mensajePie = DATOS_EMPRESA?.ticketMessage || '¡Muchas gracias por su compra!';
 
-    const totalNum = typeof total === 'number' ? total : parseFloat(String(total).replace(/\./g, '').replace(',', '.')) || 0;
+    const totalNum = parseFloat(total) || 0;
     const descNum = parseFloat(descuento) || 0;
     const recNum = parseFloat(recargo) || 0;
+    const subtotalNum = parseFloat(subtotal) || 0;
 
-    let subtotalItems = 0;
-    items.forEach(i => {
-        subtotalItems += i.subtotal !== undefined ? parseFloat(i.subtotal) : ((parseFloat(i.price) || 0) * (parseFloat(i.quantity) || 1));
-    });
+    let texto = `┏━━━━━━━━━━━━━━━━━━━━┓\n`;
+    texto += `  🏪  *${local}*\n`;
+    if (direccion) texto += `  📍  _${direccion}_\n`;
+    texto += `┗━━━━━━━━━━━━━━━━━━━━┛\n\n`;
 
-    let texto = `┏━━━━━━━━━━━━━━━━━━━━┓%0A`;
-    texto += `  🏪  *${local}*%0A`;
-    if (direccion) texto += `  📍  _${direccion}_%0A`;
-    texto += `┗━━━━━━━━━━━━━━━━━━━━┛%0A%0A`;
+    texto += `*🧾 COMPROBANTE DE COMPRA*\n`;
+    texto += `------------------------------------------\n`;
+    texto += `*👤 CLIENTE:* ${nombreCliente.toUpperCase()}\n`;
+    texto += `*📅 FECHA:* ${fecha}\n`;
+    texto += `*💳 PAGO:* LIBRETA (A CUENTA)\n`;
+    texto += `------------------------------------------\n\n`;
 
-    texto += `*🧾 COMPROBANTE DE COMPRA*%0A`;
-    texto += `------------------------------------------%0A`;
-    texto += `*👤 CLIENTE:* ${nombreCliente.toUpperCase()}%0A`;
-    texto += `*📅 FECHA:* ${fecha}%0A`;
-    texto += `*💳 PAGO:* LIBRETA (A CUENTA)%0A`;
-    texto += `------------------------------------------%0A%0A`;
-
-    if (items.length > 0) {
-        texto += `*🛒 DETALLE DE PRODUCTOS:*%0A`;
+    if (Array.isArray(items) && items.length > 0) {
+        texto += `*🛒 DETALLE DE PRODUCTOS:*\n`;
         items.forEach(i => {
             const sub = i.subtotal !== undefined ? parseFloat(i.subtotal) : ((parseFloat(i.price) || 0) * (parseFloat(i.quantity) || 1));
-            texto += `▪️ ${i.quantity}x ${(i.productName || i.nombre || 'Producto').toUpperCase()}%0A`;
-            texto += `      Subtotal: *$${sub.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}*%0A`;
+            const cantidadFormateada = formatQuantity(i.quantity, i.isFractional);
+
+            texto += `▪️ ${cantidadFormateada} ${(i.productName || i.nombre || 'Producto').toUpperCase()}\n`;
+            texto += `      Subtotal: *${formatCurrency(sub)}*\n`;
         });
-        texto += `------------------------------------------%0A`;
-        texto += `*Subtotal:* $${subtotalItems.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%0A`;
+        texto += `------------------------------------------\n`;
+        if (subtotalNum > 0) {
+            texto += `*Subtotal:* ${formatCurrency(subtotalNum)}\n`;
+        }
     }
 
-    if (descNum > 0) {
-        texto += `*DESCUENTO:* -$${descNum.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%0A`;
-    }
-
+    if (descNum > 0) texto += `*DESCUENTO:* -${formatCurrency(descNum)}\n`;
     if (recNum > 0) {
-        texto += `*RECARGO LIBRETA:* +$${recNum.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%0A`;
+        const pctText = porcentajeRecargo > 0 ? ` (${porcentajeRecargo}%)` : '';
+        texto += `*RECARGO LIBRETA${pctText}:* +${formatCurrency(recNum)}\n`;
     }
 
-    texto += `%0A------------------------------------------%0A`;
-    texto += `*💰 TOTAL FINAL: $${totalNum.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}*%0A`;
-    texto += `------------------------------------------%0A%0A`;
+    texto += `\n------------------------------------------\n`;
+    texto += `*💰 TOTAL FINAL: ${formatCurrency(totalNum)}*\n`;
+    texto += `------------------------------------------\n\n`;
 
-    texto += `💬 _${mensajePie}_%0A%0A`;
-    texto += `*¡Tu saldo ha sido actualizado en la libreta!*%0A%0A`;
+    texto += `💬 _${mensajePie}_\n\n`;
+    texto += `*¡Tu saldo ha sido actualizado en la libreta!*\n\n`;
     texto += `✨ _Generado por BaezPOS_`;
 
     const numLimpio = telefono.replace(/\D/g, '');
     window.open(`https://wa.me/${numLimpio}?text=${encodeURIComponent(texto)}`, '_blank');
 }
 
-// Exposición explícita en window para llamadas desde HTML
+// Exposición explícita para compatibilidad HTML
 window.abrirModalEditar = abrirModalEditar;
 window.verHistorial = verHistorial;
 window.registrarPago = registrarPago;

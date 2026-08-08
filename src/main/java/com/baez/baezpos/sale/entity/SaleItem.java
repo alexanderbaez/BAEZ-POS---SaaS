@@ -24,15 +24,20 @@ public class SaleItem {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    @Column(nullable = false)
-    private Integer quantity;
+    /**
+     * Cantidad en unidades decimales para soportar venta fraccionada por peso.
+     * Ejemplos: 1.000 = 1 unidad, 0.250 = 250 gramos / 0.25 kg.
+     * precision=12, scale=3 soporta hasta 999,999,999.999 unidades.
+     */
+    @Column(nullable = false, precision = 12, scale = 3)
+    private BigDecimal quantity;
 
     @Column(nullable = false, precision = 12, scale = 2)
-    private BigDecimal price; // Precio histórico de venta
+    private BigDecimal price;    // Precio histórico de venta por unidad/kg
 
     @Column(nullable = false, precision = 12, scale = 2)
-    private BigDecimal cost; // Costo histórico para calcular rentabilidad
+    private BigDecimal cost;     // Costo histórico por unidad/kg para calcular rentabilidad
 
     @Column(nullable = false, precision = 12, scale = 2)
-    private BigDecimal subtotal;
+    private BigDecimal subtotal; // = quantity * price
 }

@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -30,7 +31,7 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     @Transactional
-    public InventoryMovementResponseDTO registerMovement(Long productId, Integer quantity, MovementType type, String reason) {
+    public InventoryMovementResponseDTO registerMovement(Long productId, BigDecimal quantity, MovementType type, String reason) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
 
         if (companyId == null) {
@@ -41,7 +42,7 @@ public class InventoryServiceImpl implements InventoryService {
             throw new BadRequestException("El ID del producto es obligatorio.");
         }
 
-        if (quantity == null || quantity <= 0) {
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BadRequestException("La cantidad debe ser mayor a cero.");
         }
 
@@ -56,16 +57,18 @@ public class InventoryServiceImpl implements InventoryService {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada."));
 
-        // 2. Lógica de Stock
-        int currentStock = product.getStock() != null ? product.getStock() : 0;
+        // 2. Lógica de Stock con BigDecimal
+        BigDecimal currentStock = product.getStock() != null ? product.getStock() : BigDecimal.ZERO;
 
         if (isNegativeMovement(type)) {
-            if (currentStock < quantity) {
-                throw new BadRequestException("Stock insuficiente para " + product.getName() + ". Stock actual: " + currentStock);
+            if (currentStock.compareTo(quantity) < 0) {
+                throw new BadRequestException(
+                        "Stock insuficiente para " + product.getName() +
+                        ". Stock actual: " + currentStock.toPlainString());
             }
-            product.setStock(currentStock - quantity);
+            product.setStock(currentStock.subtract(quantity));
         } else {
-            product.setStock(currentStock + quantity);
+            product.setStock(currentStock.add(quantity));
         }
 
         productRepository.save(product);
@@ -81,7 +84,8 @@ public class InventoryServiceImpl implements InventoryService {
         movement.setCompany(company);
 
         InventoryMovement savedMovement = inventoryRepository.save(movement);
-        log.info("Empresa [{}]: Movimiento {} ({}) registrado para producto ID {}", companyId, type, quantity, product.getId());
+        log.info("Empresa [{}]: Movimiento {} ({}) registrado para producto ID {}",
+                companyId, type, quantity.toPlainString(), product.getId());
 
         return mapToDTO(savedMovement);
     }

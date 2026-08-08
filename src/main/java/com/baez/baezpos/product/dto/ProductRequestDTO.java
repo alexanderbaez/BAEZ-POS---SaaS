@@ -8,10 +8,11 @@ import java.math.BigDecimal;
 public record ProductRequestDTO(
         String name,
         String description,
-        String barcode,      // Unificado en minúsculas
-        BigDecimal cost,     // Mapped to "prodCosto"
-        BigDecimal price,    // Mapped to "prodPrecio"
-        Integer stock,
-        Integer minStock,    // Mapped to "prodMinStock"
-        Long categoryId      // Mapped to "prodCategoria"
+        String barcode,
+        BigDecimal cost,
+        BigDecimal price,
+        BigDecimal stock,       // BigDecimal para soportar productos fraccionables
+        BigDecimal minStock,    // BigDecimal para soportar productos fraccionables
+        Long categoryId,
+        Boolean isFractional    // true = producto pesable/granel (venta por kg/fracción)
 ) {}

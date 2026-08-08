@@ -16,6 +16,14 @@ const fmtARS = new Intl.NumberFormat('es-AR', {
     minimumFractionDigits: 2
 });
 
+// Helper para generar un código de barras 100% numérico de 12 dígitos (Ideal para balanzas y ticket)
+function generarCodigoInterno() {
+    // Prefijo 20 (frecuente para códigos internos de comercio) + timestamp truncado + random
+    const timestamp = Date.now().toString().slice(-8);
+    const random = Math.floor(100 + Math.random() * 900); // 3 dígitos aleatorios
+    return `20${timestamp}${random}`; // 12 dígitos en total
+}
+
 // ==========================================
 // 1. INICIALIZACIÓN
 // ==========================================
@@ -203,6 +211,21 @@ async function eliminarCategoria(id) {
 }
 
 // ==========================================
+// UTILS & HELPERS DE PRESENTACIÓN
+// ==========================================
+function formatStockDisplay(stock, isFractional) {
+    const val = parseFloat(stock) || 0;
+    if (isFractional) {
+        if (val < 1 && val > 0) {
+            const gramos = Math.round(val * 1000);
+            return `${gramos} grs.`;
+        }
+        return `${val.toFixed(3).replace(/\.?0+$/, '')} kg.`;
+    }
+    return `${Math.floor(val)} un.`;
+}
+
+// ==========================================
 // 3. GESTIÓN DE PRODUCTOS
 // ==========================================
 async function listarProductos() {
@@ -237,6 +260,7 @@ function renderizarTabla(lista) {
         const costo = parseFloat(p.cost) || 0;
         const precio = parseFloat(p.price) || 0;
         const margen = costo > 0 ? (((precio - costo) / costo) * 100).toFixed(0) : 0;
+        const stockFormateado = formatStockDisplay(p.stock, p.isFractional);
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -248,10 +272,11 @@ function renderizarTabla(lista) {
             <td class="text-muted">${fmtARS.format(costo)}</td>
             <td class="fw-bold text-dark">${fmtARS.format(precio)}</td>
             <td><span class="text-success small fw-bold">+${margen}%</span></td>
-            <td><span class="badge ${stockClase} p-2 px-3 rounded-pill" style="font-size: 0.8rem;">${p.stock} un.</span></td>
+            <td><span class="badge ${stockClase} p-2 px-3 rounded-pill" style="font-size: 0.8rem;">${stockFormateado}</span></td>
             <td class="text-end pe-4">
                 <div class="btn-group shadow-sm rounded-3">
-                    <button class="btn btn-white btn-sm border-end" title="Etiqueta" onclick="imprimirEtiqueta(${p.id})"><i class="bi bi-printer text-primary"></i></button>
+                    <button class="btn btn-white btn-sm border-end" title="Imprimir 1 Etiqueta" onclick="imprimirEtiqueta(${p.id})"><i class="bi bi-printer text-primary"></i></button>
+                    <button class="btn btn-white btn-sm border-end" title="Imprimir Hoja Masiva A4" onclick="imprimirEtiquetasMultiples(${p.id})"><i class="bi bi-grid-3x3-gap text-success"></i></button>
                     <button class="btn btn-white btn-sm border-end" title="Editar" onclick="editarProducto(${p.id})"><i class="bi bi-pencil-square text-primary"></i></button>
                     <button class="btn btn-white btn-sm" title="Eliminar" onclick="eliminarProducto(${p.id})"><i class="bi bi-trash3 text-danger"></i></button>
                 </div>
@@ -275,26 +300,40 @@ function filtrarProductos() {
     renderizarTabla(filtrados);
 }
 
+// Acción para autogenerar código desde el botón del Modal
+function autogenerarCodigoInput() {
+    const inputBarcode = document.getElementById('prodBarcode');
+    if (inputBarcode) {
+        inputBarcode.value = generarCodigoInterno();
+    }
+}
+
 async function guardarProducto(e) {
     e.preventDefault();
     const id = document.getElementById('prodId').value;
 
     const nombre = document.getElementById('prodNombre').value.trim();
     const categoriaId = document.getElementById('prodCategoria').value;
-    const barcode = document.getElementById('prodBarcode').value.trim();
+    let barcode = document.getElementById('prodBarcode').value.trim();
 
     if (!nombre) return Swal.fire('Error', 'El nombre es obligatorio', 'warning');
     if (!categoriaId) return Swal.fire('Error', 'Selecciona una categoría', 'warning');
 
+    // Si viene vacío, asignamos un código numérico limpio de 12 dígitos
+    if (!barcode) {
+        barcode = generarCodigoInterno();
+    }
+
     const body = {
         name: nombre,
         description: "Producto registrado",
-        barcode: barcode || (nombre.substring(0, 5).toUpperCase() + Date.now().toString().slice(-5)),
+        barcode: barcode,
         cost: parseFloat(document.getElementById('prodCosto').value) || 0,
         price: parseFloat(document.getElementById('prodPrecio').value) || 0,
-        stock: parseInt(document.getElementById('prodStock').value) || 0,
-        minStock: parseInt(document.getElementById('prodMinStock').value) || 0,
-        categoryId: parseInt(categoriaId)
+        stock: parseFloat(document.getElementById('prodStock').value) || 0,
+        minStock: parseFloat(document.getElementById('prodMinStock').value) || 0,
+        categoryId: parseInt(categoriaId),
+        isFractional: document.getElementById('prodIsFractional')?.checked || false
     };
 
     try {
@@ -326,6 +365,7 @@ function prepararFormulario() {
     const form = document.getElementById('formProducto');
     if (form) form.reset();
     if (document.getElementById('prodId')) document.getElementById('prodId').value = '';
+    if (document.getElementById('prodIsFractional')) document.getElementById('prodIsFractional').checked = false;
     if (document.getElementById('modalTitulo')) document.getElementById('modalTitulo').innerText = "Nuevo Producto";
 
     const modalEl = document.getElementById('modalProducto');
@@ -343,6 +383,7 @@ function editarProducto(id) {
     if (document.getElementById('prodPrecio')) document.getElementById('prodPrecio').value = p.price || 0;
     if (document.getElementById('prodStock')) document.getElementById('prodStock').value = p.stock || 0;
     if (document.getElementById('prodMinStock')) document.getElementById('prodMinStock').value = p.minStock || 0;
+    if (document.getElementById('prodIsFractional')) document.getElementById('prodIsFractional').checked = !!p.isFractional;
 
     const selectCat = document.getElementById('prodCategoria');
     if (selectCat) selectCat.value = p.categoryId || "";
@@ -457,16 +498,33 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ==========================================
-// 6. IMPRESIÓN DE ETIQUETA
+// 6. IMPRESIÓN DE ETIQUETA / TICKET MEJORADA
 // ==========================================
-function imprimirEtiqueta(id) {
-    const p = PRODUCTOS_LOCAL.find(prod => prod.id === id);
-    if (!p || !p.barcode) return Swal.fire('Atención', 'El producto no tiene un código de barras registrado', 'warning');
+async function imprimirEtiqueta(id) {
+    let p = PRODUCTOS_LOCAL.find(prod => prod.id === id);
+    if (!p) return;
+
+    // Si el producto no tiene código registrado, le generamos uno en el momento y actualizamos
+    let barcodeParaImprimir = p.barcode;
+    if (!barcodeParaImprimir) {
+        barcodeParaImprimir = generarCodigoInterno();
+        p.barcode = barcodeParaImprimir; // Actualización local
+
+        // Guardar el código generado en la BD mediante PUT silente
+        try {
+            await apiFetch(`${ENDPOINT_PRODUCTS}/${p.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ ...p, barcode: barcodeParaImprimir })
+            });
+            listarProductos(); // Refrescar vista
+        } catch (err) {
+            console.error("Error al asignar código automático:", err);
+        }
+    }
 
     const ventana = window.open('', 'PRINT', 'height=400,width=600');
     if (!ventana) return Swal.fire('Error', 'Por favor habilita las ventanas emergentes en tu navegador.', 'error');
 
-    const precio = parseFloat(p.price) || 0;
     const nameSeguro = (p.name || '').replace(/"/g, '&quot;');
 
     ventana.document.write(`
@@ -475,30 +533,69 @@ function imprimirEtiqueta(id) {
             <head>
                 <title>Etiqueta - ${nameSeguro}</title>
                 <style>
-                    body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
-                    .etiqueta {
-                        width: 50mm; height: 25mm; border: 1px solid #ddd;
-                        display: flex; flex-direction: column; align-items: center; justify-content: center;
-                        padding: 4px; box-sizing: border-box; text-align: center;
+                    @page { margin: 0; size: auto; }
+                    body {
+                        margin: 0;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        height: 100vh;
+                        background-color: #fff;
                     }
-                    .nombre { font-size: 10px; font-family: sans-serif; font-weight: bold; margin-bottom: 2px; }
-                    .barcode { width: 100%; max-height: 40px; }
-                    .precio { font-size: 13px; font-family: sans-serif; font-weight: bold; margin-top: 2px; }
+                    .etiqueta {
+                        width: 50mm;
+                        height: 25mm;
+                        border: 1px dashed #ccc;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 2px;
+                        padding: 4px;
+                        box-sizing: border-box;
+                        text-align: center;
+                    }
+                    .nombre {
+                        font-size: 10px;
+                        font-family: Arial, sans-serif;
+                        font-weight: bold;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        max-width: 100%;
+                    }
+                    .barcode-container {
+                        width: 100%;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                    }
+                    .barcode { width: 95%; max-height: 40px; }
                 </style>
             </head>
             <body>
                 <div class="etiqueta">
                     <div class="nombre">${nameSeguro.toUpperCase()}</div>
-                    <svg id="barcode-svg" class="barcode"></svg>
-                    <div class="precio">${fmtARS.format(precio)}</div>
+                    <div class="barcode-container">
+                        <svg id="barcode-svg" class="barcode"></svg>
+                    </div>
                 </div>
                 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
                 <script>
                     window.onload = function() {
-                        JsBarcode("#barcode-svg", "${p.barcode}", {
-                            format: "CODE128", width: 1.5, height: 40, displayValue: true, fontSize: 10
-                        });
-                        setTimeout(() => { window.print(); window.close(); }, 500);
+                        try {
+                            JsBarcode("#barcode-svg", "${barcodeParaImprimir}", {
+                                format: "CODE128",
+                                width: 1.5,
+                                height: 38,
+                                displayValue: true,
+                                fontSize: 9,
+                                margin: 0
+                            });
+                            setTimeout(() => { window.print(); window.close(); }, 400);
+                        } catch(e) {
+                            console.error("Error JsBarcode:", e);
+                        }
                     };
                 </script>
             </body>
@@ -518,6 +615,167 @@ document.addEventListener('focusin', (e) => {
     }
 }, true);
 
+async function imprimirEtiquetasMultiples(id) {
+    let p = PRODUCTOS_LOCAL.find(prod => prod.id === id);
+    if (!p) return;
+
+    // 1. Verificar o autogenerar código de barras si no tiene
+    let barcodeParaImprimir = p.barcode;
+    if (!barcodeParaImprimir) {
+        barcodeParaImprimir = generarCodigoInterno();
+        p.barcode = barcodeParaImprimir;
+
+        try {
+            await apiFetch(`${ENDPOINT_PRODUCTS}/${p.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ ...p, barcode: barcodeParaImprimir })
+            });
+            listarProductos();
+        } catch (err) {
+            console.error("Error al asignar código automático:", err);
+        }
+    }
+
+    // 2. Preguntar cantidad deseada
+    const { value: cantidad } = await Swal.fire({
+        title: 'Impresión Masiva de Etiquetas',
+        text: `¿Cuántas etiquetas de "${p.name}" querés generar?`,
+        input: 'number',
+        inputValue: 21, // Valor por defecto conveniente para 1 hoja A4
+        inputAttributes: {
+            min: 1,
+            max: 200,
+            step: 1
+        },
+        showCancelButton: true,
+        confirmButtonText: '<i class="bi bi-printer"></i> Generar Hoja',
+        cancelButtonText: 'Cancelar',
+        customClass: { popup: 'rounded-4' }
+    });
+
+    if (!cantidad || cantidad <= 0) return;
+
+    // 3. Abrir ventana de impresión
+    const ventana = window.open('', 'PRINT_MULTI', 'height=700,width=900');
+    if (!ventana) return Swal.fire('Error', 'Por favor habilita las ventanas emergentes para imprimir.', 'error');
+
+    const nameSeguro = (p.name || '').replace(/"/g, '&quot;');
+
+    // Generar la grilla de etiquetas HTML
+    let etiquetasHTML = '';
+    for (let i = 0; i < cantidad; i++) {
+        etiquetasHTML += `
+            <div class="etiqueta">
+                <div class="nombre">${nameSeguro.toUpperCase()}</div>
+                <div class="barcode-container">
+                    <svg class="barcode-svg" data-code="${barcodeParaImprimir}"></svg>
+                </div>
+            </div>
+        `;
+    }
+
+    ventana.document.write(`
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <title>Hoja Etiquetas - ${nameSeguro}</title>
+                <style>
+                    @page {
+                        size: A4;
+                        margin: 8mm;
+                    }
+                    * {
+                        box-sizing: border-box;
+                    }
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 0;
+                        padding: 0;
+                        background-color: #fff;
+                    }
+                    .grid-container {
+                        display: grid;
+                        grid-template-columns: repeat(3, 1fr); /* 3 Columnas por fila */
+                        gap: 4mm;
+                        width: 100%;
+                    }
+                    .etiqueta {
+                        width: 100%;
+                        height: 28mm;
+                        border: 1px dashed #bbb;
+                        border-radius: 4px;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 2px;
+                        padding: 4px;
+                        text-align: center;
+                        page-break-inside: avoid;
+                    }
+                    .nombre {
+                        font-size: 10px;
+                        font-weight: bold;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        max-width: 100%;
+                    }
+                    .barcode-container {
+                        width: 100%;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                    }
+                    .barcode-svg {
+                        width: 95%;
+                        max-height: 38px;
+                    }
+
+                    @media print {
+                        body { margin: 0; }
+                        .etiqueta { border: 1px dashed #aaa; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="grid-container">
+                    ${etiquetasHTML}
+                </div>
+                <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+                <script>
+                    window.onload = function() {
+                        try {
+                            const svgs = document.querySelectorAll('.barcode-svg');
+                            svgs.forEach(el => {
+                                const code = el.getAttribute('data-code');
+                                JsBarcode(el, code, {
+                                    format: "CODE128",
+                                    width: 1.4,
+                                    height: 34,
+                                    displayValue: true,
+                                    fontSize: 9,
+                                    margin: 0
+                                });
+                            });
+                            setTimeout(() => {
+                                window.print();
+                                window.close();
+                            }, 500);
+                        } catch(e) {
+                            console.error("Error generando códigos de barras:", e);
+                        }
+                    };
+                </script>
+            </body>
+        </html>
+    `);
+    ventana.document.close();
+}
+
+// Asegurar exponer la función globalmente
+window.imprimirEtiquetasMultiples = imprimirEtiquetasMultiples;
+
 // ==========================================
 // 7. EXPOSICIÓN AL SCOPE GLOBAL
 // ==========================================
@@ -532,3 +790,4 @@ window.abrirPapelera = abrirPapelera;
 window.restaurarProducto = restaurarProducto;
 window.imprimirEtiqueta = imprimirEtiqueta;
 window.filtrarProductos = filtrarProductos;
+window.autogenerarCodigoInput = autogenerarCodigoInput;

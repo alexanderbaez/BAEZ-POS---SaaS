@@ -107,19 +107,22 @@ public class SaleServiceImpl implements SaleService {
         BigDecimal subtotalAcumulado = BigDecimal.ZERO;
 
         for (SaleItemRequestDTO itemDTO : saleDTO.items()) {
-            if (itemDTO.quantity() == null || itemDTO.quantity() <= 0) {
+            if (itemDTO.quantity() == null || itemDTO.quantity().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new BadRequestException("La cantidad enviada para el producto debe ser mayor a 0.");
             }
 
             Product product = productRepository.findByIdAndCompanyId(itemDTO.productId(), companyId)
                     .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado en su empresa: ID " + itemDTO.productId()));
 
-            if (product.getStock() < itemDTO.quantity()) {
-                throw new BadRequestException("Stock insuficiente para: " + product.getName() + " (Stock actual: " + product.getStock() + ")");
+            // Comparación de stock con BigDecimal
+            BigDecimal stockActual = product.getStock() != null ? product.getStock() : BigDecimal.ZERO;
+            if (stockActual.compareTo(itemDTO.quantity()) < 0) {
+                throw new BadRequestException("Stock insuficiente para: " + product.getName() +
+                        " (Stock actual: " + stockActual.toPlainString() + ")");
             }
 
             BigDecimal precioVenta = (itemDTO.price() != null) ? itemDTO.price() : product.getPrice();
-            BigDecimal subtotalItem = precioVenta.multiply(BigDecimal.valueOf(itemDTO.quantity()));
+            BigDecimal subtotalItem = precioVenta.multiply(itemDTO.quantity());
 
             SaleItem item = SaleItem.builder()
                     .sale(sale)
@@ -143,7 +146,7 @@ public class SaleServiceImpl implements SaleService {
         for (SaleItem item : savedSale.getItems()) {
             inventoryService.registerMovement(
                     item.getProduct().getId(),
-                    item.getQuantity(),
+                    item.getQuantity(),   // BigDecimal: descuenta stock exacto (incl. fracciones)
                     MovementType.SALE,
                     "Venta #" + savedSale.getNroComprobante()
             );
@@ -236,7 +239,8 @@ public class SaleServiceImpl implements SaleService {
 
             for (SaleItem item : s.getItems()) {
                 BigDecimal costUnit = item.getCost() != null ? item.getCost() : BigDecimal.ZERO;
-                BigDecimal itemCostTotal = costUnit.multiply(BigDecimal.valueOf(item.getQuantity()));
+                // Multiplicación BigDecimal × BigDecimal — soporta fracciones de cantidad
+                BigDecimal itemCostTotal = costUnit.multiply(item.getQuantity());
                 mCostAccumulator = mCostAccumulator.add(itemCostTotal);
             }
 
@@ -250,7 +254,8 @@ public class SaleServiceImpl implements SaleService {
                 if (!"CUENTA_CORRIENTE".equals(s.getPaymentMethod())) {
                     for (SaleItem item : s.getItems()) {
                         BigDecimal costUnit = item.getCost() != null ? item.getCost() : BigDecimal.ZERO;
-                        BigDecimal itemProfit = item.getSubtotal().subtract(costUnit.multiply(BigDecimal.valueOf(item.getQuantity())));
+                        // Multiplicación BigDecimal × BigDecimal — soporta fracciones
+                        BigDecimal itemProfit = item.getSubtotal().subtract(costUnit.multiply(item.getQuantity()));
                         tProfitDirecto = tProfitDirecto.add(itemProfit);
                     }
                 }
@@ -338,7 +343,8 @@ public class SaleServiceImpl implements SaleService {
 
         for (SaleItem item : sale.getItems()) {
             Product product = item.getProduct();
-            product.setStock(product.getStock() + item.getQuantity());
+            BigDecimal currentStock = product.getStock() != null ? product.getStock() : BigDecimal.ZERO;
+            product.setStock(currentStock.add(item.getQuantity()));
             productRepository.save(product);
         }
 

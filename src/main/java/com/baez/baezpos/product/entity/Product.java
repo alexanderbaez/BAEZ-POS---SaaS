@@ -36,17 +36,31 @@ public class Product extends TenantEntity {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
+    /**
+     * Stock en unidades decimales (BigDecimal) para soportar productos pesables/granel.
+     * Para productos enteros: 5.000 = 5 unidades.
+     * Para productos fraccionables: 2.500 = 2.5 kg.
+     */
     @Builder.Default
-    @Column(nullable = false)
-    private Integer stock = 0;
+    @Column(nullable = false, precision = 12, scale = 3)
+    private BigDecimal stock = BigDecimal.ZERO;
 
     @Builder.Default
-    @Column(name = "min_stock")
-    private Integer minStock = 0;
+    @Column(name = "min_stock", precision = 12, scale = 3)
+    private BigDecimal minStock = BigDecimal.ZERO;
 
     @Builder.Default
     @Column(nullable = false)
     private Boolean active = true;
+
+    /**
+     * Indica si el producto se vende por peso/fracción (granel).
+     * true  → El POS mostrará las opciones "Por Peso/Cantidad" y "Por Importe $".
+     * false → Venta entera tradicional (quantity siempre será entero).
+     */
+    @Builder.Default
+    @Column(name = "is_fractional", nullable = false)
+    private Boolean isFractional = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)

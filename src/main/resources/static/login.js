@@ -5,7 +5,7 @@
 
 // Variable global para el modal de recuperación
 let modalRecuperacionInstance;
-const API_AUTH_BASE = 'https://baez-pos-saas.onrender.com/api/v1/auth';
+const API_AUTH_BASE = '/api/v1/auth'; // Usar ruta relativa para mayor compatibilidad de entornos
 
 // 1. Verificación de Setup Inicial al cargar la página
 document.addEventListener('DOMContentLoaded', async () => {
@@ -125,97 +125,72 @@ function resetButton() {
     if (btn) btn.classList.remove('disabled');
 }
 
-// --- 3. RECUPERACIÓN OFFLINE POR HARDWARE ID ---
+// --- 3. RECUPERACIÓN DE CONTRASEÑA VÍA EMAIL (SOLO ADMIN) ---
 
-async function abrirModalRecuperacion() {
+function abrirModalRecuperacion() {
     const modalEl = document.getElementById('modalRecuperacion');
     if (!modalRecuperacionInstance && modalEl) {
         modalRecuperacionInstance = new bootstrap.Modal(modalEl);
     }
 
-    const inputLlave = document.getElementById('llaveMaestraInput');
-    const pcDisplay = document.getElementById('pcIdDisplay');
+    const emailRecup = document.getElementById('emailRecuperacion');
+    const msgRecup = document.getElementById('msgRecuperacion');
 
-    if (inputLlave) inputLlave.value = '';
-    if (pcDisplay) pcDisplay.innerText = "OBTENIENDO HARDWARE ID...";
+    if (emailRecup) emailRecup.value = '';
+    if (msgRecup) msgRecup.innerHTML = '';
 
     if (modalRecuperacionInstance) modalRecuperacionInstance.show();
-
-    try {
-        const res = await fetch(`${API_AUTH_BASE}/pc-id`);
-        if (res.ok) {
-            const data = await res.json();
-            if (pcDisplay) pcDisplay.innerText = data.pcId || data.id || "SIN ID";
-        } else {
-            if (pcDisplay) pcDisplay.innerText = "ERROR AL GENERAR ID DE HARDWARE";
-        }
-    } catch (e) {
-        console.error("Error al obtener el PC ID:", e);
-        if (pcDisplay) pcDisplay.innerText = "ERROR DE CONEXIÓN CON SERVIDOR LOCAL";
-    }
 }
 
-function copiarId() {
-    const pcDisplay = document.getElementById('pcIdDisplay');
-    if (!pcDisplay) return;
+async function enviarRecuperacion() {
+    const emailInput = document.getElementById('emailRecuperacion');
+    const msgRecup = document.getElementById('msgRecuperacion');
+    const btn = document.getElementById('btnEnviarRecuperacion');
+    const txtBtn = document.getElementById('txtBtnRecup');
+    const loader = document.getElementById('loaderRecup');
 
-    const idText = pcDisplay.innerText;
-    if (idText.includes("ERROR") || idText.includes("OBTENIENDO")) return;
-
-    navigator.clipboard.writeText(idText);
-
-    if (typeof Swal !== 'undefined') {
-        const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
-        Toast.fire({ icon: 'success', title: 'ID copiado al portapapeles' });
-    }
-}
-
-async function validarLlaveOffline() {
-    const inputLlave = document.getElementById('llaveMaestraInput');
-    if (!inputLlave) return;
-
-    const llave = inputLlave.value.trim();
-
-    if (llave.length < 5) {
-        if (typeof Swal !== 'undefined') {
-            Swal.fire('Atención', 'Por favor ingrese la llave de desbloqueo válida.', 'warning');
-        }
+    if (!emailInput || !emailInput.value.trim()) {
+        if (msgRecup) msgRecup.innerHTML = `<div class="alert alert-warning py-2 mb-3"><i class="bi bi-exclamation-circle me-1"></i>Por favor ingresá un email válido.</div>`;
         return;
     }
 
-    const btnValidar = document.getElementById('btnValidarLlave');
-    if (btnValidar) btnValidar.disabled = true;
+    const email = emailInput.value.trim();
+
+    if (msgRecup) msgRecup.innerHTML = '';
+    if (txtBtn) txtBtn.classList.add('d-none');
+    if (loader) loader.classList.remove('d-none');
+    if (btn) btn.classList.add('disabled');
 
     try {
-        const res = await fetch(`${API_AUTH_BASE}/validar-llave-maestra`, {
+        const response = await fetch(`${API_AUTH_BASE}/forgot-password`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ llave: llave })
+            body: JSON.stringify({ email: email })
         });
 
-        if (res.ok) {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    title: 'Acceso Restablecido',
-                    text: 'La llave de seguridad es correcta. Su clave temporal de acceso es: admin123',
-                    icon: 'success',
-                    confirmButtonColor: '#2563eb'
-                }).then(() => {
-                    if (modalRecuperacionInstance) modalRecuperacionInstance.hide();
-                    const passInput = document.getElementById('password');
-                    if (passInput) passInput.value = 'admin123';
-                });
+        const data = await response.json();
+
+        if (response.ok) {
+            if (msgRecup) {
+                msgRecup.innerHTML = `<div class="alert alert-success py-2 mb-3"><i class="bi bi-check-circle me-1"></i>${data.message || 'Se ha enviado una nueva contraseña temporal a su correo.'}</div>`;
             }
+            setTimeout(() => {
+                if (modalRecuperacionInstance) modalRecuperacionInstance.hide();
+            }, 3000);
         } else {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire('Acceso Denegado', 'La llave de desbloqueo no es válida para este equipo.', 'error');
+            const errorMsg = data.message || 'No se pudo procesar la solicitud.';
+            if (msgRecup) {
+                msgRecup.innerHTML = `<div class="alert alert-danger py-2 mb-3"><i class="bi bi-exclamation-triangle me-1"></i>${errorMsg}</div>`;
             }
         }
     } catch (e) {
-        if (typeof Swal !== 'undefined') {
-            Swal.fire('Error de Red', 'No se pudo conectar con el servicio local.', 'error');
+        console.error("Error al enviar solicitud de recuperación:", e);
+        if (msgRecup) {
+            msgRecup.innerHTML = `<div class="alert alert-danger py-2 mb-3"><i class="bi bi-wifi-off me-1"></i>Error de conexión con el servidor.</div>`;
         }
     } finally {
-        if (btnValidar) btnValidar.disabled = false;
+        if (txtBtn) txtBtn.classList.remove('d-none');
+        if (loader) loader.classList.add('d-none');
+        if (btn) btn.classList.remove('disabled');
     }
 }

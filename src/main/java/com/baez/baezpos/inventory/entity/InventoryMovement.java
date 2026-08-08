@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -23,8 +24,12 @@ public class InventoryMovement extends TenantEntity {
     @Column(nullable = false)
     private MovementType movementType;
 
-    @Column(nullable = false)
-    private Integer quantity;
+    /**
+     * Cantidad en unidades decimales para soportar movimientos fraccionados.
+     * Ejemplo: entrada de 2.500 kg de queso → quantity = 2.500
+     */
+    @Column(nullable = false, precision = 12, scale = 3)
+    private BigDecimal quantity;
 
     private String reason;
 

@@ -1,15 +1,21 @@
 /**
- * BÁEZ POS - MÓDULO DE VENTAS Y CAJA (SaaS)
+ * ============================================================================
+ * BÁEZ POS - MÓDULO DE VENTAS Y CAJA (SaaS Multi-tenant)
  * Alexander Baez - 2026
+ * ============================================================================
  */
 
+// ==========================================
+// 1. ESTADO GLOBAL DE LA APLICACIÓN
+// ==========================================
 let sistemaBloqueado = false;
 let mensajeTicketServidor = "";
 
-// RECURSOS DE AUDIO
+// Recursos de Audio
 const sndSuccess = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
 const sndError = new Audio('https://assets.mixkit.co/active_storage/sfx/2573/2573-preview.mp3');
 
+// Estado Transaccional POS
 let PRODUCTOS_DB = [];
 let CARRITO = [];
 let METODO_PAGO = 'EFECTIVO';
@@ -20,142 +26,196 @@ let indiceSeleccionado = -1;
 let ULTIMA_VENTA_EXITOSA = null;
 let DATOS_EMPRESA = null;
 
-// ==========================================
-// INICIALIZACIÓN PRINCIPAL
-// ==========================================
-document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Carga segura de datos iniciales
-    await cargarInfoEmpresa();
-    await cargarProductos();
+// Handler para la referencia global del evento fuera del modal
+let handlerClickFueraPesables = null;
 
+
+// ==========================================
+// 2. HELPERS Y UTILIDADES NUMÉRICAS
+// ==========================================
+function utilRedondearTresDecimales(numero) {
+    return Math.round((numero + Number.EPSILON) * 1000) / 1000;
+}
+
+function utilParsearMontoTextual(texto) {
+    if (!texto) return 0;
+    const limpio = texto.replace('$', '').replace(/\./g, '').replace(',', '.').trim();
+    return parseFloat(limpio) || 0;
+}
+
+function utilFormatearMoneda(monto) {
+    return monto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+
+// ==========================================
+// 3. CICLO DE VIDA E INICIALIZACIÓN (DOM)
+// ==========================================
+document.addEventListener('DOMContentLoaded', async function inicializarModuloVentas() {
+    await serviceCargarInfoEmpresa();
+    await serviceCargarProductos();
+
+    inicializarBuscadorProductos();
+    inicializarBuscadorClientes();
+    inicializarListenersInterfaz();
+    inicializarAtajosTecladoGlobales();
+});
+
+
+// ==========================================
+// 4. CONFIGURACIÓN DE LISTENERS E INTERFAZ
+// ==========================================
+function inicializarBuscadorProductos() {
     const buscador = document.getElementById('buscadorVenta');
     const sugerenciasDiv = document.getElementById('listaSugerencias');
 
-    if (buscador) {
-        buscador.focus();
+    if (!buscador) return;
 
-        // Buscador Reactivo de Productos
-        buscador.addEventListener('input', (e) => {
-            if (sistemaBloqueado) return;
-            const term = e.target.value.toLowerCase().trim();
-            indiceSeleccionado = -1;
+    buscador.focus();
 
-            if (!sugerenciasDiv) return;
+    buscador.addEventListener('input', function handleInputBuscadorProductos(e) {
+        if (sistemaBloqueado) return;
+        const term = e.target.value.toLowerCase().trim();
+        indiceSeleccionado = -1;
 
-            if (term.length === 0) {
-                sugerenciasDiv.style.display = 'none';
-                sugerenciasDiv.innerHTML = '';
-                return;
+        if (!sugerenciasDiv) return;
+
+        if (term.length === 0) {
+            sugerenciasDiv.style.display = 'none';
+            sugerenciasDiv.innerHTML = '';
+            return;
+        }
+
+        const filtrados = PRODUCTOS_DB.filter(function filtrarProductos(p) {
+            return (p.name && p.name.toLowerCase().includes(term)) ||
+                   (p.barcode && p.barcode.includes(term));
+        }).slice(0, 8);
+
+        uiRenderizarSugerenciasProductos(filtrados);
+    });
+
+    buscador.addEventListener('keydown', function handleKeydownBuscadorProductos(e) {
+        if (sistemaBloqueado) return;
+        const items = sugerenciasDiv ? sugerenciasDiv.querySelectorAll('.list-group-item') : [];
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (items.length > 0) {
+                indiceSeleccionado = (indiceSeleccionado + 1) % items.length;
+                uiActualizarFocoSugerencia(items);
             }
-
-            const filtrados = PRODUCTOS_DB.filter(p =>
-                (p.name && p.name.toLowerCase().includes(term)) ||
-                (p.barcode && p.barcode.includes(term))
-            ).slice(0, 8);
-
-            renderizarSugerencias(filtrados);
-        });
-
-        // Navegación por teclado
-        buscador.addEventListener('keydown', (e) => {
-            if (sistemaBloqueado) return;
-            const items = sugerenciasDiv ? sugerenciasDiv.querySelectorAll('.list-group-item') : [];
-
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                if (items.length > 0) {
-                    indiceSeleccionado = (indiceSeleccionado + 1) % items.length;
-                    actualizarFocoSugerencia(items);
-                }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (items.length > 0) {
+                indiceSeleccionado = (indiceSeleccionado - 1 + items.length) % items.length;
+                uiActualizarFocoSugerencia(items);
             }
-            else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                if (items.length > 0) {
-                    indiceSeleccionado = (indiceSeleccionado - 1 + items.length) % items.length;
-                    actualizarFocoSugerencia(items);
-                }
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (indiceSeleccionado > -1 && items[indiceSeleccionado]) {
+                items[indiceSeleccionado].click();
+            } else {
+                const term = buscador.value.trim();
+                buscarYAgregar(term);
             }
-            else if (e.key === 'Enter') {
-                e.preventDefault();
-                if (indiceSeleccionado > -1 && items[indiceSeleccionado]) {
-                    items[indiceSeleccionado].click();
-                } else {
-                    const term = buscador.value.trim();
-                    buscarYAgregar(term);
-                }
-                if (sugerenciasDiv) sugerenciasDiv.style.display = 'none';
-            }
-        });
-    }
+            if (sugerenciasDiv) sugerenciasDiv.style.display = 'none';
+        }
+    });
+}
 
-    // --- BUSCADOR DE CLIENTES ---
+function inicializarBuscadorClientes() {
     const buscadorCli = document.getElementById('buscarClientePos');
-    if (buscadorCli) {
-        buscadorCli.addEventListener('input', async (e) => {
-            if (sistemaBloqueado) return;
-            const term = e.target.value.trim();
-            const sugCli = document.getElementById('sugerenciasClientes');
-            if (!sugCli) return;
-            if (term.length < 2) { sugCli.style.display = 'none'; return; }
+    if (!buscadorCli) return;
 
-            try {
-                // apiFetch gestiona la url y el token Bearer automáticamente
-                const res = await apiFetch('/customers');
-                if (!res || !res.ok) return;
+    buscadorCli.addEventListener('input', async function handleInputBuscadorClientes(e) {
+        if (sistemaBloqueado) return;
+        const term = e.target.value.trim();
+        const sugCli = document.getElementById('sugerenciasClientes');
+        if (!sugCli) return;
 
-                const todos = await res.json();
-                const filtrados = todos.filter(c =>
-                    c.name.toLowerCase().includes(term.toLowerCase())
-                ).slice(0, 5);
+        if (term.length < 2) {
+            sugCli.style.display = 'none';
+            return;
+        }
 
-                sugCli.innerHTML = filtrados.map(c => `
-                    <button type="button" class="list-group-item list-group-item-action small" onclick='seleccionarCliente(${JSON.stringify(c)})'>
-                        <div class="d-flex justify-content-between">
-                            <span>${c.name}</span>
-                            <span class="${(c.currentBalance || 0) >= (c.creditLimit || 0) ? 'text-danger' : 'text-success'} fw-bold">$${(c.currentBalance || 0).toFixed(2)}</span>
-                        </div>
-                    </button>
-                `).join('');
-                sugCli.style.display = filtrados.length > 0 ? 'block' : 'none';
-            } catch (err) { console.error("Error buscando clientes", err); }
-        });
-    }
+        try {
+            const res = await apiFetch('/customers');
+            if (!res || !res.ok) return;
 
-    // Listeners de Interfaz
+            const todos = await res.json();
+            const filtrados = todos.filter(function filtrarClientes(c) {
+                return c.name.toLowerCase().includes(term.toLowerCase());
+            }).slice(0, 5);
+
+            uiRenderizarSugerenciasClientes(filtrados, sugCli);
+        } catch (err) {
+            console.error("Error buscando clientes:", err);
+        }
+    });
+}
+
+function inicializarListenersInterfaz() {
     const inputPagaCon = document.getElementById('pagaCon');
     if (inputPagaCon) {
-        inputPagaCon.addEventListener('input', () => calcularVuelto());
+        inputPagaCon.addEventListener('input', function handleInputPagaCon() {
+            calcularVuelto();
+        });
     }
 
     const inputDesc = document.getElementById('inputDescuento');
     if (inputDesc) {
-        inputDesc.addEventListener('input', () => renderizarCarrito());
+        inputDesc.addEventListener('input', function handleInputDescuento() {
+            renderizarCarrito();
+        });
     }
 
     const tipoDesc = document.getElementById('tipoDescuento');
     if (tipoDesc) {
-        tipoDesc.addEventListener('change', () => renderizarCarrito());
+        tipoDesc.addEventListener('change', function handleChangeTipoDescuento() {
+            renderizarCarrito();
+        });
     }
+}
 
-    // Atajos Globales (F12, F4, F2, F8, Escape)
-    document.addEventListener('keydown', (e) => {
+function inicializarAtajosTecladoGlobales() {
+    document.addEventListener('keydown', function handleAtajosGlobales(e) {
         if (sistemaBloqueado) return;
-        if (e.key === 'F12') { e.preventDefault(); if (typeof finalizarVenta === 'function') finalizarVenta(); }
-        if (e.key === 'F4') { e.preventDefault(); const p = document.getElementById('pagaCon'); if(p) p.focus(); }
-        if (e.key === 'F2') { e.preventDefault(); cancelarVenta(); }
+
+        if (e.key === 'F12') {
+            e.preventDefault();
+            if (typeof finalizarVenta === 'function') finalizarVenta();
+        }
+        if (e.key === 'F4') {
+            e.preventDefault();
+            const p = document.getElementById('pagaCon');
+            if (p) p.focus();
+        }
+        if (e.key === 'F2') {
+            e.preventDefault();
+            cancelarVenta();
+        }
         if (e.key === 'Escape') {
             const buscador = document.getElementById('buscadorVenta');
-            if(buscador) buscador.focus();
-            if (sugerenciasDiv) sugerenciasDiv.style.display = 'none';
-            const sugCli = document.getElementById('sugerenciasClientes');
-            if(sugCli) sugCli.style.display = 'none';
-        }
-        if (e.key === 'F8') { e.preventDefault(); agregarProductoManual(); }
-    });
-});
+            if (buscador) buscador.focus();
 
-// --- GESTIÓN DE EMPRESA Y PRODUCTOS ---
-async function cargarInfoEmpresa() {
+            const sugerenciasDiv = document.getElementById('listaSugerencias');
+            if (sugerenciasDiv) sugerenciasDiv.style.display = 'none';
+
+            const sugCli = document.getElementById('sugerenciasClientes');
+            if (sugCli) sugCli.style.display = 'none';
+        }
+        if (e.key === 'F8') {
+            e.preventDefault();
+            if (typeof agregarProductoManual === 'function') agregarProductoManual();
+        }
+    });
+}
+
+
+// ==========================================
+// 5. SERVICIOS Y COMUNICACIÓN API
+// ==========================================
+async function serviceCargarInfoEmpresa() {
     try {
         const resp = await apiFetch('/admin/my-company/profile');
         if (resp && resp.ok) {
@@ -171,22 +231,22 @@ async function cargarInfoEmpresa() {
     }
 }
 
-// ==========================================
-// FUNCIÓN DE CARGA DE PRODUCTOS
-// ==========================================
-async function cargarProductos() {
+async function serviceCargarProductos() {
     try {
         const res = await apiFetch('/products');
         if (!res || !res.ok) return;
-
         PRODUCTOS_DB = await res.json();
     } catch (err) {
         console.error("Error de conexión al cargar productos:", err);
     }
 }
 
-function actualizarFocoSugerencia(items) {
-    items.forEach((item, index) => {
+
+// ==========================================
+// 6. RENDERIZADO Y CONTROLADORES DE INTERFAZ
+// ==========================================
+function uiActualizarFocoSugerencia(items) {
+    items.forEach(function iterarFocoItem(item, index) {
         if (index === indiceSeleccionado) {
             item.classList.add('active');
             item.scrollIntoView({ block: 'nearest' });
@@ -196,30 +256,95 @@ function actualizarFocoSugerencia(items) {
     });
 }
 
-// --- RENDERIZADO Y CÁLCULOS DE CARRITO ---
+function uiRenderizarSugerenciasClientes(filtrados, elementoContenedor) {
+    elementoContenedor.innerHTML = filtrados.map(function mapClienteItem(c) {
+        const balance = c.currentBalance || 0;
+        const limit = c.creditLimit || 0;
+        const colorClase = balance >= limit ? 'text-danger' : 'text-success';
+
+        return `
+            <button type="button" class="list-group-item list-group-item-action small" onclick='seleccionarCliente(${JSON.stringify(c)})'>
+                <div class="d-flex justify-content-between">
+                    <span>${c.name}</span>
+                    <span class="${colorClase} fw-bold">$${balance.toFixed(2)}</span>
+                </div>
+            </button>
+        `;
+    }).join('');
+
+    elementoContenedor.style.display = filtrados.length > 0 ? 'block' : 'none';
+}
+
+function uiRenderizarSugerenciasProductos(productos) {
+    const div = document.getElementById('listaSugerencias');
+    if (!div) return;
+
+    if (!productos || productos.length === 0) {
+        div.style.display = 'none';
+        return;
+    }
+
+    div.innerHTML = productos.map(function mapProductoItem(p) {
+        const badgeColor = p.stock > 5 ? 'bg-light text-dark' : 'bg-danger';
+        const categoriaHtml = p.categoryName ? ` | <i class="bi bi-tag small"></i> ${p.categoryName}` : '';
+
+        return `
+            <button type="button"
+                    class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 border-bottom shadow-sm"
+                    onclick='seleccionarProducto(${JSON.stringify(p)})'
+                    style="cursor: pointer;">
+                <div class="text-start">
+                    <div class="fw-bold text-primary mb-0">
+                        <i class="bi bi-box-seam me-2"></i>${p.name.toUpperCase()}
+                    </div>
+                    <small class="text-muted">
+                        Stock: <span class="badge ${badgeColor}">${p.stock}</span>
+                        | Cód: ${p.barcode || 'S/C'}
+                        ${categoriaHtml}
+                    </small>
+                </div>
+                <div class="text-end">
+                    <span class="h6 mb-0 fw-bold text-dark">$${(p.price || 0).toFixed(2)}</span>
+                </div>
+            </button>
+        `;
+    }).join('');
+
+    div.style.display = 'block';
+}
+
+
+// ==========================================
+// 7. LÓGICA DE NEGOCIO Y CARRITO
+// ==========================================
 function renderizarCarrito() {
     const body = document.getElementById('carritoBody');
     if (!body) return;
     body.innerHTML = '';
     SUBTOTAL_VENTA = 0;
 
-    CARRITO.forEach((item, index) => {
+    CARRITO.forEach(function procesarItemCarrito(item, index) {
         const subtotal = item.price * item.cantidad;
         SUBTOTAL_VENTA += subtotal;
 
-        const precioFmt = item.price.toLocaleString('es-AR', { minimumFractionDigits: 2 });
-        const subtotalFmt = subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 });
+        const precioFmt = utilFormatearMoneda(item.price);
+        const subtotalFmt = utilFormatearMoneda(subtotal);
+        const cantFmt = (typeof item.cantidad === 'number' && item.cantidad % 1 !== 0)
+            ? item.cantidad.toFixed(3)
+            : item.cantidad;
+
+        const pesableBadge = item.isFractional ? ' | <i class="bi bi-scale"></i> Pesable' : '';
 
         body.innerHTML += `
             <tr class="animate__animated animate__fadeIn">
                 <td>
                     <div class="fw-bold">${item.name}</div>
-                    <small class="text-muted text-uppercase" style="font-size: 0.7rem;">${item.barcode || 'S/C'}</small>
+                    <small class="text-muted text-uppercase" style="font-size: 0.7rem;">${item.barcode || 'S/C'}${pesableBadge}</small>
                 </td>
                 <td class="text-center">
                     <div class="btn-group btn-group-sm border rounded-pill overflow-hidden bg-white shadow-sm">
                         <button class="btn btn-light border-0 px-2" onclick="cambiarCant(${index}, -1)"><i class="bi bi-dash"></i></button>
-                        <span class="btn btn-white border-0 disabled fw-bold" style="min-width: 45px">${item.cantidad}</span>
+                        <span class="btn btn-white border-0 disabled fw-bold" style="min-width: 55px">${cantFmt}</span>
                         <button class="btn btn-light border-0 px-2" onclick="cambiarCant(${index}, 1)"><i class="bi bi-plus"></i></button>
                     </div>
                 </td>
@@ -247,24 +372,22 @@ function renderizarCarrito() {
 
     const totalConDescuento = SUBTOTAL_VENTA - DESCUENTO_FINAL_PESOS;
     const totalVentaEl = document.getElementById('totalVenta');
-    if(totalVentaEl) totalVentaEl.innerText = `$${totalConDescuento.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+    if (totalVentaEl) totalVentaEl.innerText = `$${utilFormatearMoneda(totalConDescuento)}`;
 
     calcularVuelto();
 
     const activeEl = document.activeElement ? document.activeElement.id : '';
     if (activeEl !== 'pagaCon' && activeEl !== 'inputDescuento' && activeEl !== 'buscarClientePos') {
         const buscador = document.getElementById('buscadorVenta');
-        if(buscador) buscador.focus();
+        if (buscador) buscador.focus();
     }
 }
 
 function calcularVuelto() {
     const totalVentaEl = document.getElementById('totalVenta');
     if (!totalVentaEl) return;
-    let totalText = totalVentaEl.innerText;
-    let totalLimpio = totalText.replace('$', '').replace(/\./g, '').replace(',', '.');
-    const total = parseFloat(totalLimpio) || 0;
 
+    const total = utilParsearMontoTextual(totalVentaEl.innerText);
     const pagaConInput = document.getElementById('pagaCon');
     const pagaCon = pagaConInput ? (parseFloat(pagaConInput.value) || 0) : 0;
     const vuelto = pagaCon - total;
@@ -276,7 +399,7 @@ function calcularVuelto() {
             txtVuelto.classList.remove('text-success');
             txtVuelto.classList.add('text-danger');
         } else {
-            txtVuelto.innerText = `$${vuelto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            txtVuelto.innerText = `$${utilFormatearMoneda(vuelto)}`;
             txtVuelto.classList.remove('text-danger');
             txtVuelto.classList.add('text-success');
         }
@@ -286,13 +409,27 @@ function calcularVuelto() {
 function cambiarCant(index, valor) {
     if (sistemaBloqueado) return;
     const item = CARRITO[index];
-    const original = PRODUCTOS_DB.find(p => p.id === item.id);
-    if (valor > 0 && original && item.cantidad >= original.stock) {
-        if(sndError) sndError.play().catch(()=>{});
-        Swal.fire({ icon: 'info', title: 'Límite alcanzado', text: 'No hay más unidades en stock', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+    const original = PRODUCTOS_DB.find(function buscarStockOriginal(p) { return p.id === item.id; });
+
+    const isDecimal = item.isFractional || (typeof item.cantidad === 'number' && item.cantidad % 1 !== 0);
+    const step = isDecimal ? 0.100 : 1;
+    const nuevaCant = utilRedondearTresDecimales(item.cantidad + valor * step);
+
+    if (valor > 0 && original && nuevaCant > original.stock) {
+        if (sndError) sndError.play().catch(function silencioso(){});
+        Swal.fire({
+            icon: 'info',
+            title: 'Límite alcanzado',
+            text: 'No hay más stock disponible',
+            toast: true,
+            position: 'top-end',
+            timer: 2000,
+            showConfirmButton: false
+        });
         return;
     }
-    item.cantidad += valor;
+
+    item.cantidad = nuevaCant;
     if (item.cantidad <= 0) CARRITO.splice(index, 1);
     renderizarCarrito();
 }
@@ -306,38 +443,41 @@ function eliminarItem(index) {
 function setMetodo(metodo, el) {
     if (sistemaBloqueado) return;
     METODO_PAGO = metodo;
-    document.querySelectorAll('.metodo-pago').forEach(d => d.classList.remove('active'));
-    if(el) el.classList.add('active');
+    document.querySelectorAll('.metodo-pago').forEach(function removerClaseActiva(d) { d.classList.remove('active'); });
+    if (el) el.classList.add('active');
 
     const divCli = document.getElementById('seccionClienteFiado');
     const divVue = document.getElementById('seccionVuelto');
 
     if (metodo === 'CUENTA_CORRIENTE') {
-        if(divCli) divCli.classList.remove('d-none');
-        if(divVue) divVue.classList.add('d-none');
-        setTimeout(() => {
+        if (divCli) divCli.classList.remove('d-none');
+        if (divVue) divVue.classList.add('d-none');
+        setTimeout(function enfocarClientePos() {
             const bCli = document.getElementById('buscarClientePos');
-            if(bCli) bCli.focus();
+            if (bCli) bCli.focus();
         }, 100);
     } else {
-        if(divCli) divCli.classList.add('d-none');
-        if(divVue) divVue.classList.remove('d-none');
+        if (divCli) divCli.classList.add('d-none');
+        if (divVue) divVue.classList.remove('d-none');
         clienteSeleccionado = null;
+
         const infoCli = document.getElementById('infoClienteSeleccionado');
         if (infoCli) infoCli.classList.add('d-none');
 
         const pagaConEl = document.getElementById('pagaCon');
         const totalVentaEl = document.getElementById('totalVenta');
+
         if (metodo === 'TRANSFERENCIA' && totalVentaEl && pagaConEl) {
             pagaConEl.value = totalVentaEl.innerText.replace('$', '').trim();
             calcularVuelto();
-        } else if(pagaConEl) {
+        } else if (pagaConEl) {
             pagaConEl.value = '';
             const vueltoEl = document.getElementById('vueltoVenta');
-            if(vueltoEl) vueltoEl.innerText = "$0.00";
+            if (vueltoEl) vueltoEl.innerText = "$0.00";
         }
+
         const buscadorVenta = document.getElementById('buscadorVenta');
-        if(buscadorVenta) buscadorVenta.focus();
+        if (buscadorVenta) buscadorVenta.focus();
     }
 }
 
@@ -345,7 +485,7 @@ function cancelarVenta() {
     if (sistemaBloqueado || CARRITO.length === 0) return;
     CARRITO = [];
     const pagaConEl = document.getElementById('pagaCon');
-    if(pagaConEl) pagaConEl.value = '';
+    if (pagaConEl) pagaConEl.value = '';
     const inputDesc = document.getElementById('inputDescuento');
     if (inputDesc) inputDesc.value = '';
     renderizarCarrito();
@@ -354,11 +494,16 @@ function cancelarVenta() {
 function seleccionarProducto(p) {
     if (sistemaBloqueado) return;
 
-    const itemEnCarrito = CARRITO.find(item => item.id === p.id);
+    if (p.isFractional) {
+        abrirModalCalculoFraccionado(p);
+        return;
+    }
+
+    const itemEnCarrito = CARRITO.find(function buscarEnCarrito(item) { return item.id === p.id; });
     const cantActual = itemEnCarrito ? itemEnCarrito.cantidad : 0;
 
     if (p.stock <= cantActual) {
-        if(sndError) sndError.play().catch(()=>{});
+        if (sndError) sndError.play().catch(function silencioso(){});
         Swal.fire({
             icon: 'warning',
             title: 'Sin Stock',
@@ -369,7 +514,7 @@ function seleccionarProducto(p) {
             showConfirmButton: false
         });
     } else {
-        if(sndSuccess) sndSuccess.play().catch(()=>{});
+        if (sndSuccess) sndSuccess.play().catch(function silencioso(){});
 
         if (itemEnCarrito) {
             itemEnCarrito.cantidad++;
@@ -379,7 +524,8 @@ function seleccionarProducto(p) {
                 name: p.name,
                 price: p.price,
                 barcode: p.barcode,
-                cantidad: 1
+                cantidad: 1,
+                isFractional: false
             });
         }
         renderizarCarrito();
@@ -390,7 +536,7 @@ function seleccionarProducto(p) {
     if (buscador) {
         buscador.value = '';
         if (sugerencias) sugerencias.style.display = 'none';
-        setTimeout(() => buscador.focus(), 50);
+        setTimeout(function enfocarBuscadorVenta() { buscador.focus(); }, 50);
     }
 }
 
@@ -420,160 +566,71 @@ function seleccionarCliente(c) {
     if (buscadorVenta) buscadorVenta.focus();
 }
 
-function renderizarSugerencias(productos) {
-    const div = document.getElementById('listaSugerencias');
-    if (!div) return;
 
-    if (!productos || productos.length === 0) {
-        div.style.display = 'none';
-        return;
-    }
-
-    div.innerHTML = productos.map(p => `
-        <button type="button"
-                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 border-bottom shadow-sm"
-                onclick='seleccionarProducto(${JSON.stringify(p)})'
-                style="cursor: pointer;">
-            <div class="text-start">
-                <div class="fw-bold text-primary mb-0">
-                    <i class="bi bi-box-seam me-2"></i>${p.name.toUpperCase()}
-                </div>
-                <small class="text-muted">
-                    Stock: <span class="badge ${p.stock > 5 ? 'bg-light text-dark' : 'bg-danger'}">${p.stock}</span>
-                    | Cód: ${p.barcode || 'S/C'}
-                    ${p.categoryName ? ' | <i class="bi bi-tag small"></i> ' + p.categoryName : ''}
-                </small>
-            </div>
-            <div class="text-end">
-                <span class="h6 mb-0 fw-bold text-dark">$${(p.price || 0).toFixed(2)}</span>
-            </div>
-        </button>
-    `).join('');
-
-    div.style.display = 'block';
-}
-
-// --- MOTOR DE BÚSQUEDA INTELIGENTE Y PISTOLA DE CÓDIGOS ---
-async function buscarYAgregar(query) {
-    if (!query) return;
-    const term = query.toLowerCase().trim();
-
-    if (typeof PRODUCTOS_DB === 'undefined' || !Array.isArray(PRODUCTOS_DB)) {
-        PRODUCTOS_DB = [];
-    }
-
-    const p = PRODUCTOS_DB.find(prod =>
-        (prod.barcode && prod.barcode.toLowerCase() === term) ||
-        (prod.name && prod.name.toLowerCase().includes(term))
-    );
-
-    if (p) {
-        seleccionarProducto(p);
-    } else {
-        if (/^\d{7,14}$/.test(term)) {
-            try {
-                // Consulta a la API pública externa de OpenFoodFacts
-                const response = await fetch(`https://world.openfoodfacts.org/api/v2/product/${term}.json?fields=product_name,product_name_es,brands,quantity`);
-                const data = await response.json();
-
-                if (data.status === 1 && data.product) {
-                    const nombreAPI = data.product.product_name_es || data.product.product_name || "";
-                    const marcaAPI = data.product.brands || "";
-                    const cantidadAPI = data.product.quantity || "";
-                    const nombreFinalParaEnviar = `${nombreAPI} ${marcaAPI} ${cantidadAPI}`.trim().toUpperCase();
-
-                    Swal.fire({
-                        icon: 'info',
-                        title: '¡Encontrado en la Red!',
-                        html: `<b>${nombreFinalParaEnviar}</b><br><br>¿Cargar al sistema?`,
-                        showCancelButton: true,
-                        confirmButtonText: 'Sí, ir a cargar'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            window.location.href = `productos.html?nuevoCodigo=${term}&nuevoNombre=${encodeURIComponent(nombreFinalParaEnviar)}`;
-                        }
-                    });
-                    return;
-                }
-            } catch (err) {
-                console.error("Error fetch API:", err);
-            }
-        }
-
-        Swal.fire({
-            icon: 'error',
-            title: 'No encontrado',
-            text: `El código o producto "${term}" no existe. ¿Cargar manual?`,
-            showCancelButton: true,
-            confirmButtonText: 'Cargar ahora'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                window.location.href = `productos.html?nuevoCodigo=${term}`;
-            }
-        });
-    }
-
-    const buscador = document.getElementById('buscadorVenta');
-    if (buscador) { buscador.value = ''; buscador.focus(); }
-}
-
-function agregarProductoManual() {
+// ==========================================
+// 8. MODALES Y VENTAS POR PESO / IMPORTE
+// ==========================================
+function venderPorPesoOImporte(productoBase = null) {
     if (sistemaBloqueado) return;
-    const productosSueltos = PRODUCTOS_DB.filter(p => parseFloat(p.price) === 0);
 
-    if (productosSueltos.length === 0) {
-        Swal.fire('Atención', 'No hay productos configurados con precio $0.', 'warning');
+    if (productoBase) {
+        abrirModalCalculoFraccionado(productoBase);
         return;
     }
 
-    let onClickFuera = null;
+    const pesables = PRODUCTOS_DB.filter(function filtrarPesables(p) {
+        return p.isFractional || parseFloat(p.price) > 0;
+    });
+
+    if (pesables.length === 0) {
+        Swal.fire('Atención', 'No hay productos en el catálogo para venta fraccionada.', 'warning');
+        return;
+    }
 
     Swal.fire({
-        title: '<i class="bi bi-box-seam me-2"></i>Venta de Sueltos',
+        title: '<i class="bi bi-scale me-2 text-primary"></i>Venta por Peso / Importe',
         html: `
-            <div class="position-relative text-start">
-                <label class="small text-muted mb-1">Buscar producto:</label>
-                <input id="manualNombreBusqueda" class="swal2-input m-0 w-100" placeholder="Ej: Pan, Queso..." autocomplete="off">
-                <div id="sugerenciasSueltos" class="list-group position-absolute w-100 shadow-lg d-none"
+            <div class="position-relative text-start mb-3">
+                <label class="small text-muted mb-1">Buscar producto pesable/granel:</label>
+                <input id="pesableNombreBusqueda" class="swal2-input m-0 w-100" placeholder="Ej: Queso, Pan, Harina..." autocomplete="off">
+                <div id="sugerenciasPesables" class="list-group position-absolute w-100 shadow-lg d-none"
                      style="z-index: 9999; max-height: 200px; overflow-y: auto;">
                 </div>
             </div>
-            <div class="text-start mt-3">
-                <label class="small text-muted mb-1">Monto total ($):</label>
-                <input id="manualPrecio" type="number" class="swal2-input m-0 w-100" placeholder="0.00" step="any" min="0">
-            </div>
         `,
         showCancelButton: true,
-        confirmButtonText: 'Agregar',
-        didOpen: () => {
-            const inputBusqueda = document.getElementById('manualNombreBusqueda');
-            const inputPrecio = document.getElementById('manualPrecio');
-            const contenedorSugerencias = document.getElementById('sugerenciasSueltos');
+        showConfirmButton: false,
+        cancelButtonText: 'Cancelar',
+        didOpen: function handleModalPesablesOpen() {
+            const inputBusqueda = document.getElementById('pesableNombreBusqueda');
+            const contenedorSugerencias = document.getElementById('sugerenciasPesables');
 
             if (inputBusqueda) inputBusqueda.focus();
 
             if (inputBusqueda && contenedorSugerencias) {
-                inputBusqueda.addEventListener('input', () => {
+                inputBusqueda.addEventListener('input', function handleInputPesables() {
                     const search = inputBusqueda.value.toUpperCase().trim();
                     contenedorSugerencias.innerHTML = '';
 
                     if (search.length > 0) {
-                        const filtrados = productosSueltos.filter(p => p.name.toUpperCase().includes(search));
+                        const filtrados = pesables.filter(function filtrarItemPesable(p) {
+                            return p.name.toUpperCase().includes(search) || (p.barcode && p.barcode.includes(search));
+                        });
+
                         if (filtrados.length > 0) {
                             contenedorSugerencias.classList.remove('d-none');
-                            filtrados.forEach(p => {
+                            filtrados.forEach(function renderizarItemPesable(p) {
                                 const btn = document.createElement('button');
                                 btn.type = 'button';
                                 btn.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2';
                                 btn.style.fontSize = '0.9rem';
                                 btn.innerHTML = `
-                                    <span><i class="bi bi-tag-fill me-2 text-primary"></i>${p.name.toUpperCase()}</span>
-                                    <span class="badge bg-light text-dark border">${p.categoryName || 'Suelto'}</span>
+                                    <span><i class="bi bi-tag-fill me-2 text-primary"></i>${p.name.toUpperCase()} ${p.isFractional ? '<span class="badge bg-info text-dark ms-1">⚖️ Kg</span>' : ''}</span>
+                                    <span class="badge bg-light text-dark border">$${(p.price || 0).toFixed(2)}/Kg</span>
                                 `;
-                                btn.onclick = () => {
-                                    inputBusqueda.value = p.name.toUpperCase();
-                                    contenedorSugerencias.classList.add('d-none');
-                                    if (inputPrecio) inputPrecio.focus();
+                                btn.onclick = function handleClickItemPesable() {
+                                    Swal.close();
+                                    abrirModalCalculoFraccionado(p);
                                 };
                                 contenedorSugerencias.appendChild(btn);
                             });
@@ -586,85 +643,315 @@ function agregarProductoManual() {
                 });
             }
 
-            onClickFuera = (e) => {
+            handlerClickFueraPesables = function handleClickFueraModalPesables(e) {
                 if (inputBusqueda && contenedorSugerencias && e.target !== inputBusqueda && !contenedorSugerencias.contains(e.target)) {
                     contenedorSugerencias.classList.add('d-none');
                 }
             };
-            document.addEventListener('click', onClickFuera);
+            document.addEventListener('click', handlerClickFueraPesables);
+        },
+        willClose: function handleModalPesablesClose() {
+            if (handlerClickFueraPesables) {
+                document.removeEventListener('click', handlerClickFueraPesables);
+                handlerClickFueraPesables = null;
+            }
+        }
+    });
+}
 
-            if (inputPrecio) {
-                inputPrecio.addEventListener('keydown', (e) => {
+function abrirModalCalculoFraccionado(p) {
+    const salePrice = p.price || 0;
+    if (salePrice <= 0) {
+        Swal.fire('Atención', 'El producto debe tener un precio de venta mayor a 0 para calcular fraccionado.', 'warning');
+        return;
+    }
+
+    let modoActual = 'PESO';
+
+    Swal.fire({
+        title: `<div class="d-flex align-items-center justify-content-center text-primary"><i class="bi bi-speedometer2 me-2"></i><span>Venta Fraccionada</span></div>`,
+        html: `
+            <div class="text-start mb-3 bg-light p-3 rounded-3 border">
+                <div class="fw-bold fs-5 text-dark mb-1">${p.name.toUpperCase()}</div>
+                <div class="d-flex justify-content-between small text-muted">
+                    <span>Precio x Kg/Unid: <strong class="text-success fs-6">$${utilFormatearMoneda(salePrice)}</strong></span>
+                    <span>Stock actual: <strong class="${p.stock > 0 ? 'text-primary' : 'text-danger'}">${p.stock} Kg</strong></span>
+                </div>
+            </div>
+
+            <!-- Botones de Modo -->
+            <div class="btn-group w-100 mb-3" role="group">
+                <button type="button" id="btnModoPeso" class="btn btn-primary fw-bold" onclick="switchModoFraccionado('PESO')">
+                    ⚖️ Por Peso / Cantidad
+                </button>
+                <button type="button" id="btnModoImporte" class="btn btn-outline-primary fw-bold" onclick="switchModoFraccionado('IMPORTE')">
+                    💵 Por Importe $
+                </button>
+            </div>
+
+            <!-- Input Modo PESO (Escenario A) -->
+            <div id="seccionModoPeso" class="text-start">
+                <label class="form-label small fw-bold text-muted mb-1">Ingresar Peso / Cantidad (Kg):</label>
+                <div class="input-group input-group-lg mb-2">
+                    <input id="inputPesoCantidad" type="number" step="0.001" min="0.001" class="form-control fw-bold text-primary" placeholder="Ej: 0.250">
+                    <span class="input-group-text fw-bold">Kg</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center bg-primary bg-opacity-10 p-2 rounded border border-primary border-opacity-25">
+                    <span class="small fw-bold text-primary">TOTAL A COBRAR:</span>
+                    <span id="displayTotalPeso" class="fs-4 fw-bold text-primary">$0.00</span>
+                </div>
+            </div>
+
+            <!-- Input Modo IMPORTE (Escenario B) -->
+            <div id="seccionModoImporte" class="text-start d-none">
+                <label class="form-label small fw-bold text-muted mb-1">Ingresar Importe Monetario ($):</label>
+                <div class="input-group input-group-lg mb-2">
+                    <span class="input-group-text fw-bold">$</span>
+                    <input id="inputImporteMoneda" type="number" step="1" min="1" class="form-control fw-bold text-success" placeholder="Ej: 2500">
+                </div>
+                <div class="d-flex justify-content-between align-items-center bg-success bg-opacity-10 p-2 rounded border border-success border-opacity-25">
+                    <span class="small fw-bold text-success">PESO EQUIVALENTE:</span>
+                    <span id="displayKilosImporte" class="fs-4 fw-bold text-success">0.000 Kg</span>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '<i class="bi bi-cart-plus me-1"></i> Agregar al Carrito',
+        cancelButtonText: 'Cancelar',
+        didOpen: function handleModalFraccionadoOpen() {
+            const inputPeso = document.getElementById('inputPesoCantidad');
+            const inputImporte = document.getElementById('inputImporteMoneda');
+            const displayTotal = document.getElementById('displayTotalPeso');
+            const displayKilos = document.getElementById('displayKilosImporte');
+
+            if (inputPeso) {
+                inputPeso.focus();
+                inputPeso.addEventListener('input', function handleInputModoPeso() {
+                    const cantKg = parseFloat(inputPeso.value) || 0;
+                    const totalCalculado = cantKg * salePrice;
+                    if (displayTotal) {
+                        displayTotal.innerText = `$${utilFormatearMoneda(totalCalculado)}`;
+                    }
+                });
+                inputPeso.addEventListener('keydown', function handleKeydownPeso(e) {
                     if (e.key === 'Enter') Swal.clickConfirm();
                 });
             }
-        },
-        willClose: () => {
-            if (onClickFuera) document.removeEventListener('click', onClickFuera);
-        },
-        preConfirm: () => {
-            const nombreInput = document.getElementById('manualNombreBusqueda');
-            const precioInput = document.getElementById('manualPrecio');
 
-            const nombre = nombreInput ? nombreInput.value.toUpperCase().trim() : '';
-            const precio = precioInput ? parseFloat(precioInput.value) : 0;
-            const pEncontrado = productosSueltos.find(p => p.name.toUpperCase() === nombre);
+            if (inputImporte) {
+                inputImporte.addEventListener('input', function handleInputModoImporte() {
+                    const monto = parseFloat(inputImporte.value) || 0;
+                    const kilosEq = salePrice > 0 ? (monto / salePrice) : 0;
+                    if (displayKilos) {
+                        displayKilos.innerText = `${kilosEq.toFixed(3)} Kg`;
+                    }
+                });
+                inputImporte.addEventListener('keydown', function handleKeydownImporte(e) {
+                    if (e.key === 'Enter') Swal.clickConfirm();
+                });
+            }
 
-            if (!nombre) return Swal.showValidationMessage('Escribí o seleccioná un producto');
-            if (isNaN(precio) || precio <= 0) return Swal.showValidationMessage('Ingresá un monto válido mayor a 0');
+            window.switchModoFraccionado = function switchModoFraccionado(modo) {
+                modoActual = modo;
+                const btnPeso = document.getElementById('btnModoPeso');
+                const btnImporte = document.getElementById('btnModoImporte');
+                const secPeso = document.getElementById('seccionModoPeso');
+                const secImporte = document.getElementById('seccionModoImporte');
 
-            const comodin = PRODUCTOS_DB.find(p => p.barcode === 'MANUAL');
-
-            return {
-                id: pEncontrado ? pEncontrado.id : (comodin ? comodin.id : 'manual_' + Date.now()),
-                name: nombre,
-                price: precio
+                if (modo === 'PESO') {
+                    if (btnPeso) btnPeso.className = 'btn btn-primary fw-bold';
+                    if (btnImporte) btnImporte.className = 'btn btn-outline-primary fw-bold';
+                    if (secPeso) secPeso.classList.remove('d-none');
+                    if (secImporte) secImporte.classList.add('d-none');
+                    if (inputPeso) { inputPeso.focus(); inputPeso.select(); }
+                } else {
+                    if (btnImporte) btnImporte.className = 'btn btn-success fw-bold';
+                    if (btnPeso) btnPeso.className = 'btn btn-outline-primary fw-bold';
+                    if (secImporte) secImporte.classList.remove('d-none');
+                    if (secPeso) secPeso.classList.add('d-none');
+                    if (inputImporte) { inputImporte.focus(); inputImporte.select(); }
+                }
             };
+        },
+        preConfirm: function handlePreConfirmFraccionado() {
+            let cantidadFinal = 0;
+
+            if (modoActual === 'PESO') {
+                const inputPeso = document.getElementById('inputPesoCantidad');
+                cantidadFinal = parseFloat(inputPeso?.value) || 0;
+                if (cantidadFinal <= 0) {
+                    Swal.showValidationMessage('Ingresa un peso/cantidad válido mayor a 0');
+                    return false;
+                }
+            } else {
+                const inputImporte = document.getElementById('inputImporteMoneda');
+                const monto = parseFloat(inputImporte?.value) || 0;
+                if (monto <= 0) {
+                    Swal.showValidationMessage('Ingresa un importe en dinero mayor a 0');
+                    return false;
+                }
+                cantidadFinal = salePrice > 0 ? (monto / salePrice) : 0;
+            }
+
+            cantidadFinal = utilRedondearTresDecimales(cantidadFinal);
+
+            if (cantidadFinal <= 0) {
+                Swal.showValidationMessage('La cantidad calculada no es válida.');
+                return false;
+            }
+
+            return cantidadFinal;
         }
-    }).then((result) => {
+    }).then(function handleResultadoFraccionado(result) {
         if (result.isConfirmed && result.value) {
-            CARRITO.push({
-                id: result.value.id,
-                name: result.value.name,
-                price: result.value.price,
-                barcode: 'SUELTO',
-                cantidad: 1
-            });
+            const qty = result.value;
+
+            const itemEnCarrito = CARRITO.find(function buscarEnCarrito(item) { return item.id === p.id; });
+            const cantActualEnCarrito = itemEnCarrito ? itemEnCarrito.cantidad : 0;
+            const cantTotalPedida = cantActualEnCarrito + qty;
+
+            if (p.stock < cantTotalPedida) {
+                if (sndError) sndError.play().catch(function silencioso(){});
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Stock Insuficiente',
+                    text: `El stock actual es ${p.stock} Kg. Ya tenías ${cantActualEnCarrito} Kg en el carrito.`
+                });
+                return;
+            }
+
+            if (itemEnCarrito) {
+                itemEnCarrito.cantidad = utilRedondearTresDecimales(itemEnCarrito.cantidad + qty);
+            } else {
+                CARRITO.push({
+                    id: p.id,
+                    name: p.name,
+                    price: p.price,
+                    barcode: p.barcode,
+                    cantidad: qty,
+                    isFractional: true
+                });
+            }
+
+            if (sndSuccess) sndSuccess.play().catch(function silencioso(){});
             renderizarCarrito();
-            if (sndSuccess) sndSuccess.play().catch(() => {});
+
+            const buscador = document.getElementById('buscadorVenta');
+            if (buscador) {
+                buscador.value = '';
+                buscador.focus();
+            }
+        }
+    });
+}
+
+/**
+ * ============================================================================
+ * BÁEZ POS - MÓDULO DE VENTAS Y CAJA (Parte 2: Búsqueda, Cobro e Impresión)
+ * Alexander Baez - 2026
+ * ============================================================================
+ */
+
+// ==========================================
+// 9. MOTOR DE BÚSQUEDA Y LECTORA DE CÓDIGOS
+// ==========================================
+async function buscarYAgregar(query) {
+    if (!query) return;
+    const term = query.toLowerCase().trim();
+
+    if (typeof PRODUCTOS_DB === 'undefined' || !Array.isArray(PRODUCTOS_DB)) {
+        PRODUCTOS_DB = [];
+    }
+
+    const productoLocal = PRODUCTOS_DB.find(function buscarProductoLocal(prod) {
+        return (prod.barcode && prod.barcode.toLowerCase() === term) ||
+               (prod.name && prod.name.toLowerCase().includes(term));
+    });
+
+    if (productoLocal) {
+        seleccionarProducto(productoLocal);
+    } else {
+        if (/^\d{7,14}$/.test(term)) {
+            await serviceConsultarOpenFoodFacts(term);
+        } else {
+            uiMostrarNotificacionProductoNoEncontrado(term);
+        }
+    }
+
+    const buscador = document.getElementById('buscadorVenta');
+    if (buscador) {
+        buscador.value = '';
+        buscador.focus();
+    }
+}
+
+async function serviceConsultarOpenFoodFacts(codigoBarras) {
+    try {
+        const response = await fetch(`https://world.openfoodfacts.org/api/v2/product/${codigoBarras}.json?fields=product_name,product_name_es,brands,quantity`);
+        const data = await response.json();
+
+        if (data.status === 1 && data.product) {
+            const nombreAPI = data.product.product_name_es || data.product.product_name || "";
+            const marcaAPI = data.product.brands || "";
+            const cantidadAPI = data.product.quantity || "";
+            const nombreFinalParaEnviar = `${nombreAPI} ${marcaAPI} ${cantidadAPI}`.trim().toUpperCase();
+
+            Swal.fire({
+                icon: 'info',
+                title: '¡Encontrado en la Red!',
+                html: `<b>${nombreFinalParaEnviar}</b><br><br>¿Cargar al sistema?`,
+                showCancelButton: true,
+                confirmButtonText: 'Sí, ir a cargar'
+            }).then(function handleConfirmarCargaExterna(result) {
+                if (result.isConfirmed) {
+                    window.location.href = `productos.html?nuevoCodigo=${codigoBarras}&nuevoNombre=${encodeURIComponent(nombreFinalParaEnviar)}`;
+                }
+            });
+            return;
+        }
+    } catch (err) {
+        console.error("Error al consultar API externa OpenFoodFacts:", err);
+    }
+
+    uiMostrarNotificacionProductoNoEncontrado(codigoBarras);
+}
+
+function uiMostrarNotificacionProductoNoEncontrado(termino) {
+    Swal.fire({
+        icon: 'error',
+        title: 'No encontrado',
+        text: `El código o producto "${termino}" no existe. ¿Cargar manual?`,
+        showCancelButton: true,
+        confirmButtonText: 'Cargar ahora'
+    }).then(function handleConfirmarRedireccionManual(result) {
+        if (result.isConfirmed) {
+            window.location.href = `productos.html?nuevoCodigo=${termino}`;
         }
     });
 }
 
 // ==========================================
-// FINALIZACIÓN Y COBRO DE VENTAS
-// ==========================================
-// ==========================================
-// FINALIZACIÓN Y COBRO DE VENTAS
+// 10. FINALIZACIÓN Y COBRO DE VENTAS
 // ==========================================
 async function finalizarVenta() {
-    // 1. Integración con el Centinela de Licenciamiento (auth.js)
     const overlayBloqueo = document.getElementById('bloqueo-pos-overlay');
     if (overlayBloqueo || (typeof sistemaBloqueado !== 'undefined' && sistemaBloqueado)) {
         if (typeof mostrarCartelBloqueo === 'function') mostrarCartelBloqueo();
         return;
     }
 
-    // 2. Validación de Carrito
     if (!CARRITO || CARRITO.length === 0) {
         Swal.fire('Carrito vacío', 'Agrega productos para cobrar', 'info');
         return;
     }
 
-    // 3. Sanitización y Parseo de Montos
     const totalVentaEl = document.getElementById('totalVenta');
     const totalRaw = totalVentaEl ? totalVentaEl.innerText : '0';
-    const totalLimpio = totalRaw.replace('$', '').replace(/\./g, '').replace(',', '.').trim();
-    let total = parseFloat(totalLimpio) || 0;
+    let total = utilParsearMontoTextual(totalRaw);
 
     const pagaConInputEl = document.getElementById('pagaCon');
     const pagaConInput = pagaConInputEl ? pagaConInputEl.value : '0';
-    const pagaCon = parseFloat(pagaConInput.replace(/\./g, '').replace(',', '.')) || 0;
+    const pagaCon = utilParsearMontoTextual(pagaConInput);
 
     if (METODO_PAGO === 'EFECTIVO' && pagaCon < total) {
         Swal.fire('Atención', 'El monto recibido es insuficiente', 'warning');
@@ -674,7 +961,6 @@ async function finalizarVenta() {
     let porcentajeRecargo = 0;
     let montoRecargo = 0;
 
-    // 4. Reglas de Negocio para Libreta / Cuenta Corriente
     if (METODO_PAGO === 'CUENTA_CORRIENTE') {
         if (!clienteSeleccionado) {
             Swal.fire('Atención', 'Debes seleccionar un cliente para vender a la libreta', 'warning');
@@ -683,14 +969,14 @@ async function finalizarVenta() {
 
         const { value: recargoIngresado, isConfirmed } = await Swal.fire({
             title: '📈 Recargo por Libreta',
-            html: `Monto base: <b>$${total.toLocaleString('es-AR', {minimumFractionDigits: 2})}</b><br><br>Ingresa el % de recargo:`,
+            html: `Monto base: <b>$${utilFormatearMoneda(total)}</b><br><br>Ingresa el % de recargo:`,
             input: 'number',
             inputValue: 0,
             inputAttributes: { min: 0, max: 200, step: 'any' },
             showCancelButton: true,
             confirmButtonText: 'Confirmar y Cobrar',
             cancelButtonText: 'Cancelar',
-            preConfirm: (value) => {
+            preConfirm: function handleValidarRecargo(value) {
                 const val = parseFloat(value);
                 if (isNaN(val) || val < 0) {
                     Swal.showValidationMessage('El porcentaje no puede ser negativo');
@@ -712,26 +998,26 @@ async function finalizarVenta() {
             Swal.fire({
                 icon: 'error',
                 title: 'Límite de Crédito Excedido',
-                text: `El cliente no puede deber más de $${clienteSeleccionado.creditLimit}. Con recargo el total queda en $${total.toFixed(2)}`
+                text: `El cliente no puede deber más de $${utilFormatearMoneda(clienteSeleccionado.creditLimit)}. Con recargo el total queda en $${utilFormatearMoneda(total)}`
             });
             return;
         }
     }
 
-    // 5. Configuración de Entorno Fiscal (Normalizado con auth.js)
     const configLocal = JSON.parse(localStorage.getItem('config_comercio') || '{}');
     const datosEmpresaContext = (typeof DATOS_EMPRESA !== 'undefined' && DATOS_EMPRESA) ? DATOS_EMPRESA : configLocal;
     const esFiscalActivo = String(datosEmpresaContext.hasTaxData) === "true";
 
-    // 6. Construcción del Payload DTO
     const saleRequestDTO = {
-        items: CARRITO.map(item => ({
-            productId: typeof item.id === 'number' ? item.id : null,
-            productName: item.name,
-            quantity: item.cantidad,
-            price: item.price,
-            unitPrice: item.price
-        })),
+        items: CARRITO.map(function mapItemParaDTO(item) {
+            return {
+                productId: typeof item.id === 'number' ? item.id : null,
+                productName: item.name,
+                quantity: item.cantidad,
+                price: item.price,
+                unitPrice: item.price
+            };
+        }),
         total: total,
         discount: typeof DESCUENTO_FINAL_PESOS !== 'undefined' ? DESCUENTO_FINAL_PESOS : 0,
         surcharge: montoRecargo,
@@ -746,13 +1032,11 @@ async function finalizarVenta() {
     if (btnFinalizar) btnFinalizar.disabled = true;
 
     try {
-        // 7. Petición HTTP usando apiFetch de auth.js
         const res = await apiFetch('/sales', {
             method: 'POST',
             body: JSON.stringify(saleRequestDTO)
         });
 
-        // Si auth.js detectó 401/403, redirigirá la página. Detenemos la ejecución aquí.
         if (res.status === 401 || res.status === 403) return;
 
         let data = {};
@@ -763,13 +1047,13 @@ async function finalizarVenta() {
 
         if (res.ok) {
             ULTIMA_VENTA_EXITOSA = data;
-            if (window.sndSuccess) window.sndSuccess.play().catch(()=>{});
+            if (window.sndSuccess) window.sndSuccess.play().catch(function silencioso(){});
 
             Swal.fire({
                 icon: 'success',
                 title: '¡Venta Realizada!',
                 text: METODO_PAGO === 'CUENTA_CORRIENTE'
-                    ? `Cargado $${total.toLocaleString('es-AR', {minimumFractionDigits: 2})} a la cuenta de ${clienteSeleccionado.name} (Op #${data.id || 'OK'})`
+                    ? `Cargado $${utilFormatearMoneda(total)} a la cuenta de ${clienteSeleccionado.name} (Op #${data.id || 'OK'})`
                     : `Operación #${data.id || 'Exitosa'}`,
                 showCancelButton: true,
                 confirmButtonText: '<i class="bi bi-printer"></i> Imprimir Ticket',
@@ -777,13 +1061,12 @@ async function finalizarVenta() {
                 confirmButtonColor: '#28a745',
                 cancelButtonColor: '#6c757d',
                 reverseButtons: true
-            }).then((result) => {
+            }).then(function handleRespuestaTicketModal(result) {
                 if (result.isConfirmed && typeof imprimirTicket === 'function') {
                     imprimirTicket(data);
                 }
             });
 
-            // Limpieza de interfaz
             CARRITO = [];
             clienteSeleccionado = null;
             const infoCli = document.getElementById('infoClienteSeleccionado');
@@ -801,7 +1084,7 @@ async function finalizarVenta() {
         }
     } catch (err) {
         console.error("Error en finalizarVenta:", err);
-        if (window.sndError) window.sndError.play().catch(()=>{});
+        if (window.sndError) window.sndError.play().catch(function silencioso(){});
         Swal.fire('Error', err.message || 'No se pudo conectar con el servidor.', 'error');
     } finally {
         if (btnFinalizar) btnFinalizar.disabled = false;
@@ -810,19 +1093,44 @@ async function finalizarVenta() {
     }
 }
 
-// ==========================================
-// IMPRESIÓN DE TICKETS Y TIKETERA
-// ==========================================
-function imprimirTicket(venta) {
-    if (!venta) return;
 
-    const ventana = window.open('', 'PRINT', 'height=700,width=400');
-    if (!ventana) {
-        Swal.fire({ icon: 'warning', title: 'Popup bloqueado', text: 'Permití las ventanas emergentes en tu navegador.' });
-        return;
+// ==========================================
+// 11. IMPRESIÓN DE TICKETS Y TICKETERA
+// ==========================================
+function fmtCantidadTicket(item) {
+    const qty = parseFloat(item.quantity || item.cantidad || 1);
+    const nombreProd = (item.productName || item.nombre || '').toUpperCase();
+
+    const palabrasPesables = ['PAN', 'QUESO', 'CARNE', 'POLLO', 'ASADO', 'FIAMBRE', 'PALETA', 'JAMON', 'MILANESA', 'FRUTA', 'VERDURA', 'VERDURAS', 'FRUTAS', 'KG', 'KILO'];
+    const coincideNombre = palabrasPesables.some(function verificarPalabraPesable(p) {
+        return nombreProd.includes(p);
+    });
+
+    const esFraccionado = Boolean(
+        item.isFractional ||
+        item.unitOfMeasure === 'KG' ||
+        item.unitOfMeasure === 'GRAM' ||
+        item.unitType === 'KG' ||
+        coincideNombre ||
+        (qty % 1 !== 0)
+    );
+
+    if (esFraccionado) {
+        if (qty < 1 && qty > 0) {
+            const gramos = Math.round(qty * 1000);
+            return `${gramos} gr `;
+        }
+        const qtyFormatted = qty.toLocaleString('es-AR', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 3
+        });
+        return `${qtyFormatted} Kg `;
     }
 
-    // Garantizar aislamiento multi-tenant usando los datos retornados por el backend en la venta
+    return `${qty} `;
+}
+
+function generarPlantillaHTMLTicket(venta) {
     const infoEmpresa = (typeof DATOS_EMPRESA !== 'undefined' && DATOS_EMPRESA !== null) ? DATOS_EMPRESA : {};
     const fiscalActivo = String(venta.isFiscal !== undefined ? venta.isFiscal : infoEmpresa.hasTaxData) === "true";
 
@@ -855,8 +1163,8 @@ function imprimirTicket(venta) {
     const fechaVenta = venta.saleDate ? new Date(venta.saleDate).toLocaleString('es-AR') : new Date().toLocaleString('es-AR');
     const metodoPago = (venta.paymentMethod || 'EFECTIVO').replace(/_/g, ' ').toUpperCase();
 
-    const nombreCliente = (venta.clienteNombre || (clienteSeleccionado ? clienteSeleccionado.name : 'CONSUMIDOR FINAL')).toUpperCase();
-    const cuitCliente = venta.clienteCuit || (clienteSeleccionado ? clienteSeleccionado.cuit : '') || '';
+    const nombreCliente = (venta.clienteNombre || (typeof clienteSeleccionado !== 'undefined' && clienteSeleccionado ? clienteSeleccionado.name : 'CONSUMIDOR FINAL')).toUpperCase();
+    const cuitCliente = venta.clienteCuit || (typeof clienteSeleccionado !== 'undefined' && clienteSeleccionado ? clienteSeleccionado.cuit : '') || '';
 
     const recargoMonto = parseFloat(venta.surcharge) || 0;
     const recargoPorcentaje = parseFloat(venta.surchargeRate) || 0;
@@ -891,7 +1199,22 @@ function imprimirTicket(venta) {
         }
     }
 
-    ventana.document.write(`
+    const itemsHTML = venta.items ? venta.items.map(function mapItemTicketHTML(item) {
+        const subtotalItem = item.subtotal !== undefined
+            ? item.subtotal
+            : ((item.price || item.unitPrice || item.precio || 0) * (item.quantity || item.cantidad || 1));
+        const prefijoCantidad = fmtCantidadTicket(item);
+
+        return `
+            <div class="item-row">
+                <span class="item-qty-name">${prefijoCantidad}${(item.productName || item.nombre || '').toUpperCase()}</span>
+                <span class="item-price">$${utilFormatearMoneda(parseFloat(subtotalItem))}</span>
+            </div>
+        `;
+    }).join('') : '';
+
+    return {
+        html: `
         <!DOCTYPE html>
         <html>
             <head>
@@ -899,28 +1222,29 @@ function imprimirTicket(venta) {
                 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
                 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
                 <style>
-                    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+                    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
                     @page { margin: 0; }
-                    body { font-family: 'Inter', sans-serif; width: 58mm; padding: 10px; margin: 0; color: #1e293b; background: #fff; line-height: 1.2; }
+                    body { font-family: 'Inter', sans-serif; width: 58mm; padding: 8px; margin: 0; color: #0f172a; background: #fff; line-height: 1.25; }
                     .center { text-align: center; }
-                    .ticket-header { border-bottom: 1px dashed #cbd5e1; padding-bottom: 8px; margin-bottom: 8px; }
-                    .business-name { font-weight: 900; font-size: 15px; margin: 3px 0; text-transform: uppercase; color: #0f172a; }
-                    .small-info { font-size: 10px; color: #475569; margin: 2px 0; }
-                    .fiscal-header { font-size: 9px; color: #334155; text-align: left; background: #f8fafc; padding: 4px; border-radius: 4px; margin-top: 5px; }
-                    .item-row { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 4px; }
-                    .item-name { font-weight: 700; text-transform: uppercase; flex: 1; padding-right: 5px; }
-                    .line { border-top: 1px dashed #cbd5e1; margin: 8px 0; }
-                    .total-container { border-top: 2px solid #0f172a; margin-top: 8px; padding-top: 8px; display: flex; justify-content: space-between; align-items: center; }
-                    .total-label { font-weight: 900; font-size: 16px; color: #0f172a; }
-                    .total-amount { font-weight: 900; font-size: 16px; color: #2563eb; }
-                    .arca-container { border-top: 1px solid #0f172a; margin-top: 12px; padding-top: 10px; text-align: center; }
-                    .arca-logo { font-weight: 900; font-size: 12px; letter-spacing: 2px; color: #0f172a; margin-bottom: 5px; }
-                    .qr-box { display: flex; justify-content: center; margin: 8px 0; }
-                    .cae-info { font-size: 9px; font-weight: 700; text-align: left; color: #0f172a; margin-top: 4px; }
-                    .ticket-footer { text-align: center; margin-top: 10px; border-top: 1px dashed #cbd5e1; padding-top: 10px; }
-                    .msg-pie { font-style: italic; font-size: 11px; color: #475569; margin-bottom: 8px; display: block; }
-                    .payment-method { font-weight: 800; font-size: 10px; color: #0f172a; border: 1px solid #e2e8f0; padding: 3px; display: inline-block; border-radius: 4px; margin-bottom: 8px; }
-                    .powered { font-size: 7px; font-weight: 700; opacity: 0.4; margin-top: 8px; letter-spacing: 1px; }
+                    .ticket-header { border-bottom: 1px dashed #94a3b8; padding-bottom: 8px; margin-bottom: 8px; }
+                    .business-name { font-weight: 900; font-size: 14px; margin: 2px 0; text-transform: uppercase; letter-spacing: -0.2px; }
+                    .small-info { font-size: 9.5px; color: #334155; margin: 1.5px 0; }
+                    .fiscal-header { font-size: 8.5px; color: #334155; text-align: left; background: #f1f5f9; padding: 4px 6px; border-radius: 4px; margin-top: 5px; }
+                    .item-row { display: flex; justify-content: space-between; align-items: flex-start; font-size: 10px; margin-bottom: 5px; word-break: break-word; }
+                    .item-qty-name { font-weight: 700; text-transform: uppercase; flex: 1; padding-right: 6px; }
+                    .item-price { font-weight: 700; white-space: nowrap; }
+                    .line { border-top: 1px dashed #94a3b8; margin: 8px 0; }
+                    .total-container { border-top: 2px solid #0f172a; margin-top: 8px; padding-top: 6px; display: flex; justify-content: space-between; align-items: center; }
+                    .total-label { font-weight: 900; font-size: 15px; }
+                    .total-amount { font-weight: 900; font-size: 15px; color: #0f172a; }
+                    .arca-container { border-top: 1px solid #0f172a; margin-top: 10px; padding-top: 8px; text-align: center; }
+                    .arca-logo { font-weight: 900; font-size: 11px; letter-spacing: 2px; }
+                    .qr-box { display: flex; justify-content: center; margin: 6px 0; }
+                    .cae-info { font-size: 8.5px; font-weight: 700; text-align: left; }
+                    .ticket-footer { text-align: center; margin-top: 10px; border-top: 1px dashed #94a3b8; padding-top: 8px; }
+                    .msg-pie { font-style: italic; font-size: 10px; color: #475569; margin-bottom: 6px; display: block; }
+                    .payment-method { font-weight: 800; font-size: 9.5px; border: 1px solid #cbd5e1; padding: 3px 6px; display: inline-block; border-radius: 4px; margin-bottom: 6px; }
+                    .powered { font-size: 7px; font-weight: 700; opacity: 0.5; margin-top: 6px; letter-spacing: 0.5px; }
                 </style>
             </head>
             <body>
@@ -928,7 +1252,7 @@ function imprimirTicket(venta) {
                     <div class="business-name">${nombreLocal}</div>
                     ${direccionLocal ? `<div class="small-info">${direccionLocal}</div>` : ''}
                     ${telefonoLocal ? `<div class="small-info">Tel: ${telefonoLocal}</div>` : ''}
-                    ${emailLocal ? `<div class="small-info">Email: ${emailLocal}</div>` : ''}
+                    ${emailLocal ? `<div class="small-info">${emailLocal}</div>` : ''}
                     ${fiscalActivo ? `
                         <div class="fiscal-header">
                             ${cuitLocal ? `<div><strong>CUIT:</strong> ${cuitLocal}</div>` : ''}
@@ -943,36 +1267,28 @@ function imprimirTicket(venta) {
                     <div class="small-info" style="text-align: left; margin-top: 4px;"><strong>A:</strong> ${nombreCliente} ${cuitCliente ? `(CUIT: ${cuitCliente})` : ''}</div>
                 </div>
                 <div class="ticket-body">
-                    ${venta.items ? venta.items.map(item => {
-                        const subtotalItem = item.subtotal !== undefined ? item.subtotal : ((item.price || item.unitPrice || item.precio || 0) * (item.quantity || 1));
-                        return `
-                            <div class="item-row">
-                                <span class="item-name">${item.quantity || 1}x ${(item.productName || item.nombre || '').toUpperCase()}</span>
-                                <span style="font-weight:700;">$${parseFloat(subtotalItem).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                            </div>
-                        `;
-                    }).join('') : ''}
+                    ${itemsHTML}
                     ${descuentoMonto > 0 ? `
                         <div class="line"></div>
                         <div class="item-row" style="color: #dc3545;">
-                            <span class="item-name">DESCUENTO:</span>
-                            <span>-$${descuentoMonto.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                            <span class="item-qty-name">DESCUENTO:</span>
+                            <span class="item-price">-$${utilFormatearMoneda(descuentoMonto)}</span>
                         </div>
                     ` : ''}
                     ${recargoMonto > 0 ? `
                         <div class="line"></div>
-                        <div class="item-row" style="color: #6c757d; font-size: 9px;">
-                            <span class="item-name">SUBTOTAL PRODUCTOS:</span>
-                            <span>$${subtotalProductos.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        <div class="item-row" style="color: #64748b; font-size: 8.5px;">
+                            <span class="item-qty-name">SUBTOTAL PRODUCTOS:</span>
+                            <span class="item-price">$${utilFormatearMoneda(subtotalProductos)}</span>
                         </div>
                         <div class="item-row" style="color: #d97706; font-weight: bold;">
-                            <span class="item-name">RECARGO LIBRETA (${recargoPorcentaje}%):</span>
-                            <span>+$${recargoMonto.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                            <span class="item-qty-name">RECARGO LIBRETA (${recargoPorcentaje}%):</span>
+                            <span class="item-price">+$${utilFormatearMoneda(recargoMonto)}</span>
                         </div>
                     ` : ''}
                     <div class="total-container">
                         <span class="total-label">TOTAL</span>
-                        <span class="total-amount">$${totalFinal.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        <span class="total-amount">$${utilFormatearMoneda(totalFinal)}</span>
                     </div>
                 </div>
                 ${(fiscalActivo && cae) ? `
@@ -994,22 +1310,37 @@ function imprimirTicket(venta) {
                         try {
                             new QRCode(document.getElementById("qrcode"), {
                                 text: "${qrText}",
-                                width: 90,
-                                height: 90,
+                                width: 85,
+                                height: 85,
                                 colorDark : "#000000",
                                 colorLight : "#ffffff",
                                 correctLevel : QRCode.CorrectLevel.M
                             });
                         } catch(e) {}
                     }
-                    setTimeout(() => {
+                    setTimeout(function ejecutarImpresionScript() {
                         window.print();
                         window.close();
                     }, 500);
                 </script>
             </body>
         </html>
-    `);
+    `,
+        qrText: qrText
+    };
+}
+
+function imprimirTicket(venta) {
+    if (!venta) return;
+
+    const ventana = window.open('', 'PRINT', 'height=700,width=400');
+    if (!ventana) {
+        Swal.fire({ icon: 'warning', title: 'Popup bloqueado', text: 'Permití las ventanas emergentes en tu navegador.' });
+        return;
+    }
+
+    const plantilla = generarPlantillaHTMLTicket(venta);
+    ventana.document.write(plantilla.html);
     ventana.document.close();
 }
 
@@ -1023,8 +1354,10 @@ function reimprimirUltimoTicket() {
     }
 }
 
-// Control global de enfoque al teclear de forma segura
-document.addEventListener('keydown', (e) => {
+// ==========================================
+// 12. CONTROL GLOBAL DE ENFOQUE (TECLADO)
+// ==========================================
+document.addEventListener('keydown', function handleCapturaFocoGlobal(e) {
     if (typeof sistemaBloqueado !== 'undefined' && sistemaBloqueado) return;
     const buscador = document.getElementById('buscadorVenta');
     const idActivo = document.activeElement ? document.activeElement.id : '';

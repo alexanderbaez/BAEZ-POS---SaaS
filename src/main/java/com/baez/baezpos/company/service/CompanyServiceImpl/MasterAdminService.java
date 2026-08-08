@@ -71,10 +71,10 @@ public class MasterAdminService implements MasterAdmin {
         // 3. Notificación de bienvenida asíncrona al dueño de la cuenta
         try {
             emailService.enviarMailBienvenida(
-                    owner.getEmail(),
-                    savedCompany.getName(),
-                    owner.getName(),
-                    req.getOwnerPassword() // contraseña temporal/inicial enviada en el alta
+                    owner.getEmail(),           // destinatario
+                    savedCompany.getName(),     // nombreEmpresa
+                    owner.getName(),            // nombreUsuario  ←← CORREGIDO (estaba invertido)
+                    req.getOwnerPassword()      // contraseña temporal/inicial
             );
         } catch (Exception e) {
             log.error("No se pudo enviar el correo de bienvenida a {}: {}", owner.getEmail(), e.getMessage());

@@ -16,7 +16,7 @@
 
         .card-pos { height: calc(100vh - 100px); border: none; border-radius: 15px; }
         .total-display { font-size: 3.5rem; font-weight: 900; color: var(--primary-color); line-height: 1; }
-        .table-responsive { height: 400px; overflow-y: auto; }
+        .table-responsive { height: calc(100vh - 240px); overflow-y: auto; }
 
         .metodo-pago { cursor: pointer; border: 2px solid #e2e8f0; border-radius: 10px; transition: 0.2s; padding: 10px; text-align: center; }
         .metodo-pago.active { border-color: var(--primary-blue); background: #eff6ff; color: var(--primary-blue); font-weight: bold; }
@@ -51,6 +51,7 @@
         <div class="row g-4">
             <div class="col-md-8">
                 <div class="card card-pos shadow-sm p-3">
+                    <!-- Buscador Principal -->
                     <div class="mb-3 position-relative">
                         <div class="input-group input-group-lg shadow-sm">
                             <span class="input-group-text bg-white border-end-0"><i class="bi bi-upc-scan text-primary"></i></span>
@@ -59,10 +60,7 @@
                         <div id="listaSugerencias" class="list-group position-absolute w-100 shadow-lg sugerencias-box"></div>
                     </div>
 
-                    <button class="btn btn-warning w-100 mb-3 fw-bold" onclick="agregarProductoManual()">
-                        <i class="bi bi-plus-circle me-2"></i> CARGA MANUAL (PAN, VARIOS)
-                    </button>
-
+                    <!-- Grilla del Carrito de Ventas -->
                     <div class="table-responsive">
                         <table class="table align-middle table-hover">
                             <thead class="text-muted small border-bottom">

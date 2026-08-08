@@ -10,6 +10,7 @@ import com.baez.baezpos.customer.entities.CustomerMovement;
 import com.baez.baezpos.customer.repository.CustomerMovementRepository;
 import com.baez.baezpos.customer.repository.CustomerRepository;
 import com.baez.baezpos.sale.entity.Sale;
+import com.baez.baezpos.sale.entity.SaleItem;
 import com.baez.baezpos.security.util.SecurityUtils;
 import com.baez.baezpos.shared.exception.BadRequestException;
 import com.baez.baezpos.shared.exception.ResourceNotFoundException;
@@ -55,7 +56,7 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Override
     @Transactional
-    public Customer saveCustomer(CustomerRequestDTO dto) {
+    public CustomerResponseDTO saveCustomer(CustomerRequestDTO dto) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         if (companyId == null) {
             throw new BadRequestException("No se puede crear un cliente sin una empresa asociada.");
@@ -73,7 +74,9 @@ public class CustomerServiceImpl implements CustomerService {
                 .build();
 
         customer.setCompany(company);
-        return customerRepository.save(customer);
+        Customer savedCustomer = customerRepository.save(customer);
+
+        return mapToDTO(savedCustomer); // Retorna DTO
     }
 
     @Override
@@ -142,23 +145,52 @@ public class CustomerServiceImpl implements CustomerService {
             dto.setDescription(m.getDescription());
             dto.setCreatedAt(m.getCreatedAt());
 
-            if (m.getSale() != null && m.getSale().getItems() != null) {
-                List<CustomerMovementDTO.ItemDetailDTO> items = m.getSale().getItems().stream().map(item -> {
-                    CustomerMovementDTO.ItemDetailDTO itemDto = new CustomerMovementDTO.ItemDetailDTO();
-                    itemDto.setProductName(item.getProduct() != null ? item.getProduct().getName() : "Producto Removido");
-                    itemDto.setQuantity(item.getQuantity());
-                    itemDto.setPrice(item.getPrice());
-                    return itemDto;
-                }).toList();
-                dto.setItemsDetail(items);
+            Sale sale = m.getSale();
+            if (sale != null) {
+                // Mapeo correcto utilizando los campos reales de Sale
+                dto.setSurchargeAmount(sale.getSurcharge());
+                dto.setSurchargePercentage(sale.getSurchargeRate());
+                dto.setTotalAmount(sale.getTotal());
+
+                if (sale.getItems() != null && !sale.getItems().isEmpty()) {
+                    // Sumamos los subtotales de cada ítem para obtener el subtotal real de la venta
+                    BigDecimal subtotalCalculado = sale.getItems().stream()
+                            .map(SaleItem::getSubtotal)
+                            .filter(java.util.Objects::nonNull)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                    dto.setSubtotal(subtotalCalculado);
+
+                    List<CustomerMovementDTO.ItemDetailDTO> items = sale.getItems().stream().map(item -> {
+                        CustomerMovementDTO.ItemDetailDTO itemDto = new CustomerMovementDTO.ItemDetailDTO();
+
+                        if (item.getProduct() != null) {
+                            itemDto.setProductName(item.getProduct().getName());
+                            itemDto.setIsFractional(item.getProduct().getIsFractional());
+                        } else {
+                            itemDto.setProductName("Producto Removido");
+                            itemDto.setIsFractional(false);
+                        }
+
+                        itemDto.setQuantity(item.getQuantity());
+                        itemDto.setPrice(item.getPrice());
+                        itemDto.setSubtotal(item.getSubtotal());
+                        return itemDto;
+                    }).toList();
+
+                    dto.setItemsDetail(items);
+                } else {
+                    dto.setSubtotal(sale.getTotal());
+                }
             }
+
             return dto;
         }).toList();
     }
 
     @Override
     @Transactional
-    public Customer updateCustomer(Long id, CustomerRequestDTO dto) {
+    public CustomerResponseDTO updateCustomer(Long id, CustomerRequestDTO dto) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         Customer customer = (companyId != null) ?
                 customerRepository.findByIdAndCompanyId(id, companyId)
@@ -173,7 +205,9 @@ public class CustomerServiceImpl implements CustomerService {
             customer.setCreditLimit(dto.getCreditLimit());
         }
 
-        return customerRepository.save(customer);
+        Customer updatedCustomer = customerRepository.save(customer);
+
+        return mapToDTO(updatedCustomer); // Retorna DTO
     }
 
     @Override
