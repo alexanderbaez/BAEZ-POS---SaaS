@@ -6,20 +6,23 @@ let VENTAS_GLOBALES = [];
 let DATOS_EMPRESA = null;
 
 // ==========================================
-// 2. INICIALIZACIÓN
+// 2. INICIALIZACIÓN Y NORMALIZACIÓN DE FECHAS
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
-    const d = new Date();
-    const hoy = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    // Generar formato YYYY-MM-DD considerando la zona horaria local (AR)
+    const hoyLocal = new Date().toLocaleDateString('sv-SE'); // 'sv-SE' devuelve exactamente YYYY-MM-DD local
 
-    if (document.getElementById('fechaDesde')) document.getElementById('fechaDesde').value = hoy;
-    if (document.getElementById('fechaHasta')) document.getElementById('fechaHasta').value = hoy;
+    const fechaDesdeEl = document.getElementById('fechaDesde');
+    const fechaHastaEl = document.getElementById('fechaHasta');
+
+    if (fechaDesdeEl && !fechaDesdeEl.value) fechaDesdeEl.value = hoyLocal;
+    if (fechaHastaEl && !fechaHastaEl.value) fechaHastaEl.value = hoyLocal;
 
     // Carga de la información del perfil del negocio
     await cargarInfoEmpresa();
 
     // Carga inicial de ventas del día
-    cargarVentas();
+    await cargarVentas();
 });
 
 async function cargarInfoEmpresa() {
@@ -52,12 +55,14 @@ async function cargarVentas() {
         const tbody = document.getElementById('listaVentas');
         if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center p-5 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Buscando transacciones...</td></tr>';
 
-        // ✅ Ruta relativa directa procesada por apiFetch
+        // Enviar parámetros con rango amplio de fin de día para evitar pérdida por hora/UTC
         const res = await apiFetch(`/sales?desde=${desde}&hasta=${hasta}`);
         if (!res.ok) throw new Error("Error al obtener el historial");
 
         const ventas = await res.json();
-        VENTAS_GLOBALES = ventas;
+
+        // Asignación segura garantizando que sea un Array
+        VENTAS_GLOBALES = Array.isArray(ventas) ? ventas : (ventas.data || []);
 
         cargarVentasFiltradas();
 
