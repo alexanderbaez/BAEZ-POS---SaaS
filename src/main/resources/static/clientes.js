@@ -1,5 +1,6 @@
 /**
  * BÁEZ POS - GESTIÓN DE CLIENTES Y CUENTA CORRIENTE (LIBRETA)
+ * Alexander Baez - 2026
  * Refactorizado: Seguridad XSS, Manejo defensivo de estado, soporte para pesables (isFractional) e interoperabilidad SaaS
  */
 
@@ -53,6 +54,13 @@ function formatQuantity(quantity, isFractional) {
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
     await Promise.all([cargarDatosEmpresa(), cargarClientes()]);
+
+    // Listener para filtros de búsqueda dinámica
+    const buscarInput = document.getElementById('buscarCliente');
+    const filtroDeudores = document.getElementById('filtroDeudores');
+
+    if (buscarInput) buscarInput.addEventListener('input', filtrarClientes);
+    if (filtroDeudores) filtroDeudores.addEventListener('change', filtrarClientes);
 });
 
 async function cargarDatosEmpresa() {
@@ -85,7 +93,7 @@ async function cargarClientes() {
         console.error("Error cargando clientes:", err);
         const tbody = document.getElementById('tablaClientes');
         if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-muted">Error al obtener la lista de clientes.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-muted"><i class="bi bi-exclamation-triangle fs-3 d-block mb-2 text-danger"></i>Error al obtener la lista de clientes del servidor.</td></tr>';
         }
     }
 }
@@ -98,7 +106,7 @@ function renderizarClientes(clientes) {
     let totalDeuda = 0;
 
     if (!Array.isArray(clientes) || clientes.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-muted">No se encontraron clientes registrados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-muted"><i class="bi bi-people fs-3 d-block mb-2"></i>No se encontraron clientes registrados.</td></tr>';
         const totalEl = document.getElementById('totalDeudaClientes');
         if (totalEl) totalEl.textContent = formatCurrency(0);
         return;
@@ -131,20 +139,20 @@ function renderizarClientes(clientes) {
                 }
             </td>
             <td>
-                <span class="balance-badge ${badgeClass}">${formatCurrency(saldo)}</span>
+                <span class="balance-badge ${badgeClass} px-2 py-1 fw-bold rounded-2">${formatCurrency(saldo)}</span>
             </td>
             <td class="text-end pe-4">
                 <div class="d-flex justify-content-end gap-2">
-                    <button class="btn-action" data-action="editar" data-id="${c.id}" title="Editar">
+                    <button class="btn btn-sm btn-light border btn-action" data-action="editar" data-id="${c.id}" title="Editar">
                         <i class="bi bi-pencil text-warning"></i>
                     </button>
-                    <button class="btn-action" data-action="historial" data-id="${c.id}" title="Ver Libreta">
+                    <button class="btn btn-sm btn-light border btn-action" data-action="historial" data-id="${c.id}" title="Ver Libreta">
                         <i class="bi bi-journal-text text-primary"></i>
                     </button>
-                    <button class="btn-action" data-action="pagar" data-id="${c.id}" title="Cobrar">
+                    <button class="btn btn-sm btn-light border btn-action" data-action="pagar" data-id="${c.id}" title="Cobrar">
                         <i class="bi bi-cash-coin text-success"></i>
                     </button>
-                    <button class="btn-action" data-action="eliminar" data-id="${c.id}" title="Eliminar Cliente">
+                    <button class="btn btn-sm btn-light border btn-action" data-action="eliminar" data-id="${c.id}" title="Eliminar Cliente">
                         <i class="bi bi-trash text-danger"></i>
                     </button>
                 </div>
@@ -292,15 +300,19 @@ async function verHistorial(id, nombre, telefono) {
         MOVIMIENTOS_CACHE = await resp.json();
         CLIENTE_ACTUAL = { id, nombre, telefono };
 
-        document.getElementById('historialTitulo').textContent = `Libreta: ${nombre.toUpperCase()}`;
-        document.getElementById('filtroFechaDesde').value = '';
-        document.getElementById('filtroFechaHasta').value = '';
+        const titEl = document.getElementById('historialTitulo');
+        if (titEl) titEl.textContent = `Libreta: ${nombre.toUpperCase()}`;
+
+        if (document.getElementById('filtroFechaDesde')) document.getElementById('filtroFechaDesde').value = '';
+        if (document.getElementById('filtroFechaHasta')) document.getElementById('filtroFechaHasta').value = '';
 
         renderizarTablaMovimientos();
 
         const modalEl = document.getElementById('modalHistorialCliente');
-        modalHistorialInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
-        modalHistorialInstance.show();
+        if (modalEl) {
+            modalHistorialInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modalHistorialInstance.show();
+        }
 
     } catch (err) {
         console.error("Error cargando historial:", err);
@@ -310,8 +322,8 @@ async function verHistorial(id, nombre, telefono) {
 
 function aplicarFiltroFechas() { renderizarTablaMovimientos(); }
 function limpiarFiltroFechas() {
-    document.getElementById('filtroFechaDesde').value = '';
-    document.getElementById('filtroFechaHasta').value = '';
+    if (document.getElementById('filtroFechaDesde')) document.getElementById('filtroFechaDesde').value = '';
+    if (document.getElementById('filtroFechaHasta')) document.getElementById('filtroFechaHasta').value = '';
     renderizarTablaMovimientos();
 }
 
@@ -320,8 +332,8 @@ function renderizarTablaMovimientos() {
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    const desdeVal = document.getElementById('filtroFechaDesde').value;
-    const hastaVal = document.getElementById('filtroFechaHasta').value;
+    const desdeVal = document.getElementById('filtroFechaDesde')?.value || '';
+    const hastaVal = document.getElementById('filtroFechaHasta')?.value || '';
 
     const fechaDesde = desdeVal ? new Date(`${desdeVal}T00:00:00`) : null;
     const fechaHasta = hastaVal ? new Date(`${hastaVal}T23:59:59`) : null;
@@ -407,7 +419,7 @@ function renderizarTablaMovimientos() {
                     <div class="d-flex align-items-center">
                         ${icono}
                         <div>
-                            <span class="${esVenta ? 'text-dark' : 'text-success fw-bold'}">${sanitizeHTML(m.description || (esVenta ? 'Venta' : 'Pago libreta'))}</span>
+                            <span class="${esVenta ? 'text-dark' : 'text-success fw-bold'}">${sanitizeHTML(m.description || (esVenta ? 'Venta' : 'Pago de Libreta'))}</span>
                             ${badgesAdicionales}
                         </div>
                         ${esVenta ? `<i id="icon-${idx}" class="bi bi-chevron-down ms-2 text-primary small"></i>` : ''}
@@ -505,65 +517,112 @@ function renderizarTablaMovimientos() {
 }
 
 // ==========================================
-// 5. REGISTRO DE PAGOS / COBROS
+// 5. REGISTRO DE PAGOS / COBROS (API Sincronizada)
 // ==========================================
-
 async function registrarPago(id) {
+    const cliente = CLIENTES_CACHE.find(c => c.id === id) || CLIENTE_ACTUAL;
+    const saldoActual = parseFloat(cliente.currentBalance) || 0;
+
     const { value: formValues } = await Swal.fire({
         title: 'Registrar Cobro de Libreta',
         html:
             `<div class="text-start mb-2"><label class="small fw-bold text-muted">Monto que entrega el cliente ($):</label></div>` +
-            `<input id="swal-input1" class="form-control form-control-lg border mb-3 text-primary fw-bold" type="number" step="0.01" placeholder="0.00">` +
+            `<input id="swal-input1" class="form-control form-control-lg border mb-3 text-primary fw-bold" type="number" step="0.01" placeholder="0.00" value="${saldoActual > 0 ? saldoActual.toFixed(2) : ''}">` +
             `<div class="text-start mb-2"><label class="small fw-bold text-muted">Método de Ingreso:</label></div>` +
-            `<select id="swal-input2" class="form-select form-select-lg border">
-                <option value="EFECTIVO">Efectivo</option>
+            `<select id="swal-input2" class="form-select form-select-lg border mb-3">
+                <option value="EFECTIVO">Efectivo (Ingresa a Caja)</option>
                 <option value="TRANSFERENCIA">Transferencia / Mercado Pago</option>
-            </select>`,
+            </select>` +
+            `<div class="text-start mb-2"><label class="small fw-bold text-muted">Referencia / Observación (Opcional):</label></div>` +
+            `<input id="swal-input3" class="form-control border" type="text" placeholder="Ej: Pago parcial, comprobante MP...">`,
         focusConfirm: false,
         showCancelButton: true,
-        confirmButtonText: 'Confirmar Ingreso',
+        confirmButtonText: '<i class="bi bi-check-lg me-1"></i> Confirmar Ingreso',
         cancelButtonText: 'Cancelar',
         customClass: {
-            confirmButton: 'btn btn-primary px-4 py-2 me-2',
+            confirmButton: 'btn btn-success px-4 py-2 me-2 fw-bold',
             cancelButton: 'btn btn-secondary px-4 py-2'
         },
         buttonsStyling: false,
         preConfirm: () => {
             const montoVal = document.getElementById('swal-input1').value;
             const metodoVal = document.getElementById('swal-input2').value;
+            const refVal = document.getElementById('swal-input3').value;
+
             if (!montoVal || parseFloat(montoVal) <= 0) {
-                Swal.showValidationMessage('Ingresa un monto válido mayor a 0');
+                Swal.showValidationMessage('Ingresá un monto válido mayor a $0');
                 return false;
             }
-            return { monto: parseFloat(montoVal), metodo: metodoVal };
+            return {
+                monto: parseFloat(montoVal),
+                metodo: metodoVal,
+                referencia: refVal ? refVal.trim() : ''
+            };
         }
     });
 
     if (formValues) {
         try {
+            const textoRef = formValues.referencia && formValues.referencia.length > 0
+                ? formValues.referencia
+                : `Cobro de Libreta (${formValues.metodo})`;
+
+            const ahora = new Date().toISOString();
+
+            // Mapeo exhaustivo para satisfacer cualquier DTO de pagos en Spring Boot
+            const payload = {
+                customerId: Number(id),
+                amount: Number(formValues.monto),
+                monto: Number(formValues.monto),
+                paymentMethod: formValues.metodo,
+                method: formValues.metodo,
+                type: formValues.metodo,
+                reference: textoRef,
+                description: textoRef,
+                observacion: textoRef,
+                details: textoRef,
+                movementDate: ahora,
+                paymentDate: ahora
+            };
+
+            console.log("Enviando Payload a /payments:", payload);
+
             const resp = await apiFetch(`${API_CUSTOMERS}/${id}/payments`, {
                 method: 'POST',
-                body: JSON.stringify({
-                    amount: formValues.monto,
-                    method: formValues.metodo,
-                    paymentMethod: formValues.metodo,
-                    description: `Cobro de libreta - ${formValues.metodo}`
-                })
+                body: JSON.stringify(payload)
             });
 
             if (resp && resp.ok) {
-                Swal.fire('¡Ingreso Registrado!', `Se ingresaron ${formatCurrency(formValues.monto)} a tu caja (${formValues.metodo})`, 'success');
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: `Pago de ${formatCurrency(formValues.monto)} registrado`,
+                    showConfirmButton: false,
+                    timer: 2500,
+                    timerProgressBar: true
+                });
+
                 await cargarClientes();
 
+                if (CLIENTE_ACTUAL.id === id && modalHistorialInstance) {
+                    await verHistorial(id, CLIENTE_ACTUAL.nombre, CLIENTE_ACTUAL.telefono);
+                }
+
                 if (typeof cargarDatosDashboard === "function") cargarDatosDashboard();
-                if (typeof actualizarBalanceGlobal === "function") actualizarBalanceGlobal();
+                if (typeof cargarReporteCajaHoy === "function") cargarReporteCajaHoy();
+
             } else if (resp) {
                 const errData = await resp.json().catch(() => ({}));
-                Swal.fire('Error', errData.message || 'No se pudo procesar el pago', 'error');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error en Backend',
+                    html: `<b>Servidor dice:</b> ${errData.message || 'Datos incompletos'}`
+                });
             }
         } catch (err) {
             console.error("Error en cobro de libreta:", err);
-            Swal.fire('Error', 'No se pudo registrar el pago en el sistema', 'error');
+            Swal.fire('Error de red', 'Ocurrió un fallo de conexión al registrar el cobro.', 'error');
         }
     }
 }

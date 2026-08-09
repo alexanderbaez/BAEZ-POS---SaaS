@@ -70,23 +70,40 @@ async function cargarDatosDashboardHoy() {
 
         const data = await response.json();
 
+        // Ventas Totales Hoy
         if (document.getElementById('txtRecaudacion'))
-            document.getElementById('txtRecaudacion').innerText = fmtMoneda(data.totalSales);
+            document.getElementById('txtRecaudacion').innerText = fmtMoneda(data.totalSalesToday);
 
+        // Efectivo en Caja
         if (document.getElementById('txtEfectivoHoy'))
-            document.getElementById('txtEfectivoHoy').innerText = fmtMoneda(data.cashSales);
+            document.getElementById('txtEfectivoHoy').innerText = fmtMoneda(data.cashSalesToday);
 
+        // Transferencias / QR
         if (document.getElementById('txtTransfHoy'))
-            document.getElementById('txtTransfHoy').innerText = fmtMoneda(data.transferSales);
+            document.getElementById('txtTransfHoy').innerText = fmtMoneda(data.transferSalesToday);
 
+        // Cobros Cta. Cte. Hoy
         if (document.getElementById('txtCobrosLibretaHoy'))
-            document.getElementById('txtCobrosLibretaHoy').innerText = fmtMoneda(data.creditPaymentsToday || data.cobrosLibretaHoy || 0);
+            document.getElementById('txtCobrosLibretaHoy').innerText = fmtMoneda(data.customerPaymentsToday);
 
+        // Deuda Pendiente en Cta. Cte.
         if (document.getElementById('cardLibreta'))
-            document.getElementById('cardLibreta').innerText = fmtMoneda(data.tCredit || data.totalPendingCredit || 0);
+            document.getElementById('cardLibreta').innerText = fmtMoneda(data.totalPendingCredit);
 
+        // Balance Real Disponible en Caja
         if (document.getElementById('cardBalanceReal'))
             document.getElementById('cardBalanceReal').innerText = fmtMoneda(data.realBalance);
+
+        // Desglose dinámico de Gastos en el subtítulo del Balance Real
+        const lblDetalleBalance = document.getElementById('lblDetalleBalance');
+        if (lblDetalleBalance) {
+            const gastos = parseFloat(data.expensesToday) || 0;
+            if (gastos > 0) {
+                lblDetalleBalance.innerHTML = `(Efectivo + Transferencias + Cobros) <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1">(Incluye -${fmtMoneda(gastos)} en gastos)</span>`;
+            } else {
+                lblDetalleBalance.innerText = '(Efectivo Ventas + Transferencias + Cobros Cta. Cte. - Gastos)';
+            }
+        }
 
     } catch (err) {
         console.error("Error al cargar KPIs de Hoy:", err);
@@ -138,8 +155,6 @@ async function consultarPorFechas() {
 
     try {
         const params = new URLSearchParams({
-            startDate: desdeVal,
-            endDate: hastaVal,
             from: desdeVal,
             to: hastaVal
         });
@@ -149,28 +164,28 @@ async function consultarPorFechas() {
 
         const data = await response.json();
 
-        const totalVentasRango = data.monthSales ?? data.totalSales ?? 0;
-        const totalGananciaRango = data.monthProfit ?? data.totalProfit ?? 0;
-        const costoReposicionRango = data.monthReplacementCost ?? data.replacementCost ?? 0;
-        const operacionesRango = data.monthOperations ?? data.totalOperations ?? 0;
+        const periodSales = data.periodSales ?? 0;
+        const periodProfit = data.periodProfit ?? 0;
+        const periodReplacementCost = data.periodReplacementCost ?? 0;
+        const periodOperations = data.periodOperations ?? 0;
 
-        // Cálculo de KPI Derivado: Ticket Medio
-        const ticketMedio = operacionesRango > 0 ? (totalVentasRango / operacionesRango) : 0;
+        // Cálculo del KPI Derivado: Ticket Promedio
+        const ticketPromedio = periodOperations > 0 ? (periodSales / periodOperations) : 0;
 
         if (document.getElementById('txtRecaudacionMes'))
-            document.getElementById('txtRecaudacionMes').innerText = fmtMoneda(totalVentasRango);
+            document.getElementById('txtRecaudacionMes').innerText = fmtMoneda(periodSales);
 
         if (document.getElementById('txtGananciaMes'))
-            document.getElementById('txtGananciaMes').innerText = fmtMoneda(totalGananciaRango);
+            document.getElementById('txtGananciaMes').innerText = fmtMoneda(periodProfit);
 
         if (document.getElementById('txtReposicionMes'))
-            document.getElementById('txtReposicionMes').innerText = fmtMoneda(costoReposicionRango);
+            document.getElementById('txtReposicionMes').innerText = fmtMoneda(periodReplacementCost);
 
         if (document.getElementById('txtVentasCountMes'))
-            document.getElementById('txtVentasCountMes').innerText = operacionesRango;
+            document.getElementById('txtVentasCountMes').innerText = periodOperations;
 
         if (document.getElementById('txtTicketPromedio'))
-            document.getElementById('txtTicketPromedio').innerText = fmtMoneda(ticketMedio);
+            document.getElementById('txtTicketPromedio').innerText = fmtMoneda(ticketPromedio);
 
         const f1 = desdeVal.split('-').reverse().join('/');
         const f2 = hastaVal.split('-').reverse().join('/');

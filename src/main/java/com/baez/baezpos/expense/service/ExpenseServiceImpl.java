@@ -45,16 +45,21 @@ public class ExpenseServiceImpl implements ExpenseService {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
 
+        // Si no se especifica en el Request, por defecto se descuenta de caja
+        Boolean deductFromBox = (dto.deductFromBox() != null) ? dto.deductFromBox() : true;
+
         Expense expense = Expense.builder()
                 .description(dto.description().trim())
                 .amount(dto.amount())
+                .deductFromBox(deductFromBox)
                 .expenseDate(LocalDateTime.now())
                 .build();
 
         expense.setCompany(company);
 
         Expense saved = expenseRepository.save(expense);
-        log.info("Empresa [{}]: Registrar nuevo gasto por ${} ({})", companyId, dto.amount(), dto.description());
+        log.info("Empresa [{}]: Registrar nuevo gasto por ${} ({}) - Resta caja: {}",
+                companyId, dto.amount(), dto.description(), deductFromBox);
 
         return mapToDTO(saved);
     }
@@ -100,7 +105,8 @@ public class ExpenseServiceImpl implements ExpenseService {
                 expense.getId(),
                 expense.getDescription(),
                 expense.getAmount(),
-                expense.getExpenseDate()
+                expense.getExpenseDate(),
+                expense.getDeductFromBox() != null ? expense.getDeductFromBox() : true
         );
     }
 }

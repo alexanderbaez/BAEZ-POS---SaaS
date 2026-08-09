@@ -1,4 +1,4 @@
-package com.baez.baezpos.inventory.service;
+package com.baez.baezpos.inventory.service.InventoryService;
 
 import com.baez.baezpos.inventory.dto.InventoryMovementResponseDTO;
 import com.baez.baezpos.inventory.entity.MovementType;

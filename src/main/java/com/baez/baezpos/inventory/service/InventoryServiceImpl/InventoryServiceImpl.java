@@ -1,4 +1,4 @@
-package com.baez.baezpos.inventory.service.impl;
+package com.baez.baezpos.inventory.service.InventoryServiceImpl;
 
 import com.baez.baezpos.company.entity.Company;
 import com.baez.baezpos.company.repository.CompanyRepository;
@@ -6,7 +6,7 @@ import com.baez.baezpos.inventory.dto.InventoryMovementResponseDTO;
 import com.baez.baezpos.inventory.entity.InventoryMovement;
 import com.baez.baezpos.inventory.entity.MovementType;
 import com.baez.baezpos.inventory.repository.InventoryRepository;
-import com.baez.baezpos.inventory.service.InventoryService;
+import com.baez.baezpos.inventory.service.InventoryService.InventoryService;
 import com.baez.baezpos.product.entity.Product;
 import com.baez.baezpos.product.repository.ProductRepository;
 import com.baez.baezpos.security.util.SecurityUtils;

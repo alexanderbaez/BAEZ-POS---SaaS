@@ -60,7 +60,7 @@
     </nav>
 
     <div class="container-fluid p-2 p-md-4">
-        <!-- Encabezado con botón corregido -->
+        <!-- Encabezado con botón de nuevo gasto -->
         <div class="row mb-3 mb-md-4 align-items-center justify-content-between g-2">
             <div class="col-12 col-md-7">
                 <h2 class="fw-bold text-dark mb-1 fs-3 fs-md-2"><i class="bi bi-wallet2 text-danger me-2"></i>Egresos y Gastos Operativos</h2>
@@ -73,7 +73,7 @@
             </div>
         </div>
 
-        <!-- TARJETAS KPI DE RESUMEN (Múltiples métricas clave) -->
+        <!-- TARJETAS KPI DE RESUMEN -->
         <div class="row g-3 mb-4">
             <div class="col-12 col-md-6 col-xl-4">
                 <div class="card p-3 border-start border-danger border-4">
@@ -168,7 +168,7 @@
                     <div class="modal-body p-3 p-md-4">
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted">Descripción detallada *</label>
-                            <input type="text" id="descGasto" class="form-control" placeholder="Ej: Pago factura distribuidora Arcor, Compra rollos de papel, Flete zona norte..." required>
+                            <input type="text" id="descGasto" class="form-control" placeholder="Ej: Pago factura distribuidora Arcor, Compra rollos de papel, Flete..." required>
                         </div>
                         <div class="row">
                             <div class="col-12 col-md-6 mb-3">
@@ -187,7 +187,7 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="row">
+                        <div class="row align-items-center">
                             <div class="col-12 col-md-6 mb-3">
                                 <label class="form-label small fw-bold text-muted">Medio de Pago / Origen del Fondo *</label>
                                 <select id="metodoPagoGasto" class="form-select" required>
@@ -201,6 +201,19 @@
                                 <input type="text" id="refComprobante" class="form-control" placeholder="Ej: Factura A-0001-00012345 o N° de transferencia">
                             </div>
                         </div>
+
+                        <!-- CONTROL DE IMPACTO EN CAJA DIARIA (deductFromBox) -->
+                        <div class="p-3 bg-light rounded-3 border">
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" role="switch" id="deductFromBox" checked>
+                                <label class="form-check-label fw-bold text-dark ms-2" for="deductFromBox">
+                                    Descontar del Balance Real de Caja del Día
+                                </label>
+                            </div>
+                            <small class="text-muted d-block mt-1" style="font-size: 0.78rem;">
+                                Si está activo, este monto restará del efectivo/balance disponible en el Dashboard para el turno de hoy.
+                            </small>
+                        </div>
                     </div>
                     <div class="modal-footer bg-light border-0 p-3">
                         <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancelar</button>
@@ -213,8 +226,6 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<!-- SweetAlert2 CSS y JS -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="sidebar.js"></script>
 <script src="auth.js"></script>
 <script src="gastos.js"></script>

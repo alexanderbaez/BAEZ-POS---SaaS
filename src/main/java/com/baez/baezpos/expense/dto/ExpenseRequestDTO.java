@@ -4,5 +4,6 @@ import java.math.BigDecimal;
 
 public record ExpenseRequestDTO(
         String description,
-        BigDecimal amount
+        BigDecimal amount,
+        Boolean deductFromBox
 ) {}

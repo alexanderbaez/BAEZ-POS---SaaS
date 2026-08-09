@@ -27,4 +27,9 @@ public class Expense extends TenantEntity {
 
     @Column(nullable = false)
     private LocalDateTime expenseDate;
+
+    // NUEVO CAMPO: Bandera de control de caja
+    @Column(name = "deduct_from_box", nullable = false)
+    @Builder.Default
+    private Boolean deductFromBox = true;
 }

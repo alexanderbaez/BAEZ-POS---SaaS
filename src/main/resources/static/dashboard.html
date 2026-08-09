@@ -98,7 +98,7 @@
 <!-- Contenido Principal -->
 <div id="content">
 
-  <!-- TOPBAR / ENCABEZADO PRINCIPAL CORREGIDO -->
+  <!-- TOPBAR / ENCABEZADO PRINCIPAL -->
   <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center pb-3 mb-4 border-bottom gap-3">
     <div class="d-flex justify-content-between align-items-center w-100 w-md-auto">
       <div>
@@ -111,7 +111,7 @@
       </button>
     </div>
 
-    <!-- Contenedor del Comercio Activo con ancho contenido (w-auto) -->
+    <!-- Contenedor del Comercio Activo -->
     <div class="d-flex align-items-center gap-3 w-100 w-md-auto justify-content-start justify-content-md-end">
       <div class="d-flex align-items-center gap-2 bg-white px-3 py-1.5 rounded-3 border shadow-sm w-auto">
         <div class="icon-box-soft bg-primary bg-opacity-10 text-primary flex-shrink-0" style="width:32px; height:32px;">
@@ -202,7 +202,9 @@
             <div>
               <span class="kpi-title text-primary">Balance Real Disponible en Caja</span>
               <h3 class="fw-bold mb-0 text-dark mt-1 fs-4 fs-md-3" id="cardBalanceReal">$0,00</h3>
-              <small class="text-muted d-block" style="font-size: 0.75rem;">(Efectivo Ventas + Cobros Cta. Cte. - Gastos)</small>
+              <small class="text-muted d-block" id="lblDetalleBalance" style="font-size: 0.75rem;">
+                (Efectivo Ventas + Transferencias + Cobros Cta. Cte. - Gastos)
+              </small>
             </div>
             <div class="icon-box-soft bg-primary text-white rounded-circle flex-shrink-0">
               <i class="bi bi-wallet2"></i>

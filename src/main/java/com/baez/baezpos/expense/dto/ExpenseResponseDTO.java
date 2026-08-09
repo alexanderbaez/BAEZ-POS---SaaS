@@ -7,5 +7,6 @@ public record ExpenseResponseDTO(
         Long id,
         String description,
         BigDecimal amount,
-        LocalDateTime expenseDate
+        LocalDateTime expenseDate,
+        Boolean deductFromBox
 ) {}

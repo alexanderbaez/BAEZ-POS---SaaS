@@ -5,63 +5,72 @@ import java.math.BigDecimal;
 
 public class BoxReportDTO {
 
-    @JsonProperty("totalSales")
-    private BigDecimal totalSales;
+    @JsonProperty("totalSalesToday")
+    private BigDecimal totalSalesToday;      // Total vendido hoy (Efectivo + Transferencia + Fiado)
 
-    @JsonProperty("cashSales")
-    private BigDecimal cashSales;
+    @JsonProperty("cashSalesToday")
+    private BigDecimal cashSalesToday;       // Efectivo entrado SOLO por ventas de hoy
 
-    @JsonProperty("transferSales")
-    private BigDecimal transferSales;
+    @JsonProperty("transferSalesToday")
+    private BigDecimal transferSalesToday;   // Transferencias entradas SOLO por ventas de hoy
 
-    @JsonProperty("tCredit")
-    private BigDecimal tCredit;
+    @JsonProperty("creditSalesToday")
+    private BigDecimal creditSalesToday;     // Fiado emitido HOY
 
-    @JsonProperty("totalProfit")
-    private BigDecimal totalProfit; // Ganancia de hoy
+    @JsonProperty("customerPaymentsToday")
+    private BigDecimal customerPaymentsToday;// Cobros de Cta Cte recibidos HOY (Efectivo + Transferencia)
+
+    @JsonProperty("expensesToday")
+    private BigDecimal expensesToday;        // Gastos restables de caja abonados HOY
 
     @JsonProperty("realBalance")
-    private BigDecimal realBalance;
+    private BigDecimal realBalance;          // (CashSales + TransferSales + CustomerPayments) - Expenses
 
-    @JsonProperty("monthSales")
-    private BigDecimal monthSales;
+    @JsonProperty("totalPendingCredit")
+    private BigDecimal totalPendingCredit;   // Deuda histórica total acumulada de clientes
 
-    @JsonProperty("monthOperations")
-    private Long monthOperations;
+    // Métricas del Período / Históricas (Rango de fechas)
+    @JsonProperty("periodSales")
+    private BigDecimal periodSales;          // Facturación total del rango
 
-    // NUEVOS CAMPOS MENSUALES
-    @JsonProperty("monthProfit")
-    private BigDecimal monthProfit; // Ganancia Real Mensual
+    @JsonProperty("periodOperations")
+    private Long periodOperations;           // Total tickets del rango
 
-    @JsonProperty("monthReplacementCost")
-    private BigDecimal monthReplacementCost; // Monto de Reposición Mensual
+    @JsonProperty("periodProfit")
+    private BigDecimal periodProfit;         // Ganancia neta real (Ventas - Costos de productos)
 
-    // CONSTRUCTOR CORREGIDO: monthOperations vuelve a su posición original (8vo lugar)
-    public BoxReportDTO(BigDecimal totalSales, BigDecimal cashSales, BigDecimal transferSales,
-                        BigDecimal tCredit, BigDecimal totalProfit, BigDecimal realBalance,
-                        BigDecimal monthSales, Long monthOperations,
-                        BigDecimal monthProfit, BigDecimal monthReplacementCost) {
-        this.totalSales = totalSales;
-        this.cashSales = cashSales;
-        this.transferSales = transferSales;
-        this.tCredit = tCredit;
-        this.totalProfit = totalProfit;
+    @JsonProperty("periodReplacementCost")
+    private BigDecimal periodReplacementCost;// Costo total de reposición
+
+    public BoxReportDTO(
+            BigDecimal totalSalesToday, BigDecimal cashSalesToday, BigDecimal transferSalesToday,
+            BigDecimal creditSalesToday, BigDecimal customerPaymentsToday, BigDecimal expensesToday,
+            BigDecimal realBalance, BigDecimal totalPendingCredit, BigDecimal periodSales,
+            Long periodOperations, BigDecimal periodProfit, BigDecimal periodReplacementCost) {
+        this.totalSalesToday = totalSalesToday;
+        this.cashSalesToday = cashSalesToday;
+        this.transferSalesToday = transferSalesToday;
+        this.creditSalesToday = creditSalesToday;
+        this.customerPaymentsToday = customerPaymentsToday;
+        this.expensesToday = expensesToday;
         this.realBalance = realBalance;
-        this.monthSales = monthSales;
-        this.monthOperations = monthOperations;
-        this.monthProfit = monthProfit;
-        this.monthReplacementCost = monthReplacementCost;
+        this.totalPendingCredit = totalPendingCredit;
+        this.periodSales = periodSales;
+        this.periodOperations = periodOperations;
+        this.periodProfit = periodProfit;
+        this.periodReplacementCost = periodReplacementCost;
     }
 
-    // Getters públicos para que Jackson los serialice correctamente
-    public BigDecimal getTotalSales() { return totalSales; }
-    public BigDecimal getCashSales() { return cashSales; }
-    public BigDecimal getTransferSales() { return transferSales; }
-    public BigDecimal getTCredit() { return tCredit; }
-    public BigDecimal getTotalProfit() { return totalProfit; }
+    public BigDecimal getTotalSalesToday() { return totalSalesToday; }
+    public BigDecimal getCashSalesToday() { return cashSalesToday; }
+    public BigDecimal getTransferSalesToday() { return transferSalesToday; }
+    public BigDecimal getCreditSalesToday() { return creditSalesToday; }
+    public BigDecimal getCustomerPaymentsToday() { return customerPaymentsToday; }
+    public BigDecimal getExpensesToday() { return expensesToday; }
     public BigDecimal getRealBalance() { return realBalance; }
-    public BigDecimal getMonthSales() { return monthSales; }
-    public Long getMonthOperations() { return monthOperations; } // Corregido el tipo de retorno aquí también a Long
-    public BigDecimal getMonthProfit() { return monthProfit; }
-    public BigDecimal getMonthReplacementCost() { return monthReplacementCost; }
+    public BigDecimal getTotalPendingCredit() { return totalPendingCredit; }
+    public BigDecimal getPeriodSales() { return periodSales; }
+    public Long getPeriodOperations() { return periodOperations; }
+    public BigDecimal getPeriodProfit() { return periodProfit; }
+    public BigDecimal getPeriodReplacementCost() { return periodReplacementCost; }
 }

@@ -6,8 +6,9 @@ import com.baez.baezpos.customer.entities.Customer;
 import com.baez.baezpos.customer.repository.CustomerMovementRepository;
 import com.baez.baezpos.customer.repository.CustomerRepository;
 import com.baez.baezpos.customer.service.CustomerService;
+import com.baez.baezpos.expense.repository.ExpenseRepository;
 import com.baez.baezpos.inventory.entity.MovementType;
-import com.baez.baezpos.inventory.service.InventoryService;
+import com.baez.baezpos.inventory.service.InventoryService.InventoryService;
 import com.baez.baezpos.product.entity.Product;
 import com.baez.baezpos.product.repository.ProductRepository;
 import com.baez.baezpos.sale.dto.*;
@@ -26,7 +27,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -49,6 +49,7 @@ public class SaleServiceImpl implements SaleService {
     private final CustomerRepository customerRepository;
     private final CustomerMovementRepository customerMovementRepository;
     private final CompanyRepository companyRepository;
+    private final ExpenseRepository expenseRepository;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -114,7 +115,6 @@ public class SaleServiceImpl implements SaleService {
             Product product = productRepository.findByIdAndCompanyId(itemDTO.productId(), companyId)
                     .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado en su empresa: ID " + itemDTO.productId()));
 
-            // Comparación de stock con BigDecimal
             BigDecimal stockActual = product.getStock() != null ? product.getStock() : BigDecimal.ZERO;
             if (stockActual.compareTo(itemDTO.quantity()) < 0) {
                 throw new BadRequestException("Stock insuficiente para: " + product.getName() +
@@ -140,19 +140,18 @@ public class SaleServiceImpl implements SaleService {
         BigDecimal totalFinal = subtotalAcumulado.add(recargo).subtract(descuento);
         sale.setTotal(totalFinal.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : totalFinal);
 
-        // Guardamos la venta una sola vez con su correlativo asignado
         Sale savedSale = saleRepository.save(sale);
 
         for (SaleItem item : savedSale.getItems()) {
             inventoryService.registerMovement(
                     item.getProduct().getId(),
-                    item.getQuantity(),   // BigDecimal: descuenta stock exacto (incl. fracciones)
+                    item.getQuantity(),
                     MovementType.SALE,
                     "Venta #" + savedSale.getNroComprobante()
             );
         }
 
-        if ("CUENTA_CORRIENTE".equals(saleDTO.paymentMethod())) {
+        if ("CUENTA_CORRIENTE".equalsIgnoreCase(saleDTO.paymentMethod())) {
             handleCreditSale(saleDTO.customerId(), savedSale, companyId);
         }
 
@@ -210,94 +209,85 @@ public class SaleServiceImpl implements SaleService {
         LocalDateTime startToday = LocalDate.now().atStartOfDay();
         LocalDateTime endToday = LocalDate.now().atTime(LocalTime.MAX);
 
-        LocalDateTime startRange;
-        LocalDateTime endRange;
-
-        if (from != null && to != null) {
-            startRange = from.atStartOfDay();
-            endRange = to.atTime(LocalTime.MAX);
-        } else {
-            startRange = LocalDate.now().withDayOfMonth(1).atStartOfDay();
-            endRange = LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()).atTime(LocalTime.MAX);
-        }
+        // Rango para métricas de rendimiento comercial
+        LocalDateTime startRange = (from != null) ? from.atStartOfDay() : LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        LocalDateTime endRange = (to != null) ? to.atTime(LocalTime.MAX) : LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()).atTime(LocalTime.MAX);
 
         List<Sale> rangeSales = saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, startRange, endRange);
 
-        BigDecimal vCash = BigDecimal.ZERO;
-        BigDecimal vTransfer = BigDecimal.ZERO;
-        BigDecimal tProfitDirecto = BigDecimal.ZERO;
+        // Métricas de Rango / Rendimiento
+        BigDecimal periodSales = BigDecimal.ZERO;
+        BigDecimal periodReplacementCost = BigDecimal.ZERO;
+        long periodOperations = 0;
 
-        BigDecimal mSales = BigDecimal.ZERO;
-        BigDecimal mCostAccumulator = BigDecimal.ZERO;
-        long mCount = 0;
+        // Métricas Exclusivas de HOY (Flujo Diario)
+        BigDecimal totalSalesToday = BigDecimal.ZERO;
+        BigDecimal cashSalesToday = BigDecimal.ZERO;
+        BigDecimal transferSalesToday = BigDecimal.ZERO;
+        BigDecimal creditSalesToday = BigDecimal.ZERO;
 
         for (Sale s : rangeSales) {
             if (Boolean.TRUE.equals(s.getCanceled())) continue;
 
-            mSales = mSales.add(s.getTotal());
-            mCount++;
+            periodSales = periodSales.add(s.getTotal());
+            periodOperations++;
 
             for (SaleItem item : s.getItems()) {
                 BigDecimal costUnit = item.getCost() != null ? item.getCost() : BigDecimal.ZERO;
-                // Multiplicación BigDecimal × BigDecimal — soporta fracciones de cantidad
-                BigDecimal itemCostTotal = costUnit.multiply(item.getQuantity());
-                mCostAccumulator = mCostAccumulator.add(itemCostTotal);
+                periodReplacementCost = periodReplacementCost.add(costUnit.multiply(item.getQuantity()));
             }
 
+            // Filtrado estricto de ventas del día actual
             if (!s.getSaleDate().isBefore(startToday) && !s.getSaleDate().isAfter(endToday)) {
-                if ("EFECTIVO".equals(s.getPaymentMethod())) {
-                    vCash = vCash.add(s.getTotal());
-                } else if ("TRANSFERENCIA".equals(s.getPaymentMethod())) {
-                    vTransfer = vTransfer.add(s.getTotal());
-                }
+                totalSalesToday = totalSalesToday.add(s.getTotal());
 
-                if (!"CUENTA_CORRIENTE".equals(s.getPaymentMethod())) {
-                    for (SaleItem item : s.getItems()) {
-                        BigDecimal costUnit = item.getCost() != null ? item.getCost() : BigDecimal.ZERO;
-                        // Multiplicación BigDecimal × BigDecimal — soporta fracciones
-                        BigDecimal itemProfit = item.getSubtotal().subtract(costUnit.multiply(item.getQuantity()));
-                        tProfitDirecto = tProfitDirecto.add(itemProfit);
-                    }
+                if ("EFECTIVO".equalsIgnoreCase(s.getPaymentMethod())) {
+                    cashSalesToday = cashSalesToday.add(s.getTotal());
+                } else if ("TRANSFERENCIA".equalsIgnoreCase(s.getPaymentMethod())) {
+                    transferSalesToday = transferSalesToday.add(s.getTotal());
+                } else if ("CUENTA_CORRIENTE".equalsIgnoreCase(s.getPaymentMethod())) {
+                    creditSalesToday = creditSalesToday.add(s.getTotal());
                 }
             }
         }
 
+        // Cobros de deudas de Cuenta Corriente cobrados HOY
         BigDecimal cobrosEfe = customerMovementRepository.sumPaymentsByMethodAndCompanyId("EFECTIVO", companyId, startToday, endToday);
         BigDecimal cobrosTra = customerMovementRepository.sumPaymentsByMethodAndCompanyId("TRANSFERENCIA", companyId, startToday, endToday);
 
-        if (cobrosEfe == null) cobrosEfe = BigDecimal.ZERO;
-        if (cobrosTra == null) cobrosTra = BigDecimal.ZERO;
+        cobrosEfe = (cobrosEfe != null) ? cobrosEfe : BigDecimal.ZERO;
+        cobrosTra = (cobrosTra != null) ? cobrosTra : BigDecimal.ZERO;
+        BigDecimal customerPaymentsToday = cobrosEfe.add(cobrosTra);
 
-        BigDecimal cobrosTotalHoy = cobrosEfe.add(cobrosTra);
-        BigDecimal cashFinal = vCash.add(cobrosEfe);
-        BigDecimal transferFinal = vTransfer.add(cobrosTra);
-        BigDecimal recaudacionYBalanceReal = cashFinal.add(transferFinal);
+        // Gastos autorizados del día a descontar de la caja
+        BigDecimal expensesToday = expenseRepository.sumDeductibleExpensesByCompanyIdAndDate(companyId, startToday, endToday);
+        if (expensesToday == null) expensesToday = BigDecimal.ZERO;
 
-        BigDecimal margenGananciaPromedio = BigDecimal.ZERO;
-        if (mSales.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal mProfitTemp = mSales.subtract(mCostAccumulator);
-            margenGananciaPromedio = mProfitTemp.divide(mSales, 4, RoundingMode.HALF_UP);
-        }
+        // Balance Real Disponible = (Efectivo + Transferencia + Cobros Deudas) - Gastos de Caja
+        BigDecimal realBalance = cashSalesToday
+                .add(transferSalesToday)
+                .add(customerPaymentsToday)
+                .subtract(expensesToday);
 
-        BigDecimal gananciaCobrosLibreta = cobrosTotalHoy.multiply(margenGananciaPromedio);
-        BigDecimal totalProfitReal = tProfitDirecto.add(gananciaCobrosLibreta);
+        // Deuda total acumulada en la calle por clientes
+        BigDecimal totalPendingCredit = customerRepository.sumAllBalancesByCompanyId(companyId);
+        if (totalPendingCredit == null) totalPendingCredit = BigDecimal.ZERO;
 
-        BigDecimal mProfit = mSales.subtract(mCostAccumulator);
-        BigDecimal deudaTotalHistorica = customerRepository.sumAllBalancesByCompanyId(companyId);
-
-        if (deudaTotalHistorica == null) deudaTotalHistorica = BigDecimal.ZERO;
+        BigDecimal periodProfit = periodSales.subtract(periodReplacementCost);
 
         return new BoxReportDTO(
-                recaudacionYBalanceReal,
-                cashFinal,
-                transferFinal,
-                deudaTotalHistorica,
-                totalProfitReal,
-                recaudacionYBalanceReal,
-                mSales,
-                mCount,
-                mProfit,
-                mCostAccumulator
+                totalSalesToday,
+                cashSalesToday,
+                transferSalesToday,
+                creditSalesToday,
+                customerPaymentsToday,
+                expensesToday,
+                realBalance,
+                totalPendingCredit,
+                periodSales,
+                periodOperations,
+                periodProfit,
+                periodReplacementCost
         );
     }
 
