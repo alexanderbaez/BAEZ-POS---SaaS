@@ -2,11 +2,12 @@ package com.baez.baezpos;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.scheduling.annotation.EnableAsync;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-import java.io.IOException;
+import java.util.concurrent.Executor;
 
 @SpringBootApplication
 @EnableJpaAuditing
@@ -18,5 +19,16 @@ public class BaezposApplication {
 		System.out.println("==========================================");
 		System.out.println("BÁEZ POS SaaS Multi-Tenant iniciado correctamente.");
 		System.out.println("==========================================");
+	}
+
+	@Bean(name = "taskExecutor")
+	public Executor taskExecutor() {
+		ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+		executor.setCorePoolSize(2);
+		executor.setMaxPoolSize(5);
+		executor.setQueueCapacity(500);
+		executor.setThreadNamePrefix("EmailThread-");
+		executor.initialize();
+		return executor;
 	}
 }

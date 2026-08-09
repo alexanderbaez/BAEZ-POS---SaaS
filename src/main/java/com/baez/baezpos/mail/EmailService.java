@@ -51,8 +51,10 @@ public class EmailService {
     // ==========================================
     // NOTIFICACIÓN CON CONTRASEÑA (MasterAdminService)
     // ==========================================
-    @Async // <--- Spring AOP lo intercepta correctamente aquí al ser llamado desde MasterAdminService
+    @Async("taskExecutor")
     public void enviarMailBienvenida(String destinatario, String nombreEmpresa, String nombreUsuario, String passwordTemporal) {
+        log.info("Iniciando tarea asíncrona de correo de bienvenida (con clave) hacia: {}", destinatario);
+
         String asunto = "¡Bienvenido a BAEZ POS! - Accesos a tu cuenta";
 
         String contenidoHtml = """
@@ -84,8 +86,10 @@ public class EmailService {
     // ==========================================
     // NOTIFICACIÓN SIN CONTRASEÑA (AuthService)
     // ==========================================
-    @Async // <--- Spring AOP lo intercepta correctamente aquí al ser llamado desde AuthService
+    @Async("taskExecutor")
     public void enviarMailBienvenida(String destinatario, String nombreUsuario, String nombreEmpresa) {
+        log.info("Iniciando tarea asíncrona de correo de bienvenida hacia: {}", destinatario);
+
         String asunto = "¡Bienvenido a BAEZ POS! - Configuración de Cuenta";
 
         String contenidoHtml = """
@@ -116,8 +120,10 @@ public class EmailService {
     // ==========================================
     // RESETEO DE CONTRASEÑA
     // ==========================================
-    @Async // <--- Spring AOP lo intercepta correctamente aquí
+    @Async("taskExecutor")
     public void enviarMailResetPassword(String destinatario, String nombreUsuario, String nuevaPassword) {
+        log.info("Iniciando tarea asíncrona de correo de reset de clave hacia: {}", destinatario);
+
         String asunto = "BAEZ POS - Restablecimiento de Contraseña";
 
         String contenidoHtml = """
