@@ -1227,6 +1227,8 @@ function generarPlantillaHTMLTicket(venta) {
                     body { font-family: 'Inter', sans-serif; width: 58mm; padding: 8px; margin: 0; color: #0f172a; background: #fff; line-height: 1.25; }
                     .center { text-align: center; }
                     .ticket-header { border-bottom: 1px dashed #94a3b8; padding-bottom: 8px; margin-bottom: 8px; }
+                    .shop-icon-container { display: flex; justify-content: center; align-items: center; margin-bottom: 4px; }
+                    .shop-icon-container svg { width: 32px; height: 32px; fill: #3b82f6; }
                     .business-name { font-weight: 900; font-size: 14px; margin: 2px 0; text-transform: uppercase; letter-spacing: -0.2px; }
                     .small-info { font-size: 9.5px; color: #334155; margin: 1.5px 0; }
                     .fiscal-header { font-size: 8.5px; color: #334155; text-align: left; background: #f1f5f9; padding: 4px 6px; border-radius: 4px; margin-top: 5px; }
@@ -1249,6 +1251,11 @@ function generarPlantillaHTMLTicket(venta) {
             </head>
             <body>
                 <div class="ticket-header center">
+                    <div class="shop-icon-container">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+                            <path d="M2.97 1.35A1 1 0 0 1 3.73 1h8.54a1 1 0 0 1 .76.35l2.609 3.044A1.5 1.5 0 0 1 16 5.37v.255a2.375 2.375 0 0 1-4.25 1.458A2.37 2.37 0 0 1 9.875 8 2.37 2.37 0 0 1 8 7.083 2.37 2.37 0 0 1 6.125 8a2.37 2.37 0 0 1-1.875-.917A2.375 2.375 0 0 1 0 5.625V5.37a1.5 1.5 0 0 1 .361-.976zm1.78 4.275a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 1 0 2.75 0V5.37a.5.5 0 0 0-.12-.325L12.27 2H3.73L1.12 5.045A.5.5 0 0 0 1 5.37v.255a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0M1.5 8.5A.5.5 0 0 1 2 9v6h12V9a.5.5 0 0 1 1 0v6.5a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5V9a.5.5 0 0 1 .5-.5M5 11a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 .5.5v4H5z"/>
+                        </svg>
+                    </div>
                     <div class="business-name">${nombreLocal}</div>
                     ${direccionLocal ? `<div class="small-info">${direccionLocal}</div>` : ''}
                     ${telefonoLocal ? `<div class="small-info">Tel: ${telefonoLocal}</div>` : ''}
