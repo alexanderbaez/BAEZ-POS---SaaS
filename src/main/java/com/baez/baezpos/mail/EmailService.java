@@ -21,13 +21,9 @@ public class EmailService {
     private String senderEmail;
 
     // ==========================================
-    // MOTOR BÁSICO DE ENVÍO HTML — @Async SOLO AQUÍ
-    // NOTA: Los métodos de conveniencia deben llamar a este directamente.
-    //       @Async en métodos que llaman a otro @Async del mismo bean no funciona
-    //       porque Spring AOP no intercepta llamadas internas (this.metodo()).
+    // MÉTODO PRIVADO AUXILIAR (Ejecuta el envío)
     // ==========================================
-    @Async
-    public void enviarCorreoPro(String destinatario, String asunto, String contenidoHtml) {
+    private void enviarCorreoInterno(String destinatario, String asunto, String contenidoHtml) {
         if (destinatario == null || destinatario.isBlank()) {
             log.warn("Intento de envío de correo frustrado: destinatario nulo o vacío.");
             return;
@@ -46,16 +42,16 @@ public class EmailService {
             log.info("Email enviado con éxito a: {}", destinatario);
 
         } catch (MessagingException e) {
-            log.error("Error SMTP al enviar correo a {}. Detalle: {}", destinatario, e.getMessage(), e);
+            log.error("Error SMTP al enviar correo a {}. Detalle: {}", destinatario, e.getMessage());
         } catch (Exception e) {
-            log.error("Error inesperado en el servicio de e-mail para {}: {}", destinatario, e.getMessage(), e);
+            log.error("Error inesperado en el servicio de e-mail para {}: {}", destinatario, e.getMessage());
         }
     }
 
     // ==========================================
-    // NOTIFICACIÓN DE BIENVENIDA CON CONTRASEÑA (Para SuperAdmin / MasterAdminService)
-    // SIN @Async — la llamada asíncrona la gestiona enviarCorreoPro()
+    // NOTIFICACIÓN CON CONTRASEÑA (MasterAdminService)
     // ==========================================
+    @Async // <--- Spring AOP lo intercepta correctamente aquí al ser llamado desde MasterAdminService
     public void enviarMailBienvenida(String destinatario, String nombreEmpresa, String nombreUsuario, String passwordTemporal) {
         String asunto = "¡Bienvenido a BAEZ POS! - Accesos a tu cuenta";
 
@@ -82,14 +78,13 @@ public class EmailService {
             </div>
             """.formatted(nombreUsuario, nombreEmpresa, destinatario, passwordTemporal);
 
-        // Delega al método @Async — el proxy de Spring lo intercepta correctamente aquí
-        enviarCorreoPro(destinatario, asunto, contenidoHtml);
+        enviarCorreoInterno(destinatario, asunto, contenidoHtml);
     }
 
     // ==========================================
-    // NOTIFICACIÓN DE BIENVENIDA SIN CONTRASEÑA (Para Setup Inicial / AuthService)
-    // SIN @Async — la llamada asíncrona la gestiona enviarCorreoPro()
+    // NOTIFICACIÓN SIN CONTRASEÑA (AuthService)
     // ==========================================
+    @Async // <--- Spring AOP lo intercepta correctamente aquí al ser llamado desde AuthService
     public void enviarMailBienvenida(String destinatario, String nombreUsuario, String nombreEmpresa) {
         String asunto = "¡Bienvenido a BAEZ POS! - Configuración de Cuenta";
 
@@ -115,13 +110,13 @@ public class EmailService {
             </div>
             """.formatted(nombreUsuario, nombreEmpresa, destinatario);
 
-        enviarCorreoPro(destinatario, asunto, contenidoHtml);
+        enviarCorreoInterno(destinatario, asunto, contenidoHtml);
     }
 
     // ==========================================
-    // NOTIFICACIÓN DE RESETEO DE CONTRASEÑA
-    // SIN @Async — la llamada asíncrona la gestiona enviarCorreoPro()
+    // RESETEO DE CONTRASEÑA
     // ==========================================
+    @Async // <--- Spring AOP lo intercepta correctamente aquí
     public void enviarMailResetPassword(String destinatario, String nombreUsuario, String nuevaPassword) {
         String asunto = "BAEZ POS - Restablecimiento de Contraseña";
 
@@ -147,6 +142,6 @@ public class EmailService {
             </div>
             """.formatted(nombreUsuario, nuevaPassword);
 
-        enviarCorreoPro(destinatario, asunto, contenidoHtml);
+        enviarCorreoInterno(destinatario, asunto, contenidoHtml);
     }
 }
