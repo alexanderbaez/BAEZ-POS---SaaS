@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
@@ -20,6 +21,7 @@ public class CompanyDTO {
     private String email;
     private LocalDate expirationDate;
     private Boolean active;
+    private BigDecimal monthlyFee; // <--- Agregado
     private String ticketMessage;
     private String ownerPassword;
 

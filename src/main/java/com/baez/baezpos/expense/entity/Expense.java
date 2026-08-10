@@ -1,5 +1,6 @@
 package com.baez.baezpos.expense.entity;
 
+import com.baez.baezpos.shared.entity.PaymentMethod;
 import com.baez.baezpos.shared.entity.TenantEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -28,8 +29,19 @@ public class Expense extends TenantEntity {
     @Column(nullable = false)
     private LocalDateTime expenseDate;
 
-    // NUEVO CAMPO: Bandera de control de caja
     @Column(name = "deduct_from_box", nullable = false)
     @Builder.Default
     private Boolean deductFromBox = true;
+
+    // --- NUEVOS CAMPOS ---
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category", nullable = false, length = 30)
+    private ExpenseCategory category;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", nullable = false, length = 30)
+    private PaymentMethod paymentMethod;
+
+    @Column(name = "reference", length = 100)
+    private String reference;
 }

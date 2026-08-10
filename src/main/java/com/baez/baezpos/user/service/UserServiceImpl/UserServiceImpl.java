@@ -1,7 +1,7 @@
 package com.baez.baezpos.user.service.UserServiceImpl;
 
-import com.baez.baezpos.company.repository.CompanyRepository; // <--- 1. Importar el repositorio de compañía
-import com.baez.baezpos.company.entity.Company;             // <--- 1. Importar la entidad Company
+import com.baez.baezpos.company.entity.Company;
+import com.baez.baezpos.company.repository.CompanyRepository;
 import com.baez.baezpos.user.dto.UserRequestDTO;
 import com.baez.baezpos.user.dto.UserResponseDTO;
 import com.baez.baezpos.user.entity.Role;
@@ -25,7 +25,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final CompanyRepository companyRepository; // <--- 2. Declarar la dependencia
+    private final CompanyRepository companyRepository;
 
     @Override
     @Transactional
@@ -41,9 +41,6 @@ public class UserServiceImpl implements UserService {
         user.setRole(dto.getRole() != null ? dto.getRole() : Role.VENDEDOR);
         user.setActive(true);
 
-        // ==========================================
-        // CORRECCIÓN MULTI-TENANT: Asignar compañía
-        // ==========================================
         Long companyId = SecurityUtils.getCurrentCompanyId();
         if (companyId != null) {
             Company company = companyRepository.findById(companyId)
@@ -60,12 +57,13 @@ public class UserServiceImpl implements UserService {
     public UserResponseDTO getUserById(Long id) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         if (companyId != null) {
-            return userRepository.findByIdAndCompanyId(id, companyId)
+            return userRepository.findByIdAndCompanyIdAndActiveTrue(id, companyId)
                     .map(this::convertToDTO)
                     .orElseThrow(() -> new RuntimeException("Usuario no encontrado o no pertenece a su empresa."));
         }
 
         return userRepository.findById(id)
+                .filter(u -> Boolean.TRUE.equals(u.getActive()))
                 .map(this::convertToDTO)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
     }
@@ -75,13 +73,14 @@ public class UserServiceImpl implements UserService {
     public List<UserResponseDTO> getAllUsers() {
         Long companyId = SecurityUtils.getCurrentCompanyId();
 
+        // FILTRADO CLAVE: Devuelve solo usuarios activos (no eliminados)
         if (companyId != null) {
-            return userRepository.findByCompanyId(companyId).stream()
+            return userRepository.findByCompanyIdAndActiveTrue(companyId).stream()
                     .map(this::convertToDTO)
                     .collect(Collectors.toList());
         }
 
-        return userRepository.findAll().stream()
+        return userRepository.findByActiveTrue().stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
@@ -91,8 +90,11 @@ public class UserServiceImpl implements UserService {
     public UserResponseDTO updateUser(Long id, UserRequestDTO dto) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         User existing = (companyId != null) ?
-                userRepository.findByIdAndCompanyId(id, companyId).orElseThrow(() -> new RuntimeException("No autorizado")) :
-                userRepository.findById(id).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                userRepository.findByIdAndCompanyIdAndActiveTrue(id, companyId)
+                        .orElseThrow(() -> new RuntimeException("No autorizado o usuario inactivo")) :
+                userRepository.findById(id)
+                        .filter(u -> Boolean.TRUE.equals(u.getActive()))
+                        .orElseThrow(() -> new RuntimeException("Usuario no encontrado o inactivo"));
 
         existing.setName(dto.getName());
         if (dto.getRole() != null) {
@@ -112,8 +114,10 @@ public class UserServiceImpl implements UserService {
     public void deleteUser(Long id) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         User existing = (companyId != null) ?
-                userRepository.findByIdAndCompanyId(id, companyId).orElseThrow(() -> new RuntimeException("No autorizado")) :
-                userRepository.findById(id).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                userRepository.findByIdAndCompanyId(id, companyId)
+                        .orElseThrow(() -> new RuntimeException("No autorizado")) :
+                userRepository.findById(id)
+                        .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         existing.setActive(false);
         userRepository.save(existing);
@@ -136,6 +140,7 @@ public class UserServiceImpl implements UserService {
                 .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole())
+                .active(user.getActive())
                 .build();
     }
 }

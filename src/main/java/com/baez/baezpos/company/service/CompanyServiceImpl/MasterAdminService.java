@@ -36,19 +36,19 @@ public class MasterAdminService implements MasterAdmin {
     @Transactional
     public void registerFullBusiness(MasterRegistrationRequest req) {
         if (req.getTaxId() != null && !req.getTaxId().isBlank() && companyRepository.existsByTaxId(req.getTaxId())) {
-            throw new RuntimeException("El CUIT/TaxID ya existe en el sistema.");
+            throw new IllegalArgumentException("El CUIT/TaxID ya existe en el sistema.");
         }
         if (req.getOwnerEmail() != null && userRepository.existsByEmail(req.getOwnerEmail())) {
-            throw new RuntimeException("El correo del dueño ya esta registrado.");
+            throw new IllegalArgumentException("El correo del dueño ya está registrado.");
         }
 
-        // 1. Guardar la configuración del negocio
         Company company = Company.builder()
                 .name(req.getCompanyName())
                 .taxId(req.getTaxId())
                 .address(req.getAddress())
                 .phone(req.getPhone())
                 .email(req.getOwnerEmail())
+                .monthlyFee(req.getMonthlyFee())
                 .expirationDate(req.getExpirationDate() != null ? req.getExpirationDate() : LocalDate.now().plusDays(15))
                 .active(true)
                 .ticketMessage(req.getTicketMessage())
@@ -56,9 +56,8 @@ public class MasterAdminService implements MasterAdmin {
 
         Company savedCompany = companyRepository.save(company);
 
-        // 2. Guardar el Admin CON relación a la empresa
         User owner = User.builder()
-                .name(req.getOwnerName())
+                .name(req.getOwnerName() != null ? req.getOwnerName() : req.getCompanyName())
                 .email(req.getOwnerEmail())
                 .password(passwordEncoder.encode(req.getOwnerPassword()))
                 .role(Role.ADMIN)
@@ -68,13 +67,12 @@ public class MasterAdminService implements MasterAdmin {
 
         userRepository.save(owner);
 
-        // 3. Notificación de bienvenida asíncrona al dueño de la cuenta
         try {
             emailService.enviarMailBienvenida(
-                    owner.getEmail(),           // destinatario
-                    savedCompany.getName(),     // nombreEmpresa
-                    owner.getName(),            // nombreUsuario  ←← CORREGIDO (estaba invertido)
-                    req.getOwnerPassword()      // contraseña temporal/inicial
+                    owner.getEmail(),
+                    savedCompany.getName(),
+                    owner.getName(),
+                    req.getOwnerPassword()
             );
         } catch (Exception e) {
             log.error("No se pudo enviar el correo de bienvenida a {}: {}", owner.getEmail(), e.getMessage());
@@ -89,7 +87,7 @@ public class MasterAdminService implements MasterAdmin {
 
         if (dto.getTaxId() != null && !dto.getTaxId().equals(company.getTaxId())) {
             if (companyRepository.existsByTaxId(dto.getTaxId())) {
-                throw new RuntimeException("El CUIT/TaxID ya está registrado en otra empresa.");
+                throw new IllegalArgumentException("El CUIT/TaxID ya está registrado en otra empresa.");
             }
             company.setTaxId(dto.getTaxId());
         }
@@ -97,9 +95,17 @@ public class MasterAdminService implements MasterAdmin {
         company.setName(dto.getName());
         company.setAddress(dto.getAddress());
         company.setPhone(dto.getPhone());
+        company.setEmail(dto.getEmail());
+        company.setMonthlyFee(dto.getMonthlyFee());
         company.setExpirationDate(dto.getExpirationDate());
         company.setActive(dto.getActive());
         company.setTicketMessage(dto.getTicketMessage());
+
+        // Si se envió una nueva clave desde el modal de edición, actualizar el password del Admin
+        if (dto.getOwnerPassword() != null && !dto.getOwnerPassword().trim().isEmpty()) {
+            resetOwnerPassword(id, dto.getOwnerPassword());
+        }
+
         companyRepository.save(company);
     }
 
@@ -113,17 +119,19 @@ public class MasterAdminService implements MasterAdmin {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Map<String, Object> getMasterDashboardStats() {
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalCompanies", companyRepository.count());
-        stats.put("activeCompanies", companyRepository.findAll().stream().filter(Company::getActive).count());
+        stats.put("activeCompanies", companyRepository.countByActiveTrue()); // Consulta directa optimizada
         return stats;
     }
 
     @Override
     @Transactional
     public void extendSubscriptionMaster(Long id) {
-        Company company = companyRepository.findById(id).orElseThrow();
+        Company company = companyRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
         LocalDate hoy = LocalDate.now();
         LocalDate nuevaFecha = (company.getExpirationDate() == null || company.getExpirationDate().isBefore(hoy))
                 ? hoy.plusDays(30) : company.getExpirationDate().plusDays(30);
@@ -148,7 +156,6 @@ public class MasterAdminService implements MasterAdmin {
         owner.setPassword(passwordEncoder.encode(newRawPassword));
         userRepository.save(owner);
 
-        // Notificación de reseteo de clave al dueño
         try {
             emailService.enviarMailResetPassword(
                     owner.getEmail(),
@@ -168,6 +175,7 @@ public class MasterAdminService implements MasterAdmin {
                 .address(c.getAddress())
                 .phone(c.getPhone())
                 .email(c.getEmail())
+                .monthlyFee(c.getMonthlyFee())
                 .expirationDate(c.getExpirationDate())
                 .active(c.getActive())
                 .ticketMessage(c.getTicketMessage())

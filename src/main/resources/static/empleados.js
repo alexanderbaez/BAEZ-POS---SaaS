@@ -9,7 +9,7 @@ let modalForm = null;
 // 1. INICIALIZACIÓN
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Verificar si es ADMIN
+    // Verificar si es ADMIN o SUPER_ADMIN
     const userRole = (localStorage.getItem('baezpos_user_role') || '').toUpperCase().trim();
     if (userRole !== 'ADMIN' && !userRole.includes('SUPER_ADMIN')) {
         Swal.fire({
@@ -47,12 +47,20 @@ async function cargarEmpleados() {
 
         tbody.innerHTML = '';
 
-        if (!usuarios || usuarios.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-muted">No hay empleados registrados.</td></tr>';
+        if (!Array.isArray(usuarios)) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-warning">Respuesta no válida del servidor.</td></tr>';
             return;
         }
 
-        usuarios.forEach(user => {
+        // Filtrar preventivamente cualquier registro que haya venido inactivo por la API
+        const usuariosActivos = usuarios.filter(user => user && (user.active === true || user.active === undefined));
+
+        if (usuariosActivos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-muted">No hay empleados activos registrados.</td></tr>';
+            return;
+        }
+
+        usuariosActivos.forEach(user => {
             let badgeClass = 'bg-light text-dark';
             const rol = (user.role || '').toUpperCase();
             if (rol === 'ADMIN' || rol.includes('SUPER')) badgeClass = 'bg-danger text-white';
@@ -63,7 +71,7 @@ async function cargarEmpleados() {
             const nombreSeguro = (user.name || 'Sin Nombre').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
             tbody.innerHTML += `
-                <tr>
+                <tr id="empleado-row-${user.id}">
                     <td class="ps-3">
                         <div class="d-flex align-items-center gap-3">
                             <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center fw-bold text-white shadow-sm" style="width: 38px; height: 38px;">
@@ -72,11 +80,11 @@ async function cargarEmpleados() {
                             <span class="fw-bold text-dark">${user.name || 'Sin Nombre'}</span>
                         </div>
                     </td>
-                    <td class="text-secondary align-middle">${user.email}</td>
+                    <td class="text-secondary align-middle">${user.email || '-'}</td>
                     <td class="align-middle"><span class="badge ${badgeClass} rounded-pill px-3 py-1">${user.role}</span></td>
                     <td class="text-end align-middle pe-3">
                         <button class="btn btn-sm btn-outline-secondary rounded-circle me-1" onclick='abrirEdicion(${userJsonSeguro})' title="Editar"><i class="bi bi-pencil"></i></button>
-                        <button class="btn btn-sm btn-outline-danger rounded-circle" onclick="eliminarEmpleado(${user.id}, '${nombreSeguro}', '${user.role}')" title="Eliminar"><i class="bi bi-trash"></i></button>
+                        <button class="btn btn-sm btn-outline-danger rounded-circle" onclick="eliminarEmpleado(${user.id}, '${nombreSeguro}', '${user.role}')" title="Desactivar"><i class="bi bi-trash"></i></button>
                     </td>
                 </tr>
             `;
@@ -192,17 +200,17 @@ if (modalElement) {
 }
 
 // ==========================================
-// 4. ELIMINACIÓN DE EMPLEADOS
+// 4. ELIMINACIÓN LÓGICA (DESACTIVAR)
 // ==========================================
 async function eliminarEmpleado(id, name, rol) {
     if (rol === 'ADMIN' && id === 1) {
-        Swal.fire('Denegado', 'No puedes eliminar al Administrador Principal del sistema.', 'error');
+        Swal.fire('Denegado', 'No puedes desactivar al Administrador Principal del sistema.', 'error');
         return;
     }
 
     const { isConfirmed } = await Swal.fire({
-        title: `¿Eliminar a ${name}?`,
-        html: "Esta acción no se puede deshacer y el empleado perderá el acceso al sistema.",
+        title: `¿Desactivar a ${name}?`,
+        html: "El empleado perderá el acceso al sistema y no aparecerá en la lista de vendedores activos.",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#ef4444',
@@ -215,7 +223,18 @@ async function eliminarEmpleado(id, name, rol) {
         try {
             const res = await apiFetch(`/users/${id}`, { method: 'DELETE' });
             if (res && res.ok) {
-                Swal.fire({ icon: 'success', title: '¡Eliminado!', text: 'El empleado ha sido removido.', timer: 1500, showConfirmButton: false });
+                // Remueve inmediatamente la fila del DOM
+                const fila = document.getElementById(`empleado-row-${id}`);
+                if (fila) fila.remove();
+
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Eliminado!',
+                    text: 'El empleado ha sido removido.',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+
                 cargarEmpleados();
             } else {
                 Swal.fire('Error', 'No se pudo eliminar al empleado.', 'error');
@@ -227,6 +246,6 @@ async function eliminarEmpleado(id, name, rol) {
     }
 }
 
-// Exposición en window para compatibilidad estricta con eventos HTML
+// Exposición global
 window.abrirEdicion = abrirEdicion;
 window.eliminarEmpleado = eliminarEmpleado;

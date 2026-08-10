@@ -1,16 +1,17 @@
 package com.baez.baezpos.company.dto;
 
 import lombok.Data;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
 public class MasterRegistrationRequest {
-    // --- DATOS DEL COMERCIO ---
     private String companyName;
     private String taxId;
     private String address;
-    private String phone;          // <--- AGREGADO: Para contacto rápido
-    private String ticketMessage;  // <--- AGREGADO: "Gracias por su compra", etc.
+    private String phone;
+    private String ticketMessage;
+    private BigDecimal monthlyFee; // <--- Agregado para el alta inicial
     private LocalDate expirationDate;
 
     // --- DATOS DEL DUEÑO (ADMIN) ---

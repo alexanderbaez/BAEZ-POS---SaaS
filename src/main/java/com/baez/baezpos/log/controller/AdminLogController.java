@@ -19,7 +19,10 @@ public class AdminLogController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
-    public ResponseEntity<List<SystemLogResponseDTO>> getLogs() {
-        return ResponseEntity.ok(auditService.getLogs());
+    public ResponseEntity<List<SystemLogResponseDTO>> getLogs(
+            @RequestParam(required = false) Long companyId,
+            @RequestParam(defaultValue = "100") int limit
+    ) {
+        return ResponseEntity.ok(auditService.getLogs(companyId, limit));
     }
 }

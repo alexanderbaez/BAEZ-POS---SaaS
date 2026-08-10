@@ -121,9 +121,20 @@ function renderizarGastos(gastos) {
         return;
     }
 
+    // Mapa de categorías alineado estrictamente con el Enum ExpenseCategory.java
+    const mapaCategorias = {
+        'PROVEEDOR': { label: 'Proveedor', class: 'bg-primary text-white' },
+        'SERVICIOS': { label: 'Servicios', class: 'bg-warning text-dark' },
+        'LOGISTICA': { label: 'Logística / Flete', class: 'bg-info text-dark' },
+        'SUELDOS': { label: 'Sueldos', class: 'bg-success text-white' },
+        'MANTENIMIENTO': { label: 'Mantenimiento', class: 'bg-secondary text-white' },
+        'CAJA_CHICA': { label: 'Caja Chica', class: 'bg-danger text-white' },
+        'VARIOS_RETIRO': { label: 'Retiro / Varios', class: 'bg-dark text-white' }
+    };
+
     const fragment = document.createDocumentFragment();
 
-    // Ordenar de más reciente a más antiguo
+    // Ordenar de más reciente a más antiguo por la propiedad 'date'
     const listaOrdenada = [...gastos].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
     listaOrdenada.forEach(g => {
@@ -138,12 +149,9 @@ function renderizarGastos(gastos) {
         const descSegura = escapeHTML(g.description || 'Sin concepto');
         const refSegura = escapeHTML(g.reference || '');
 
-        let badgeCatClass = 'bg-slate-100 text-slate-700 border';
-        if (g.category === 'PROVEEDOR') badgeCatClass = 'bg-primary-subtle text-primary border border-primary-subtle';
-        else if (g.category === 'SERVICIOS') badgeCatClass = 'bg-warning-subtle text-warning-emphasis border border-warning-subtle';
-        else if (g.category === 'LOGISTICA') badgeCatClass = 'bg-info-subtle text-info-emphasis border border-info-subtle';
-        else if (g.category === 'SUELDOS') badgeCatClass = 'bg-success-subtle text-success-emphasis border border-success-subtle';
-        else if (g.category === 'CAJA_CHICA') badgeCatClass = 'bg-danger-subtle text-danger border border-danger-subtle';
+        // Obtener configuración de categoría o usar fallback
+        const catKey = g.category ? g.category.toUpperCase() : 'VARIOS_RETIRO';
+        const catConfig = mapaCategorias[catKey] || { label: g.category || 'Varios', class: 'bg-secondary text-white' };
 
         let metodoTexto = 'Efectivo';
         let iconoMetodo = 'bi-cash-stack text-success';
@@ -156,7 +164,7 @@ function renderizarGastos(gastos) {
         }
 
         const badgeCaja = g.deductFromBox
-            ? '<span class="badge bg-danger-subtle text-danger ms-1" style="font-size: 10px;" title="Descontado del turno de caja">-Caja</span>'
+            ? '<span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size: 10px;" title="Descontado del turno de caja">-Caja</span>'
             : '';
 
         const tr = document.createElement('tr');
@@ -169,7 +177,11 @@ function renderizarGastos(gastos) {
                 <span class="fw-semibold text-dark d-block">${descSegura}</span>
                 ${refSegura ? `<small class="text-muted"><i class="bi bi-receipt me-1"></i>Ref: ${refSegura}</small>` : ''}
             </td>
-            <td><span class="badge ${badgeCatClass} px-2 py-1" style="font-size: 11px;">${g.category}</span></td>
+            <td>
+                <span class="badge ${catConfig.class} px-2 py-1 fw-semibold" style="font-size: 11px;">
+                    ${catConfig.label}
+                </span>
+            </td>
             <td>
                 <span class="small text-secondary"><i class="bi ${iconoMetodo} me-1"></i>${metodoTexto}</span>
                 ${badgeCaja}
@@ -229,14 +241,14 @@ async function guardarGasto(e) {
     btnGuardar.disabled = true;
     btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Guardando...';
 
+    // Payload alineado al ExpenseRequestDTO de Java
     const nuevoGasto = {
         description: document.getElementById('descGasto').value.trim(),
         amount: monto,
         category: document.getElementById('catGasto').value,
         paymentMethod: document.getElementById('metodoPagoGasto').value,
-        reference: document.getElementById('refComprobante').value.trim(),
-        deductFromBox: document.getElementById('deductFromBox').checked,
-        date: new Date().toISOString()
+        reference: document.getElementById('refComprobante').value.trim() || null,
+        deductFromBox: document.getElementById('deductFromBox').checked
     };
 
     try {
@@ -253,6 +265,8 @@ async function guardarGasto(e) {
             });
 
             document.getElementById('formGasto').reset();
+            // Aseguramos que al resetear vuelva por defecto a 'true'
+            document.getElementById('deductFromBox').checked = true;
 
             const modalEl = document.getElementById('modalNuevoGasto');
             if (modalEl) {
@@ -313,7 +327,8 @@ async function confirmarEliminarGasto(id) {
 
 // Helper para sanear HTML y prevenir XSS
 function escapeHTML(str) {
-    return str.replace(/[&<>'"]/g,
+    if (!str) return '';
+    return String(str).replace(/[&<>'"]/g,
         tag => ({
             '&': '&amp;',
             '<': '&lt;',

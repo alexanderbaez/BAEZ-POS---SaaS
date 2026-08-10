@@ -2,10 +2,12 @@ package com.baez.baezpos.company.entity;
 
 import com.baez.baezpos.shared.entity.BaseEntity;
 import jakarta.persistence.*;
-import lombok.*;
-import lombok.experimental.SuperBuilder;
+        import lombok.*;
+        import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
@@ -14,6 +16,7 @@ import java.time.LocalDate;
 @NoArgsConstructor @AllArgsConstructor
 @SuperBuilder
 @SQLDelete(sql = "UPDATE companies SET active = false WHERE id = ?")
+@SQLRestriction("active = true") // Asegura el filtrado automático de Soft Delete
 public class Company extends BaseEntity {
 
     @Id
@@ -38,6 +41,9 @@ public class Company extends BaseEntity {
     @Builder.Default
     @Column(nullable = false)
     private Boolean active = true;
+
+    @Column(name = "monthly_fee", precision = 12, scale = 2)
+    private BigDecimal monthlyFee; // <--- CAMPO CLAVE PARA EL CALCULO DE MRR EN EL FRONTEND
 
     @Column(name = "ticket_message", columnDefinition = "TEXT")
     private String ticketMessage;

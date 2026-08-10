@@ -14,14 +14,15 @@
         --bg-main: #060911;
         --bg-card: #0f172a;
         --bg-card-hover: #1e293b;
-        --border-color: rgba(255, 255, 255, 0.08);
+        --border-color: rgba(255, 255, 255, 0.12);
         --primary: #38bdf8;
         --primary-glow: rgba(56, 189, 248, 0.25);
         --accent: #10b981;
         --warning: #fbbf24;
         --danger: #f87171;
         --text-main: #f8fafc;
-        --text-muted: #94a3b8;
+        --text-muted: #cbd5e1;
+        --text-subtle: #94a3b8;
     }
 
     body {
@@ -38,7 +39,7 @@
     ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
     .master-header {
-        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(6, 9, 17, 0.98));
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(6, 9, 17, 0.99));
         border-bottom: 1px solid var(--border-color);
         padding: 1.25rem 2rem;
         margin-bottom: 1.5rem;
@@ -63,7 +64,7 @@
         box-shadow: 0 12px 30px -5px var(--primary-glow);
     }
     .kpi-label {
-        font-size: 0.7rem;
+        font-size: 0.72rem;
         font-weight: 700;
         letter-spacing: 1px;
         text-transform: uppercase;
@@ -78,8 +79,8 @@
     }
 
     .revenue-badge {
-        background: rgba(16, 185, 129, 0.12);
-        border: 1px solid rgba(16, 185, 129, 0.35);
+        background: rgba(16, 185, 129, 0.15);
+        border: 1px solid rgba(16, 185, 129, 0.4);
         color: #34d399;
         padding: 0.5rem 1rem;
         border-radius: 12px;
@@ -90,9 +91,6 @@
         font-size: 0.9rem;
     }
 
-    /* ==========================================
-       DISEÑO DE TABLAS FLUIDAS Y ROBUSTAS
-       ========================================== */
     .table {
         color: var(--text-main) !important;
         margin-bottom: 0;
@@ -107,11 +105,11 @@
     }
 
     .table thead th {
-        background: rgba(0, 0, 0, 0.5) !important;
-        color: #cbd5e1 !important;
+        background: rgba(0, 0, 0, 0.6) !important;
+        color: #f1f5f9 !important;
         font-weight: 700;
         text-transform: uppercase;
-        font-size: 0.7rem;
+        font-size: 0.75rem;
         letter-spacing: 0.5px;
         padding: 14px 16px;
         border-bottom: 1px solid var(--border-color) !important;
@@ -135,13 +133,17 @@
         color: var(--text-main) !important;
     }
 
-    .row-vencido { background-color: rgba(248, 113, 113, 0.08) !important; border-left: 4px solid var(--danger); }
-    .row-pronto { background-color: rgba(251, 191, 36, 0.08) !important; border-left: 4px solid var(--warning); }
+    .text-subtext {
+        color: var(--text-muted) !important;
+        font-size: 0.82rem;
+    }
 
-    /* FORMULARIOS DE ALTA VISIBILIDAD */
+    .row-vencido { background-color: rgba(248, 113, 113, 0.12) !important; border-left: 4px solid var(--danger); }
+    .row-pronto { background-color: rgba(251, 191, 36, 0.12) !important; border-left: 4px solid var(--warning); }
+
     .form-control, .form-select {
         background-color: #020617 !important;
-        border: 1px solid #334155;
+        border: 1px solid #475569;
         color: #ffffff !important;
         border-radius: 10px;
         padding: 0.65rem 0.9rem;
@@ -150,7 +152,7 @@
         transition: all 0.2s;
     }
     .form-control::placeholder {
-        color: #64748b !important;
+        color: #94a3b8 !important;
         opacity: 1;
     }
     .form-control:focus, .form-select:focus {
@@ -166,7 +168,7 @@
     .form-label {
         font-size: 0.75rem;
         font-weight: 700;
-        color: #cbd5e1;
+        color: #e2e8f0;
         text-transform: uppercase;
         letter-spacing: 0.5px;
         margin-bottom: 0.4rem;
@@ -194,21 +196,11 @@
         color: var(--text-main);
     }
 
-    /* AJUSTES RESPONSIVE MÓVIL */
     @media (max-width: 767.98px) {
-        .master-header {
-            padding: 1rem;
-        }
-        .revenue-badge {
-            width: 100%;
-            justify-content: center;
-        }
-        .card {
-            padding: 1.25rem !important;
-        }
-        .table-responsive table {
-            min-width: 650px; /* Asegura que la tabla no se aplaste en móvil */
-        }
+        .master-header { padding: 1rem; }
+        .revenue-badge { width: 100%; justify-content: center; }
+        .card { padding: 1.25rem !important; }
+        .table-responsive table { min-width: 700px; }
     }
   </style>
 </head>
@@ -223,13 +215,13 @@
         <span>BÁEZ</span> <span class="text-primary">POS</span>
         <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fs-7 px-2 py-0.5 fw-bold">MASTER ADMIN</span>
       </h3>
-      <p class="text-muted small m-0 mt-1">Panel de control centralizado y supervisión de red SaaS de alto rendimiento.</p>
+      <p class="text-light opacity-75 small m-0 mt-1">Panel de control centralizado y supervisión de red SaaS de alto rendimiento.</p>
     </div>
 
     <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 gap-sm-3">
-      <div class="revenue-badge shadow-sm">
-        <i class="bi bi-wallet2 fs-5"></i>
-        <span>RECAUDACIÓN: <strong id="kpiGanancia" class="text-white">$ 0,00</strong></span>
+      <div class="revenue-badge shadow-sm" title="Suma total de abonos mensuales de clientes activos">
+        <i class="bi bi-cash-stack fs-5"></i>
+        <span>ESTIMADO MENSUAL: <strong id="kpiGanancia" class="text-white">$ 0,00</strong></span>
       </div>
       <button class="btn btn-outline-danger btn-sm px-3 rounded-pill fw-bold" onclick="cerrarSesion()">
         <i class="bi bi-power me-1"></i>Salir
@@ -241,7 +233,7 @@
 <!-- CONTENEDOR PRINCIPAL FLUIDO -->
 <div class="container-fluid px-2 px-md-4">
 
-  <!-- TARJETAS KPI (4 Columnas responsivas) -->
+  <!-- TARJETAS KPI -->
   <div class="row g-3 mb-4">
     <div class="col-12 col-sm-6 col-xl-3">
       <div class="card p-3 kpi-card" style="border-left-color: var(--primary);">
@@ -306,36 +298,42 @@
         <h5 class="fw-bold mb-3 text-white d-flex align-items-center gap-2 fs-6">
           <i class="bi bi-plus-circle-fill text-primary"></i> Dar de Alta Comercio
         </h5>
-        <form id="formNuevaEmpresa">
+        <form id="formNuevaEmpresa" autocomplete="off">
           <div class="mb-3">
-            <label class="form-label">Nombre Comercial</label>
+            <label class="form-label" for="masterNombre">Nombre Comercial</label>
             <input type="text" id="masterNombre" class="form-control" placeholder="Ej: Central Market" required>
           </div>
           <div class="row g-2">
             <div class="col-12 col-sm-6 col-lg-12 col-xl-6 mb-3">
-              <label class="form-label">CUIT / TaxID</label>
+              <label class="form-label" for="masterTaxId">CUIT / TaxID</label>
               <input type="text" id="masterTaxId" class="form-control" placeholder="20-XXXXXXXX-9" required>
             </div>
             <div class="col-12 col-sm-6 col-lg-12 col-xl-6 mb-3">
-              <label class="form-label">Teléfono</label>
+              <label class="form-label" for="masterTelefono">Teléfono</label>
               <input type="text" id="masterTelefono" class="form-control" placeholder="1122334455" required>
             </div>
           </div>
           <div class="mb-3">
-            <label class="form-label">Dirección</label>
+            <label class="form-label" for="masterDireccion">Dirección</label>
             <input type="text" id="masterDireccion" class="form-control" placeholder="Av. Principal 123" required>
           </div>
           <div class="mb-3">
-            <label class="form-label">Email Admin</label>
-            <input type="email" id="masterEmail" class="form-control" placeholder="admin@comercio.com" required>
+            <label class="form-label" for="masterEmail">Email Admin</label>
+            <input type="email" id="masterEmail" class="form-control" placeholder="admin@comercio.com" autocomplete="username" required>
           </div>
           <div class="mb-3">
-            <label class="form-label">Contraseña Inicial</label>
-            <input type="password" id="masterPass" class="form-control" placeholder="••••••••" required>
+            <label class="form-label" for="masterPass">Contraseña Inicial</label>
+            <input type="password" id="masterPass" class="form-control" placeholder="••••••••" autocomplete="new-password" required>
           </div>
-          <div class="mb-4">
-            <label class="form-label text-warning"><i class="bi bi-calendar-event me-1"></i> Vencimiento</label>
-            <input type="date" id="masterVenc" class="form-control border-warning border-opacity-50" required>
+          <div class="row g-2">
+            <div class="col-12 col-sm-6 col-lg-12 col-xl-6 mb-3">
+              <label class="form-label text-success" for="masterAbono"><i class="bi bi-currency-dollar me-1"></i> Abono/Mes ($)</label>
+              <input type="number" id="masterAbono" class="form-control border-success border-opacity-50" placeholder="25000" step="500" required>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-12 col-xl-6 mb-3">
+              <label class="form-label text-warning" for="masterVenc"><i class="bi bi-calendar-event me-1"></i> Vencimiento</label>
+              <input type="date" id="masterVenc" class="form-control border-warning border-opacity-50" required>
+            </div>
           </div>
           <button type="submit" class="btn btn-primary w-100 py-2.5 fw-bold shadow-sm">
             <i class="bi bi-shield-check me-2"></i> REGISTRAR
@@ -361,11 +359,12 @@
           <table class="table align-middle">
             <thead>
             <tr>
-              <th class="ps-3" style="width: 25%;">Comercio</th>
-              <th style="width: 30%;">Email Admin</th>
-              <th style="width: 15%;">Vencimiento</th>
-              <th style="width: 15%;">Estado</th>
-              <th class="text-end pe-3" style="width: 15%;">Acciones</th>
+              <th class="ps-3" style="width: 25%;">Comercio / CUIT</th>
+              <th style="width: 25%;">Email Admin</th>
+              <th style="width: 15%;">Abono / Mes</th>
+              <th style="width: 12%;">Vencimiento</th>
+              <th style="width: 10%;">Estado</th>
+              <th class="text-end pe-3" style="width: 13%;">Acciones</th>
             </tr>
             </thead>
             <tbody id="tablaEmpresas">
@@ -378,7 +377,7 @@
 
   </div>
 
-  <!-- SECCIÓN INFERIOR: BITÁCORA / LOGS DEL SISTEMA -->
+  <!-- SECCIÓN INFERIOR: BITÁCORA / LOGS -->
   <div class="row mt-4">
     <div class="col-12">
       <div class="card p-4">
@@ -395,13 +394,14 @@
             <thead>
             <tr>
               <th class="ps-3" style="width: 20%;">Fecha / Hora</th>
-              <th style="width: 20%;">Acción</th>
-              <th style="width: 40%;">Descripción del Evento</th>
-              <th class="text-end pe-3" style="width: 20%;">Usuario / Responsable</th>
+              <th style="width: 15%;">Acción</th>
+              <th style="width: 20%;">Comercio</th>
+              <th style="width: 30%;">Descripción del Evento</th>
+              <th class="text-end pe-3" style="width: 15%;">Usuario / Responsable</th>
             </tr>
             </thead>
             <tbody id="tablaLogsCompleta">
-            <tr><td colspan="4" class="text-center p-4 text-muted">Cargando bitácora del sistema...</td></tr>
+            <tr><td colspan="5" class="text-center p-4 text-muted">Cargando bitácora del sistema...</td></tr>
             </tbody>
           </table>
         </div>
@@ -411,7 +411,7 @@
 
 </div>
 
-<!-- Modal de Edición de Comercio -->
+<!-- Modal de Edición -->
 <div class="modal fade" id="modalEditar" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content p-2">
@@ -422,46 +422,50 @@
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body p-3 p-md-4">
-        <form id="formEditarEmpresa">
+        <form id="formEditarEmpresa" autocomplete="off">
           <input type="hidden" id="editId">
           <div class="row g-3">
             <div class="col-12 col-md-6">
-              <label class="form-label">Nombre Comercial</label>
+              <label class="form-label" for="editNombre">Nombre Comercial</label>
               <input type="text" id="editNombre" class="form-control" required>
             </div>
             <div class="col-12 col-md-6">
-              <label class="form-label">CUIT / TaxID</label>
+              <label class="form-label" for="editTaxId">CUIT / TaxID</label>
               <input type="text" id="editTaxId" class="form-control">
             </div>
             <div class="col-12">
-              <label class="form-label">Email de Contacto</label>
-              <input type="email" id="editEmail" class="form-control" required>
+              <label class="form-label" for="editEmail">Email de Contacto</label>
+              <input type="email" id="editEmail" class="form-control" autocomplete="username" required>
             </div>
             <div class="col-12 col-md-6">
-              <label class="form-label text-warning">Contraseña Nueva <small class="text-muted">(Dejar vacío si no cambia)</small></label>
-              <input type="password" id="editPass" class="form-control" placeholder="••••••••">
+              <label class="form-label text-warning" for="editPass">Contraseña Nueva <small class="text-muted">(Dejar vacío si no cambia)</small></label>
+              <input type="password" id="editPass" class="form-control" placeholder="••••••••" autocomplete="new-password">
             </div>
             <div class="col-12 col-md-6">
-              <label class="form-label text-info">Estado de Licencia</label>
+              <label class="form-label text-info" for="editActive">Estado de Licencia</label>
               <select id="editActive" class="form-select border-info border-opacity-50">
                 <option value="true">ACTIVO / HABILITADO</option>
                 <option value="false">SUSPENDIDO / BLOQUEADO</option>
               </select>
             </div>
             <div class="col-12 col-md-6">
-              <label class="form-label">Teléfono / WhatsApp</label>
+              <label class="form-label text-success" for="editMonthlyFee">Abono Mensual ($)</label>
+              <input type="number" id="editMonthlyFee" class="form-control border-success border-opacity-50" step="500">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label text-warning fw-bold" for="editVencimiento">Fecha de Vencimiento</label>
+              <input type="date" id="editVencimiento" class="form-control border-warning border-opacity-50">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="editPhone">Teléfono / WhatsApp</label>
               <input type="text" id="editPhone" class="form-control">
             </div>
             <div class="col-12 col-md-6">
-              <label class="form-label">Dirección</label>
+              <label class="form-label" for="editAddress">Dirección</label>
               <input type="text" id="editAddress" class="form-control">
             </div>
-            <div class="col-12 col-md-6">
-              <label class="form-label text-warning fw-bold">Fecha de Vencimiento</label>
-              <input type="date" id="editVencimiento" class="form-control border-warning border-opacity-50">
-            </div>
             <div class="col-12">
-              <label class="form-label text-info">Mensaje Predeterminado de Ticket</label>
+              <label class="form-label text-info" for="editTicketMessage">Mensaje Predeterminado de Ticket</label>
               <textarea id="editTicketMessage" class="form-control" rows="2" placeholder="Ej: Gracias por su compra."></textarea>
             </div>
           </div>
@@ -475,7 +479,7 @@
   </div>
 </div>
 
-<!-- Modal de Movimientos / Actividad del Cliente -->
+<!-- Modal de Movimientos -->
 <div class="modal fade" id="modalMovimientos" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-centered">
     <div class="modal-content p-2">
@@ -515,10 +519,11 @@
               <th>Fecha / Hora</th>
               <th>Acción Realizada</th>
               <th>Detalles</th>
+              <th class="text-end">Usuario / Responsable</th>
             </tr>
             </thead>
             <tbody id="tablaMovimientosCliente">
-            <tr><td colspan="3" class="text-center text-muted">Seleccione un comercio para ver sus movimientos.</td></tr>
+            <tr><td colspan="4" class="text-center text-muted">Seleccione un comercio para ver sus movimientos.</td></tr>
             </tbody>
           </table>
         </div>
@@ -529,7 +534,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="admin-maestro.js"></script>
 <script src="auth.js"></script>
+<script src="admin-maestro.js"></script>
 </body>
 </html>

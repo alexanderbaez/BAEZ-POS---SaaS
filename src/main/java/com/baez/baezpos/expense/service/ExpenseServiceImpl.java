@@ -5,8 +5,10 @@ import com.baez.baezpos.company.repository.CompanyRepository;
 import com.baez.baezpos.expense.dto.ExpenseRequestDTO;
 import com.baez.baezpos.expense.dto.ExpenseResponseDTO;
 import com.baez.baezpos.expense.entity.Expense;
+import com.baez.baezpos.expense.entity.ExpenseCategory;
 import com.baez.baezpos.expense.repository.ExpenseRepository;
 import com.baez.baezpos.security.util.SecurityUtils;
+import com.baez.baezpos.shared.entity.PaymentMethod;
 import com.baez.baezpos.shared.exception.BadRequestException;
 import com.baez.baezpos.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -45,21 +47,27 @@ public class ExpenseServiceImpl implements ExpenseService {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
 
-        // Si no se especifica en el Request, por defecto se descuenta de caja
         Boolean deductFromBox = (dto.deductFromBox() != null) ? dto.deductFromBox() : true;
+
+        // Fallbacks seguros para evitar NPE
+        ExpenseCategory category = (dto.category() != null) ? dto.category() : ExpenseCategory.VARIOS_RETIRO;
+        PaymentMethod paymentMethod = (dto.paymentMethod() != null) ? dto.paymentMethod() : PaymentMethod.EFECTIVO_CAJA;
 
         Expense expense = Expense.builder()
                 .description(dto.description().trim())
                 .amount(dto.amount())
                 .deductFromBox(deductFromBox)
+                .category(category)
+                .paymentMethod(paymentMethod)
+                .reference(dto.reference() != null ? dto.reference().trim() : null)
                 .expenseDate(LocalDateTime.now())
                 .build();
 
         expense.setCompany(company);
 
         Expense saved = expenseRepository.save(expense);
-        log.info("Empresa [{}]: Registrar nuevo gasto por ${} ({}) - Resta caja: {}",
-                companyId, dto.amount(), dto.description(), deductFromBox);
+        log.info("Empresa [{}]: Registrar nuevo gasto por ${} ({}) - Categoria: {} - Resta caja: {}",
+                companyId, dto.amount(), dto.description(), category, deductFromBox);
 
         return mapToDTO(saved);
     }
@@ -73,7 +81,6 @@ public class ExpenseServiceImpl implements ExpenseService {
         if (companyId != null) {
             expenses = expenseRepository.findByCompanyIdOrderByExpenseDateDesc(companyId);
         } else {
-            // SUPER_ADMIN trae la lista general de gastos de todas las empresas
             expenses = expenseRepository.findAll();
         }
 
@@ -106,7 +113,10 @@ public class ExpenseServiceImpl implements ExpenseService {
                 expense.getDescription(),
                 expense.getAmount(),
                 expense.getExpenseDate(),
-                expense.getDeductFromBox() != null ? expense.getDeductFromBox() : true
+                expense.getDeductFromBox() != null ? expense.getDeductFromBox() : true,
+                expense.getCategory() != null ? expense.getCategory() : ExpenseCategory.VARIOS_RETIRO,
+                expense.getPaymentMethod() != null ? expense.getPaymentMethod() : PaymentMethod.EFECTIVO_CAJA,
+                expense.getReference()
         );
     }
 }

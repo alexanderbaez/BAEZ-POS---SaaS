@@ -11,30 +11,91 @@
 
     <style>
         :root {
-          --sidebar-width: 250px;
-          --bg-main: #f8fafc;
-          --primary-blue: #0f172a;
+            --sidebar-width: 250px;
+            --bg-main: #f8fafc;
+            --primary-dark: #0f172a;
+            --expense-red: #e11d48;
+            --expense-red-subtle: #ffe4e6;
         }
-        body {
-          background-color: var(--bg-main);
-          font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-          overflow-x: hidden;
-        }
-        #content {
-          margin-left: var(--sidebar-width);
-          width: calc(100% - var(--sidebar-width));
-          transition: all 0.3s ease;
-          min-height: 100vh;
-        }
-        .card { border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
-        .table thead th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; background: #f1f5f9; color: #475569; border-bottom: 2px solid #e2e8f0; }
-        .form-control, .form-select { border-radius: 10px; padding: 0.6rem 0.95rem; font-size: 0.9rem; border-color: #cbd5e1; }
-        .form-control:focus, .form-select:focus { border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15); }
 
-        /* AJUSTES RESPONSIVE MÓVIL Y TABLET */
+        body {
+            background-color: var(--bg-main);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #334155;
+            overflow-x: hidden;
+        }
+
+        #content {
+            margin-left: var(--sidebar-width);
+            width: calc(100% - var(--sidebar-width));
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            min-height: 100vh;
+        }
+
+        /* CARDS Y CONTENEDORES FINANCIEROS */
+        .card {
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.02), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
+            background-color: #ffffff;
+        }
+
+        .kpi-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        /* TIPOGRAFÍA TABULAR PARA NÚMEROS FINANCIEROS */
+        .amount-num {
+            font-variant-numeric: tabular-nums;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        /* TABLAS E INTERFAZ */
+        .table thead th {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: #f8fafc;
+            color: #64748b;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 0.85rem 1rem;
+        }
+        .table tbody td {
+            padding: 0.9rem 1rem;
+        }
+
+        .form-control, .form-select {
+            border-radius: 8px;
+            padding: 0.55rem 0.85rem;
+            font-size: 0.875rem;
+            border-color: #cbd5e1;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #0284c7;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+        }
+
+        .btn-expense {
+            background-color: var(--expense-red);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-expense:hover {
+            background-color: #be123c;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(225, 29, 72, 0.25);
+        }
+
         @media (max-width: 768px) {
             #content { margin-left: 0; width: 100%; }
-            .table-responsive-mobile { min-width: 700px; }
         }
     </style>
 </head>
@@ -43,181 +104,207 @@
 <div id="sidebar-container"></div>
 
 <div id="content">
-    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom p-3">
+    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom px-3 py-2.5">
         <div class="container-fluid p-0">
             <button type="button" id="sidebarCollapse" class="btn btn-outline-secondary d-md-none me-2">
                 <i class="bi bi-list"></i>
             </button>
-            <span class="navbar-brand fw-bold text-secondary fs-6 d-none d-md-inline">MÓDULO FINANCIERO</span>
+            <span class="navbar-brand fw-bold text-slate-700 fs-6 d-none d-md-inline">MÓDULO FINANCIERO</span>
             <div class="ms-auto d-flex align-items-center">
-                <div class="text-end me-2 me-md-3">
-                    <div id="userName" class="fw-bold text-dark text-capitalize fs-6">Usuario</div>
-                    <small id="userRoleBadge" class="badge bg-dark text-uppercase" style="font-size: 0.65rem;">Cargando...</small>
+                <div class="text-end me-3">
+                    <div id="userName" class="fw-semibold text-dark text-capitalize fs-6">Usuario</div>
+                    <small id="userRoleBadge" class="badge bg-slate-100 text-slate-700 border" style="font-size: 0.65rem;">Cargando...</small>
                 </div>
-                <i class="bi bi-person-circle fs-3 text-secondary"></i>
+                <div class="rounded-circle bg-light p-2 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                    <i class="bi bi-person text-secondary fs-5"></i>
+                </div>
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid p-2 p-md-4">
-        <!-- Encabezado con botón de nuevo gasto -->
-        <div class="row mb-3 mb-md-4 align-items-center justify-content-between g-2">
+    <div class="container-fluid p-3 p-md-4">
+        <!-- Encabezado con Botón de Acción -->
+        <div class="row mb-4 align-items-center justify-content-between g-3">
             <div class="col-12 col-md-7">
-                <h2 class="fw-bold text-dark mb-1 fs-3 fs-md-2"><i class="bi bi-wallet2 text-danger me-2"></i>Egresos y Gastos Operativos</h2>
-                <p class="text-muted small mb-0">Control analítico de salidas de caja, pagos a proveedores y costos fijos de la distribuidora.</p>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="p-2 rounded-3 text-white" style="background-color: var(--expense-red);">
+                        <i class="bi bi-wallet2 fs-4"></i>
+                    </div>
+                    <div>
+                        <h3 class="fw-bold text-dark mb-0 fs-4">Gestión de Gastos y Egresos</h3>
+                        <p class="text-muted small mb-0">Control analítico de costos operativos, cajas chicas y pagos a proveedores.</p>
+                    </div>
+                </div>
             </div>
-            <div class="col-12 col-md-5 text-md-end mt-2 mt-md-0">
-                <button class="btn btn-danger shadow-sm w-100 w-md-auto fw-bold py-2" data-bs-toggle="modal" data-bs-target="#modalNuevoGasto">
-                    <i class="bi bi-plus-lg me-1"></i> NUEVO GASTO / EGRESO
+            <div class="col-12 col-md-5 text-md-end">
+                <button class="btn btn-expense px-3 py-2.5 w-100 w-md-auto shadow-sm" data-bs-toggle="modal" data-bs-target="#modalNuevoGasto">
+                    <i class="bi bi-plus-lg me-1"></i> REGISTRAR EGRESO
                 </button>
             </div>
         </div>
 
         <!-- TARJETAS KPI DE RESUMEN -->
         <div class="row g-3 mb-4">
-            <div class="col-12 col-md-6 col-xl-4">
-                <div class="card p-3 border-start border-danger border-4">
-                    <div class="text-muted small fw-bold text-uppercase">Total Egresos (Período)</div>
-                    <div class="fs-3 fw-bold text-danger mt-1" id="txtTotalGastos">$0,00</div>
-                    <small class="text-muted mt-1" id="txtCantidadGastos">0 operaciones registradas</small>
+            <div class="col-12 col-md-4">
+                <div class="card p-3 kpi-card border-start border-danger border-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted small fw-semibold text-uppercase">Total Egresos (Filtrado)</span>
+                        <i class="bi bi-arrow-down-right-circle text-danger fs-5"></i>
+                    </div>
+                    <div class="fs-3 amount-num text-danger mt-1" id="txtTotalGastos">$0,00</div>
+                    <small class="text-muted mt-1 d-block" id="txtCantidadGastos">0 operaciones</small>
                 </div>
             </div>
-            <div class="col-12 col-md-6 col-xl-4">
-                <div class="card p-3 border-start border-primary border-4">
-                    <div class="text-muted small fw-bold text-uppercase">Pagos a Proveedores</div>
-                    <div class="fs-3 fw-bold text-primary mt-1" id="txtTotalProveedores">$0,00</div>
-                    <small class="text-muted mt-1">Mercadería y reposición</small>
+            <div class="col-12 col-md-4">
+                <div class="card p-3 kpi-card border-start border-primary border-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted small fw-semibold text-uppercase">Pagos a Proveedores</span>
+                        <i class="bi bi-truck text-primary fs-5"></i>
+                    </div>
+                    <div class="fs-3 amount-num text-primary mt-1" id="txtTotalProveedores">$0,00</div>
+                    <small class="text-muted mt-1 d-block">Mercadería e Insumos directos</small>
                 </div>
             </div>
-            <div class="col-12 col-md-12 col-xl-4">
-                <div class="card p-3 border-start border-warning border-4">
-                    <div class="text-muted small fw-bold text-uppercase">Gastos Fijos / Operativos</div>
-                    <div class="fs-3 fw-bold text-warning-emphasis mt-1" id="txtTotalOperativos">$0,00</div>
-                    <small class="text-muted mt-1">Servicios, alquileres y logística</small>
+            <div class="col-12 col-md-4">
+                <div class="card p-3 kpi-card border-start border-warning border-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted small fw-semibold text-uppercase">Gastos Operativos / Fijos</span>
+                        <i class="bi bi-building text-warning fs-5"></i>
+                    </div>
+                    <div class="fs-3 amount-num text-dark mt-1" id="txtTotalOperativos">$0,00</div>
+                    <small class="text-muted mt-1 d-block">Servicios, Alquileres y Sueldos</small>
                 </div>
             </div>
         </div>
 
         <!-- BARRA DE FILTROS AVANZADOS -->
-        <div class="card p-3 mb-4 bg-white">
+        <div class="card p-3 mb-4">
             <div class="row g-2 g-md-3 align-items-center">
                 <div class="col-12 col-md-4">
                     <div class="input-group">
-                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
-                        <input type="text" id="filtroTexto" class="form-control border-start-0 bg-light" placeholder="Buscar por descripción...">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                        <input type="text" id="filtroTexto" class="form-control border-start-0" placeholder="Buscar por concepto o comprobante...">
                     </div>
                 </div>
                 <div class="col-12 col-sm-6 col-md-3">
-                    <select id="filtroCategoria" class="form-select bg-light">
+                    <select id="filtroCategoria" class="form-select">
                         <option value="">Todas las Categorías</option>
                         <option value="PROVEEDOR">Pago a Proveedor</option>
                         <option value="SERVICIOS">Servicios (Luz, Internet)</option>
                         <option value="LOGISTICA">Fletes / Logística</option>
                         <option value="SUELDOS">Sueldos / Adelantos</option>
                         <option value="MANTENIMIENTO">Mantenimiento / Insumos</option>
-                        <option value="CAJA_CHICA">Caja Chica / Varios</option>
+                        <option value="CAJA_CHICA">Caja Chica</option>
+                        <option value="VARIOS_RETIRO">Retiro Personal / Varios</option>
                     </select>
                 </div>
                 <div class="col-12 col-sm-6 col-md-3">
-                    <select id="filtroMetodoPago" class="form-select bg-light">
-                        <option value="">Cualquier Medio de Pago</option>
+                    <select id="filtroMetodoPago" class="form-select">
+                        <option value="">Todos los Medios de Pago</option>
                         <option value="EFECTIVO_CAJA">Efectivo de Caja</option>
                         <option value="TRANSFERENCIA">Transferencia Bancaria</option>
                         <option value="TARJETA">Tarjeta de Débito/Crédito</option>
                     </select>
                 </div>
                 <div class="col-12 col-md-2 text-md-end">
-                    <button class="btn btn-outline-secondary w-100 fw-bold" onclick="limpiarFiltros()">
-                        <i class="bi bi-arrow-counterclockwise me-1"></i> Reiniciar
+                    <button class="btn btn-outline-secondary w-100 fw-semibold" onclick="limpiarFiltros()">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Limpiar
                     </button>
                 </div>
             </div>
         </div>
 
         <!-- TABLA DE GASTOS -->
-        <div class="card p-2 p-md-3">
-            <div class="table-responsive" style="min-height: 400px;">
-                <table class="table table-hover align-middle mb-0 table-responsive-mobile">
+        <div class="card overflow-hidden">
+            <div class="table-responsive" style="min-height: 380px;">
+                <table class="table table-hover align-middle mb-0">
                     <thead>
                     <tr>
                         <th class="ps-3">FECHA / HORA</th>
-                        <th>DESCRIPCIÓN</th>
+                        <th>DESCRIPCIÓN Y REF.</th>
                         <th>CATEGORÍA</th>
-                        <th>MEDIO DE PAGO</th>
+                        <th>MEDIO / ORIGEN</th>
                         <th class="text-end">MONTO</th>
                         <th class="text-center pe-3">ACCIONES</th>
                     </tr>
                     </thead>
-                    <tbody id="listaGastos" style="font-size: 14px;">
-                    <tr><td colspan="6" class="text-center p-5 text-muted">Cargando registros de gastos...</td></tr>
+                    <tbody id="listaGastos" style="font-size: 0.875rem;">
+                    <!-- Render via JS -->
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <!-- MODAL NUEVO GASTO / EGRESO -->
-    <div class="modal fade" id="modalNuevoGasto" tabindex="-1">
+    <!-- MODAL REGISTRO DE GASTO -->
+    <div class="modal fade" id="modalNuevoGasto" tabindex="-1" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content border-0 shadow-lg">
-                <div class="modal-header bg-danger text-white p-3">
-                    <h5 class="modal-title fw-bold"><i class="bi bi-wallet2 me-2"></i>Registrar Nuevo Egreso de Dinero</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+                <div class="modal-header border-bottom p-3 bg-light">
+                    <h5 class="modal-title fw-bold text-dark fs-6"><i class="bi bi-receipt me-2 text-danger"></i>Registrar Nuevo Egreso de Dinero</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form id="formGasto">
-                    <div class="modal-body p-3 p-md-4">
+                    <div class="modal-body p-4">
                         <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">Descripción detallada *</label>
-                            <input type="text" id="descGasto" class="form-control" placeholder="Ej: Pago factura distribuidora Arcor, Compra rollos de papel, Flete..." required>
+                            <label class="form-label small fw-semibold text-secondary">Concepto / Descripción del Gasto *</label>
+                            <input type="text" id="descGasto" class="form-control" placeholder="Ej: Compra de bolsas, Pago servicio de luz, Comida almuerzo..." required autocomplete="off">
                         </div>
+
                         <div class="row">
                             <div class="col-12 col-md-6 mb-3">
-                                <label class="form-label small fw-bold text-muted">Monto total ($) *</label>
-                                <input type="number" inputmode="decimal" id="montoGasto" class="form-control fw-bold text-danger fs-5" step="0.01" placeholder="0.00" required>
+                                <label class="form-label small fw-semibold text-secondary">Monto ($ ARS) *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light fw-bold text-muted">$</span>
+                                    <input type="number" inputmode="decimal" id="montoGasto" class="form-control fw-bold text-danger amount-num fs-5" step="0.01" placeholder="0.00" required>
+                                </div>
                             </div>
                             <div class="col-12 col-md-6 mb-3">
-                                <label class="form-label small fw-bold text-muted">Categoría del Gasto *</label>
+                                <label class="form-label small fw-semibold text-secondary">Categoría del Gasto *</label>
                                 <select id="catGasto" class="form-select" required>
-                                    <option value="PROVEEDOR">Pago a Proveedor (Mercadería)</option>
+                                    <option value="PROVEEDOR">Pago a Proveedor (Stock/Mercadería)</option>
                                     <option value="SERVICIOS">Servicios (Luz, Agua, Internet)</option>
                                     <option value="LOGISTICA">Fletes / Logística / Combustible</option>
                                     <option value="SUELDOS">Sueldos / Adelantos de Personal</option>
                                     <option value="MANTENIMIENTO">Mantenimiento / Reparaciones</option>
-                                    <option value="CAJA_CHICA">Caja Chica / Varios (Hielo, limpieza)</option>
+                                    <option value="CAJA_CHICA">Caja Chica (Limpieza, insumos)</option>
+                                    <option value="VARIOS_RETIRO">Retiro Personal / Varios (Comida, no operativo)</option>
                                 </select>
                             </div>
                         </div>
-                        <div class="row align-items-center">
+
+                        <div class="row">
                             <div class="col-12 col-md-6 mb-3">
-                                <label class="form-label small fw-bold text-muted">Medio de Pago / Origen del Fondo *</label>
+                                <label class="form-label small fw-semibold text-secondary">Origen del Dinero / Medio de Pago *</label>
                                 <select id="metodoPagoGasto" class="form-select" required>
-                                    <option value="EFECTIVO_CAJA">Efectivo (Sale de la Caja Diaria)</option>
-                                    <option value="TRANSFERENCIA">Transferencia Bancaria / Cuenta Digital</option>
+                                    <option value="EFECTIVO_CAJA">Efectivo (Sale del cajón diario)</option>
+                                    <option value="TRANSFERENCIA">Transferencia Bancaria / QR Digital</option>
                                     <option value="TARJETA">Tarjeta de Débito del Negocio</option>
                                 </select>
                             </div>
                             <div class="col-12 col-md-6 mb-3">
-                                <label class="form-label small fw-bold text-muted">Referencia / Comprobante (Opcional)</label>
-                                <input type="text" id="refComprobante" class="form-control" placeholder="Ej: Factura A-0001-00012345 o N° de transferencia">
+                                <label class="form-label small fw-semibold text-secondary">N° Comprobante / Ticket (Opcional)</label>
+                                <input type="text" id="refComprobante" class="form-control" placeholder="Ej: Factura A-0001-00012345">
                             </div>
                         </div>
 
-                        <!-- CONTROL DE IMPACTO EN CAJA DIARIA (deductFromBox) -->
-                        <div class="p-3 bg-light rounded-3 border">
+                        <!-- TOGGLE CAJA CHICA -->
+                        <div class="p-3 bg-light rounded-3 border mt-1">
                             <div class="form-check form-switch m-0">
                                 <input class="form-check-input" type="checkbox" role="switch" id="deductFromBox" checked>
-                                <label class="form-check-label fw-bold text-dark ms-2" for="deductFromBox">
-                                    Descontar del Balance Real de Caja del Día
+                                <label class="form-check-label fw-semibold text-dark ms-2" for="deductFromBox">
+                                    Descontar del Arqueo / Cierre de Caja Chica del Turno
                                 </label>
                             </div>
-                            <small class="text-muted d-block mt-1" style="font-size: 0.78rem;">
-                                Si está activo, este monto restará del efectivo/balance disponible en el Dashboard para el turno de hoy.
+                            <small class="text-muted d-block mt-1 style-subtext" style="font-size: 0.78rem;">
+                                Desactivalo únicamente si el gasto fue abonado con fondos personales del dueño por fuera de la caja física del local.
                             </small>
                         </div>
                     </div>
-                    <div class="modal-footer bg-light border-0 p-3">
-                        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-danger px-4 fw-bold shadow-sm">REGISTRAR EGRESO</button>
+
+                    <div class="modal-footer bg-light border-top p-3">
+                        <button type="button" class="btn btn-outline-secondary px-4 fw-semibold" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-expense px-4">REGISTRAR GASTO</button>
                     </div>
                 </form>
             </div>
