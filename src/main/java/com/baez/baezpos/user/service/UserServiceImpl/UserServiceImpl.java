@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,10 +31,37 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponseDTO createUser(UserRequestDTO dto) {
-        if (userRepository.existsByEmail(dto.getEmail())) {
-            throw new RuntimeException("El email '" + dto.getEmail() + "' ya existe.");
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        Optional<User> existingUserOpt = userRepository.findByEmail(dto.getEmail());
+
+        if (existingUserOpt.isPresent()) {
+            User existingUser = existingUserOpt.get();
+
+            // Si el usuario ya está activo, no permitimos duplicados.
+            if (Boolean.TRUE.equals(existingUser.getActive())) {
+                throw new IllegalArgumentException("El email '" + dto.getEmail() + "' ya pertenece a un usuario activo.");
+            }
+
+            // OPCIÓN 1: Reactivar el usuario existente
+            log.info("Reactivando usuario previamente inactivo: {} para la empresa ID: {}", dto.getEmail(), companyId);
+            existingUser.setName(dto.getName());
+            existingUser.setRole(dto.getRole() != null ? dto.getRole() : Role.VENDEDOR);
+
+            if (dto.getPassword() != null && !dto.getPassword().trim().isEmpty()) {
+                existingUser.setPassword(passwordEncoder.encode(dto.getPassword()));
+            }
+
+            if (companyId != null) {
+                Company company = companyRepository.findById(companyId)
+                        .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada"));
+                existingUser.setCompany(company);
+            }
+
+            existingUser.setActive(true);
+            return convertToDTO(userRepository.save(existingUser));
         }
 
+        // Si no existe, crear un nuevo usuario desde cero
         User user = new User();
         user.setName(dto.getName());
         user.setEmail(dto.getEmail());
@@ -41,10 +69,9 @@ public class UserServiceImpl implements UserService {
         user.setRole(dto.getRole() != null ? dto.getRole() : Role.VENDEDOR);
         user.setActive(true);
 
-        Long companyId = SecurityUtils.getCurrentCompanyId();
         if (companyId != null) {
             Company company = companyRepository.findById(companyId)
-                    .orElseThrow(() -> new RuntimeException("Empresa no encontrada"));
+                    .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada"));
             user.setCompany(company);
         }
 
@@ -59,13 +86,13 @@ public class UserServiceImpl implements UserService {
         if (companyId != null) {
             return userRepository.findByIdAndCompanyIdAndActiveTrue(id, companyId)
                     .map(this::convertToDTO)
-                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado o no pertenece a su empresa."));
+                    .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado o no pertenece a su empresa."));
         }
 
         return userRepository.findById(id)
                 .filter(u -> Boolean.TRUE.equals(u.getActive()))
                 .map(this::convertToDTO)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado con ID: " + id));
     }
 
     @Override
@@ -73,7 +100,6 @@ public class UserServiceImpl implements UserService {
     public List<UserResponseDTO> getAllUsers() {
         Long companyId = SecurityUtils.getCurrentCompanyId();
 
-        // FILTRADO CLAVE: Devuelve solo usuarios activos (no eliminados)
         if (companyId != null) {
             return userRepository.findByCompanyIdAndActiveTrue(companyId).stream()
                     .map(this::convertToDTO)
@@ -91,10 +117,10 @@ public class UserServiceImpl implements UserService {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         User existing = (companyId != null) ?
                 userRepository.findByIdAndCompanyIdAndActiveTrue(id, companyId)
-                        .orElseThrow(() -> new RuntimeException("No autorizado o usuario inactivo")) :
+                        .orElseThrow(() -> new IllegalArgumentException("No autorizado o usuario inactivo")) :
                 userRepository.findById(id)
                         .filter(u -> Boolean.TRUE.equals(u.getActive()))
-                        .orElseThrow(() -> new RuntimeException("Usuario no encontrado o inactivo"));
+                        .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado o inactivo"));
 
         existing.setName(dto.getName());
         if (dto.getRole() != null) {
@@ -115,9 +141,9 @@ public class UserServiceImpl implements UserService {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         User existing = (companyId != null) ?
                 userRepository.findByIdAndCompanyId(id, companyId)
-                        .orElseThrow(() -> new RuntimeException("No autorizado")) :
+                        .orElseThrow(() -> new IllegalArgumentException("No autorizado")) :
                 userRepository.findById(id)
-                        .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                        .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
         existing.setActive(false);
         userRepository.save(existing);
@@ -128,7 +154,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void updatePasswordOnly(String email, String newPassword) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setPasswordResetAt(null);
         userRepository.save(user);
