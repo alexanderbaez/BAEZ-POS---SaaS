@@ -20,8 +20,9 @@ public class UserPrincipal implements UserDetails {
     private String password;
     private boolean enabled;
     private Long companyId;
-    private boolean companyActive; // <-- NUEVO: Para validar en cada petición
-    private LocalDate companyExpirationDate; // <-- NUEVO
+    private boolean companyActive;
+    private LocalDate companyExpirationDate;
+    private Role role; // Guardamos el Enum directamente para chequeos limpios
     private Collection<? extends GrantedAuthority> authorities;
 
     public static UserPrincipal create(User user) {
@@ -30,7 +31,7 @@ public class UserPrincipal implements UserDetails {
         boolean companyActive = true;
         LocalDate expirationDate = null;
 
-        // Si no es SuperAdmin, evaluamos el estado de su empresa asociada
+        // Evaluar estado de empresa solo si NO es SuperAdmin y la empresa existe
         if (user.getRole() != Role.SUPER_ADMIN && user.getCompany() != null) {
             companyActive = Boolean.TRUE.equals(user.getCompany().getActive());
             expirationDate = user.getCompany().getExpirationDate();
@@ -40,19 +41,35 @@ public class UserPrincipal implements UserDetails {
                 user.getId(),
                 user.getEmail(),
                 user.getPassword(),
-                user.getActive(),
+                Boolean.TRUE.equals(user.getActive()),
                 companyId,
                 companyActive,
                 expirationDate,
+                user.getRole(),
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
         );
     }
 
-    // Método de comprobación integral de acceso activo
+    /**
+     * Comprobación de vigencia de la suscripción/licencia.
+     * Retorna true si es SuperAdmin, o si la empresa está activa y no vencida.
+     */
     public boolean isCompanyAccessValid() {
-        if (companyId == null) return true; // SuperAdmin pasa directo
-        if (!companyActive) return false;
-        if (companyExpirationDate != null && LocalDate.now().isAfter(companyExpirationDate)) return false;
+        // 1. SuperAdmin siempre tiene acceso válido
+        if (this.role == Role.SUPER_ADMIN || this.companyId == null) {
+            return true;
+        }
+
+        // 2. Si la empresa fue inhabilitada explícitamente
+        if (!this.companyActive) {
+            return false;
+        }
+
+        // 3. Si la fecha de vencimiento existe y ya transcurrió
+        if (this.companyExpirationDate != null && LocalDate.now().isAfter(this.companyExpirationDate)) {
+            return false;
+        }
+
         return true;
     }
 

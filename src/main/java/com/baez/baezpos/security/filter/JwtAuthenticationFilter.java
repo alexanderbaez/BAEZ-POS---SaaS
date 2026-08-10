@@ -65,17 +65,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (userDetails instanceof UserPrincipal userPrincipal) {
                     if (jwtService.isTokenValid(jwt, userPrincipal.getUsername())) {
 
-                        // 1. Validar únicamente que la cuenta individual del usuario esté activa
+                        // 1. Validar cuenta individual de usuario
                         if (!userPrincipal.isEnabled()) {
                             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                            response.setContentType("application/json");
+                            response.setContentType("application/json;charset=UTF-8");
                             response.getWriter().write("{\"error\": \"CUENTA_DESACTIVADA\", \"message\": \"La cuenta de usuario se encuentra desactivada.\"}");
                             return;
                         }
 
-                        // Nota: Se removió el corte automático por estado de empresa en el filtro.
-                        // La navegación es libre para el dashboard/productos y el control del POS
-                        // queda a cargo del centinela visual en el frontend y la lógica de negocio en las ventas.
+                        // 2. Validar estado de la Empresa solo en operaciones de transacción (POST/PUT/DELETE ventas)
+                        String requestURI = request.getRequestURI();
+                        String method = request.getMethod();
+
+                        boolean isVentaOperation = requestURI.startsWith("/api/v1/sales") &&
+                                (method.equalsIgnoreCase("POST") || method.equalsIgnoreCase("PUT") || method.equalsIgnoreCase("DELETE"));
+
+                        if (!userPrincipal.isCompanyAccessValid() && isVentaOperation) {
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"error\": \"CUENTA_SUSPENDIDA\", \"message\": \"Su suscripción se encuentra inhabilitada. No puede procesar ventas.\"}");
+                            return;
+                        }
 
                         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                                 userPrincipal, null, userPrincipal.getAuthorities());

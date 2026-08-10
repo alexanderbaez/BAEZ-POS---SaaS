@@ -6,6 +6,7 @@ import com.baez.baezpos.log.dto.SystemLogResponseDTO;
 import com.baez.baezpos.log.entity.SystemLog;
 import com.baez.baezpos.log.repository.SystemLogRepository;
 import com.baez.baezpos.security.util.SecurityUtils;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -25,7 +26,6 @@ public class AuditService {
     private final SystemLogRepository logRepository;
     private final CompanyRepository companyRepository;
 
-    // Con REQUIRES_NEW el log se guarda en su propia transacción aunque la principal falle
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logAction(String action, String description, String level) {
         try {
@@ -49,7 +49,6 @@ public class AuditService {
         }
     }
 
-    // Sobrecarga para mantener retrocompatibilidad (default "INFO")
     public void logAction(String action, String description) {
         logAction(action, description, "INFO");
     }
@@ -57,14 +56,12 @@ public class AuditService {
     @Transactional(readOnly = true)
     public List<SystemLogResponseDTO> getLogs(Long filterCompanyId, int limit) {
         Long currentCompanyId = SecurityUtils.getCurrentCompanyId();
-        Pageable pageable = PageRequest.of(0, Math.min(limit, 500)); // Limite máximo de seguridad
+        Pageable pageable = PageRequest.of(0, Math.min(limit, 500));
         List<SystemLog> logs;
 
         if (currentCompanyId != null) {
-            // Si es un ADMIN normal de un comercio, solo ve sus propios logs (Aislamiento Multi-tenant)
             logs = logRepository.findByCompanyIdOrderByTimestampDesc(currentCompanyId, pageable);
         } else {
-            // Si es SUPER_ADMIN, puede ver todo o filtrar por la empresa que pida en la UI
             logs = logRepository.findLogsForSuperAdmin(filterCompanyId, pageable);
         }
 
@@ -72,15 +69,27 @@ public class AuditService {
     }
 
     private SystemLogResponseDTO convertToDTO(SystemLog log) {
-        Company comp = log.getCompany();
+        Long compId = null;
+        String compName = "SISTEMA / GLOBAL";
+
+        if (log.getCompany() != null) {
+            try {
+                compId = log.getCompany().getId();
+                compName = log.getCompany().getName();
+            } catch (EntityNotFoundException e) {
+                // Si la empresa fue eliminada de la BD posteriormente, evitamos que rompa el flujo
+                compName = "EMPRESA ELIMINADA (ID: " + compId + ")";
+            }
+        }
+
         return SystemLogResponseDTO.builder()
                 .id(log.getId())
                 .action(log.getAction())
                 .description(log.getDescription())
                 .level(log.getLevel())
                 .userEmail(log.getUserEmail())
-                .companyId(comp != null ? comp.getId() : null)
-                .companyName(comp != null ? comp.getName() : "SISTEMA / GLOBAL")
+                .companyId(compId)
+                .companyName(compName)
                 .timestamp(log.getTimestamp())
                 .build();
     }

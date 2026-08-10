@@ -60,27 +60,27 @@ async function apiFetch(path, options = {}) {
         headers.set('Authorization', `Bearer ${currentToken}`);
     }
 
-    // Normalizar la ruta: asegurar '/' inicial y eliminar '/' final para evitar error 404
+    // Normalizar la ruta
     let cleanPath = path.startsWith('/') ? path : `/${path}`;
     if (cleanPath.endsWith('/') && cleanPath.length > 1) {
         cleanPath = cleanPath.slice(0, -1);
     }
 
-    // Si no es una URL absoluta HTTP/HTTPS, fuerza el prefijo BASE_URL (Render / Localhost)
     const url = path.startsWith('http') ? path : `${BASE_URL}${cleanPath}`;
-
     const config = { ...options, headers };
 
     try {
         const response = await fetch(url, config);
 
-        if (response.status === 401 || response.status === 403) {
-            // No redirigir si ya estamos intentando autenticarnos en la pantalla de login
+        // Si el token es inválido o no está autenticado (401), destruir sesión
+        if (response.status === 401) {
             if (!window.location.pathname.endsWith('login.html')) {
                 localStorage.clear();
                 window.location.href = 'login.html';
             }
         }
+
+        // Permitimos que el llamador reciba respuestas 403 u otros códigos de error sin redirigir al login
         return response;
     } catch (err) {
         console.error(`Error de conexión con el backend: ${url}`, err);
@@ -88,12 +88,20 @@ async function apiFetch(path, options = {}) {
     }
 }
 
-// 3. CHEQUEO DE ESTADO DE LICENCIA (Diseño Quirúrgico Exclusivo para el Punto de Venta)
+// 3. CHEQUEO DE ESTADO DE LICENCIA
 async function chequearEstadoLicencia() {
     if (window.location.pathname.endsWith('login.html')) return;
 
     const userRole = (localStorage.getItem('baezpos_user_role') || '').toUpperCase().trim();
     if (userRole === 'SUPER_ADMIN') return; // El super admin nunca se bloquea
+
+    // Determinar si la vista actual corresponde estrictamente al Punto de Venta (POS)
+    const currentPath = window.location.pathname.toLowerCase();
+    const esPaginaPOS = currentPath.includes('ventas.html') ||
+                        currentPath.endsWith('/pos') ||
+                        currentPath.endsWith('/pos.html') ||
+                        currentPath === '/' ||
+                        currentPath.endsWith('/index.html');
 
     try {
         const res = await apiFetch('/admin/my-company/check-status');
@@ -103,8 +111,10 @@ async function chequearEstadoLicencia() {
 
             // Si la empresa está inactiva o vencida
             if (data.active === false || data.vencido === true) {
-                if (window.location.pathname.includes('ventas.html')) {
+                if (esPaginaPOS) {
                     bloquearPantallaVentas(data.message || "Tu suscripción/licencia se encuentra vencida.");
+                } else {
+                    removerBloqueoVentas();
                 }
             } else {
                 removerBloqueoVentas();
@@ -116,17 +126,21 @@ async function chequearEstadoLicencia() {
             } else {
                 removerNotificacionVencimiento();
             }
+        } else if (res && res.status === 403) {
+            // Manejo directo de respuesta 403 del Backend
+            if (esPaginaPOS) {
+                bloquearPantallaVentas("Su suscripción se encuentra inhabilitada por administración.");
+            } else {
+                removerBloqueoVentas();
+            }
         }
     } catch (err) {
         console.warn("Error consultando estado de licencia:", err);
     }
 }
 
-// Bloqueo estético específico y bloqueante para el Punto de Venta
+// Bloqueo estético MILIMÉTRICO enfocado EXCLUSIVAMENTE en el área de Ventas (sin tapar la Sidebar)
 function bloquearPantallaVentas(mensaje) {
-    const contentDiv = document.getElementById('content');
-    if (!contentDiv) return;
-
     if (document.getElementById('bloqueo-pos-overlay')) return;
 
     if (typeof CARRITO !== 'undefined') {
@@ -136,42 +150,86 @@ function bloquearPantallaVentas(mensaje) {
 
     const overlay = document.createElement('div');
     overlay.id = 'bloqueo-pos-overlay';
+
+    // Cálculo dinámico de borde: detecta exactamente dónde finaliza el sidebar en el DOM
+    const targetContainer = document.getElementById('main-content') ||
+                            document.getElementById('content') ||
+                            document.querySelector('main');
+
+    let offsetLeft = '250px'; // Fallback por defecto
+    if (targetContainer && window.innerWidth > 768) {
+        const rect = targetContainer.getBoundingClientRect();
+        offsetLeft = `${rect.left}px`;
+    } else if (window.innerWidth <= 768) {
+        offsetLeft = '0px';
+    }
+
     overlay.style.cssText = `
-        position: absolute;
+        position: fixed;
         top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(15, 23, 42, 0.92);
+        right: 0;
+        bottom: 0;
+        left: ${offsetLeft};
+        width: auto;
+        height: 100vh;
+        background: rgba(15, 23, 42, 0.96);
         backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
         z-index: 99999;
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 20px;
+        box-sizing: border-box;
+        transition: left 0.15s ease-out;
     `;
 
     overlay.innerHTML = `
-        <div class="card p-5 text-center shadow-lg border-0" style="max-width: 550px; border-radius: 20px; background: white;">
+        <div class="card p-5 text-center shadow-lg border-0" style="max-width: 520px; border-radius: 20px; background: #ffffff; z-index: 100000;">
             <div class="mb-3 text-danger">
                 <i class="bi bi-shield-lock-fill display-3"></i>
             </div>
             <h3 class="fw-bold text-dark mb-2">Punto de Venta Bloqueado</h3>
-            <p class="text-muted mb-4">${mensaje}<br><br><strong>El sistema se encuentra bloqueado por falta de pago de suscripción. Comunícate con la administración para abonar y restablecer las ventas de inmediato.</strong></p>
-            <a href="https://wa.me/${MI_WHATSAPP}?text=Hola Alexander, mi sistema BaezPOS tiene el Punto de Venta bloqueado por suscripción." target="_blank" class="btn btn-success btn-lg fw-bold py-3 rounded-pill shadow">
+            <p class="text-muted mb-3">${mensaje}<br><br><strong>El módulo de emisión de ventas se encuentra inhabilitado por falta de pago. Regulariza tu abono para volver a cobrar.</strong></p>
+            <a href="https://wa.me/${MI_WHATSAPP}?text=Hola Alexander, mi Punto de Venta en BaezPOS se encuentra bloqueado por suscripción." target="_blank" class="btn btn-success btn-lg fw-bold py-3 rounded-pill shadow mb-3">
                 <i class="bi bi-whatsapp me-2"></i> Regularizar Pago por WhatsApp
             </a>
-            <p class="small text-secondary mt-3 mb-0">Nota: Puedes seguir consultando reportes, clientes y gastos con normalidad.</p>
+            <div class="p-2 rounded bg-light border">
+                <small class="text-secondary fw-semibold">
+                    <i class="bi bi-info-circle me-1"></i> Puedes seguir utilizando la barra lateral para consultar Dashboard, Productos, Clientes y Reportes.
+                </small>
+            </div>
         </div>
     `;
 
-    contentDiv.style.position = 'relative';
-    contentDiv.appendChild(overlay);
+    window.addEventListener('resize', ajustarOverlayBloqueo);
+    document.body.appendChild(overlay);
+}
+
+// Recalcula milimétricamente la posición en caso de redimensionar la ventana
+function ajustarOverlayBloqueo() {
+    const overlay = document.getElementById('bloqueo-pos-overlay');
+    if (!overlay) {
+        window.removeEventListener('resize', ajustarOverlayBloqueo);
+        return;
+    }
+
+    const targetContainer = document.getElementById('main-content') ||
+                            document.getElementById('content') ||
+                            document.querySelector('main');
+
+    if (targetContainer && window.innerWidth > 768) {
+        const rect = targetContainer.getBoundingClientRect();
+        overlay.style.left = `${rect.left}px`;
+    } else {
+        overlay.style.left = '0px';
+    }
 }
 
 function removerBloqueoVentas() {
     const overlay = document.getElementById('bloqueo-pos-overlay');
     if (overlay) overlay.remove();
+    window.removeEventListener('resize', ajustarOverlayBloqueo);
 }
 
 /**

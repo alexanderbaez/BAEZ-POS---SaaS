@@ -16,7 +16,6 @@ import java.time.LocalDate;
 @NoArgsConstructor @AllArgsConstructor
 @SuperBuilder
 @SQLDelete(sql = "UPDATE companies SET active = false WHERE id = ?")
-@SQLRestriction("active = true") // Asegura el filtrado automático de Soft Delete
 public class Company extends BaseEntity {
 
     @Id
