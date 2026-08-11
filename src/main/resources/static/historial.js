@@ -9,8 +9,7 @@ let DATOS_EMPRESA = null;
 // 2. INICIALIZACIÓN Y NORMALIZACIÓN DE FECHAS
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
-    // Generar formato YYYY-MM-DD considerando la zona horaria local (AR)
-    const hoyLocal = new Date().toLocaleDateString('sv-SE'); // 'sv-SE' devuelve exactamente YYYY-MM-DD local
+    const hoyLocal = new Date().toLocaleDateString('sv-SE'); // 'YYYY-MM-DD' local (AR)
 
     const fechaDesdeEl = document.getElementById('fechaDesde');
     const fechaHastaEl = document.getElementById('fechaHasta');
@@ -18,10 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (fechaDesdeEl && !fechaDesdeEl.value) fechaDesdeEl.value = hoyLocal;
     if (fechaHastaEl && !fechaHastaEl.value) fechaHastaEl.value = hoyLocal;
 
-    // Carga de la información del perfil del negocio
     await cargarInfoEmpresa();
-
-    // Carga inicial de ventas del día
     await cargarVentas();
 });
 
@@ -30,15 +26,14 @@ async function cargarInfoEmpresa() {
         const resp = await apiFetch('/admin/my-company/profile');
         if (resp.ok) {
             DATOS_EMPRESA = await resp.json();
-            console.log("Datos de empresa cargados para el ticket:", DATOS_EMPRESA);
         }
     } catch (err) {
-        console.error("No se pudo cargar la info de la empresa para el ticket", err);
+        console.error("No se pudo cargar la info de la empresa:", err);
     }
 }
 
 // ==========================================
-// 3. CARGA DE DATOS Y FILTRADO (API FETCH)
+// 3. CARGA DE DATOS Y FILTRADO
 // ==========================================
 async function cargarVentas() {
     const desdeInput = document.getElementById('fechaDesde');
@@ -53,15 +48,14 @@ async function cargarVentas() {
 
     try {
         const tbody = document.getElementById('listaVentas');
-        if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center p-5 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Buscando transacciones...</td></tr>';
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center p-5 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Buscando transacciones...</td></tr>';
+        }
 
-        // Enviar parámetros con rango amplio de fin de día para evitar pérdida por hora/UTC
         const res = await apiFetch(`/sales?desde=${desde}&hasta=${hasta}`);
         if (!res.ok) throw new Error("Error al obtener el historial");
 
         const ventas = await res.json();
-
-        // Asignación segura garantizando que sea un Array
         VENTAS_GLOBALES = Array.isArray(ventas) ? ventas : (ventas.data || []);
 
         cargarVentasFiltradas();
@@ -75,21 +69,23 @@ async function cargarVentas() {
 function cargarVentasFiltradas() {
     const filtroEl = document.getElementById('filtroMetodo');
     const metodo = filtroEl ? filtroEl.value : "TODOS";
+
     let ventasFiltradas = [...VENTAS_GLOBALES];
 
     if (metodo !== "TODOS") {
-        ventasFiltradas = VENTAS_GLOBALES.filter(v => {
-            const m = v.paymentMethod || 'EFECTIVO';
-            return m === metodo;
-        });
+        ventasFiltradas = VENTAS_GLOBALES.filter(v => (v.paymentMethod || 'EFECTIVO') === metodo);
     }
 
     renderizarTabla(ventasFiltradas);
     calcularResumenVisto(ventasFiltradas);
 }
 
+function obtenerNumTicketVisual(v) {
+    return v.nroComprobante || (v.numeroTicket ? `#${v.numeroTicket}` : `#${v.id}`);
+}
+
 // ==========================================
-// 4. RENDERIZADO DE TABLA PROFESIONAL
+// 4. RENDERIZADO DE TABLA (OPCION OPTIMIZADA)
 // ==========================================
 function renderizarTabla(ventas) {
     const tbody = document.getElementById('listaVentas');
@@ -102,11 +98,21 @@ function renderizarTabla(ventas) {
         return;
     }
 
-    ventas.sort((a, b) => b.id - a.id).forEach(v => {
-        const estaAnulada = v.status === "ANULADA" || v.canceled;
+    // Ordenamiento numérico descendente
+    const ventasOrdenadas = [...ventas].sort((a, b) => {
+        const numA = Number(a.numeroTicket || a.id) || 0;
+        const numB = Number(b.numeroTicket || b.id) || 0;
+        return numB - numA;
+    });
+
+    const fragment = document.createDocumentFragment();
+
+    ventasOrdenadas.forEach(v => {
+        const estaAnulada = v.status === "ANULADA" || Boolean(v.canceled);
+        const numTicketVisual = obtenerNumTicketVisual(v);
 
         let iconClass = "bi-cash text-success";
-        let metodoNombre = v.paymentMethod || 'EFECTIVO';
+        let metodoNombre = (v.paymentMethod || 'EFECTIVO').replace(/_/g, ' ').toUpperCase();
 
         if (v.paymentMethod === 'TRANSFERENCIA') {
             iconClass = "bi-phone text-primary";
@@ -118,37 +124,84 @@ function renderizarTabla(ventas) {
         const tr = document.createElement('tr');
         if (estaAnulada) tr.classList.add('status-anulada');
 
+        // Mapeo seguro de cliente
+        const nombreClienteBruto = v.customerName || v.clienteNombre || v.customer || 'Consumidor Final';
+        const cliente = escapeHtml(nombreClienteBruto).toUpperCase();
+
+        // Mapeo seguro de productos
+        const itemsArray = Array.isArray(v.items) ? v.items : [];
+        const listaNombresProductos = itemsArray
+            .map(i => i.productName || i.nombre || i.title || '')
+            .filter(Boolean)
+            .join(", ");
+
+        const resumenProductos = listaNombresProductos
+            ? escapeHtml(listaNombresProductos)
+            : '<em class="text-muted opacity-75">Sin detalle de productos</em>';
+
+        // Mapeo seguro de fecha
+        const fechaRaw = v.saleDate || v.created_at || v.createdAt || new Date();
+        const fechaObj = new Date(fechaRaw);
+        const fechaFormateada = !isNaN(fechaObj.getTime())
+            ? fechaObj.toLocaleString('es-AR')
+            : 'Fecha no registrada';
+
+        const descuentoVal = parseFloat(v.discount) || 0;
+        const totalVal = parseFloat(v.total) || 0;
+
         tr.innerHTML = `
-            <td class="ps-4"><span class="fw-bold">#${v.id}</span></td>
-            <td class="text-muted small">${new Date(v.saleDate).toLocaleString('es-AR')}</td>
-            <td>
-                <div class="fw-bold">${v.customerName || 'Consumidor Final'}</div>
-                <small class="text-muted text-truncate" style="max-width: 150px; display:block;">
-                    ${(v.items || []).map(i => i.productName || i.nombre || '').join(", ")}
-                </small>
+            <td class="ps-4 align-middle"><span class="fw-bold text-dark">${escapeHtml(numTicketVisual)}</span></td>
+            <td class="text-muted small align-middle text-nowrap">${fechaFormateada}</td>
+            <td class="align-middle">
+                <div class="fw-bold text-dark text-truncate" style="max-width: 230px;">${cliente}</div>
+                <div class="text-muted small text-truncate" style="max-width: 230px;" title="${escapeHtml(listaNombresProductos)}">
+                    ${resumenProductos}
+                </div>
             </td>
-            <td>
+            <td class="align-middle text-nowrap">
                 <span class="badge bg-light text-dark border px-2 py-1">
-                    <i class="bi ${iconClass} me-1"></i> ${metodoNombre}
+                    <i class="bi ${iconClass} me-1"></i> ${escapeHtml(metodoNombre)}
                 </span>
             </td>
-            <td class="text-end text-danger">-$${(v.discount || 0).toFixed(2)}</td>
-            <td class="text-end fw-bold">$${(v.total || 0).toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
-            <td class="text-center">
-                <button class="btn btn-sm btn-light" onclick="verDetalle(${v.id})"><i class="bi bi-eye"></i></button>
-                <button class="btn btn-sm btn-light" onclick="confirmarAnulacion(${v.id})" ${estaAnulada ? 'disabled' : ''}><i class="bi bi-trash text-danger"></i></button>
+            <td class="text-end text-danger align-middle text-nowrap">-$${descuentoVal.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+            <td class="text-end fw-bold align-middle text-dark text-nowrap">$${totalVal.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+            <td class="text-center align-middle text-nowrap" style="width: 110px;">
+                <div class="d-flex flex-row justify-content-center align-items-center gap-1">
+                    <button class="btn btn-sm btn-light" onclick="verDetalle(${v.id})" title="Ver detalle">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                    <button class="btn btn-sm btn-light" onclick="confirmarAnulacion(${v.id})" ${estaAnulada ? 'disabled' : ''} title="Anular">
+                        <i class="bi bi-trash text-danger"></i>
+                    </button>
+                </div>
             </td>
         `;
-        tbody.appendChild(tr);
+        fragment.appendChild(tr);
     });
+
+    tbody.appendChild(fragment);
+}
+
+// Sanitizador XSS
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 // ==========================================
 // 5. LÓGICA DE ANULACIÓN
 // ==========================================
 async function confirmarAnulacion(id) {
+    const venta = VENTAS_GLOBALES.find(v => v.id === id);
+    const numTicketVisual = venta ? obtenerNumTicketVisual(venta) : `#${id}`;
+
     const result = await Swal.fire({
-        title: `¿Anular venta #${id}?`,
+        title: `¿Anular venta ${numTicketVisual}?`,
         text: "El stock se reintegrará automáticamente y esta acción no se puede deshacer.",
         icon: 'warning',
         showCancelButton: true,
@@ -160,14 +213,11 @@ async function confirmarAnulacion(id) {
 
     if (result.isConfirmed) {
         try {
-            // ✅ Ruta relativa directa procesada por apiFetch
-            const res = await apiFetch(`/sales/${id}/cancel`, {
-                method: 'PUT'
-            });
+            const res = await apiFetch(`/sales/${id}/cancel`, { method: 'PUT' });
 
             if (res.ok) {
                 Swal.fire('Venta Anulada', 'El stock ha sido restaurado.', 'success');
-                cargarVentas();
+                await cargarVentas();
             } else {
                 const errorData = await res.json();
                 Swal.fire('Error', errorData.message || 'No se pudo procesar la anulación', 'error');
@@ -179,36 +229,23 @@ async function confirmarAnulacion(id) {
 }
 
 // ==========================================
-// HELPER GLOBAL DE FORMATEO DE CANTIDAD Y PESO
+// HELPER GLOBAL DE FORMATEO DE CANTIDAD
 // ==========================================
 function fmtCantidadGlobal(item) {
     const qty = parseFloat(item.quantity || item.cantidad || 1);
-    const nombreProd = (item.productName || item.nombre || '').toUpperCase();
 
-    // Palabras clave comunes para detectar productos pesables si el backend/objeto no envía el flag explícito
-    const palabrasPesables = ['PAN', 'QUESO', 'CARNE', 'POLLO', 'ASADO', 'FIAMBRE', 'PALETA', 'JAMON', 'MILANESA', 'FRUTA', 'VERDURA', 'VERDURAS', 'FRUTAS', 'KG', 'KILO'];
-    const coincideNombre = palabrasPesables.some(p => nombreProd.includes(p));
-
-    // Detección robusta de producto pesable/fraccionado
+    // Detección basada en banderas de dominio o precisión flotante
     const esFraccionado = Boolean(
         item.isFractional ||
-        item.unitOfMeasure === 'KG' ||
-        item.unitOfMeasure === 'GRAM' ||
-        item.unitType === 'KG' ||
-        coincideNombre ||
-        (qty % 1 !== 0) // Tiene decimales (ej: 0.5, 1.250)
+        ['KG', 'GRAM', 'KILO'].includes((item.unitOfMeasure || item.unitType || '').toUpperCase()) ||
+        (qty % 1 !== 0)
     );
 
     if (esFraccionado) {
         if (qty < 1 && qty > 0) {
-            const gramos = Math.round(qty * 1000);
-            return `${gramos} gr`;
+            return `${Math.round(qty * 1000)} gr`;
         }
-        const qtyFormatted = qty.toLocaleString('es-AR', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 3
-        });
-        return `${qtyFormatted} Kg`;
+        return `${qty.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} Kg`;
     }
 
     return `${qty} un.`;
@@ -228,26 +265,25 @@ function verDetalle(idVenta) {
         if (el) el.innerText = text;
     };
 
-    setSafeText('txtIdVenta', venta.id);
+    setSafeText('txtIdVenta', obtenerNumTicketVisual(venta));
 
     const container = document.getElementById('contenedorItems');
     if (container) {
         container.innerHTML = '';
         let sumaSubtotales = 0;
+
         (venta.items || []).forEach(item => {
             const cant = parseFloat(item.quantity || item.cantidad || 1);
             const prec = parseFloat(item.price || item.precio || 0);
             const subtotalItem = item.subtotal !== undefined ? parseFloat(item.subtotal) : (prec * cant);
             sumaSubtotales += subtotalItem;
 
-            const cantTexto = fmtCantidadGlobal(item);
-
             const itemDiv = document.createElement('div');
             itemDiv.className = "d-flex justify-content-between align-items-center mb-2 border-bottom pb-2";
             itemDiv.innerHTML = `
                 <div style="flex: 1;">
-                    <span class="fw-bold text-uppercase" style="font-size: 12px;">${item.productName || item.nombre || 'PRODUCTO'}</span><br>
-                    <small class="text-muted">${cantTexto} x $${prec.toLocaleString('es-AR', {minimumFractionDigits: 2})}</small>
+                    <span class="fw-bold text-uppercase" style="font-size: 12px;">${escapeHtml(item.productName || item.nombre || 'PRODUCTO')}</span><br>
+                    <small class="text-muted">${fmtCantidadGlobal(item)} x $${prec.toLocaleString('es-AR', {minimumFractionDigits: 2})}</small>
                 </div>
                 <div class="fw-bold">$${subtotalItem.toLocaleString('es-AR', {minimumFractionDigits: 2})}</div>
             `;
@@ -260,11 +296,7 @@ function verDetalle(idVenta) {
         setSafeText('txtSubtotalModal', `$${sumaSubtotales.toLocaleString('es-AR', {minimumFractionDigits: 2})}`);
         setSafeText('txtDescuentoModal', `-$${descuento.toLocaleString('es-AR', {minimumFractionDigits: 2})}`);
 
-        const elRecargo = document.getElementById('txtRecargoModal');
-        if (elRecargo) {
-            elRecargo.innerText = `+$${recargo.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
-        }
-
+        setSafeText('txtRecargoModal', `+$${recargo.toLocaleString('es-AR', {minimumFractionDigits: 2})}`);
         setSafeText('txtTotalModal', `$${(parseFloat(venta.total) || 0).toLocaleString('es-AR', {minimumFractionDigits: 2})}`);
 
         const metodoElement = document.getElementById('txtMetodoModal');
@@ -277,13 +309,14 @@ function verDetalle(idVenta) {
 
     const modalElement = document.getElementById('modalDetalleVenta');
     if (modalElement) {
-        const modal = new bootstrap.Modal(modalElement);
+        // Reutilización segura de la instancia de Bootstrap Modal
+        const modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
         modal.show();
     }
 }
 
 // ==========================================
-// 7. RESUMEN SUPERIOR (CARDS - SEPARACIÓN CAJA REAL VS LIBRETA)
+// 7. RESUMEN SUPERIOR
 // ==========================================
 function calcularResumenVisto(ventas) {
     let totalEfe = 0;
@@ -296,7 +329,7 @@ function calcularResumenVisto(ventas) {
             if (v.paymentMethod === 'TRANSFERENCIA') {
                 totalTra += montoTotal;
             } else if (v.paymentMethod === 'CUENTA_CORRIENTE') {
-                totalLib += montoTotal; // Fiado otorgado
+                totalLib += montoTotal;
             } else {
                 totalEfe += montoTotal;
             }
@@ -305,31 +338,23 @@ function calcularResumenVisto(ventas) {
 
     const totalCajaReal = totalEfe + totalTra;
     const totalMontoVendido = totalEfe + totalTra + totalLib;
-
     const fmt = (val) => `$${val.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
 
-    if (document.getElementById('resumenEfectivo'))
-        document.getElementById('resumenEfectivo').innerText = fmt(totalEfe);
+    const safeSetText = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = val;
+    };
 
-    if (document.getElementById('resumenTransf'))
-        document.getElementById('resumenTransf').innerText = fmt(totalTra);
-
-    if (document.getElementById('resumenLibreta'))
-        document.getElementById('resumenLibreta').innerText = fmt(totalLib);
-
-    // Muestra lo recaudado realmente en caja (Efectivo + Transferencia)
-    if (document.getElementById('resumenTotalCaja'))
-        document.getElementById('resumenTotalCaja').innerText = fmt(totalCajaReal);
-
-    // Muestra el volumen total vendido en el período (incluyendo fiado)
-    if (document.getElementById('resumenVentaTotal'))
-        document.getElementById('resumenVentaTotal').innerText = fmt(totalMontoVendido);
+    safeSetText('resumenEfectivo', fmt(totalEfe));
+    safeSetText('resumenTransf', fmt(totalTra));
+    safeSetText('resumenLibreta', fmt(totalLib));
+    safeSetText('resumenTotalCaja', fmt(totalCajaReal));
+    safeSetText('resumenVentaTotal', fmt(totalMontoVendido));
 }
 
 // ==========================================
-// 8. REPORTES ROBUSTOS (PDF Y EXCEL DESGLOSADOS POR PRODUCTO)
+// 8. REPORTES ROBUSTOS (PDF Y EXCEL)
 // ==========================================
-
 function obtenerVentasParaExportar() {
     const filtroEl = document.getElementById('filtroMetodo');
     const metodo = filtroEl ? filtroEl.value : "TODOS";
@@ -337,8 +362,7 @@ function obtenerVentasParaExportar() {
     return VENTAS_GLOBALES.filter(v => {
         if (v.status === "ANULADA" || v.canceled) return false;
         if (metodo !== "TODOS") {
-            const m = v.paymentMethod || 'EFECTIVO';
-            return m === metodo;
+            return (v.paymentMethod || 'EFECTIVO') === metodo;
         }
         return true;
     });
@@ -348,49 +372,40 @@ function exportarPDF() {
     const ventasAExportar = obtenerVentasParaExportar();
 
     if (ventasAExportar.length === 0) {
-        Swal.fire('Sin datos', 'No hay ventas activas para exportar en el rango seleccionado.', 'info');
-        return;
+        return Swal.fire('Sin datos', 'No hay ventas activas para exportar en el rango seleccionado.', 'info');
     }
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
-    let totalEfectivo = 0;
-    let totalTransferencia = 0;
-    let totalLibreta = 0;
-    let sumaDescuentos = 0;
-    let sumaRecargos = 0;
+    let totalEfectivo = 0, totalTransferencia = 0, totalLibreta = 0;
+    let sumaDescuentos = 0, sumaRecargos = 0;
     const filas = [];
 
     ventasAExportar.forEach(v => {
         const desc = parseFloat(v.discount) || 0;
         const rec = parseFloat(v.surcharge) || 0;
         const totalVenta = parseFloat(v.total) || 0;
+        const numTicketVisual = obtenerNumTicketVisual(v);
 
         sumaDescuentos += desc;
         sumaRecargos += rec;
 
-        if (v.paymentMethod === 'TRANSFERENCIA') {
-            totalTransferencia += totalVenta;
-        } else if (v.paymentMethod === 'CUENTA_CORRIENTE') {
-            totalLibreta += totalVenta;
-        } else {
-            totalEfectivo += totalVenta;
-        }
+        if (v.paymentMethod === 'TRANSFERENCIA') totalTransferencia += totalVenta;
+        else if (v.paymentMethod === 'CUENTA_CORRIENTE') totalLibreta += totalVenta;
+        else totalEfectivo += totalVenta;
 
         const items = v.items || [];
         const fechaFmt = new Date(v.saleDate).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
+        const metodoPagoText = v.paymentMethod === 'CUENTA_CORRIENTE' ? 'LIBRETA' : (v.paymentMethod || 'EFECTIVO');
+        const clienteText = v.customerName || v.clienteNombre || 'Consumidor Final';
 
         if (items.length === 0) {
             filas.push([
-                `#${v.id}`,
-                fechaFmt,
-                v.customerName || v.clienteNombre || 'Consumidor Final',
-                'SIN DETALLE DE PRODUCTOS',
-                '1 un.',
+                numTicketVisual, fechaFmt, clienteText, 'SIN DETALLE DE PRODUCTOS', '1 un.',
                 `$${totalVenta.toLocaleString('es-AR', {minimumFractionDigits: 2})}`,
                 `$${totalVenta.toLocaleString('es-AR', {minimumFractionDigits: 2})}`,
-                v.paymentMethod === 'CUENTA_CORRIENTE' ? 'LIBRETA' : (v.paymentMethod || 'EFECTIVO')
+                metodoPagoText
             ]);
         } else {
             items.forEach((item, index) => {
@@ -399,54 +414,47 @@ function exportarPDF() {
                 const subtotalItem = item.subtotal !== undefined ? parseFloat(item.subtotal) : (cant * prec);
 
                 filas.push([
-                    index === 0 ? `#${v.id}` : "",
+                    index === 0 ? numTicketVisual : "",
                     index === 0 ? fechaFmt : "",
-                    index === 0 ? (v.customerName || v.clienteNombre || 'Consumidor Final') : "",
+                    index === 0 ? clienteText : "",
                     (item.productName || item.nombre || 'PRODUCTO').toUpperCase(),
                     fmtCantidadGlobal(item),
                     `$${prec.toLocaleString('es-AR', {minimumFractionDigits: 2})}`,
                     `$${subtotalItem.toLocaleString('es-AR', {minimumFractionDigits: 2})}`,
-                    index === 0 ? (v.paymentMethod === 'CUENTA_CORRIENTE' ? 'LIBRETA' : (v.paymentMethod || 'EFECTIVO')) : ""
+                    index === 0 ? metodoPagoText : ""
                 ]);
             });
         }
     });
 
-    const fechaDesde = document.getElementById('fechaDesde') ? document.getElementById('fechaDesde').value : '';
-    const fechaHasta = document.getElementById('fechaHasta') ? document.getElementById('fechaHasta').value : '';
+    const fechaDesde = document.getElementById('fechaDesde')?.value || '';
+    const fechaHasta = document.getElementById('fechaHasta')?.value || '';
 
-    // Encabezado del PDF
-    doc.setFillColor(15, 23, 42); // Slate 900
+    doc.setFillColor(15, 23, 42);
     doc.rect(0, 0, 210, 38, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(18);
-    doc.text("BaezPOS - Reporte Detallado de Ventas", 14, 18);
+    doc.text("Reporte Detallado de Ventas", 14, 18);
     doc.setFontSize(9);
     doc.text(`Rango auditado: Desde ${fechaDesde} hasta ${fechaHasta}`, 14, 27);
     doc.text(`Total operaciones auditadas: ${ventasAExportar.length} ventas`, 14, 33);
 
-    // Tabla con autoTable
     doc.autoTable({
         startY: 42,
-        head: [['ID', 'FECHA', 'CLIENTE', 'PRODUCTO', 'CANT', 'P. UNIT', 'SUBTOTAL', 'PAGO']],
+        head: [['COMPROBANTE', 'FECHA', 'CLIENTE', 'PRODUCTO', 'CANT', 'P. UNIT', 'SUBTOTAL', 'PAGO']],
         body: filas,
         theme: 'striped',
         headStyles: { fillColor: [37, 99, 235], fontStyle: 'bold', fontSize: 8 },
         styles: { fontSize: 7, cellPadding: 2 },
         columnStyles: {
-            0: { cellWidth: 12 },
-            1: { cellWidth: 26 },
-            2: { cellWidth: 28 },
-            3: { cellWidth: 'auto' },
-            4: { cellWidth: 16, halign: 'center' },
-            5: { cellWidth: 20, halign: 'right' },
-            6: { cellWidth: 22, halign: 'right' },
-            7: { cellWidth: 22, halign: 'center' }
+            0: { cellWidth: 22 }, 1: { cellWidth: 24 }, 2: { cellWidth: 26 },
+            3: { cellWidth: 'auto' }, 4: { cellWidth: 16, halign: 'center' },
+            5: { cellWidth: 18, halign: 'right' }, 6: { cellWidth: 20, halign: 'right' },
+            7: { cellWidth: 20, halign: 'center' }
         },
         margin: { top: 42, bottom: 20 }
     });
 
-    // Resumen Financiero en PDF
     const finalY = doc.lastAutoTable.finalY + 10;
     if (finalY > 230) doc.addPage();
     const actualY = finalY > 230 ? 20 : finalY;
@@ -461,10 +469,10 @@ function exportarPDF() {
     doc.text(`(+) Recaudación en Efectivo: $${totalEfectivo.toLocaleString('es-AR', {minimumFractionDigits: 2})}`, 14, actualY + 6);
     doc.text(`(+) Recaudación Transferencias/Digital: $${totalTransferencia.toLocaleString('es-AR', {minimumFractionDigits: 2})}`, 14, actualY + 12);
 
-    doc.setTextColor(217, 119, 6); // Naranja
-    doc.text(`( ) Deuda Pendiente en Libreta (Fiados): $${totalLibreta.toLocaleString('es-AR', {minimumFractionDigits: 2})} (incluye $${sumaRecargos.toLocaleString('es-AR', {minimumFractionDigits: 2})} de recargos)`, 14, actualY + 18);
+    doc.setTextColor(217, 119, 6);
+    doc.text(`( ) Deuda Pendiente en Libreta: $${totalLibreta.toLocaleString('es-AR', {minimumFractionDigits: 2})} (incluye $${sumaRecargos.toLocaleString('es-AR', {minimumFractionDigits: 2})} de recargos)`, 14, actualY + 18);
 
-    doc.setTextColor(220, 38, 38); // Rojo
+    doc.setTextColor(220, 38, 38);
     doc.text(`(-) Total Descuentos Aplicados: $${sumaDescuentos.toLocaleString('es-AR', {minimumFractionDigits: 2})}`, 14, actualY + 24);
 
     doc.setFontSize(12);
@@ -472,49 +480,42 @@ function exportarPDF() {
     doc.setFont(undefined, 'bold');
     doc.text(`TOTAL RECAUDADO EN CAJA (EFE + TRA): $${(totalEfectivo + totalTransferencia).toLocaleString('es-AR', {minimumFractionDigits: 2})}`, 14, actualY + 34);
 
-    doc.save(`Reporte_Ventas_Productos_${fechaDesde}_al_${fechaHasta}.pdf`);
+    doc.save(`Reporte_Ventas_${fechaDesde}_al_${fechaHasta}.pdf`);
 }
 
 function exportarExcelPro() {
     const ventasAExportar = obtenerVentasParaExportar();
 
     if (ventasAExportar.length === 0) {
-        Swal.fire('Atención', 'No hay datos activos para exportar en el rango seleccionado.', 'info');
-        return;
+        return Swal.fire('Atención', 'No hay datos activos para exportar en el rango seleccionado.', 'info');
     }
 
-    let efe = 0;
-    let tra = 0;
-    let lib = 0;
-    let descTot = 0;
-    let recTot = 0;
-
+    let efe = 0, tra = 0, lib = 0, descTot = 0, recTot = 0;
     const dataExcel = [];
 
-    // Mapeo detallado ÍTEM POR ÍTEM
     ventasAExportar.forEach(v => {
         const desc = parseFloat(v.discount) || 0;
         const rec = parseFloat(v.surcharge) || 0;
         const totalVenta = parseFloat(v.total) || 0;
+        const numTicketVisual = obtenerNumTicketVisual(v);
 
         descTot += desc;
         recTot += rec;
 
-        if (v.paymentMethod === 'TRANSFERENCIA') {
-            tra += totalVenta;
-        } else if (v.paymentMethod === 'CUENTA_CORRIENTE') {
-            lib += totalVenta;
-        } else {
-            efe += totalVenta;
-        }
+        if (v.paymentMethod === 'TRANSFERENCIA') tra += totalVenta;
+        else if (v.paymentMethod === 'CUENTA_CORRIENTE') lib += totalVenta;
+        else efe += totalVenta;
 
         const items = v.items || [];
+        const metodoTexto = v.paymentMethod === 'CUENTA_CORRIENTE' ? 'LIBRETA' : (v.paymentMethod || 'EFECTIVO');
+        const clienteTexto = v.customerName || v.clienteNombre || 'Consumidor Final';
+        const fechaTexto = new Date(v.saleDate).toLocaleString('es-AR');
 
         if (items.length === 0) {
             dataExcel.push({
-                "N° Venta": v.id,
-                "Fecha / Hora": new Date(v.saleDate).toLocaleString('es-AR'),
-                "Cliente": v.customerName || v.clienteNombre || 'Consumidor Final',
+                "N° Comprobante": numTicketVisual,
+                "Fecha / Hora": fechaTexto,
+                "Cliente": clienteTexto,
                 "Producto": 'SIN DETALLE',
                 "Cantidad / Peso": '1 un.',
                 "Precio Unitario": totalVenta,
@@ -522,35 +523,35 @@ function exportarExcelPro() {
                 "Descuento Venta": desc,
                 "Recargo Libreta": rec,
                 "Total Venta": totalVenta,
-                "Método de Pago": v.paymentMethod === 'CUENTA_CORRIENTE' ? 'LIBRETA' : (v.paymentMethod || 'EFECTIVO')
+                "Método de Pago": metodoTexto
             });
         } else {
-            items.forEach((item) => {
+            items.forEach((item, index) => {
                 const cant = parseFloat(item.quantity || item.cantidad || 1);
                 const prec = parseFloat(item.price || item.precio || 0);
                 const subt = item.subtotal !== undefined ? parseFloat(item.subtotal) : (cant * prec);
 
+                // Evitamos duplicar totales agregados por renglón de ítem
                 dataExcel.push({
-                    "N° Venta": v.id,
-                    "Fecha / Hora": new Date(v.saleDate).toLocaleString('es-AR'),
-                    "Cliente": v.customerName || v.clienteNombre || 'Consumidor Final',
+                    "N° Comprobante": index === 0 ? numTicketVisual : "",
+                    "Fecha / Hora": index === 0 ? fechaTexto : "",
+                    "Cliente": index === 0 ? clienteTexto : "",
                     "Producto": (item.productName || item.nombre || 'PRODUCTO').toUpperCase(),
                     "Cantidad / Peso": fmtCantidadGlobal(item),
                     "Precio Unitario": prec,
                     "Subtotal Ítem": subt,
-                    "Descuento Venta": desc,
-                    "Recargo Libreta": rec,
-                    "Total Venta": totalVenta,
-                    "Método de Pago": v.paymentMethod === 'CUENTA_CORRIENTE' ? 'LIBRETA' : (v.paymentMethod || 'EFECTIVO')
+                    "Descuento Venta": index === 0 ? desc : "",
+                    "Recargo Libreta": index === 0 ? rec : "",
+                    "Total Venta": index === 0 ? totalVenta : "",
+                    "Método de Pago": index === 0 ? metodoTexto : ""
                 });
             });
         }
     });
 
-    const fechaDesde = document.getElementById('fechaDesde') ? document.getElementById('fechaDesde').value : '';
-    const fechaHasta = document.getElementById('fechaHasta') ? document.getElementById('fechaHasta').value : '';
+    const fechaDesde = document.getElementById('fechaDesde')?.value || '';
+    const fechaHasta = document.getElementById('fechaHasta')?.value || '';
 
-    // Filas de Resumen Final
     dataExcel.push({});
     dataExcel.push({ "Producto": "--- RESUMEN DE AUDITORÍA DE CAJA ---" });
     dataExcel.push({ "Producto": "TOTAL DESCUENTOS APLICADOS:", "Subtotal Ítem": descTot });
@@ -561,19 +562,10 @@ function exportarExcelPro() {
     dataExcel.push({ "Producto": "TOTAL RECAUDACIÓN REAL EN CAJA (EFE + TRA):", "Subtotal Ítem": efe + tra });
 
     const ws = XLSX.utils.json_to_sheet(dataExcel);
-
     ws['!cols'] = [
-        { wch: 10 },
-        { wch: 18 },
-        { wch: 22 },
-        { wch: 35 },
-        { wch: 16 },
-        { wch: 14 },
-        { wch: 14 },
-        { wch: 14 },
-        { wch: 14 },
-        { wch: 14 },
-        { wch: 16 }
+        { wch: 16 }, { wch: 18 }, { wch: 22 }, { wch: 35 },
+        { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
+        { wch: 14 }, { wch: 14 }, { wch: 16 }
     ];
 
     const wb = XLSX.utils.book_new();
@@ -582,7 +574,7 @@ function exportarExcelPro() {
 }
 
 // ==========================================
-// 9. REIMPRESIÓN DE TICKET TÉRMICO (100% ALINEADO A POS 58mm)
+// 9. REIMPRESIÓN DE TICKET TÉRMICO (58mm POS)
 // ==========================================
 function reimprimirTicket() {
     if (!VENTA_SELECCIONADA) return;
@@ -591,18 +583,22 @@ function reimprimirTicket() {
     const ventana = window.open('', 'PRINT', 'height=700,width=400');
 
     if (!ventana) {
-        Swal.fire({ icon: 'warning', title: 'Popup bloqueado', text: 'Permití las ventanas emergentes.' });
-        return;
+        return Swal.fire({
+            icon: 'warning',
+            title: 'Ventana emergente bloqueada',
+            text: 'Por favor habilita las ventanas emergentes en tu navegador para imprimir.'
+        });
     }
 
     const infoEmpresa = (typeof DATOS_EMPRESA !== 'undefined' && DATOS_EMPRESA !== null) ? DATOS_EMPRESA : {};
     const fiscalActivo = String(venta.isFiscal !== undefined ? venta.isFiscal : infoEmpresa.hasTaxData) === "true";
 
-    const nombreLocal = (venta.companyName || infoEmpresa.name || 'MI NEGOCIO').toUpperCase();
-    const direccionLocal = venta.companyAddress || infoEmpresa.address || '';
-    const telefonoLocal = venta.companyPhone || infoEmpresa.phone || '';
-    const emailLocal = venta.companyEmail || infoEmpresa.email || '';
-    const mensajePie = venta.ticketMessage || infoEmpresa.ticketMessage || '¡Gracias por su compra!';
+    // Datos del emisor
+    const nombreLocal = escapeHtml(venta.companyName || infoEmpresa.name || 'MI NEGOCIO').toUpperCase();
+    const direccionLocal = escapeHtml(venta.companyAddress || infoEmpresa.address || '');
+    const telefonoLocal = escapeHtml(venta.companyPhone || infoEmpresa.phone || '');
+    const emailLocal = escapeHtml(venta.companyEmail || infoEmpresa.email || '');
+    const mensajePie = escapeHtml(venta.ticketMessage || infoEmpresa.ticketMessage || '¡Gracias por su compra!');
 
     const cuitLocal = venta.companyCuit || infoEmpresa.taxId || infoEmpresa.cuit || '';
     const iibbLocal = venta.companyIibb || infoEmpresa.iibb || '';
@@ -611,9 +607,7 @@ function reimprimirTicket() {
     let inicioActividades = venta.inicioActividades || infoEmpresa.inicioActividades || infoEmpresa.inicioAct || '';
     if (inicioActividades && inicioActividades.includes('-')) {
         const parts = inicioActividades.split('-');
-        if (parts.length === 3) {
-            inicioActividades = `${parts[2]}/${parts[1]}/${parts[0]}`;
-        }
+        if (parts.length === 3) inicioActividades = `${parts[2]}/${parts[1]}/${parts[0]}`;
     }
 
     const tipoComprobante = fiscalActivo
@@ -622,21 +616,49 @@ function reimprimirTicket() {
 
     const cae = venta.cae || '';
     const caeVto = venta.caeVto || '';
+    const ptoVta = venta.ptoVta || infoEmpresa.ptoVta || 1;
 
-    const nroComprobante = venta.nroComprobante || `00001-${String(venta.id || 1).padStart(8, '0')}`;
-    const fechaVenta = venta.saleDate ? new Date(venta.saleDate).toLocaleString('es-AR') : new Date().toLocaleString('es-AR');
+    const nroComprobante = venta.nroComprobante || `${String(ptoVta).padStart(5, '0')}-${String(venta.numeroTicket || venta.id || 1).padStart(8, '0')}`;
+
+    // Manejo robusto de fechas
+    const fechaObj = venta.saleDate ? new Date(venta.saleDate) : new Date();
+    const fechaVentaStr = fechaObj.toLocaleString('es-AR');
+    const fechaAfipIso = fechaObj.toISOString().split('T')[0]; // Formato YYYY-MM-DD exigido por AFIP
+
     let metodoPago = (venta.paymentMethod || 'EFECTIVO').replace(/_/g, ' ').toUpperCase();
     if (metodoPago === 'CUENTA CORRIENTE') metodoPago = 'LIBRETA';
 
-    const nombreCliente = (venta.customerName || venta.clienteNombre || 'CONSUMIDOR FINAL').toUpperCase();
+    const nombreCliente = escapeHtml(venta.customerName || venta.clienteNombre || 'CONSUMIDOR FINAL').toUpperCase();
     const cuitCliente = venta.clienteCuit || venta.customerCuit || '';
 
-    // Parseo seguro de montos
+    // Cálculos de montos deterministas
     const recargoMonto = parseFloat(venta.surcharge) || 0;
     const recargoPorcentaje = parseFloat(venta.surchargeRate) || 0;
     const descuentoMonto = parseFloat(venta.discount) || 0;
     const totalFinal = parseFloat(venta.total) || 0;
-    const subtotalProductos = (totalFinal - recargoMonto) + descuentoMonto;
+
+    // Subtotal calculado sumando explícitamente los renglones (sin asunciones)
+    let subtotalProductos = 0;
+    const itemsHtml = (venta.items || []).map(item => {
+        const cant = parseFloat(item.quantity || item.cantidad || 1);
+        const prec = parseFloat(item.price || item.precio || 0);
+        const subtotalItem = item.subtotal !== undefined ? parseFloat(item.subtotal) : (prec * cant);
+
+        subtotalProductos += subtotalItem;
+        const cantTexto = typeof fmtCantidadGlobal === 'function' ? fmtCantidadGlobal(item) : `${cant} un.`;
+
+        return `
+            <div class="item-row">
+                <span class="item-qty-name">${cantTexto} ${escapeHtml(item.productName || item.nombre || '').toUpperCase()}</span>
+                <span class="item-price">$${subtotalItem.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            </div>
+        `;
+    }).join('');
+
+    // Determinación del código de comprobante AFIP
+    let tipoCmpAfip = 11; // 11 = Factura C por defecto
+    if (tipoComprobante.includes('A')) tipoCmpAfip = 1;
+    else if (tipoComprobante.includes('B')) tipoCmpAfip = 6;
 
     let qrText = '';
     if (fiscalActivo && cae) {
@@ -645,11 +667,11 @@ function reimprimirTicket() {
 
         const datosQr = {
             ver: 1,
-            fecha: fechaVenta.split(' ')[0],
+            fecha: fechaAfipIso,
             cuit: Number(cuitLimpio),
-            ptoVta: 1,
-            tipoCmp: tipoComprobante.includes('A') ? 1 : 11,
-            nroCmp: venta.id || 1,
+            ptoVta: Number(ptoVta),
+            tipoCmp: tipoCmpAfip,
+            nroCmp: Number(venta.numeroTicket || venta.id || 1),
             importe: totalFinal,
             moneda: "ARS",
             ctz: 1,
@@ -658,26 +680,21 @@ function reimprimirTicket() {
             tipoCodAut: "E",
             codAut: Number(cae) || 0
         };
+
         try {
             qrText = `https://www.afip.gob.ar/fe/qr/?p=${btoa(JSON.stringify(datosQr))}`;
         } catch(e) {
+            console.error("Error al construir el QR fiscal:", e);
             qrText = '';
         }
     }
-
-    // Formateador de cantidades
-    const fmtCantidadTicket = (item) => {
-        const cantStr = typeof fmtCantidadGlobal === 'function' ? fmtCantidadGlobal(item) : `${item.quantity || item.cantidad || 1} un.`;
-        return cantStr.endsWith('un.') ? `${parseFloat(item.quantity || item.cantidad || 1)} ` : `${cantStr} `;
-    };
 
     ventana.document.write(`
         <!DOCTYPE html>
         <html>
             <head>
+                <meta charset="utf-8">
                 <title>Ticket #${venta.id || ''}</title>
-                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
                 <style>
                     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
                     @page { margin: 0; }
@@ -685,25 +702,25 @@ function reimprimirTicket() {
                     .center { text-align: center; }
                     .ticket-header { border-bottom: 1px dashed #94a3b8; padding-bottom: 8px; margin-bottom: 8px; }
                     .shop-icon-container { display: flex; justify-content: center; align-items: center; margin-bottom: 4px; }
-                    .shop-icon-container svg { width: 32px; height: 32px; fill: #3b82f6; }
-                    .business-name { font-weight: 900; font-size: 14px; margin: 2px 0; text-transform: uppercase; letter-spacing: -0.2px; }
-                    .small-info { font-size: 9.5px; color: #334155; margin: 1.5px 0; }
+                    .shop-icon-container svg { width: 28px; height: 28px; fill: #2563eb; }
+                    .business-name { font-weight: 900; font-size: 13px; margin: 2px 0; text-transform: uppercase; letter-spacing: -0.2px; }
+                    .small-info { font-size: 9px; color: #334155; margin: 1.5px 0; }
                     .fiscal-header { font-size: 8.5px; color: #334155; text-align: left; background: #f1f5f9; padding: 4px 6px; border-radius: 4px; margin-top: 5px; }
-                    .item-row { display: flex; justify-content: space-between; align-items: flex-start; font-size: 10px; margin-bottom: 5px; word-break: break-word; }
-                    .item-qty-name { font-weight: 700; text-transform: uppercase; flex: 1; padding-right: 6px; }
+                    .item-row { display: flex; justify-content: space-between; align-items: flex-start; font-size: 9.5px; margin-bottom: 4px; word-break: break-word; }
+                    .item-qty-name { font-weight: 700; text-transform: uppercase; flex: 1; padding-right: 4px; }
                     .item-price { font-weight: 700; white-space: nowrap; }
-                    .line { border-top: 1px dashed #94a3b8; margin: 8px 0; }
-                    .total-container { border-top: 2px solid #0f172a; margin-top: 8px; padding-top: 6px; display: flex; justify-content: space-between; align-items: center; }
-                    .total-label { font-weight: 900; font-size: 15px; }
-                    .total-amount { font-weight: 900; font-size: 15px; color: #0f172a; }
-                    .arca-container { border-top: 1px solid #0f172a; margin-top: 10px; padding-top: 8px; text-align: center; }
-                    .arca-logo { font-weight: 900; font-size: 11px; letter-spacing: 2px; }
+                    .line { border-top: 1px dashed #94a3b8; margin: 6px 0; }
+                    .total-container { border-top: 2px solid #0f172a; margin-top: 6px; padding-top: 6px; display: flex; justify-content: space-between; align-items: center; }
+                    .total-label { font-weight: 900; font-size: 14px; }
+                    .total-amount { font-weight: 900; font-size: 14px; color: #0f172a; }
+                    .arca-container { border-top: 1px solid #0f172a; margin-top: 8px; padding-top: 6px; text-align: center; }
+                    .arca-logo { font-weight: 900; font-size: 10px; letter-spacing: 1.5px; }
                     .qr-box { display: flex; justify-content: center; margin: 6px 0; }
                     .cae-info { font-size: 8.5px; font-weight: 700; text-align: left; }
-                    .ticket-footer { text-align: center; margin-top: 10px; border-top: 1px dashed #94a3b8; padding-top: 8px; }
-                    .msg-pie { font-style: italic; font-size: 10px; color: #475569; margin-bottom: 6px; display: block; }
-                    .payment-method { font-weight: 800; font-size: 9.5px; border: 1px solid #cbd5e1; padding: 3px 6px; display: inline-block; border-radius: 4px; margin-bottom: 6px; }
-                    .powered { font-size: 7px; font-weight: 700; opacity: 0.5; margin-top: 6px; letter-spacing: 0.5px; }
+                    .ticket-footer { text-align: center; margin-top: 8px; border-top: 1px dashed #94a3b8; padding-top: 6px; }
+                    .msg-pie { font-style: italic; font-size: 9.5px; color: #475569; margin-bottom: 4px; display: block; }
+                    .payment-method { font-weight: 800; font-size: 9px; border: 1px solid #cbd5e1; padding: 2px 5px; display: inline-block; border-radius: 4px; margin-bottom: 4px; }
+                    .powered { font-size: 7px; font-weight: 700; opacity: 0.5; margin-top: 4px; letter-spacing: 0.5px; }
                     .watermark-reprint { font-size: 8px; font-weight: 800; color: #475569; background: #f1f5f9; padding: 2px 4px; border-radius: 3px; display: inline-block; margin: 3px 0; border: 1px solid #cbd5e1; }
                 </style>
             </head>
@@ -731,23 +748,12 @@ function reimprimirTicket() {
                     <div class="line"></div>
                     <div class="watermark-reprint">DUPLICADO / REIMPRESIÓN</div>
                     <div class="small-info"><strong>${tipoComprobante} N° ${nroComprobante}</strong></div>
-                    <div class="small-info">Fecha: ${fechaVenta}</div>
+                    <div class="small-info">Fecha: ${fechaVentaStr}</div>
                     <div class="small-info" style="text-align: left; margin-top: 4px;"><strong>A:</strong> ${nombreCliente} ${cuitCliente ? `(CUIT: ${cuitCliente})` : ''}</div>
                 </div>
 
                 <div class="ticket-body">
-                    ${venta.items ? venta.items.map(item => {
-                        const cant = parseFloat(item.quantity || item.cantidad || 1);
-                        const prec = parseFloat(item.price || item.precio || 0);
-                        const subtotalItem = item.subtotal !== undefined ? parseFloat(item.subtotal) : (prec * cant);
-                        const prefijoCantidad = fmtCantidadTicket(item);
-                        return `
-                            <div class="item-row">
-                                <span class="item-qty-name">${prefijoCantidad}${(item.productName || item.nombre || '').toUpperCase()}</span>
-                                <span class="item-price">$${subtotalItem.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                            </div>
-                        `;
-                    }).join('') : ''}
+                    ${itemsHtml}
 
                     ${descuentoMonto > 0 ? `
                         <div class="line"></div>
@@ -791,27 +797,41 @@ function reimprimirTicket() {
                     <div class="powered">BAEZPOS v3.5 - POWERED BY BAEZ ALEXANDER</div>
                 </div>
 
+                <!-- Carga sincrónica y segura de la librería QRCode -->
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
                 <script>
-                    if (${Boolean(fiscalActivo && cae && qrText)}) {
-                        try {
-                            new QRCode(document.getElementById("qrcode"), {
-                                text: "${qrText}",
-                                width: 85,
-                                height: 85,
-                                colorDark : "#000000",
-                                colorLight : "#ffffff",
-                                correctLevel : QRCode.CorrectLevel.M
-                            });
-                        } catch(e) {}
+                    function ejecutarImpresion() {
+                        const qrContainer = document.getElementById("qrcode");
+                        const qrTextVal = "${qrText}";
+
+                        if (qrContainer && qrTextVal && typeof QRCode !== 'undefined') {
+                            try {
+                                new QRCode(qrContainer, {
+                                    text: qrTextVal,
+                                    width: 85,
+                                    height: 85,
+                                    colorDark: "#000000",
+                                    colorLight: "#ffffff",
+                                    correctLevel: QRCode.CorrectLevel.M
+                                });
+                            } catch(e) {
+                                console.error("Error al renderizar código QR:", e);
+                            }
+                        }
+
+                        // Dar tiempo suficiente para el renderizado del QR antes de disparar la impresora
+                        setTimeout(() => {
+                            window.print();
+                            window.close();
+                        }, 300);
                     }
 
-                    setTimeout(() => {
-                        window.print();
-                        window.close();
-                    }, 500);
+                    // Se ejecuta exactamente cuando la ventana y la librería JS terminan de cargar
+                    window.onload = ejecutarImpresion;
                 </script>
             </body>
         </html>
     `);
+
     ventana.document.close();
 }

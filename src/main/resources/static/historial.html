@@ -29,13 +29,18 @@
     }
 
     .card { border-radius: 15px; border: none; }
-    .table thead th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #6c757d; }
+    .table thead th {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #6c757d;
+      white-space: nowrap;
+    }
     .dashed { border-top: 2px dashed #dee2e6; opacity: 1; }
 
     /* AJUSTES RESPONSIVE MÓVIL Y TABLET */
     @media (max-width: 768px) {
         #content { margin-left: 0; width: 100%; }
-        .table-responsive-mobile { min-width: 750px; }
     }
   </style>
 </head>
@@ -132,22 +137,22 @@
       </div>
     </div>
 
-    <!-- Tabla de Ventas -->
+    <!-- Tabla de Ventas (Estructura Optimizada Multi-tenant) -->
     <div class="card shadow-sm p-2 p-md-3">
       <div class="table-responsive" style="min-height: 400px;">
-        <table class="table table-hover align-middle mb-0 table-responsive-mobile">
-          <thead class="bg-light">
+        <table class="table table-hover align-middle mb-0" style="min-width: 850px;">
+          <thead class="table-light">
           <tr>
-            <th class="ps-4">ID</th>
-            <th>Fecha y Hora</th>
-            <th>Cliente / Productos</th>
-            <th>Método Pago</th>
-            <th class="text-end">Descuento</th>
-            <th class="text-end">Total Final</th>
-            <th class="text-center">Acciones</th>
+            <th class="ps-4" style="width: 14%;">Comprobante</th>
+            <th style="width: 16%;">Fecha y Hora</th>
+            <th style="width: 28%;">Cliente / Productos</th>
+            <th style="width: 14%;">Método Pago</th>
+            <th class="text-end" style="width: 11%;">Descuento</th>
+            <th class="text-end" style="width: 11%;">Total Final</th>
+            <th class="text-center text-nowrap" style="width: 110px;">Acciones</th>
           </tr>
           </thead>
-          <tbody id="listaVentas" style="font-size: 14px;">
+          <tbody id="listaVentas" style="font-size: 13.5px;">
           <tr><td colspan="7" class="text-center p-4 text-muted">Cargando ventas...</td></tr>
           </tbody>
         </table>

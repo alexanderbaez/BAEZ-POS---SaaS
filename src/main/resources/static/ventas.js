@@ -1049,12 +1049,15 @@ async function finalizarVenta() {
             ULTIMA_VENTA_EXITOSA = data;
             if (window.sndSuccess) window.sndSuccess.play().catch(function silencioso(){});
 
+            // Extraemos la secuencia o el comprobante del backend
+            const numTicketVisual = data.nroComprobante || (data.numeroTicket ? `#${data.numeroTicket}` : `Op #${data.id || 'OK'}`);
+
             Swal.fire({
                 icon: 'success',
                 title: '¡Venta Realizada!',
                 text: METODO_PAGO === 'CUENTA_CORRIENTE'
-                    ? `Cargado $${utilFormatearMoneda(total)} a la cuenta de ${clienteSeleccionado.name} (Op #${data.id || 'OK'})`
-                    : `Operación #${data.id || 'Exitosa'}`,
+                    ? `Cargado $${utilFormatearMoneda(total)} a la cuenta de ${clienteSeleccionado.name} (${numTicketVisual})`
+                    : `Comprobante ${numTicketVisual}`,
                 showCancelButton: true,
                 confirmButtonText: '<i class="bi bi-printer"></i> Imprimir Ticket',
                 cancelButtonText: 'No imprimir',
@@ -1159,7 +1162,9 @@ function generarPlantillaHTMLTicket(venta) {
     const cae = venta.cae || '';
     const caeVto = venta.caeVto || '';
 
-    const nroComprobante = venta.nroComprobante || `00001-${String(venta.id || 1).padStart(8, '0')}`;
+    // Si nroComprobante viene de Java (Ej: "00001-00000001"), lo respeta.
+    // Si no, lo genera con nroTicket / id.
+    const nroComprobante = venta.nroComprobante || `00001-${String(venta.numeroTicket || venta.id || 1).padStart(8, '0')}`;
     const fechaVenta = venta.saleDate ? new Date(venta.saleDate).toLocaleString('es-AR') : new Date().toLocaleString('es-AR');
     const metodoPago = (venta.paymentMethod || 'EFECTIVO').replace(/_/g, ' ').toUpperCase();
 
@@ -1177,13 +1182,18 @@ function generarPlantillaHTMLTicket(venta) {
         const cuitLimpio = cuitLocal.replace(/\D/g, '');
         const cuitClienteLimpio = cuitCliente.replace(/\D/g, '');
 
+        // Extraemos solo el número secuencial del comprobante "00001-00000005" -> 5
+        const numeroComprobanteEntero = venta.nroComprobante
+            ? parseInt(venta.nroComprobante.split('-')[1], 10)
+            : (venta.numeroTicket || venta.id || 1);
+
         const datosQr = {
             ver: 1,
             fecha: fechaVenta.split(' ')[0],
             cuit: Number(cuitLimpio),
             ptoVta: 1,
             tipoCmp: tipoComprobante.includes('A') ? 1 : 11,
-            nroCmp: venta.id || 1,
+            nroCmp: numeroComprobanteEntero, // <-- CORREGIDO: Toma el número de comprobante por empresa
             importe: totalFinal,
             moneda: "ARS",
             ctz: 1,
