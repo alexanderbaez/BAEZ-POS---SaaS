@@ -11,9 +11,15 @@ const BACKEND_URL = IS_LOCAL
 const BASE_URL = `${BACKEND_URL}/api/v1`;
 const MI_WHATSAPP = "5492645468570";
 
+// Auxiliar para detectar si la vista actual es el Login
+function esVistaLogin() {
+    const path = window.location.pathname.toLowerCase();
+    return path.endsWith('login.html') || path.endsWith('/login');
+}
+
 // 1. Verificación, decodificación estricta del Token JWT y Sincronización de Identidad
 (function verificarSesionInicial() {
-    if (window.location.pathname.endsWith('login.html')) return;
+    if (esVistaLogin()) return;
 
     const token = localStorage.getItem('baezpos_token');
     if (!token) {
@@ -74,7 +80,7 @@ async function apiFetch(path, options = {}) {
 
         // Si el token es inválido o no está autenticado (401), destruir sesión
         if (response.status === 401) {
-            if (!window.location.pathname.endsWith('login.html')) {
+            if (!esVistaLogin()) {
                 localStorage.clear();
                 window.location.href = 'login.html';
             }
@@ -88,9 +94,17 @@ async function apiFetch(path, options = {}) {
     }
 }
 
-// 3. CHEQUEO DE ESTADO DE LICENCIA
+// 3. CHEQUEO DE ESTADO DE LICENCIA (MULTI-TENANT GUARD)
 async function chequearEstadoLicencia() {
-    if (window.location.pathname.endsWith('login.html')) return;
+    // Si estamos en la pantalla de login, abortar inmediatamente y limpiar residuos
+    if (esVistaLogin()) {
+        removerNotificacionVencimiento();
+        removerBloqueoVentas();
+        return;
+    }
+
+    const currentToken = localStorage.getItem('baezpos_token');
+    if (!currentToken) return;
 
     const userRole = (localStorage.getItem('baezpos_user_role') || '').toUpperCase().trim();
     if (userRole === 'SUPER_ADMIN') return; // El super admin nunca se bloquea
@@ -236,6 +250,8 @@ function removerBloqueoVentas() {
  * NOTIFICACIÓN FLOTANTE DE VENCIMIENTO REUBICADA Y ADAPTADA AL LAYOUT RESPONSIVO
  */
 function mostrarNotificacionVencimientoGlobal(dias) {
+    if (esVistaLogin()) return; // Protección estricta en Login
+
     let banner = document.getElementById('baezpos-vencimiento-banner');
     if (!banner) {
         banner = document.createElement('div');
@@ -292,8 +308,15 @@ function removerNotificacionVencimiento() {
     if (banner) banner.remove();
 }
 
-// Iniciar chequeo inmediato y repetirlo cada 15 segundos
+// Iniciar chequeo controlado
 document.addEventListener('DOMContentLoaded', () => {
+    // Si la vista es el Login, desinfectar la interfaz y frenar los intervalos
+    if (esVistaLogin()) {
+        removerNotificacionVencimiento();
+        removerBloqueoVentas();
+        return;
+    }
+
     chequearEstadoLicencia();
     setInterval(chequearEstadoLicencia, 15000);
 });
