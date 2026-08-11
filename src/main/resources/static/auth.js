@@ -11,10 +11,19 @@ const BACKEND_URL = IS_LOCAL
 const BASE_URL = `${BACKEND_URL}/api/v1`;
 const MI_WHATSAPP = "5492645468570";
 
-// Auxiliar para detectar si la vista actual es el Login
+// Auxiliar robusto para detectar si la vista actual es el Login (URL o DOM)
 function esVistaLogin() {
     const path = window.location.pathname.toLowerCase();
-    return path.endsWith('login.html') || path.endsWith('/login');
+    const esUrlLogin = path.endsWith('login.html') || path.endsWith('/login');
+
+    // Si el DOM ya cargó, comprobamos elementos de la interfaz de login
+    const tieneFormLogin = !!(
+        document.getElementById('loginForm') ||
+        document.querySelector('form[action*="login"]') ||
+        (document.querySelector('input[type="password"]') && !document.getElementById('main-content'))
+    );
+
+    return esUrlLogin || tieneFormLogin;
 }
 
 // 1. Verificación, decodificación estricta del Token JWT y Sincronización de Identidad
@@ -54,7 +63,7 @@ function esVistaLogin() {
     }
 })();
 
-// 2. Fetch Helper Universal Corregido
+// 2. Fetch Helper Universal
 async function apiFetch(path, options = {}) {
     const headers = options.headers ? new Headers(options.headers) : new Headers();
     if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
@@ -86,7 +95,6 @@ async function apiFetch(path, options = {}) {
             }
         }
 
-        // Permitimos que el llamador reciba respuestas 403 u otros códigos de error sin redirigir al login
         return response;
     } catch (err) {
         console.error(`Error de conexión con el backend: ${url}`, err);
@@ -96,7 +104,7 @@ async function apiFetch(path, options = {}) {
 
 // 3. CHEQUEO DE ESTADO DE LICENCIA (MULTI-TENANT GUARD)
 async function chequearEstadoLicencia() {
-    // Si estamos en la pantalla de login, abortar inmediatamente y limpiar residuos
+    // Freno de mano: Si estamos en vista de login, limpiar cualquier residuo y abortar
     if (esVistaLogin()) {
         removerNotificacionVencimiento();
         removerBloqueoVentas();
@@ -104,7 +112,11 @@ async function chequearEstadoLicencia() {
     }
 
     const currentToken = localStorage.getItem('baezpos_token');
-    if (!currentToken) return;
+    if (!currentToken) {
+        removerNotificacionVencimiento();
+        removerBloqueoVentas();
+        return;
+    }
 
     const userRole = (localStorage.getItem('baezpos_user_role') || '').toUpperCase().trim();
     if (userRole === 'SUPER_ADMIN') return; // El super admin nunca se bloquea
@@ -119,6 +131,13 @@ async function chequearEstadoLicencia() {
 
     try {
         const res = await apiFetch('/admin/my-company/check-status');
+
+        // Re-verificar estado por si cambió la vista mientras se ejecutaba el fetch async
+        if (esVistaLogin()) {
+            removerNotificacionVencimiento();
+            removerBloqueoVentas();
+            return;
+        }
 
         if (res && res.ok) {
             const data = await res.json();
@@ -141,7 +160,6 @@ async function chequearEstadoLicencia() {
                 removerNotificacionVencimiento();
             }
         } else if (res && res.status === 403) {
-            // Manejo directo de respuesta 403 del Backend
             if (esPaginaPOS) {
                 bloquearPantallaVentas("Su suscripción se encuentra inhabilitada por administración.");
             } else {
@@ -155,6 +173,7 @@ async function chequearEstadoLicencia() {
 
 // Bloqueo estético MILIMÉTRICO enfocado EXCLUSIVAMENTE en el área de Ventas (sin tapar la Sidebar)
 function bloquearPantallaVentas(mensaje) {
+    if (esVistaLogin()) return;
     if (document.getElementById('bloqueo-pos-overlay')) return;
 
     if (typeof CARRITO !== 'undefined') {
@@ -165,12 +184,12 @@ function bloquearPantallaVentas(mensaje) {
     const overlay = document.createElement('div');
     overlay.id = 'bloqueo-pos-overlay';
 
-    // Cálculo dinámico de borde: detecta exactamente dónde finaliza el sidebar en el DOM
+    // Cálculo dinámico de borde
     const targetContainer = document.getElementById('main-content') ||
                             document.getElementById('content') ||
                             document.querySelector('main');
 
-    let offsetLeft = '250px'; // Fallback por defecto
+    let offsetLeft = '250px';
     if (targetContainer && window.innerWidth > 768) {
         const rect = targetContainer.getBoundingClientRect();
         offsetLeft = `${rect.left}px`;
@@ -220,7 +239,6 @@ function bloquearPantallaVentas(mensaje) {
     document.body.appendChild(overlay);
 }
 
-// Recalcula milimétricamente la posición en caso de redimensionar la ventana
 function ajustarOverlayBloqueo() {
     const overlay = document.getElementById('bloqueo-pos-overlay');
     if (!overlay) {
@@ -250,7 +268,7 @@ function removerBloqueoVentas() {
  * NOTIFICACIÓN FLOTANTE DE VENCIMIENTO REUBICADA Y ADAPTADA AL LAYOUT RESPONSIVO
  */
 function mostrarNotificacionVencimientoGlobal(dias) {
-    if (esVistaLogin()) return; // Protección estricta en Login
+    if (esVistaLogin()) return; // Protección estricta
 
     let banner = document.getElementById('baezpos-vencimiento-banner');
     if (!banner) {
@@ -308,9 +326,9 @@ function removerNotificacionVencimiento() {
     if (banner) banner.remove();
 }
 
-// Iniciar chequeo controlado
+// Inicialización de ciclo de vida seguro
 document.addEventListener('DOMContentLoaded', () => {
-    // Si la vista es el Login, desinfectar la interfaz y frenar los intervalos
+    // Si la vista es Login, desinfectar UI y no levantar polling
     if (esVistaLogin()) {
         removerNotificacionVencimiento();
         removerBloqueoVentas();
@@ -321,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(chequearEstadoLicencia, 15000);
 });
 
-// Función de Cierre de Sesión Universal
+// Cierre de Sesión Universal
 function cerrarSesion(e) {
     if (e) e.preventDefault();
     localStorage.clear();
