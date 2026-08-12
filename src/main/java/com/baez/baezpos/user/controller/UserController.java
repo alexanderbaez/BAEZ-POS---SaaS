@@ -2,16 +2,16 @@ package com.baez.baezpos.user.controller;
 
 import com.baez.baezpos.user.dto.UserRequestDTO;
 import com.baez.baezpos.user.dto.UserResponseDTO;
-import com.baez.baezpos.user.entity.User;
 import com.baez.baezpos.user.service.UserService.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.context.SecurityContextHolder;
-import java.util.Map;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -22,7 +22,7 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping
-    public ResponseEntity<UserResponseDTO> create(@RequestBody UserRequestDTO dto) {
+    public ResponseEntity<UserResponseDTO> create(@Valid @RequestBody UserRequestDTO dto) { // <--- Agregado @Valid
         return new ResponseEntity<>(userService.createUser(dto), HttpStatus.CREATED);
     }
 
@@ -37,7 +37,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<UserResponseDTO> update(@PathVariable Long id, @RequestBody UserRequestDTO dto) {
+    public ResponseEntity<UserResponseDTO> update(@PathVariable Long id, @Valid @RequestBody UserRequestDTO dto) { // <--- Agregado @Valid
         return ResponseEntity.ok(userService.updateUser(id, dto));
     }
 
@@ -50,6 +50,9 @@ public class UserController {
     @PatchMapping("/update-password")
     public ResponseEntity<?> updatePassword(@RequestBody Map<String, String> request) {
         String newPassword = request.get("newPassword");
+        if (newPassword == null || newPassword.isBlank()) {
+            throw new IllegalArgumentException("La nueva contraseña no puede estar vacía.");
+        }
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         userService.updatePasswordOnly(email, newPassword);
         return ResponseEntity.ok(Map.of("message", "Contraseña actualizada correctamente"));

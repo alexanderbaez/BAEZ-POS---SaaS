@@ -5,6 +5,7 @@ import com.baez.baezpos.security.dto.AuthenticationResponse;
 import com.baez.baezpos.security.dto.ForgotPasswordRequest;
 import com.baez.baezpos.security.dto.SetupRequest;
 import com.baez.baezpos.security.service.AuthService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,7 +22,7 @@ public class AuthController {
 
     @PostMapping("/authenticate")
     public ResponseEntity<AuthenticationResponse> authenticate(
-            @RequestBody AuthenticationRequest request
+            @Valid @RequestBody AuthenticationRequest request
     ) {
         return ResponseEntity.ok(authService.authenticate(request));
     }
@@ -33,16 +34,16 @@ public class AuthController {
 
     @PostMapping("/setup")
     public ResponseEntity<AuthenticationResponse> setup(
-            @RequestBody SetupRequest request
+            @Valid @RequestBody SetupRequest request
     ) {
         return ResponseEntity.ok(authService.setup(request));
     }
 
     @PostMapping("/forgot-password")
     public ResponseEntity<Map<String, String>> forgotPassword(
-            @RequestBody ForgotPasswordRequest request
+            @Valid @RequestBody ForgotPasswordRequest request
     ) {
         authService.processForgotPassword(request);
-        return ResponseEntity.ok(Map.of("message", "Se ha enviado una nueva contraseña temporal a su correo electrónico."));
+        return ResponseEntity.ok(Map.of("message", "Si la cuenta existe en nuestro sistema, recibirá un correo con las instrucciones de restablecimiento."));
     }
 }

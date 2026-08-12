@@ -1,22 +1,19 @@
 package com.baez.baezpos.log.service;
 
 import com.baez.baezpos.company.entity.Company;
-import com.baez.baezpos.company.repository.CompanyRepository;
 import com.baez.baezpos.log.dto.SystemLogResponseDTO;
 import com.baez.baezpos.log.entity.SystemLog;
 import com.baez.baezpos.log.repository.SystemLogRepository;
 import com.baez.baezpos.security.util.SecurityUtils;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,14 +21,14 @@ import java.util.stream.Collectors;
 public class AuditService {
 
     private final SystemLogRepository logRepository;
-    private final CompanyRepository companyRepository;
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void logAction(String action, String description, String level) {
+    /**
+     * Registra auditorías de manera asíncrona sin bloquear la transacción principal.
+     */
+    @Async
+    @Transactional
+    public void logActionAsync(Long companyId, String userEmail, String action, String description, String level) {
         try {
-            Long companyId = SecurityUtils.getCurrentCompanyId();
-            String userEmail = SecurityUtils.getCurrentUserEmail();
-
             SystemLog.SystemLogBuilder<?, ?> logBuilder = SystemLog.builder()
                     .action(action)
                     .description(description)
@@ -39,14 +36,26 @@ public class AuditService {
                     .userEmail(userEmail != null ? userEmail : "SISTEMA");
 
             if (companyId != null) {
-                Company company = companyRepository.findById(companyId).orElse(null);
+                Company company = new Company();
+                company.setId(companyId);
                 logBuilder.company(company);
             }
 
             logRepository.save(logBuilder.build());
         } catch (Exception e) {
-            log.error("Error al registrar auditoría [{}]: {}", action, e.getMessage());
+            log.error("Error al registrar auditoría en background [{}]: {}", action, e.getMessage());
         }
+    }
+
+    /**
+     * Método wrapper sincrónico para resolver seguridad y enviar al worker asíncrono
+     */
+    public void logAction(String action, String description, String level) {
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        String userEmail = SecurityUtils.getCurrentUserEmail();
+
+        // Se ejecuta en un hilo separado inmediatamente
+        logActionAsync(companyId, userEmail, action, description, level);
     }
 
     public void logAction(String action, String description) {
@@ -65,32 +74,31 @@ public class AuditService {
             logs = logRepository.findLogsForSuperAdmin(filterCompanyId, pageable);
         }
 
-        return logs.stream().map(this::convertToDTO).collect(Collectors.toList());
+        return logs.stream().map(this::convertToDTO).toList();
     }
 
-    private SystemLogResponseDTO convertToDTO(SystemLog log) {
+    private SystemLogResponseDTO convertToDTO(SystemLog logEntity) {
         Long compId = null;
         String compName = "SISTEMA / GLOBAL";
 
-        if (log.getCompany() != null) {
+        if (logEntity.getCompany() != null) {
+            compId = logEntity.getCompany().getId();
             try {
-                compId = log.getCompany().getId();
-                compName = log.getCompany().getName();
-            } catch (EntityNotFoundException e) {
-                // Si la empresa fue eliminada de la BD posteriormente, evitamos que rompa el flujo
-                compName = "EMPRESA ELIMINADA (ID: " + compId + ")";
+                compName = logEntity.getCompany().getName();
+            } catch (Exception e) {
+                compName = "EMPRESA (ID: " + compId + ")";
             }
         }
 
         return SystemLogResponseDTO.builder()
-                .id(log.getId())
-                .action(log.getAction())
-                .description(log.getDescription())
-                .level(log.getLevel())
-                .userEmail(log.getUserEmail())
+                .id(logEntity.getId())
+                .action(logEntity.getAction())
+                .description(logEntity.getDescription())
+                .level(logEntity.getLevel())
+                .userEmail(logEntity.getUserEmail())
                 .companyId(compId)
                 .companyName(compName)
-                .timestamp(log.getTimestamp())
+                .timestamp(logEntity.getTimestamp())
                 .build();
     }
 }

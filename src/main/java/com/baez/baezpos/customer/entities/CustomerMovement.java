@@ -18,26 +18,27 @@ public class CustomerMovement {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 10)
     private String type; // "DEBITO" (Deuda) o "CREDITO" (Pago)
 
+    @Column(length = 255)
     private String description;
 
-    @Column(name = "payment_method")
-    private String paymentMethod; // "EFECTIVO" o "TRANSFERENCIA"
+    @Column(name = "payment_method", length = 30)
+    private String paymentMethod; // "EFECTIVO", "TRANSFERENCIA", "TARJETA", etc.
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sale_id")
     private Sale sale;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 

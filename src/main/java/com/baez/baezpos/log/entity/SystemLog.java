@@ -8,7 +8,10 @@ import lombok.experimental.SuperBuilder;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "system_logs")
+@Table(name = "system_logs", indexes = {
+        @Index(name = "idx_system_logs_company", columnList = "company_id"),
+        @Index(name = "idx_system_logs_timestamp", columnList = "timestamp")
+})
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @SuperBuilder
@@ -27,13 +30,12 @@ public class SystemLog extends TenantEntity {
     @Column(nullable = false)
     private String userEmail;
 
-    // ➕ Agregamos el campo level para evitar el error de MySQL
     @Builder.Default
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private String level = "INFO";
 
-    @Builder.Default
-    private LocalDateTime timestamp = LocalDateTime.now();
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime timestamp;
 
     @PrePersist
     protected void onCreate() {

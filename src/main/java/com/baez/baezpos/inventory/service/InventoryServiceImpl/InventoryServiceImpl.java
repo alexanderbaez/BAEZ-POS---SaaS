@@ -12,8 +12,11 @@ import com.baez.baezpos.product.repository.ProductRepository;
 import com.baez.baezpos.security.util.SecurityUtils;
 import com.baez.baezpos.shared.exception.BadRequestException;
 import com.baez.baezpos.shared.exception.ResourceNotFoundException;
+import com.baez.baezpos.shared.exception.UnauthorizedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,45 +38,29 @@ public class InventoryServiceImpl implements InventoryService {
         Long companyId = SecurityUtils.getCurrentCompanyId();
 
         if (companyId == null) {
-            throw new BadRequestException("No se puede registrar un movimiento de stock sin una empresa asociada.");
+            throw new UnauthorizedException("No hay un contexto de empresa activo para registrar el movimiento.");
         }
 
-        if (productId == null) {
-            throw new BadRequestException("El ID del producto es obligatorio.");
-        }
-
-        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BadRequestException("La cantidad debe ser mayor a cero.");
-        }
-
-        if (type == null) {
-            throw new BadRequestException("El tipo de movimiento es obligatorio.");
-        }
-
-        // 1. Validar producto dentro de la empresa
         Product product = productRepository.findByIdAndCompanyId(productId, companyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado en su empresa."));
+                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado en su empresa. ID: " + productId));
 
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada."));
+        Company company = companyRepository.getReferenceById(companyId);
 
-        // 2. Lógica de Stock con BigDecimal
         BigDecimal currentStock = product.getStock() != null ? product.getStock() : BigDecimal.ZERO;
 
         if (isNegativeMovement(type)) {
             if (currentStock.compareTo(quantity) < 0) {
                 throw new BadRequestException(
                         "Stock insuficiente para " + product.getName() +
-                        ". Stock actual: " + currentStock.toPlainString());
+                                ". Stock actual: " + currentStock.toPlainString());
             }
             product.setStock(currentStock.subtract(quantity));
         } else {
             product.setStock(currentStock.add(quantity));
         }
 
-        productRepository.save(product);
+        // NO hace falta productRepository.save(product) -> JPA hace dirty checking al commit.
 
-        // 3. Crear y guardar movimiento
         InventoryMovement movement = InventoryMovement.builder()
                 .movementType(type)
                 .quantity(quantity)
@@ -82,18 +69,15 @@ public class InventoryServiceImpl implements InventoryService {
                 .build();
 
         movement.setCompany(company);
-
         InventoryMovement savedMovement = inventoryRepository.save(movement);
-        log.info("Empresa [{}]: Movimiento {} ({}) registrado para producto ID {}",
-                companyId, type, quantity.toPlainString(), product.getId());
 
         return mapToDTO(savedMovement);
     }
 
     private boolean isNegativeMovement(MovementType type) {
         return switch (type) {
-            case SALE, DAMAGE, ADJUSTMENT_OUT -> true;
-            case PURCHASE, ADJUSTMENT_IN, RETURN -> false;
+            case OUT, SALE, DAMAGE, ADJUSTMENT_OUT -> true;
+            case IN, PURCHASE, ADJUSTMENT_IN, RETURN -> false;
         };
     }
 
@@ -101,15 +85,12 @@ public class InventoryServiceImpl implements InventoryService {
     @Transactional(readOnly = true)
     public List<InventoryMovementResponseDTO> getProductMovements(Long productId) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
-
-        List<InventoryMovement> movements;
-        if (companyId != null) {
-            movements = inventoryRepository.findByProductIdAndCompanyIdOrderByCreatedAtDesc(productId, companyId);
-        } else {
-            movements = inventoryRepository.findByProductIdOrderByCreatedAtDesc(productId);
+        if (companyId == null) {
+            throw new UnauthorizedException("Acceso denegado: Contexto de empresa no identificado.");
         }
 
-        return movements.stream()
+        return inventoryRepository.findByProductIdAndCompanyIdOrderByCreatedAtDesc(productId, companyId)
+                .stream()
                 .map(this::mapToDTO)
                 .toList();
     }
@@ -118,15 +99,13 @@ public class InventoryServiceImpl implements InventoryService {
     @Transactional(readOnly = true)
     public List<InventoryMovementResponseDTO> getAllRecentMovements() {
         Long companyId = SecurityUtils.getCurrentCompanyId();
-
-        List<InventoryMovement> movements;
-        if (companyId != null) {
-            movements = inventoryRepository.findByCompanyIdOrderByCreatedAtDesc(companyId);
-        } else {
-            movements = inventoryRepository.findAll();
+        if (companyId == null) {
+            throw new UnauthorizedException("Acceso denegado: Contexto de empresa no identificado.");
         }
 
-        return movements.stream()
+        Pageable pageable = PageRequest.of(0, 100);
+        return inventoryRepository.findByCompanyIdOrderByCreatedAtDesc(companyId, pageable)
+                .stream()
                 .map(this::mapToDTO)
                 .toList();
     }

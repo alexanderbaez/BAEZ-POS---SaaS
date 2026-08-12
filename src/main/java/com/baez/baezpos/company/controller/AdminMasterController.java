@@ -3,6 +3,7 @@ package com.baez.baezpos.company.controller;
 import com.baez.baezpos.company.dto.CompanyDTO;
 import com.baez.baezpos.company.dto.MasterRegistrationRequest;
 import com.baez.baezpos.company.service.CompanyService.MasterAdmin;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,9 +28,9 @@ public class AdminMasterController {
     }
 
     @PostMapping
-    public ResponseEntity<String> registerCompany(@RequestBody MasterRegistrationRequest req) {
+    public ResponseEntity<String> registerCompany(@Valid @RequestBody MasterRegistrationRequest req) {
         masterAdminService.registerFullBusiness(req);
-        return ResponseEntity.ok("Empresa y Dueño creados correctamente.");
+        return ResponseEntity.ok("Empresa registrada. Se ha enviado un correo de verificación al cliente.");
     }
 
     // Se eliminó el endpoint redundante "/full-register"

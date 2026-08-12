@@ -2,6 +2,7 @@ package com.baez.baezpos.product.service;
 
 import com.baez.baezpos.company.entity.Company;
 import com.baez.baezpos.company.repository.CompanyRepository;
+import com.baez.baezpos.log.service.AuditService;
 import com.baez.baezpos.product.dto.CategoryRequestDTO;
 import com.baez.baezpos.product.dto.CategoryResponseDTO;
 import com.baez.baezpos.product.entity.Category;
@@ -14,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -22,41 +22,33 @@ public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final CompanyRepository companyRepository;
+    private final AuditService auditService;
 
     @Override
     @Transactional
     public CategoryResponseDTO createCategory(CategoryRequestDTO dto) {
         Long companyId = requireCompanyContext();
-
-        if (dto.name() == null || dto.name().isBlank()) {
-            throw new BadRequestException("El nombre de la categoría es obligatorio.");
-        }
-
         String categoryName = dto.name().trim();
 
-        Optional<Category> existing = categoryRepository.findByNameAndCompanyId(categoryName, companyId);
-        if (existing.isPresent()) {
-            Category category = existing.get();
-            if (category.getActive()) {
+        categoryRepository.findByNameAndCompanyId(categoryName, companyId).ifPresent(c -> {
+            if (c.getActive()) {
                 throw new BadRequestException("Ya existe una categoría activa con el nombre '" + categoryName + "'");
-            } else {
-                category.setActive(true);
-                category.setDescription(dto.description());
-                return mapToResponseDTO(categoryRepository.save(category));
             }
-        }
+        });
 
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
+        Company companyRef = companyRepository.getReferenceById(companyId);
 
         Category newCategory = Category.builder()
                 .name(categoryName)
                 .description(dto.description())
-                .company(company)
+                .company(companyRef)
                 .active(true)
                 .build();
 
-        return mapToResponseDTO(categoryRepository.save(newCategory));
+        Category saved = categoryRepository.save(newCategory);
+        auditService.logAction("CREACION_CATEGORIA", "Categoría creada: " + saved.getName(), "INFO");
+
+        return mapToResponseDTO(saved);
     }
 
     @Override
@@ -81,18 +73,16 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public CategoryResponseDTO updateCategory(Long id, CategoryRequestDTO dto) {
         Long companyId = requireCompanyContext();
-
-        if (dto.name() == null || dto.name().isBlank()) {
-            throw new BadRequestException("El nombre de la categoría es obligatorio.");
-        }
-
         Category category = categoryRepository.findByIdAndCompanyId(id, companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada en su empresa"));
 
         category.setName(dto.name().trim());
         category.setDescription(dto.description());
 
-        return mapToResponseDTO(categoryRepository.save(category));
+        Category updated = categoryRepository.save(category);
+        auditService.logAction("ACTUALIZACION_CATEGORIA", "Categoría actualizada ID: " + id, "INFO");
+
+        return mapToResponseDTO(updated);
     }
 
     @Override
@@ -104,6 +94,7 @@ public class CategoryServiceImpl implements CategoryService {
 
         category.setActive(false);
         categoryRepository.save(category);
+        auditService.logAction("ELIMINACION_CATEGORIA", "Categoría desactivada: " + category.getName(), "WARN");
     }
 
     @Override
@@ -123,7 +114,10 @@ public class CategoryServiceImpl implements CategoryService {
                 .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada en su empresa"));
 
         category.setActive(true);
-        return mapToResponseDTO(categoryRepository.save(category));
+        Category saved = categoryRepository.save(category);
+        auditService.logAction("ACTIVACION_CATEGORIA", "Categoría reactivada: " + category.getName(), "INFO");
+
+        return mapToResponseDTO(saved);
     }
 
     private Long requireCompanyContext() {

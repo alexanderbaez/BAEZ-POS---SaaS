@@ -3,6 +3,7 @@ package com.baez.baezpos.security.config;
 import com.baez.baezpos.security.filter.JwtAuthenticationFilter;
 import com.baez.baezpos.security.service.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -23,6 +24,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -34,6 +36,9 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService customUserDetailsService;
 
+    @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:5173,http://localhost:8080}")
+    private String allowedOrigins;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -42,7 +47,7 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .authorizeHttpRequests(auth -> auth
-                        // Recurso estáticos y HTMLs de frontend
+                        // 1. Archivos estáticos y Vistas HTML
                         .requestMatchers(
                                 "/",
                                 "/login.html",
@@ -57,29 +62,36 @@ public class SecurityConfig {
                                 "/error"
                         ).permitAll()
 
-                        // Endpoints públicos de autenticación y setup
+                        // 2. Endpoints públicos del Módulo de Autenticación
                         .requestMatchers(
                                 "/api/v1/auth/authenticate",
                                 "/api/v1/auth/setup-status",
                                 "/api/v1/auth/setup",
-                                "/api/v1/auth/forgot-password"
+                                "/api/v1/auth/forgot-password",
+                                "/api/v1/auth/verify" // <-- Agregado para activación por email
                         ).permitAll()
 
-                        // 1. Exclusivo para Super Admin
+                        // 3. Módulo Global Super Admin
                         .requestMatchers("/api/v1/super-admin/**").hasRole("SUPER_ADMIN")
 
-                        // 2. Rutas específicas de la empresa accesibles por ADMIN y VENDEDOR
-                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/my-company/status", "/api/v1/admin/my-company/check-status", "/api/v1/admin/my-company/profile").hasAnyRole("ADMIN", "VENDEDOR")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/products/**").hasAnyRole("ADMIN", "VENDEDOR")
-                        .requestMatchers("/api/v1/sales/**").hasAnyRole("ADMIN", "VENDEDOR")
-                        .requestMatchers("/api/v1/customers/**").hasAnyRole("ADMIN", "VENDEDOR")
+                        // 4. Perfil de Usuario (Cualquier usuario autenticado puede actualizar su clave)
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/users/update-password").authenticated()
 
-                        // 3. Módulos de administración del negocio (solo ADMIN)
-                        .requestMatchers("/api/v1/users/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/inventory/**").hasRole("ADMIN")
+                        // 5. Operaciones de Empresa y POS accesibles por ADMIN y VENDEDOR
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/admin/my-company/status",
+                                "/api/v1/admin/my-company/check-status",
+                                "/api/v1/admin/my-company/profile"
+                        ).hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
 
-                        // Regla general para el resto de la API de administración
-                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/products/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
+                        .requestMatchers("/api/v1/sales/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
+                        .requestMatchers("/api/v1/customers/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
+
+                        // 6. Módulos de administración del tenant (ADMIN y SUPER_ADMIN)
+                        .requestMatchers("/api/v1/users/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        .requestMatchers("/api/v1/inventory/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
 
                         .anyRequest().authenticated()
                 )
@@ -116,9 +128,14 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("*"));
+
+        // Parsear los orígenes permitidos desde application.properties / variables de entorno
+        List<String> origins = Arrays.asList(allowedOrigins.split(","));
+        config.setAllowedOrigins(origins);
+
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        config.setAllowedHeaders(List.of("*"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
+        config.setExposedHeaders(List.of("Authorization"));
         config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

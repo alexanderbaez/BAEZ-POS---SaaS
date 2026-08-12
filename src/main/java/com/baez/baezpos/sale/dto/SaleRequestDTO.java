@@ -1,14 +1,30 @@
 package com.baez.baezpos.sale.dto;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.PositiveOrZero;
+
 import java.math.BigDecimal;
 import java.util.List;
 
 public record SaleRequestDTO(
+        @NotEmpty(message = "La venta debe incluir al menos un ítem")
+        @Valid
         List<SaleItemRequestDTO> items,
+
+        @PositiveOrZero(message = "El descuento no puede ser negativo")
         BigDecimal discount,
-        BigDecimal surcharge,     // <--- NUEVO: Monto $ del recargo
-        BigDecimal surchargeRate, // <--- NUEVO: Porcentaje % del recargo
+
+        @PositiveOrZero(message = "El recargo no puede ser negativo")
+        BigDecimal surcharge,
+
+        @PositiveOrZero(message = "El porcentaje de recargo no puede ser negativo")
+        BigDecimal surchargeRate,
+
+        @NotBlank(message = "El método de pago es obligatorio")
         String paymentMethod,
+
         Long customerId,
         Boolean isFiscal
 ) {}

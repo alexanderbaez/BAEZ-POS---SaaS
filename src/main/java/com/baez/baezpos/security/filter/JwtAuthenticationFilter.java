@@ -8,6 +8,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -20,27 +21,11 @@ import java.io.IOException;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final CustomUserDetailsService userDetailsService;
-
-    @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getServletPath();
-        return path.equals("/") ||
-                path.equals("/login.html") ||
-                path.startsWith("/api/v1/auth/authenticate") ||
-                path.startsWith("/api/v1/auth/setup-status") ||
-                path.startsWith("/api/v1/auth/setup") ||
-                path.startsWith("/api/v1/auth/forgot-password") ||
-                path.startsWith("/css/") ||
-                path.startsWith("/js/") ||
-                path.startsWith("/images/") ||
-                path.endsWith(".js") ||
-                path.endsWith(".css") ||
-                path.equals("/favicon.ico");
-    }
 
     @Override
     protected void doFilterInternal(
@@ -50,7 +35,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         final String authHeader = request.getHeader("Authorization");
-
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
@@ -59,45 +43,46 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String jwt = authHeader.substring(7);
         try {
             final String userEmail = jwtService.extractUsername(jwt);
+
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
 
                 if (userDetails instanceof UserPrincipal userPrincipal) {
                     if (jwtService.isTokenValid(jwt, userPrincipal.getUsername())) {
 
-                        // 1. Validar cuenta individual de usuario
+                        // 1. Validar que la cuenta del usuario no esté inhabilitada
                         if (!userPrincipal.isEnabled()) {
-                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                            response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write("{\"error\": \"CUENTA_DESACTIVADA\", \"message\": \"La cuenta de usuario se encuentra desactivada.\"}");
+                            sendJsonError(response, HttpServletResponse.SC_FORBIDDEN, "CUENTA_DESACTIVADA", "La cuenta de usuario se encuentra desactivada.");
                             return;
                         }
 
-                        // 2. Validar estado de la Empresa solo en operaciones de transacción (POST/PUT/DELETE ventas)
-                        String requestURI = request.getRequestURI();
+                        // 2. Validar suscripción/estado del tenant para métodos de escritura/modificación en el sistema
+                        String path = request.getRequestURI();
                         String method = request.getMethod();
+                        boolean isMutationOperation = !method.equalsIgnoreCase("GET") && !method.equalsIgnoreCase("OPTIONS");
 
-                        boolean isVentaOperation = requestURI.startsWith("/api/v1/sales") &&
-                                (method.equalsIgnoreCase("POST") || method.equalsIgnoreCase("PUT") || method.equalsIgnoreCase("DELETE"));
-
-                        if (!userPrincipal.isCompanyAccessValid() && isVentaOperation) {
-                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                            response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write("{\"error\": \"CUENTA_SUSPENDIDA\", \"message\": \"Su suscripción se encuentra inhabilitada. No puede procesar ventas.\"}");
+                        if (!userPrincipal.isCompanyAccessValid() && isMutationOperation && !path.startsWith("/api/v1/auth")) {
+                            sendJsonError(response, HttpServletResponse.SC_FORBIDDEN, "CUENTA_SUSPENDIDA", "Su suscripción se encuentra inhabilitada o vencida. Operación no permitida.");
                             return;
                         }
 
                         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                                 userPrincipal, null, userPrincipal.getAuthorities());
-
                         authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                         SecurityContextHolder.getContext().setAuthentication(authToken);
                     }
                 }
             }
         } catch (Exception e) {
-            logger.error("Error en validación de JWT: " + e.getMessage());
+            log.error("Error al procesar el token JWT en el filtro: {}", e.getMessage());
         }
+
         filterChain.doFilter(request, response);
+    }
+
+    private void sendJsonError(HttpServletResponse response, int status, String errorCode, String message) throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write(String.format("{\"error\": \"%s\", \"message\": \"%s\"}", errorCode, message));
     }
 }

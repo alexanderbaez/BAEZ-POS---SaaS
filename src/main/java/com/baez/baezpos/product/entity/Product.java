@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 
 @Entity
 @Table(name = "products", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"company_id", "barcode"}) // Unicidad POR EMPRESA
+        @UniqueConstraint(columnNames = {"company_id", "barcode"})
 })
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
@@ -36,11 +36,6 @@ public class Product extends TenantEntity {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
-    /**
-     * Stock en unidades decimales (BigDecimal) para soportar productos pesables/granel.
-     * Para productos enteros: 5.000 = 5 unidades.
-     * Para productos fraccionables: 2.500 = 2.5 kg.
-     */
     @Builder.Default
     @Column(nullable = false, precision = 12, scale = 3)
     private BigDecimal stock = BigDecimal.ZERO;
@@ -53,11 +48,6 @@ public class Product extends TenantEntity {
     @Column(nullable = false)
     private Boolean active = true;
 
-    /**
-     * Indica si el producto se vende por peso/fracción (granel).
-     * true  → El POS mostrará las opciones "Por Peso/Cantidad" y "Por Importe $".
-     * false → Venta entera tradicional (quantity siempre será entero).
-     */
     @Builder.Default
     @Column(name = "is_fractional", nullable = false)
     private Boolean isFractional = false;
@@ -65,4 +55,8 @@ public class Product extends TenantEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
+
+    @Version
+    @Builder.Default
+    private Long version = 0L;
 }

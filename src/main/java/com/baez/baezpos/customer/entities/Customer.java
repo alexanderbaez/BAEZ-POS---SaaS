@@ -4,6 +4,7 @@ import com.baez.baezpos.shared.entity.TenantEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.SQLDelete;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -13,30 +14,46 @@ import java.time.LocalDateTime;
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @SuperBuilder
+@SQLDelete(sql = "UPDATE customers SET active = false WHERE id = ?")
 public class Customer extends TenantEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 150)
     private String name;
 
+    @Column(length = 30)
     private String phone;
+
+    @Column(name = "dni_cuit", length = 20)
     private String dniCuit;
 
-    @Column(precision = 10, scale = 2)
+    @Column(name = "current_balance", nullable = false, precision = 12, scale = 2)
     @Builder.Default
     private BigDecimal currentBalance = BigDecimal.ZERO;
 
-    @Column(precision = 10, scale = 2)
+    @Column(name = "credit_limit", nullable = false, precision = 12, scale = 2)
     @Builder.Default
     private BigDecimal creditLimit = BigDecimal.valueOf(10000);
 
+    @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @Builder.Default
     @Column(nullable = false)
     private Boolean active = true;
+
+    @Version
+    @Builder.Default
+    private Long version = 0L;
+
+    @PrePersist
+    protected void onCreate() {
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
+    }
 }

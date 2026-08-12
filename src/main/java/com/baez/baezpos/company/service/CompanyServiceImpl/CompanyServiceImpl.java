@@ -5,10 +5,11 @@ import com.baez.baezpos.company.entity.Company;
 import com.baez.baezpos.company.repository.CompanyRepository;
 import com.baez.baezpos.company.service.CompanyService.CompanyService;
 import com.baez.baezpos.log.service.AuditService;
-import com.baez.baezpos.mail.EmailService;
-import com.baez.baezpos.user.dto.UserDTO;
-import com.baez.baezpos.user.entity.User;
+import com.baez.baezpos.mail.service.EmailService;
+import com.baez.baezpos.user.dto.UserRequestDTO;
+import com.baez.baezpos.user.dto.UserResponseDTO;
 import com.baez.baezpos.user.entity.Role;
+import com.baez.baezpos.user.entity.User;
 import com.baez.baezpos.user.repository.UserRepository;
 import com.baez.baezpos.shared.exception.ResourceNotFoundException;
 import com.baez.baezpos.security.util.SecurityUtils;
@@ -118,10 +119,18 @@ public class CompanyServiceImpl implements CompanyService {
 
     @Override
     @Transactional
-    public UserDTO createEmployee(UserDTO dto) {
+    public UserResponseDTO createEmployee(UserRequestDTO dto) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
+
+        if (userRepository.existsByEmail(dto.getEmail())) {
+            throw new IllegalArgumentException("El email '" + dto.getEmail() + "' ya se encuentra registrado.");
+        }
+
+        if (dto.getPassword() == null || dto.getPassword().trim().length() < 6) {
+            throw new IllegalArgumentException("Debe proporcionar una contraseña válida de al menos 6 caracteres para el empleado.");
+        }
 
         User employee = new User();
         employee.setName(dto.getName());
@@ -133,7 +142,7 @@ public class CompanyServiceImpl implements CompanyService {
 
         User savedEmployee = userRepository.save(employee);
 
-        // Envío de correo de bienvenida para el vendedor
+        // Envío de correo de bienvenida
         try {
             emailService.enviarMailBienvenida(
                     savedEmployee.getEmail(),
@@ -145,30 +154,40 @@ public class CompanyServiceImpl implements CompanyService {
             log.error("Error al enviar email al vendedor {}: {}", savedEmployee.getEmail(), e.getMessage());
         }
 
-        return convertToUserDTO(savedEmployee);
+        return convertToUserResponseDTO(savedEmployee);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<UserDTO> getMyEmployees() {
+    public List<UserResponseDTO> getMyEmployees() {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         return userRepository.findByCompanyIdAndRole(companyId, Role.VENDEDOR).stream()
-                .map(this::convertToUserDTO)
+                .map(this::convertToUserResponseDTO)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional
-    public UserDTO updateEmployee(Long id, UserDTO dto) {
+    public UserResponseDTO updateEmployee(Long id, UserRequestDTO dto) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         User employee = userRepository.findByIdAndCompanyId(id, companyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Empleado no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Empleado no encontrado o no pertenece a su empresa."));
+
+        // Validar duplicado si intenta cambiar el email
+        if (!employee.getEmail().equalsIgnoreCase(dto.getEmail())) {
+            if (userRepository.existsByEmail(dto.getEmail())) {
+                throw new IllegalArgumentException("El email '" + dto.getEmail() + "' ya está registrado por otro usuario.");
+            }
+            employee.setEmail(dto.getEmail());
+        }
 
         employee.setName(dto.getName());
-        employee.setEmail(dto.getEmail());
 
-        // Si se especificó una nueva contraseña para el vendedor
+        // Si se especifica una nueva contraseña
         if (dto.getPassword() != null && !dto.getPassword().trim().isEmpty()) {
+            if (dto.getPassword().trim().length() < 6) {
+                throw new IllegalArgumentException("La contraseña debe tener al menos 6 caracteres.");
+            }
             employee.setPassword(passwordEncoder.encode(dto.getPassword()));
             try {
                 emailService.enviarMailResetPassword(
@@ -181,11 +200,7 @@ public class CompanyServiceImpl implements CompanyService {
             }
         }
 
-        if (dto.getActive() != null) {
-            employee.setActive(dto.getActive());
-        }
-
-        return convertToUserDTO(userRepository.save(employee));
+        return convertToUserResponseDTO(userRepository.save(employee));
     }
 
     @Override
@@ -228,13 +243,13 @@ public class CompanyServiceImpl implements CompanyService {
         return dto;
     }
 
-    private UserDTO convertToUserDTO(User user) {
-        UserDTO dto = new UserDTO();
-        dto.setId(user.getId());
-        dto.setName(user.getName());
-        dto.setEmail(user.getEmail());
-        dto.setRole(user.getRole().toString());
-        dto.setActive(user.getActive());
-        return dto;
+    private UserResponseDTO convertToUserResponseDTO(User user) {
+        return UserResponseDTO.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .active(user.getActive())
+                .build();
     }
 }

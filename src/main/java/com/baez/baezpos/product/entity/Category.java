@@ -8,7 +8,7 @@ import org.hibernate.annotations.SQLDelete;
 
 @Entity
 @Table(name = "categories", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"company_id", "name"}) // Unicidad POR EMPRESA
+        @UniqueConstraint(columnNames = {"company_id", "name"})
 })
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
@@ -29,4 +29,7 @@ public class Category extends TenantEntity {
     @Builder.Default
     @Column(nullable = false)
     private Boolean active = true;
+
+    @Version
+    private Long version;
 }

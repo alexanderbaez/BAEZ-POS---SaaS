@@ -24,7 +24,6 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end);
 
-    // NUEVA CONSULTA: Suma solo los gastos que descuentan de caja
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE e.company.id = :companyId AND e.deductFromBox = true AND e.expenseDate BETWEEN :start AND :end")
     BigDecimal sumDeductibleExpensesByCompanyIdAndDate(
             @Param("companyId") Long companyId,

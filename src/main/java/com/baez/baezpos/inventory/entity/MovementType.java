@@ -1,10 +1,12 @@
 package com.baez.baezpos.inventory.entity;
 
 public enum MovementType {
-    PURCHASE,       // Entrada (+)
-    SALE,           // Salida (-)
-    ADJUSTMENT_IN,  // Entrada manual (+)
-    ADJUSTMENT_OUT, // Salida manual/merma (-)
-    DAMAGE,         // Rotura (-)
-    RETURN          // Devolución de cliente (+)
+    IN,             // Entrada genérica (+)
+    OUT,            // Salida genérica (-)
+    PURCHASE,       // Entrada por Compra (+)
+    SALE,           // Salida por Venta (-)
+    ADJUSTMENT_IN,  // Entrada por Ajuste (+)
+    ADJUSTMENT_OUT, // Salida por Ajuste (-)
+    DAMAGE,         // Rotura/Merma (-)
+    RETURN          // Devolución (+)
 }

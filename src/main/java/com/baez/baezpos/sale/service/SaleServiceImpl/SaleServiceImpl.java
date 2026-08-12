@@ -9,13 +9,14 @@ import com.baez.baezpos.customer.service.CustomerService;
 import com.baez.baezpos.expense.repository.ExpenseRepository;
 import com.baez.baezpos.inventory.entity.MovementType;
 import com.baez.baezpos.inventory.service.InventoryService.InventoryService;
+import com.baez.baezpos.log.service.AuditService;
 import com.baez.baezpos.product.entity.Product;
 import com.baez.baezpos.product.repository.ProductRepository;
 import com.baez.baezpos.sale.dto.*;
 import com.baez.baezpos.sale.entity.Sale;
 import com.baez.baezpos.sale.entity.SaleItem;
 import com.baez.baezpos.sale.repository.SaleRepository;
-import com.baez.baezpos.sale.service.SaleService.SaleService;
+import com.baez.baezpos.sale.service.SaleService;
 import com.baez.baezpos.security.util.SecurityUtils;
 import com.baez.baezpos.shared.exception.BadRequestException;
 import com.baez.baezpos.shared.exception.ResourceNotFoundException;
@@ -31,10 +32,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.TemporalAdjusters;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -50,6 +50,7 @@ public class SaleServiceImpl implements SaleService {
     private final CustomerMovementRepository customerMovementRepository;
     private final CompanyRepository companyRepository;
     private final ExpenseRepository expenseRepository;
+    private final AuditService auditService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -60,65 +61,70 @@ public class SaleServiceImpl implements SaleService {
             throw new BadRequestException("La venta debe contener al menos un producto.");
         }
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        // 1. Obtención eficiente del usuario emisor
+        User user;
+        if (userId != null) {
+            user = userRepository.getReferenceById(userId);
+        } else {
+            String currentEmail = SecurityUtils.getCurrentUserEmail();
+            if (currentEmail == null) {
+                throw new BadRequestException("No se pudo identificar al usuario emisor de la venta.");
+            }
+            user = userRepository.findByEmail(currentEmail)
+                    .orElseThrow(() -> new ResourceNotFoundException("Usuario emisor no encontrado: " + currentEmail));
+        }
 
+        // 2. Obtención de la empresa
         Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
+                .orElseThrow(() -> new ResourceNotFoundException("Empresa asociada no encontrada"));
 
         BigDecimal recargo = saleDTO.surcharge() != null ? saleDTO.surcharge() : BigDecimal.ZERO;
         BigDecimal porcentajeRecargo = saleDTO.surchargeRate() != null ? saleDTO.surchargeRate() : BigDecimal.ZERO;
         BigDecimal descuento = saleDTO.discount() != null ? saleDTO.discount() : BigDecimal.ZERO;
 
-        if (descuento.compareTo(BigDecimal.ZERO) < 0 || recargo.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BadRequestException("Los valores de recargo y descuento deben ser positivos.");
-        }
-
-        // ==========================================
-        // GENERACIÓN DE NÚMERO DE TICKET MULTI-TENANT
-        // ==========================================
+        // 3. Asignación del número de comprobante (Hibernate sincroniza al commit por Dirty Checking)
         Long siguienteNumeroTicket = (company.getLastTicketNumber() != null ? company.getLastTicketNumber() : 0L) + 1L;
         company.setLastTicketNumber(siguienteNumeroTicket);
-        companyRepository.save(company);
 
         String nroComprobanteFormateado = String.format("00001-%08d", siguienteNumeroTicket);
 
+        // 4. Mapeo de entidad Venta
         Sale sale = Sale.builder()
                 .user(user)
+                .company(company)
                 .saleDate(LocalDateTime.now())
                 .items(new ArrayList<>())
                 .discount(descuento)
                 .surcharge(recargo)
                 .surchargeRate(porcentajeRecargo)
-                .paymentMethod(saleDTO.paymentMethod())
+                .paymentMethod(saleDTO.paymentMethod().toUpperCase())
                 .canceled(false)
+                .total(BigDecimal.ZERO)
                 .nroComprobante(nroComprobanteFormateado)
+                .tipoComprobante(Boolean.TRUE.equals(saleDTO.isFiscal()) ? "FACTURA C" : "TICKET INTERNO")
+                .cae(Boolean.TRUE.equals(saleDTO.isFiscal()) ? "76543210987654" : null)
+                .caeVto(Boolean.TRUE.equals(saleDTO.isFiscal()) ? LocalDate.now().plusDays(10).toString() : null)
                 .build();
 
-        sale.setCompany(company);
+        // 5. Carga BATCH de productos en 1 sola consulta SQL
+        List<Long> productIds = saleDTO.items().stream().map(SaleItemRequestDTO::productId).toList();
+        List<Product> products = productRepository.findAllById(productIds);
 
-        if (Boolean.TRUE.equals(saleDTO.isFiscal())) {
-            sale.setTipoComprobante("FACTURA C");
-            sale.setCae("76543210987654");
-            sale.setCaeVto(LocalDate.now().plusDays(10).toString());
-        } else {
-            sale.setTipoComprobante("TICKET INTERNO");
-        }
+        Map<Long, Product> productMap = products.stream()
+                .collect(Collectors.toMap(Product::getId, Function.identity()));
 
         BigDecimal subtotalAcumulado = BigDecimal.ZERO;
 
+        // 6. Validaciones y armado de ítems en memoria
         for (SaleItemRequestDTO itemDTO : saleDTO.items()) {
-            if (itemDTO.quantity() == null || itemDTO.quantity().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new BadRequestException("La cantidad enviada para el producto debe ser mayor a 0.");
+            Product product = productMap.get(itemDTO.productId());
+            if (product == null || !product.getCompany().getId().equals(companyId)) {
+                throw new ResourceNotFoundException("Producto ID " + itemDTO.productId() + " no encontrado en su empresa.");
             }
-
-            Product product = productRepository.findByIdAndCompanyId(itemDTO.productId(), companyId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado en su empresa: ID " + itemDTO.productId()));
 
             BigDecimal stockActual = product.getStock() != null ? product.getStock() : BigDecimal.ZERO;
             if (stockActual.compareTo(itemDTO.quantity()) < 0) {
-                throw new BadRequestException("Stock insuficiente para: " + product.getName() +
-                        " (Stock actual: " + stockActual.toPlainString() + ")");
+                throw new BadRequestException("Stock insuficiente para: " + product.getName() + " (Disponible: " + stockActual + ")");
             }
 
             BigDecimal precioVenta = (itemDTO.price() != null) ? itemDTO.price() : product.getPrice();
@@ -129,33 +135,46 @@ public class SaleServiceImpl implements SaleService {
                     .product(product)
                     .quantity(itemDTO.quantity())
                     .price(precioVenta)
-                    .cost(product.getCost())
+                    .cost(product.getCost() != null ? product.getCost() : BigDecimal.ZERO)
                     .subtotal(subtotalItem)
                     .build();
 
-            sale.getItems().add(item);
+            sale.addItem(item);
             subtotalAcumulado = subtotalAcumulado.add(subtotalItem);
         }
 
+        // 7. Cálculo final de total y persistencia
         BigDecimal totalFinal = subtotalAcumulado.add(recargo).subtract(descuento);
         sale.setTotal(totalFinal.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : totalFinal);
 
         Sale savedSale = saleRepository.save(sale);
 
+        // 8. Registro de movimientos de stock
         for (SaleItem item : savedSale.getItems()) {
             inventoryService.registerMovement(
                     item.getProduct().getId(),
                     item.getQuantity(),
                     MovementType.SALE,
-                    "Venta #" + savedSale.getNroComprobante()
+                    "Venta Ticket #" + savedSale.getNroComprobante()
             );
         }
 
+        // 9. Manejo de Cuenta Corriente
         if ("CUENTA_CORRIENTE".equalsIgnoreCase(saleDTO.paymentMethod())) {
             handleCreditSale(saleDTO.customerId(), savedSale, companyId);
         }
 
-        log.info("Venta procesada Ticket: {} - Total: ${} - Empresa: {}", savedSale.getNroComprobante(), savedSale.getTotal(), company.getName());
+        // 10. Auditoría desacoplada (no bloqueante)
+        try {
+            auditService.logAction(
+                    "VENTA_REGISTRADA",
+                    "Ticket #" + savedSale.getNroComprobante() + " por $" + savedSale.getTotal(),
+                    "INFO"
+            );
+        } catch (Exception e) {
+            log.error("Error al registrar auditoría de la venta #{}: {}", savedSale.getNroComprobante(), e.getMessage());
+        }
+
         return mapToResponseDTO(savedSale);
     }
 
@@ -177,7 +196,7 @@ public class SaleServiceImpl implements SaleService {
                 customer.getId(),
                 savedSale.getTotal(),
                 "DEBITO",
-                "Venta en libreta Ticket #" + savedSale.getNroComprobante(),
+                "Venta Libreta Ticket #" + savedSale.getNroComprobante(),
                 savedSale,
                 savedSale.getPaymentMethod()
         );
@@ -186,19 +205,25 @@ public class SaleServiceImpl implements SaleService {
     @Override
     @Transactional(readOnly = true)
     public SaleResponseDTO getSaleById(Long id) {
-        Long companyId = requireCompanyContext();
-        Sale sale = saleRepository.findByIdAndCompanyId(id, companyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada en su empresa"));
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        Sale sale = (companyId != null)
+                ? saleRepository.findByIdAndCompanyId(id, companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada en su empresa"))
+                : saleRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada"));
+
         return mapToResponseDTO(sale);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<SaleResponseDTO> getAllSales() {
-        Long companyId = requireCompanyContext();
-        return saleRepository.findByCompanyIdOrderBySaleDateDesc(companyId).stream()
-                .map(this::mapToResponseDTO)
-                .toList();
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        List<Sale> sales = (companyId != null)
+                ? saleRepository.findByCompanyIdOrderBySaleDateDesc(companyId)
+                : saleRepository.findAllByOrderBySaleDateDesc();
+
+        return sales.stream().map(this::mapToResponseDTO).toList();
     }
 
     @Override
@@ -209,18 +234,15 @@ public class SaleServiceImpl implements SaleService {
         LocalDateTime startToday = LocalDate.now().atStartOfDay();
         LocalDateTime endToday = LocalDate.now().atTime(LocalTime.MAX);
 
-        // Rango para métricas de rendimiento comercial
         LocalDateTime startRange = (from != null) ? from.atStartOfDay() : LocalDate.now().withDayOfMonth(1).atStartOfDay();
         LocalDateTime endRange = (to != null) ? to.atTime(LocalTime.MAX) : LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()).atTime(LocalTime.MAX);
 
         List<Sale> rangeSales = saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, startRange, endRange);
 
-        // Métricas de Rango / Rendimiento
         BigDecimal periodSales = BigDecimal.ZERO;
         BigDecimal periodReplacementCost = BigDecimal.ZERO;
         long periodOperations = 0;
 
-        // Métricas Exclusivas de HOY (Flujo Diario)
         BigDecimal totalSalesToday = BigDecimal.ZERO;
         BigDecimal cashSalesToday = BigDecimal.ZERO;
         BigDecimal transferSalesToday = BigDecimal.ZERO;
@@ -237,7 +259,6 @@ public class SaleServiceImpl implements SaleService {
                 periodReplacementCost = periodReplacementCost.add(costUnit.multiply(item.getQuantity()));
             }
 
-            // Filtrado estricto de ventas del día actual
             if (!s.getSaleDate().isBefore(startToday) && !s.getSaleDate().isAfter(endToday)) {
                 totalSalesToday = totalSalesToday.add(s.getTotal());
 
@@ -251,7 +272,6 @@ public class SaleServiceImpl implements SaleService {
             }
         }
 
-        // Cobros de deudas de Cuenta Corriente cobrados HOY
         BigDecimal cobrosEfe = customerMovementRepository.sumPaymentsByMethodAndCompanyId("EFECTIVO", companyId, startToday, endToday);
         BigDecimal cobrosTra = customerMovementRepository.sumPaymentsByMethodAndCompanyId("TRANSFERENCIA", companyId, startToday, endToday);
 
@@ -259,17 +279,11 @@ public class SaleServiceImpl implements SaleService {
         cobrosTra = (cobrosTra != null) ? cobrosTra : BigDecimal.ZERO;
         BigDecimal customerPaymentsToday = cobrosEfe.add(cobrosTra);
 
-        // Gastos autorizados del día a descontar de la caja
         BigDecimal expensesToday = expenseRepository.sumDeductibleExpensesByCompanyIdAndDate(companyId, startToday, endToday);
         if (expensesToday == null) expensesToday = BigDecimal.ZERO;
 
-        // Balance Real Disponible = (Efectivo + Transferencia + Cobros Deudas) - Gastos de Caja
-        BigDecimal realBalance = cashSalesToday
-                .add(transferSalesToday)
-                .add(customerPaymentsToday)
-                .subtract(expensesToday);
+        BigDecimal realBalance = cashSalesToday.add(transferSalesToday).add(customerPaymentsToday).subtract(expensesToday);
 
-        // Deuda total acumulada en la calle por clientes
         BigDecimal totalPendingCredit = customerRepository.sumAllBalancesByCompanyId(companyId);
         if (totalPendingCredit == null) totalPendingCredit = BigDecimal.ZERO;
 
@@ -303,9 +317,9 @@ public class SaleServiceImpl implements SaleService {
         }
 
         LocalDateTime start = today.minusDays(6).atStartOfDay();
-        LocalDateTime end = today.atTime(23, 59, 59);
+        LocalDateTime end = today.atTime(LocalTime.MAX);
 
-        List<Sale> recentSales = saleRepository.findByCompanyIdAndSaleDateBetweenAndCanceledFalse(companyId, start, end);
+        List<Sale> recentSales = saleRepository.findActiveSalesByCompanyAndDateRange(companyId, start, end);
 
         for (Sale sale : recentSales) {
             LocalDate localDate = sale.getSaleDate().toLocalDate();
@@ -322,6 +336,7 @@ public class SaleServiceImpl implements SaleService {
     @Transactional
     public void cancelSale(Long saleId) {
         Long companyId = requireCompanyContext();
+
         Sale sale = saleRepository.findByIdAndCompanyId(saleId, companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada en su empresa"));
 
@@ -335,28 +350,42 @@ public class SaleServiceImpl implements SaleService {
             Product product = item.getProduct();
             BigDecimal currentStock = product.getStock() != null ? product.getStock() : BigDecimal.ZERO;
             product.setStock(currentStock.add(item.getQuantity()));
-            productRepository.save(product);
+
+            inventoryService.registerMovement(
+                    product.getId(),
+                    item.getQuantity(),
+                    MovementType.IN,
+                    "Devolución por anulación de Ticket #" + sale.getNroComprobante()
+            );
         }
 
         saleRepository.save(sale);
+
+        try {
+            auditService.logAction("ANULACION_VENTA", "Ticket #" + sale.getNroComprobante() + " anulado", "WARN");
+        } catch (Exception e) {
+            log.error("Error al registrar auditoría de anulación para el Ticket #{}: {}", sale.getNroComprobante(), e.getMessage());
+        }
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<SaleResponseDTO> getSalesByDateRange(LocalDate desde, LocalDate hasta) {
-        Long companyId = requireCompanyContext();
+        Long companyId = SecurityUtils.getCurrentCompanyId();
         LocalDateTime start = desde.atStartOfDay();
         LocalDateTime end = hasta.atTime(LocalTime.MAX);
 
-        return saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, start, end).stream()
-                .map(this::mapToResponseDTO)
-                .toList();
+        List<Sale> sales = (companyId != null)
+                ? saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, start, end)
+                : saleRepository.findBySaleDateBetweenOrderBySaleDateDesc(start, end);
+
+        return sales.stream().map(this::mapToResponseDTO).toList();
     }
 
     private Long requireCompanyContext() {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         if (companyId == null) {
-            throw new BadRequestException("Acceso denegado: Operación requiere un contexto de empresa válido.");
+            throw new BadRequestException("Acceso denegado: Se requiere un contexto de empresa válido.");
         }
         return companyId;
     }
@@ -364,6 +393,7 @@ public class SaleServiceImpl implements SaleService {
     private SaleResponseDTO mapToResponseDTO(Sale sale) {
         List<SaleItemResponseDTO> itemDTOs = sale.getItems().stream()
                 .map(item -> new SaleItemResponseDTO(
+                        item.getProduct().getId(),
                         item.getProduct().getName(),
                         item.getQuantity(),
                         item.getPrice(),
@@ -371,10 +401,10 @@ public class SaleServiceImpl implements SaleService {
                 )).toList();
 
         Company comp = sale.getCompany();
-        String cName = (comp != null) ? comp.getName() : "BÁEZ POS";
+        String cName = (comp != null) ? comp.getName() : "SISTEMA BASE";
         String cTaxId = (comp != null && comp.getTaxId() != null) ? comp.getTaxId() : "";
         String cAddress = (comp != null && comp.getAddress() != null) ? comp.getAddress() : "";
-        String uName = (sale.getUser() != null) ? sale.getUser().getName() : "Usuario Desconocido";
+        String uName = (sale.getUser() != null) ? sale.getUser().getName() : "Usuario Sistema";
 
         return new SaleResponseDTO(
                 sale.getId(),
@@ -384,6 +414,7 @@ public class SaleServiceImpl implements SaleService {
                 sale.getSurcharge(),
                 sale.getSurchargeRate(),
                 sale.getPaymentMethod(),
+                sale.getCanceled(),
                 uName,
                 cName,
                 cTaxId,

@@ -5,18 +5,17 @@ import com.baez.baezpos.company.repository.CompanyRepository;
 import com.baez.baezpos.expense.dto.ExpenseRequestDTO;
 import com.baez.baezpos.expense.dto.ExpenseResponseDTO;
 import com.baez.baezpos.expense.entity.Expense;
-import com.baez.baezpos.expense.entity.ExpenseCategory;
 import com.baez.baezpos.expense.repository.ExpenseRepository;
+import com.baez.baezpos.log.service.AuditService;
 import com.baez.baezpos.security.util.SecurityUtils;
-import com.baez.baezpos.shared.entity.PaymentMethod;
 import com.baez.baezpos.shared.exception.BadRequestException;
 import com.baez.baezpos.shared.exception.ResourceNotFoundException;
+import com.baez.baezpos.shared.exception.UnauthorizedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -27,38 +26,27 @@ public class ExpenseServiceImpl implements ExpenseService {
 
     private final ExpenseRepository expenseRepository;
     private final CompanyRepository companyRepository;
+    private final AuditService auditService;
 
     @Override
     @Transactional
     public ExpenseResponseDTO createExpense(ExpenseRequestDTO dto) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         if (companyId == null) {
-            throw new BadRequestException("No se puede registrar un gasto sin contexto de empresa.");
-        }
-
-        if (dto.description() == null || dto.description().isBlank()) {
-            throw new BadRequestException("La descripción del gasto es obligatoria.");
-        }
-
-        if (dto.amount() == null || dto.amount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BadRequestException("El monto del gasto debe ser mayor a cero.");
+            throw new UnauthorizedException("No hay una sesión activa o el contexto de empresa es inválido.");
         }
 
         Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
+                .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada con ID: " + companyId));
 
-        Boolean deductFromBox = (dto.deductFromBox() != null) ? dto.deductFromBox() : true;
-
-        // Fallbacks seguros para evitar NPE
-        ExpenseCategory category = (dto.category() != null) ? dto.category() : ExpenseCategory.VARIOS_RETIRO;
-        PaymentMethod paymentMethod = (dto.paymentMethod() != null) ? dto.paymentMethod() : PaymentMethod.EFECTIVO_CAJA;
+        boolean deductFromBox = (dto.deductFromBox() != null) ? dto.deductFromBox() : true;
 
         Expense expense = Expense.builder()
                 .description(dto.description().trim())
                 .amount(dto.amount())
                 .deductFromBox(deductFromBox)
-                .category(category)
-                .paymentMethod(paymentMethod)
+                .category(dto.category())
+                .paymentMethod(dto.paymentMethod())
                 .reference(dto.reference() != null ? dto.reference().trim() : null)
                 .expenseDate(LocalDateTime.now())
                 .build();
@@ -66,8 +54,15 @@ public class ExpenseServiceImpl implements ExpenseService {
         expense.setCompany(company);
 
         Expense saved = expenseRepository.save(expense);
-        log.info("Empresa [{}]: Registrar nuevo gasto por ${} ({}) - Categoria: {} - Resta caja: {}",
-                companyId, dto.amount(), dto.description(), category, deductFromBox);
+        log.info("Empresa [{}]: Gasto registrado por $ {} - Cat: {} - Descuenta Caja: {}",
+                companyId, saved.getAmount(), saved.getCategory(), saved.getDeductFromBox());
+
+        auditService.logAction(
+                "GASTO_CREADO",
+                String.format("Gasto ID [%d] registrado por $ %.2f (%s) - Categoría: %s",
+                        saved.getId(), saved.getAmount(), saved.getDescription(), saved.getCategory()),
+                "INFO"
+        );
 
         return mapToDTO(saved);
     }
@@ -76,15 +71,12 @@ public class ExpenseServiceImpl implements ExpenseService {
     @Transactional(readOnly = true)
     public List<ExpenseResponseDTO> getAllExpenses() {
         Long companyId = SecurityUtils.getCurrentCompanyId();
-
-        List<Expense> expenses;
-        if (companyId != null) {
-            expenses = expenseRepository.findByCompanyIdOrderByExpenseDateDesc(companyId);
-        } else {
-            expenses = expenseRepository.findAll();
+        if (companyId == null) {
+            throw new UnauthorizedException("Acceso denegado: Contexto de empresa no identificado.");
         }
 
-        return expenses.stream()
+        return expenseRepository.findByCompanyIdOrderByExpenseDateDesc(companyId)
+                .stream()
                 .map(this::mapToDTO)
                 .toList();
     }
@@ -93,18 +85,22 @@ public class ExpenseServiceImpl implements ExpenseService {
     @Transactional
     public void deleteExpense(Long id) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
-        Expense expense;
-
-        if (companyId != null) {
-            expense = expenseRepository.findByIdAndCompanyId(id, companyId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Gasto no encontrado en su empresa"));
-        } else {
-            expense = expenseRepository.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundException("Gasto no encontrado"));
+        if (companyId == null) {
+            throw new UnauthorizedException("Acceso denegado: Contexto de empresa no identificado.");
         }
 
+        Expense expense = expenseRepository.findByIdAndCompanyId(id, companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Gasto no encontrado o no pertenece a su empresa. ID: " + id));
+
         expenseRepository.delete(expense);
-        log.warn("Gasto ID [{}] eliminado de la empresa [{}]", id, companyId);
+        log.warn("Empresa [{}]: Gasto ID [{}] eliminado por $ {}", companyId, id, expense.getAmount());
+
+        auditService.logAction(
+                "GASTO_ELIMINADO",
+                String.format("Gasto ID [%d] eliminado. Monto: $ %.2f | Concepto: %s",
+                        id, expense.getAmount(), expense.getDescription()),
+                "WARN"
+        );
     }
 
     private ExpenseResponseDTO mapToDTO(Expense expense) {
@@ -114,8 +110,8 @@ public class ExpenseServiceImpl implements ExpenseService {
                 expense.getAmount(),
                 expense.getExpenseDate(),
                 expense.getDeductFromBox() != null ? expense.getDeductFromBox() : true,
-                expense.getCategory() != null ? expense.getCategory() : ExpenseCategory.VARIOS_RETIRO,
-                expense.getPaymentMethod() != null ? expense.getPaymentMethod() : PaymentMethod.EFECTIVO_CAJA,
+                expense.getCategory(),
+                expense.getPaymentMethod(),
                 expense.getReference()
         );
     }

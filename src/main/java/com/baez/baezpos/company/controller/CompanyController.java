@@ -1,12 +1,15 @@
 package com.baez.baezpos.company.controller;
 
 import com.baez.baezpos.company.dto.CompanyDTO;
-import com.baez.baezpos.user.dto.UserDTO;
-import com.baez.baezpos.user.entity.Role;
 import com.baez.baezpos.company.service.CompanyService.CompanyService;
+import com.baez.baezpos.user.dto.UserRequestDTO;
+import com.baez.baezpos.user.dto.UserResponseDTO;
+import com.baez.baezpos.user.entity.Role;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 import java.util.Map;
 
@@ -25,11 +28,10 @@ public class CompanyController {
     }
 
     @PutMapping("/profile")
-    public ResponseEntity<CompanyDTO> updateMyBusiness(@RequestBody CompanyDTO dto) {
+    public ResponseEntity<CompanyDTO> updateMyBusiness(@Valid @RequestBody CompanyDTO dto) {
         return ResponseEntity.ok(companyService.updateAuthenticatedCompany(dto));
     }
 
-    // Acepta tanto /status como /check-status para compatibilidad total
     @GetMapping({"/status", "/check-status"})
     public ResponseEntity<Map<String, Object>> getStatus() {
         return ResponseEntity.ok(companyService.verificarEstadoSuscripcionAutenticada());
@@ -37,18 +39,18 @@ public class CompanyController {
 
     // --- GESTIÓN DE CAJEROS (VENDEDORES) ---
     @GetMapping("/employees")
-    public ResponseEntity<List<UserDTO>> getAllEmployees() {
+    public ResponseEntity<List<UserResponseDTO>> getAllEmployees() {
         return ResponseEntity.ok(companyService.getMyEmployees());
     }
 
     @PostMapping("/employees")
-    public ResponseEntity<UserDTO> createEmployee(@RequestBody UserDTO dto) {
-        dto.setRole(Role.VENDEDOR.name());
+    public ResponseEntity<UserResponseDTO> createEmployee(@Valid @RequestBody UserRequestDTO dto) {
+        dto.setRole(Role.VENDEDOR);
         return ResponseEntity.ok(companyService.createEmployee(dto));
     }
 
     @PutMapping("/employees/{id}")
-    public ResponseEntity<UserDTO> updateEmployee(@PathVariable Long id, @RequestBody UserDTO dto) {
+    public ResponseEntity<UserResponseDTO> updateEmployee(@PathVariable Long id, @Valid @RequestBody UserRequestDTO dto) {
         return ResponseEntity.ok(companyService.updateEmployee(id, dto));
     }
 

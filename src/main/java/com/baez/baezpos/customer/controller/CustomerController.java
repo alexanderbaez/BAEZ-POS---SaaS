@@ -4,11 +4,12 @@ import com.baez.baezpos.customer.dto.CustomerMovementDTO;
 import com.baez.baezpos.customer.dto.CustomerRequestDTO;
 import com.baez.baezpos.customer.dto.CustomerResponseDTO;
 import com.baez.baezpos.customer.dto.PaymentRequestDTO;
-import com.baez.baezpos.customer.entities.Customer;
 import com.baez.baezpos.customer.service.CustomerService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,42 +24,48 @@ public class CustomerController {
     private final CustomerService customerService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'SUPER_ADMIN')")
     public ResponseEntity<List<CustomerResponseDTO>> listCustomers() {
         return ResponseEntity.ok(customerService.getAll());
     }
 
     @PostMapping
-    public ResponseEntity<CustomerResponseDTO> create(@RequestBody CustomerRequestDTO dto) {
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'SUPER_ADMIN')")
+    public ResponseEntity<CustomerResponseDTO> create(@Valid @RequestBody CustomerRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(customerService.saveCustomer(dto));
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<CustomerResponseDTO>> search(@RequestParam String q) {
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'SUPER_ADMIN')")
+    public ResponseEntity<List<CustomerResponseDTO>> search(@RequestParam(required = false) String q) {
         return ResponseEntity.ok(customerService.searchCustomers(q));
     }
 
     @GetMapping("/{id}/movements")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'SUPER_ADMIN')")
     public ResponseEntity<List<CustomerMovementDTO>> getHistory(@PathVariable Long id) {
         return ResponseEntity.ok(customerService.getHistory(id));
     }
 
     @PostMapping("/{id}/payments")
-    public ResponseEntity<Map<String, String>> receivePayment(@PathVariable Long id, @RequestBody PaymentRequestDTO paymentDTO) {
-        if (paymentDTO.getAmount() == null || paymentDTO.getMethod() == null) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Datos incompletos para el pago."));
-        }
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'SUPER_ADMIN')")
+    public ResponseEntity<Map<String, String>> receivePayment(
+            @PathVariable Long id,
+            @Valid @RequestBody PaymentRequestDTO paymentDTO) {
 
-        customerService.processCustomerPayment(id, paymentDTO.getAmount(), paymentDTO.getMethod());
+        customerService.processCustomerPayment(id, paymentDTO.amount(), paymentDTO.method());
         return ResponseEntity.ok(Map.of("message", "Pago registrado con éxito"));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<CustomerResponseDTO> update(@PathVariable Long id, @RequestBody CustomerRequestDTO dto) {
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<CustomerResponseDTO> update(@PathVariable Long id, @Valid @RequestBody CustomerRequestDTO dto) {
         return ResponseEntity.ok(customerService.updateCustomer(id, dto));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<Map<String, String>> delete(@PathVariable Long id) {
         customerService.deleteCustomer(id);
         return ResponseEntity.ok(Map.of("message", "Cliente desactivado con éxito"));

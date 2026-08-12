@@ -14,8 +14,11 @@ import java.util.List;
 @Repository
 public interface CustomerMovementRepository extends JpaRepository<CustomerMovement, Long> {
 
-    @EntityGraph(attributePaths = {"sale", "sale.items"})
+    @EntityGraph(attributePaths = {"sale", "sale.items", "sale.items.product"})
     List<CustomerMovement> findByCustomerIdAndCustomerCompanyIdOrderByIdDesc(Long customerId, Long companyId);
+
+    @EntityGraph(attributePaths = {"sale", "sale.items", "sale.items.product"})
+    List<CustomerMovement> findByCustomerIdOrderByIdDesc(Long customerId);
 
     @Query("SELECT COALESCE(SUM(cm.amount), 0) FROM CustomerMovement cm " +
             "WHERE cm.customer.company.id = :companyId AND cm.type = 'CREDITO' AND cm.createdAt BETWEEN :start AND :end")
@@ -24,7 +27,7 @@ public interface CustomerMovementRepository extends JpaRepository<CustomerMoveme
                                                  @Param("end") LocalDateTime end);
 
     @Query("SELECT COALESCE(SUM(cm.amount), 0) FROM CustomerMovement cm " +
-            "WHERE cm.customer.company.id = :companyId AND cm.type = 'CREDITO' AND cm.paymentMethod = :method " +
+            "WHERE cm.customer.company.id = :companyId AND cm.type = 'CREDITO' AND UPPER(cm.paymentMethod) = UPPER(:method) " +
             "AND cm.createdAt BETWEEN :start AND :end")
     BigDecimal sumPaymentsByMethodAndCompanyId(@Param("method") String method,
                                                @Param("companyId") Long companyId,

@@ -30,13 +30,16 @@ document.addEventListener('DOMContentLoaded', () => {
         elUserRoleBadge.style.fontSize = '0.65rem';
     }
 
-    // 3. INYECTAR SIDEBAR DINÁMICO
+    // 3. INYECTAR OVERLAY AUTOMÁTICO (Para cerrar al hacer clic afuera)
+    asegurarOverlayGlobal();
+
+    // 4. INYECTAR SIDEBAR DINÁMICO
     const sidebarContainer = document.getElementById('sidebar-container');
     if (!sidebarContainer) return;
 
     const paginaActual = window.location.pathname.split("/").pop() || "dashboard.html";
 
-    // Inyectar estilos CSS (controlando duplicados)
+    // Inyectar estilos CSS globales
     if (!document.getElementById('sidebar-styles')) {
         const estilos = document.createElement('style');
         estilos.id = 'sidebar-styles';
@@ -48,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 top: 0;
                 left: 0;
                 background: #1e293b !important;
-                z-index: 1000;
+                z-index: 1090 !important; /* Prioridad máxima por sobre cabeceras */
                 transition: all 0.3s ease;
                 display: flex;
                 flex-direction: column;
@@ -84,6 +87,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 margin: 10px 12px;
                 border: 1px solid rgba(255, 255, 255, 0.1);
             }
+
+            /* Estilos del Overlay Transparente/Oscuro */
+            #sidebar-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background: rgba(0, 0, 0, 0.4);
+                z-index: 1085 !important;
+                display: none;
+                backdrop-filter: blur(2px);
+            }
+            #sidebar-overlay.active {
+                display: block;
+            }
+
             @media (max-width: 768px) {
                 #sidebar { left: -250px !important; }
                 #sidebar.active { left: 0 !important; }
@@ -149,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
           </div>
 
-          <!-- Footer: Usuario Logueado Real -->
+          <!-- Footer: Usuario Logueado -->
           <div class="pb-3">
             <div class="user-badge text-white">
                 <div class="d-flex align-items-center">
@@ -168,6 +188,57 @@ document.addEventListener('DOMContentLoaded', () => {
         </nav>
     `;
 });
+
+/**
+ * Garantiza que exista el div del Overlay en el body
+ */
+function asegurarOverlayGlobal() {
+    let overlay = document.getElementById('sidebar-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'sidebar-overlay';
+        document.body.prepend(overlay);
+    }
+
+    // Cierra el sidebar al hacer clic en el overlay
+    overlay.onclick = cerrarSidebar;
+}
+
+/**
+ * Control del Toggle Abrir/Cerrar
+ */
+document.addEventListener('click', (event) => {
+    const btnToggle = event.target.closest('#sidebarCollapse, #btnToggleSidebar');
+    if (btnToggle) {
+        toggleSidebar();
+        return;
+    }
+
+    // Detectar clic en la zona blanca / fuera del sidebar
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar && sidebar.classList.contains('active')) {
+        const tocandoSidebar = event.target.closest('#sidebar');
+        if (!tocandoSidebar) {
+            cerrarSidebar();
+        }
+    }
+});
+
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    if (sidebar) {
+        sidebar.classList.toggle('active');
+        if (overlay) overlay.classList.toggle('active', sidebar.classList.contains('active'));
+    }
+}
+
+function cerrarSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    if (sidebar) sidebar.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
+}
 
 /**
  * Interceptor de Cierre de Sesión en fase de Captura
@@ -201,15 +272,6 @@ document.addEventListener('click', async (event) => {
         }
     }
 }, { capture: true });
-
-// Toggle responsivo (Soporta id="sidebarCollapse" y "btnToggleSidebar")
-document.addEventListener('click', (event) => {
-    const btnToggle = event.target.closest('#sidebarCollapse, #btnToggleSidebar');
-    if (btnToggle) {
-        const sidebar = document.getElementById('sidebar');
-        if (sidebar) sidebar.classList.toggle('active');
-    }
-});
 
 function ejecutarCierreDeSesion() {
     localStorage.clear();

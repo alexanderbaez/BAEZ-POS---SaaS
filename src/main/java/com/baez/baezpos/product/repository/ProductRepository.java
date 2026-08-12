@@ -13,7 +13,9 @@ import java.util.Optional;
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
     Optional<Product> findByIdAndCompanyId(Long id, Long companyId);
-    Optional<Product> findByBarcodeAndCompanyId(String barcode, Long companyId);
+
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.barcode = :barcode AND p.company.id = :companyId")
+    Optional<Product> findByBarcodeAndCompanyIdWithCategory(@Param("barcode") String barcode, @Param("companyId") Long companyId);
 
     @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.company.id = :companyId AND p.active = true")
     List<Product> findByActiveTrueWithCategoryAndCompanyId(@Param("companyId") Long companyId);
@@ -27,8 +29,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.active = false")
     List<Product> findAllInactiveWithCategory();
 
-
-    // Búsqueda parcial por nombre o código de barras para las sugerencias del buscador
     @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.company.id = :companyId AND p.active = true AND (LOWER(p.name) LIKE LOWER(CONCAT('%', :term, '%')) OR LOWER(p.barcode) LIKE LOWER(CONCAT('%', :term, '%')))")
     List<Product> searchByTermAndCompanyId(@Param("companyId") Long companyId, @Param("term") String term);
 }

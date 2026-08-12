@@ -38,10 +38,8 @@ public class User extends BaseEntity {
     @Column(name = "password_reset_at")
     private LocalDateTime passwordResetAt;
 
-    // ==========================================
     // RELACIÓN MULTI-TENANT (SaaS)
-    // ==========================================
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "company_id", nullable = true) // Nullable para el SUPER_ADMIN
+    @JoinColumn(name = "company_id", nullable = true)
     private Company company;
 }

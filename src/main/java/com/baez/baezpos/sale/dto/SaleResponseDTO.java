@@ -9,16 +9,15 @@ public record SaleResponseDTO(
         LocalDateTime saleDate,
         BigDecimal total,
         BigDecimal discount,
-        BigDecimal surcharge,     // <--- NUEVO
-        BigDecimal surchargeRate, // <--- NUEVO
+        BigDecimal surcharge,
+        BigDecimal surchargeRate,
         String paymentMethod,
+        Boolean canceled,
         String userName,
         String companyName,
         String companyCuit,
         String companyAddress,
         List<SaleItemResponseDTO> items,
-
-        // Campos fiscales ARCA
         String cae,
         String caeVto,
         String tipoComprobante,

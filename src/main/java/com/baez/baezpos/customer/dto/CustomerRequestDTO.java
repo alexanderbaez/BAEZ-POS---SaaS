@@ -1,14 +1,22 @@
 package com.baez.baezpos.customer.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import lombok.Data;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
+
 import java.math.BigDecimal;
 
-@Data
-public class CustomerRequestDTO {
-    @NotBlank(message = "El nombre del cliente es obligatorio")
-    private String name;
-    private String phone;
-    private String dniCuit;
-    private BigDecimal creditLimit;
-}
+public record CustomerRequestDTO(
+        @NotBlank(message = "El nombre del cliente es obligatorio")
+        @Size(max = 150, message = "El nombre no puede superar los 150 caracteres")
+        String name,
+
+        @Size(max = 30, message = "El teléfono no puede superar los 30 caracteres")
+        String phone,
+
+        @Size(max = 20, message = "El DNI/CUIT no puede superar los 20 caracteres")
+        String dniCuit,
+
+        @PositiveOrZero(message = "El límite de crédito debe ser un monto válido")
+        BigDecimal creditLimit
+) {}

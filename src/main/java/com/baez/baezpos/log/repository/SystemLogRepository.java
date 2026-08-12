@@ -15,9 +15,6 @@ public interface SystemLogRepository extends JpaRepository<SystemLog, Long> {
     @Query("SELECT l FROM SystemLog l LEFT JOIN FETCH l.company WHERE l.company.id = :companyId ORDER BY l.timestamp DESC")
     List<SystemLog> findByCompanyIdOrderByTimestampDesc(@Param("companyId") Long companyId, Pageable pageable);
 
-    @Query("SELECT l FROM SystemLog l LEFT JOIN FETCH l.company ORDER BY l.timestamp DESC")
-    List<SystemLog> findByOrderByTimestampDesc(Pageable pageable);
-
     @Query("SELECT l FROM SystemLog l LEFT JOIN FETCH l.company WHERE (:companyId IS NULL OR l.company.id = :companyId) ORDER BY l.timestamp DESC")
     List<SystemLog> findLogsForSuperAdmin(@Param("companyId") Long companyId, Pageable pageable);
 }

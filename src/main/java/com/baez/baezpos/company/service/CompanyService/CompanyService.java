@@ -1,9 +1,11 @@
 package com.baez.baezpos.company.service.CompanyService;
 
 import com.baez.baezpos.company.dto.CompanyDTO;
-import com.baez.baezpos.user.dto.UserDTO;
-import java.util.Map;
+import com.baez.baezpos.user.dto.UserRequestDTO;
+import com.baez.baezpos.user.dto.UserResponseDTO;
+
 import java.util.List;
+import java.util.Map;
 
 public interface CompanyService {
     // Gestión de la Empresa
@@ -13,8 +15,8 @@ public interface CompanyService {
     void validarAcceso(Long companyId);
 
     // Gestión de sus Cajeros (Empleados)
-    List<UserDTO> getMyEmployees();
-    UserDTO createEmployee(UserDTO dto);
-    UserDTO updateEmployee(Long id, UserDTO dto);
+    List<UserResponseDTO> getMyEmployees();
+    UserResponseDTO createEmployee(UserRequestDTO dto);
+    UserResponseDTO updateEmployee(Long id, UserRequestDTO dto);
     void deleteEmployee(Long id);
 }

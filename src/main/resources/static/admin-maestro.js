@@ -52,6 +52,13 @@ function formatDateToISO(dateInput) {
     return [year, month, day].join('-');
 }
 
+// Validador sintáctico de dirección de correo (RFC 5322 standard)
+function esEmailValido(email) {
+    if (!email) return false;
+    const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return regex.test(email);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Control de seguridad por rol
     const rolActual = (localStorage.getItem('baezpos_user_role') || '').toUpperCase().trim();
@@ -274,15 +281,28 @@ function actualizarKpis(empresas) {
     }
 }
 
-// FORMULARIO DE ALTA DE EMPRESA
+// FORMULARIO DE ALTA DE EMPRESA CON VALIDACIÓN DE EMAIL
 const formNueva = document.getElementById('formNuevaEmpresa');
 if (formNueva) {
     formNueva.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const btnSubmit = e.target.querySelector('button[type="submit"]');
-        if (btnSubmit) btnSubmit.disabled = true;
 
         const getVal = (id) => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+
+        const ownerEmail = getVal('masterEmail');
+
+        // Validar sintaxis del mail antes de enviar la petición
+        if (!esEmailValido(ownerEmail)) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Email Inválido', 'Por favor, ingrese un correo electrónico válido.', 'warning');
+            } else {
+                alert('Por favor, ingrese un correo electrónico válido.');
+            }
+            return;
+        }
+
+        const btnSubmit = e.target.querySelector('button[type="submit"]');
+        if (btnSubmit) btnSubmit.disabled = true;
 
         const companyName = getVal('masterNombre');
         const ownerName = getVal('masterNombreOwner') || companyName;
@@ -294,7 +314,7 @@ if (formNueva) {
             phone: getVal('masterTelefono'),
             address: getVal('masterDireccion'),
             ownerName: ownerName,
-            ownerEmail: getVal('masterEmail'),
+            ownerEmail: ownerEmail,
             ownerPassword: getVal('masterPass'),
             expirationDate: document.getElementById('masterVenc')?.value || null,
             monthlyFee: rawAbono ? parsearMonto(rawAbono) : 0.0
@@ -349,12 +369,22 @@ if (formEdit) {
         const id = document.getElementById('editId').value;
         const newPass = document.getElementById('editPass').value.trim();
         const rawFee = document.getElementById('editMonthlyFee')?.value;
+        const editEmail = document.getElementById('editEmail').value.trim();
+
+        if (!esEmailValido(editEmail)) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Email Inválido', 'Por favor, ingrese un correo electrónico válido.', 'warning');
+            } else {
+                alert('Por favor, ingrese un correo electrónico válido.');
+            }
+            return;
+        }
 
         const payload = {
             id: Number(id),
             name: document.getElementById('editNombre').value.trim(),
             taxId: document.getElementById('editTaxId').value.trim(),
-            email: document.getElementById('editEmail').value.trim(),
+            email: editEmail,
             phone: document.getElementById('editPhone').value.trim(),
             address: document.getElementById('editAddress').value.trim(),
             expirationDate: document.getElementById('editVencimiento').value,

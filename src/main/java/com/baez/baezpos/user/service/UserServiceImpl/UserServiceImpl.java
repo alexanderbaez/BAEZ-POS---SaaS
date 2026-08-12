@@ -37,13 +37,11 @@ public class UserServiceImpl implements UserService {
         if (existingUserOpt.isPresent()) {
             User existingUser = existingUserOpt.get();
 
-            // Si el usuario ya está activo, no permitimos duplicados.
             if (Boolean.TRUE.equals(existingUser.getActive())) {
                 throw new IllegalArgumentException("El email '" + dto.getEmail() + "' ya pertenece a un usuario activo.");
             }
 
-            // OPCIÓN 1: Reactivar el usuario existente
-            log.info("Reactivando usuario previamente inactivo: {} para la empresa ID: {}", dto.getEmail(), companyId);
+            log.info("Reactivando usuario previamente inactivo: {} para empresa ID: {}", dto.getEmail(), companyId);
             existingUser.setName(dto.getName());
             existingUser.setRole(dto.getRole() != null ? dto.getRole() : Role.VENDEDOR);
 
@@ -61,7 +59,6 @@ public class UserServiceImpl implements UserService {
             return convertToDTO(userRepository.save(existingUser));
         }
 
-        // Si no existe, crear un nuevo usuario desde cero
         User user = new User();
         user.setName(dto.getName());
         user.setEmail(dto.getEmail());
@@ -122,13 +119,23 @@ public class UserServiceImpl implements UserService {
                         .filter(u -> Boolean.TRUE.equals(u.getActive()))
                         .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado o inactivo"));
 
+        // Validar si intenta cambiar el email por uno que ya existe en el sistema
+        if (!existing.getEmail().equalsIgnoreCase(dto.getEmail())) {
+            if (userRepository.existsByEmail(dto.getEmail())) {
+                throw new IllegalArgumentException("El email '" + dto.getEmail() + "' ya está registrado por otro usuario.");
+            }
+            existing.setEmail(dto.getEmail());
+        }
+
         existing.setName(dto.getName());
         if (dto.getRole() != null) {
             existing.setRole(dto.getRole());
         }
-        existing.setEmail(dto.getEmail());
 
         if (dto.getPassword() != null && !dto.getPassword().trim().isEmpty()) {
+            if (dto.getPassword().trim().length() < 6) {
+                throw new IllegalArgumentException("La contraseña debe tener al menos 6 caracteres.");
+            }
             existing.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
 
@@ -153,6 +160,9 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void updatePasswordOnly(String email, String newPassword) {
+        if (newPassword == null || newPassword.trim().length() < 6) {
+            throw new IllegalArgumentException("La nueva contraseña debe tener al menos 6 caracteres.");
+        }
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
         user.setPassword(passwordEncoder.encode(newPassword));
