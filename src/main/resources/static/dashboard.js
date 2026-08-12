@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Inicializar fechas por defecto (Este mes)
+    // Inicializar fechas por defecto (Este mes) y consultar datos
     aplicarPresetFecha('ESTE_MES');
 
     await Promise.allSettled([
@@ -154,9 +154,18 @@ async function consultarPorFechas() {
     }
 
     try {
+        // Formateo ISO con horas límites de inicio (00:00:00) y fin de día (23:59:59)
+        const fromIso = `${desdeVal}T00:00:00`;
+        const toIso = `${hastaVal}T23:59:59`;
+
+        // Se envían parámetros redundantes para compatibilidad con cualquier Controller backend
         const params = new URLSearchParams({
             from: desdeVal,
-            to: hastaVal
+            to: hastaVal,
+            startDate: fromIso,
+            endDate: toIso,
+            desde: desdeVal,
+            hasta: hastaVal
         });
 
         const response = await apiFetch(`/sales/report/box?${params.toString()}`);
@@ -164,10 +173,11 @@ async function consultarPorFechas() {
 
         const data = await response.json();
 
-        const periodSales = data.periodSales ?? 0;
-        const periodProfit = data.periodProfit ?? 0;
-        const periodReplacementCost = data.periodReplacementCost ?? 0;
-        const periodOperations = data.periodOperations ?? 0;
+        // Mapeo defensivo de propiedades enviadas por el API
+        const periodSales = data.periodSales ?? data.totalSales ?? data.total ?? 0;
+        const periodProfit = data.periodProfit ?? data.profit ?? data.ganancia ?? 0;
+        const periodReplacementCost = data.periodReplacementCost ?? data.cost ?? data.reposicion ?? 0;
+        const periodOperations = data.periodOperations ?? data.totalOperations ?? data.count ?? 0;
 
         // Cálculo del KPI Derivado: Ticket Promedio
         const ticketPromedio = periodOperations > 0 ? (periodSales / periodOperations) : 0;

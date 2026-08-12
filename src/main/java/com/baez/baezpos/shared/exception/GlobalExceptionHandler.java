@@ -11,6 +11,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -42,6 +43,13 @@ public class GlobalExceptionHandler {
         });
         log.warn("Error de validación [{}]: {}", request.getRequestURI(), errors);
         return buildResponse(HttpStatus.BAD_REQUEST, "Validation Error", "Error de validación en los campos enviados.", request.getRequestURI(), errors);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        log.warn("Error de conversión de parámetro [{}]: '{}' con valor '{}'", request.getRequestURI(), ex.getName(), ex.getValue());
+        String msg = String.format("El parámetro '%s' recibió un valor de formato inválido: '%s'", ex.getName(), ex.getValue());
+        return buildResponse(HttpStatus.BAD_REQUEST, "Bad Request", msg, request.getRequestURI(), null);
     }
 
     @ExceptionHandler(AccessDeniedException.class)

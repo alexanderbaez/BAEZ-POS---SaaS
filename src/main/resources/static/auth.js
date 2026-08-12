@@ -16,7 +16,6 @@ function esVistaLogin() {
     const path = window.location.pathname.toLowerCase();
     const esUrlLogin = path.endsWith('login.html') || path.endsWith('/login');
 
-    // Si el DOM ya cargó, comprobamos elementos de la interfaz de login
     const tieneFormLogin = !!(
         document.getElementById('loginForm') ||
         document.querySelector('form[action*="login"]') ||
@@ -75,7 +74,6 @@ async function apiFetch(path, options = {}) {
         headers.set('Authorization', `Bearer ${currentToken}`);
     }
 
-    // Normalizar la ruta
     let cleanPath = path.startsWith('/') ? path : `/${path}`;
     if (cleanPath.endsWith('/') && cleanPath.length > 1) {
         cleanPath = cleanPath.slice(0, -1);
@@ -87,7 +85,6 @@ async function apiFetch(path, options = {}) {
     try {
         const response = await fetch(url, config);
 
-        // Si el token es inválido o no está autenticado (401), destruir sesión
         if (response.status === 401) {
             if (!esVistaLogin()) {
                 localStorage.clear();
@@ -104,7 +101,6 @@ async function apiFetch(path, options = {}) {
 
 // 3. CHEQUEO DE ESTADO DE LICENCIA (MULTI-TENANT GUARD)
 async function chequearEstadoLicencia() {
-    // Freno de mano: Si estamos en vista de login, limpiar cualquier residuo y abortar
     if (esVistaLogin()) {
         removerNotificacionVencimiento();
         removerBloqueoVentas();
@@ -119,9 +115,8 @@ async function chequearEstadoLicencia() {
     }
 
     const userRole = (localStorage.getItem('baezpos_user_role') || '').toUpperCase().trim();
-    if (userRole === 'SUPER_ADMIN') return; // El super admin nunca se bloquea
+    if (userRole === 'SUPER_ADMIN') return;
 
-    // Determinar si la vista actual corresponde estrictamente al Punto de Venta (POS)
     const currentPath = window.location.pathname.toLowerCase();
     const esPaginaPOS = currentPath.includes('ventas.html') ||
                         currentPath.endsWith('/pos') ||
@@ -132,7 +127,6 @@ async function chequearEstadoLicencia() {
     try {
         const res = await apiFetch('/admin/my-company/check-status');
 
-        // Re-verificar estado por si cambió la vista mientras se ejecutaba el fetch async
         if (esVistaLogin()) {
             removerNotificacionVencimiento();
             removerBloqueoVentas();
@@ -142,8 +136,8 @@ async function chequearEstadoLicencia() {
         if (res && res.ok) {
             const data = await res.json();
 
-            // Si la empresa está inactiva o vencida
             if (data.active === false || data.vencido === true) {
+                removerNotificacionVencimiento();
                 if (esPaginaPOS) {
                     bloquearPantallaVentas(data.message || "Tu suscripción/licencia se encuentra vencida.");
                 } else {
@@ -151,15 +145,14 @@ async function chequearEstadoLicencia() {
                 }
             } else {
                 removerBloqueoVentas();
-            }
-
-            // Notificación global superior si el abono vence en 5 días o menos
-            if (data.diasRestantes !== undefined && data.diasRestantes <= 5 && data.diasRestantes >= 0) {
-                mostrarNotificacionVencimientoGlobal(data.diasRestantes);
-            } else {
-                removerNotificacionVencimiento();
+                if (data.diasRestantes !== undefined && data.diasRestantes <= 5 && data.diasRestantes >= 0) {
+                    mostrarNotificacionVencimientoGlobal(data.diasRestantes);
+                } else {
+                    removerNotificacionVencimiento();
+                }
             }
         } else if (res && res.status === 403) {
+            removerNotificacionVencimiento();
             if (esPaginaPOS) {
                 bloquearPantallaVentas("Su suscripción se encuentra inhabilitada por administración.");
             } else {
@@ -171,104 +164,134 @@ async function chequearEstadoLicencia() {
     }
 }
 
-// Bloqueo estético MILIMÉTRICO enfocado EXCLUSIVAMENTE en el área de Ventas (sin tapar la Sidebar)
+/**
+ * BLOQUEO ESTRUCTURAL DE PANTALLA
+ */
 function bloquearPantallaVentas(mensaje) {
     if (esVistaLogin()) return;
     if (document.getElementById('bloqueo-pos-overlay')) return;
 
+    // 1. Desactivar carrito si existe
     if (typeof CARRITO !== 'undefined') {
         CARRITO = [];
         if (typeof renderizarCarrito === 'function') renderizarCarrito();
     }
 
+    // 2. Ocultar la barra flotante inferior móvil de cobro
+    const mobileBottomBar = document.querySelector('.mobile-bottom-bar');
+    if (mobileBottomBar) {
+        mobileBottomBar.style.setProperty('display', 'none', 'important');
+    }
+
+    // 3. Inyectar corrección CSS estricta para Sidebar y Overlay
+    let styleElem = document.getElementById('baezpos-bloqueo-styles');
+    if (!styleElem) {
+        styleElem = document.createElement('style');
+        styleElem.id = 'baezpos-bloqueo-styles';
+        styleElem.innerHTML = `
+            /* Navbar siempre visible por encima del overlay */
+            .navbar, header, nav {
+                z-index: 1050 !important;
+            }
+
+            /* Forzar Sidebar/Menu desplegable arriba de todo y desactivar desenfoque */
+            .sidebar, #sidebar, .offcanvas, .sidebar-wrapper, [class*="sidebar"] {
+                z-index: 10000 !important;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+                filter: none !important;
+            }
+
+            /* Overlay oscuro de fondo */
+            #bloqueo-pos-overlay {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                background-color: #0f172a !important;
+                z-index: 1040 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                padding: 20px !important;
+                box-sizing: border-box !important;
+                overflow: hidden !important;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+            }
+
+            @media (max-width: 768px) {
+                #bloqueo-pos-overlay {
+                    top: 56px !important;
+                    height: calc(100vh - 56px) !important;
+                }
+            }
+        `;
+        document.head.appendChild(styleElem);
+    }
+
+    // 4. Crear el overlay
     const overlay = document.createElement('div');
     overlay.id = 'bloqueo-pos-overlay';
 
-    // Cálculo dinámico de borde
-    const targetContainer = document.getElementById('main-content') ||
-                            document.getElementById('content') ||
-                            document.querySelector('main');
-
-    let offsetLeft = '250px';
-    if (targetContainer && window.innerWidth > 768) {
-        const rect = targetContainer.getBoundingClientRect();
-        offsetLeft = `${rect.left}px`;
-    } else if (window.innerWidth <= 768) {
-        offsetLeft = '0px';
-    }
-
-    overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        left: ${offsetLeft};
-        width: auto;
-        height: 100vh;
-        background: rgba(15, 23, 42, 0.96);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        z-index: 99999;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-        box-sizing: border-box;
-        transition: left 0.15s ease-out;
-    `;
-
     overlay.innerHTML = `
-        <div class="card p-5 text-center shadow-lg border-0" style="max-width: 520px; border-radius: 20px; background: #ffffff; z-index: 100000;">
+        <div class="card p-4 p-md-5 text-center shadow-lg border-0" style="
+            max-width: 480px;
+            width: 100%;
+            border-radius: 20px;
+            background: #ffffff;
+            position: relative;
+            z-index: 1041;
+        ">
             <div class="mb-3 text-danger">
                 <i class="bi bi-shield-lock-fill display-3"></i>
             </div>
-            <h3 class="fw-bold text-dark mb-2">Punto de Venta Bloqueado</h3>
-            <p class="text-muted mb-3">${mensaje}<br><br><strong>El módulo de emisión de ventas se encuentra inhabilitado por falta de pago. Regulariza tu abono para volver a cobrar.</strong></p>
-            <a href="https://wa.me/${MI_WHATSAPP}?text=Hola Alexander, mi Punto de Venta en BaezPOS se encuentra bloqueado por suscripción." target="_blank" class="btn btn-success btn-lg fw-bold py-3 rounded-pill shadow mb-3">
-                <i class="bi bi-whatsapp me-2"></i> Regularizar Pago por WhatsApp
+            <h3 class="fw-bold text-dark mb-2 fs-4 fs-md-3">Punto de Venta Bloqueado</h3>
+            <p class="text-muted mb-4 small fs-md-6" style="line-height: 1.5;">
+                ${mensaje}<br><br>
+                <strong>El módulo de emisión de ventas se encuentra inhabilitado por falta de pago. Regulariza tu abono para volver a cobrar.</strong>
+            </p>
+            <a href="https://wa.me/${MI_WHATSAPP}?text=Hola Alexander, mi Punto de Venta en BaezPOS se encuentra bloqueado por suscripción."
+               target="_blank"
+               class="btn btn-success btn-lg fw-bold py-3 rounded-pill shadow mb-3 w-100 d-flex align-items-center justify-content-center gap-2">
+                <i class="bi bi-whatsapp fs-5"></i> Regularizar Pago por WhatsApp
             </a>
-            <div class="p-2 rounded bg-light border">
-                <small class="text-secondary fw-semibold">
+            <div class="p-3 rounded bg-light border">
+                <small class="text-secondary fw-semibold d-block" style="font-size: 0.78rem;">
                     <i class="bi bi-info-circle me-1"></i> Puedes seguir utilizando la barra lateral para consultar Dashboard, Productos, Clientes y Reportes.
                 </small>
             </div>
         </div>
     `;
 
-    window.addEventListener('resize', ajustarOverlayBloqueo);
     document.body.appendChild(overlay);
-}
-
-function ajustarOverlayBloqueo() {
-    const overlay = document.getElementById('bloqueo-pos-overlay');
-    if (!overlay) {
-        window.removeEventListener('resize', ajustarOverlayBloqueo);
-        return;
-    }
-
-    const targetContainer = document.getElementById('main-content') ||
-                            document.getElementById('content') ||
-                            document.querySelector('main');
-
-    if (targetContainer && window.innerWidth > 768) {
-        const rect = targetContainer.getBoundingClientRect();
-        overlay.style.left = `${rect.left}px`;
-    } else {
-        overlay.style.left = '0px';
-    }
 }
 
 function removerBloqueoVentas() {
     const overlay = document.getElementById('bloqueo-pos-overlay');
-    if (overlay) overlay.remove();
-    window.removeEventListener('resize', ajustarOverlayBloqueo);
+    if (overlay) {
+        overlay.remove();
+    }
+
+    const styleElem = document.getElementById('baezpos-bloqueo-styles');
+    if (styleElem) {
+        styleElem.remove();
+    }
+
+    const mobileBottomBar = document.querySelector('.mobile-bottom-bar');
+    if (mobileBottomBar) {
+        mobileBottomBar.style.display = '';
+    }
 }
 
 /**
- * NOTIFICACIÓN FLOTANTE DE VENCIMIENTO REUBICADA Y ADAPTADA AL LAYOUT RESPONSIVO
+ * NOTIFICACIÓN FLOTANTE DE VENCIMIENTO (BANNER SUPERIOR)
  */
 function mostrarNotificacionVencimientoGlobal(dias) {
-    if (esVistaLogin()) return; // Protección estricta
+    if (esVistaLogin()) return;
 
     let banner = document.getElementById('baezpos-vencimiento-banner');
     if (!banner) {
@@ -280,33 +303,37 @@ function mostrarNotificacionVencimientoGlobal(dias) {
         estilosBanner.innerHTML = `
             #baezpos-vencimiento-banner {
                 position: fixed;
-                top: 12px;
-                right: 20px;
-                z-index: 1040;
+                top: 10px;
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 1060;
                 background: #fff5f5;
                 color: #c53030;
                 border: 1px solid #feb2b2;
-                padding: 8px 16px;
+                padding: 6px 16px;
                 border-radius: 30px;
                 font-weight: 600;
-                font-size: 0.85rem;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                font-size: 0.82rem;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.12);
                 display: flex;
                 align-items: center;
                 gap: 8px;
-                animation: fadeInDown 0.3s ease;
+                white-space: nowrap;
             }
             @media (max-width: 768px) {
                 #baezpos-vencimiento-banner {
                     top: 60px;
-                    left: 15px;
-                    right: 15px;
+                    width: 90%;
+                    left: 5%;
+                    transform: none;
+                    white-space: normal;
+                    text-align: center;
                     justify-content: center;
-                    font-size: 0.78rem;
+                    font-size: 0.75rem;
                 }
             }
         `;
-        if (!document.getElementById('baezpos-vencimiento-styles')) {
+        if (!document.head.querySelector('#baezpos-vencimiento-styles')) {
             document.head.appendChild(estilosBanner);
         }
 
@@ -328,7 +355,6 @@ function removerNotificacionVencimiento() {
 
 // Inicialización de ciclo de vida seguro
 document.addEventListener('DOMContentLoaded', () => {
-    // Si la vista es Login, desinfectar UI y no levantar polling
     if (esVistaLogin()) {
         removerNotificacionVencimiento();
         removerBloqueoVentas();
