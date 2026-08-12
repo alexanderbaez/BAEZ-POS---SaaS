@@ -31,5 +31,6 @@ public class Category extends TenantEntity {
     private Boolean active = true;
 
     @Version
-    private Long version;
+    @Builder.Default
+    private Long version = 0L;
 }
