@@ -36,7 +36,8 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService customUserDetailsService;
 
-    @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:5173,http://localhost:8080}")
+    // Agregada la URL de AWS Amplify al fallback por defecto
+    @Value("${app.cors.allowed-origins:https://master.d3gp9of2938ba5.amplifyapp.com,http://localhost:3000,http://localhost:5173,http://localhost:8080}")
     private String allowedOrigins;
 
     @Bean
@@ -68,13 +69,13 @@ public class SecurityConfig {
                                 "/api/v1/auth/setup-status",
                                 "/api/v1/auth/setup",
                                 "/api/v1/auth/forgot-password",
-                                "/api/v1/auth/verify" // <-- Agregado para activación por email
+                                "/api/v1/auth/verify"
                         ).permitAll()
 
                         // 3. Módulo Global Super Admin
                         .requestMatchers("/api/v1/super-admin/**").hasRole("SUPER_ADMIN")
 
-                        // 4. Perfil de Usuario (Cualquier usuario autenticado puede actualizar su clave)
+                        // 4. Perfil de Usuario
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/users/update-password").authenticated()
 
                         // 5. Operaciones de Empresa y POS accesibles por ADMIN y VENDEDOR
@@ -88,7 +89,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/sales/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/customers/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
 
-                        // 6. Módulos de administración del tenant (ADMIN y SUPER_ADMIN)
+                        // 6. Módulos de administración del tenant
                         .requestMatchers("/api/v1/users/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/inventory/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
@@ -129,7 +130,6 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Trim para eliminar cualquier espacio accidental entre comas
         List<String> origins = Arrays.stream(allowedOrigins.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
