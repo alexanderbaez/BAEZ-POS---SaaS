@@ -6,9 +6,8 @@ import com.baez.baezpos.company.service.CompanyService.MasterAdmin;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
@@ -20,7 +19,7 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 public class AdminMasterController {
 
-    private final MasterAdmin masterAdminService; // Usando la interfaz corregida
+    private final MasterAdmin masterAdminService;
 
     @GetMapping
     public ResponseEntity<List<CompanyDTO>> listAll() {
@@ -30,10 +29,8 @@ public class AdminMasterController {
     @PostMapping
     public ResponseEntity<String> registerCompany(@Valid @RequestBody MasterRegistrationRequest req) {
         masterAdminService.registerFullBusiness(req);
-        return ResponseEntity.ok("Empresa registrada. Se ha enviado un correo de verificación al cliente.");
+        return ResponseEntity.ok("Empresa registrada correctamente. Se ha generado la cuenta del administrador.");
     }
-
-    // Se eliminó el endpoint redundante "/full-register"
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
@@ -47,7 +44,7 @@ public class AdminMasterController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<String> update(@PathVariable Long id, @RequestBody CompanyDTO dto) {
+    public ResponseEntity<String> update(@PathVariable Long id, @Valid @RequestBody CompanyDTO dto) { // <--- Agregado @Valid
         masterAdminService.updateCompanyMaster(id, dto);
         return ResponseEntity.ok("Empresa actualizada correctamente.");
     }
@@ -62,9 +59,9 @@ public class AdminMasterController {
     public ResponseEntity<String> resetPassword(@PathVariable Long id, @RequestBody Map<String, String> body) {
         String newPass = body.get("password");
         if (newPass == null || newPass.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body("La nueva contraseña no puede estar vacía");
+            return ResponseEntity.badRequest().body("La nueva contraseña no puede estar vacía.");
         }
-        masterAdminService.resetOwnerPassword(id, newPass);
+        masterAdminService.resetOwnerPassword(id, newPass.trim());
         return ResponseEntity.ok("Contraseña restablecida correctamente.");
     }
 }

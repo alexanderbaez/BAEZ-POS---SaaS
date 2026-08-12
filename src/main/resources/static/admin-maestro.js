@@ -1,6 +1,5 @@
 /**
  * BÁEZ POS - PANEL MAESTRO SUPER ADMIN & SEGURIDAD SAAS
- * Refactorizado: Integración con Spring Boot API v1, Sanitización XSS y Multi-Tenant Logs
  */
 
 const API_BASE = '/super-admin/companies';
@@ -10,9 +9,13 @@ let modalEdicion = null;
 let modalMovimientos = null;
 let todasLasEmpresas = [];
 
-// Helper para prevenir inyección XSS al manipular texto plano en el DOM
+// Variables para control de paginación de Logs
+let todosLosLogs = [];
+let paginaActualLogs = 1;
+const LOGS_POR_PAGINA = 20;
+
 function escapeHTML(str) {
-    if (!str) return '';
+    if (str === null || str === undefined) return '';
     return String(str)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -21,7 +24,6 @@ function escapeHTML(str) {
         .replace(/'/g, '&#039;');
 }
 
-// Helper seguro para parsear cualquier valor a número (soporta formateos como "$ 30.000,00")
 function parsearMonto(valor) {
     if (valor === null || valor === undefined) return 0;
     if (typeof valor === 'number') return isNaN(valor) ? 0 : valor;
@@ -38,32 +40,33 @@ function parsearMonto(valor) {
     return isNaN(num) ? 0 : num;
 }
 
-// Helper para manejo seguro de fechas UTC a YYYY-MM-DD
-function formatDateToISO(dateInput) {
-    const d = new Date(dateInput);
-    if (isNaN(d.getTime())) return '';
-    let month = '' + (d.getMonth() + 1);
-    let day = '' + d.getDate();
-    const year = d.getFullYear();
-
-    if (month.length < 2) month = '0' + month;
-    if (day.length < 2) day = '0' + day;
-
-    return [year, month, day].join('-');
-}
-
-// Validador sintáctico de dirección de correo (RFC 5322 standard)
 function esEmailValido(email) {
     if (!email) return false;
     const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     return regex.test(email);
 }
 
+async function extraerMensajeError(resp) {
+    try {
+        const contentType = resp.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+            const data = await resp.json();
+            return data.message || data.error || 'Ocurrió un error en la solicitud.';
+        } else {
+            const text = await resp.text();
+            return text || `Error HTTP ${resp.status}`;
+        }
+    } catch (e) {
+        return `Error procesando la respuesta (${resp.status})`;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Control de seguridad por rol
     const rolActual = (localStorage.getItem('baezpos_user_role') || '').toUpperCase().trim();
-    if (!rolActual.includes('SUPER_ADMIN') && !rolActual.includes('SUPERADMIN')) {
-        console.error("Acceso denegado: Se requiere rol SUPER_ADMIN.");
+    const token = localStorage.getItem('baezpos_token');
+
+    if (!token || (!rolActual.includes('SUPER_ADMIN') && !rolActual.includes('SUPERADMIN'))) {
+        console.error("Acceso denegado: Se requiere sesión activa de SUPER_ADMIN.");
         window.location.href = 'login.html';
         return;
     }
@@ -79,9 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
         buscador.addEventListener('input', (e) => filtrarEmpresas(e.target.value));
     }
 
-    // Polling controlado de Logs cada 30 segundos
     setInterval(cargarLogs, 30000);
-
     cargarTodo();
 });
 
@@ -93,7 +94,13 @@ function cargarTodo() {
 async function cargarEmpresas() {
     try {
         const resp = await apiFetch(API_BASE);
-        if (!resp || !resp.ok) return;
+        if (!resp) return;
+
+        if (!resp.ok) {
+            const errorMsg = await extraerMensajeError(resp);
+            if (typeof Swal !== 'undefined') Swal.fire('Error', errorMsg, 'error');
+            return;
+        }
 
         todasLasEmpresas = await resp.json();
         renderizarTabla(todasLasEmpresas);
@@ -120,7 +127,14 @@ function renderizarTabla(empresas) {
     empresas.forEach(empresa => {
         const tr = document.createElement('tr');
 
-        const fechaVenc = empresa.expirationDate ? new Date(empresa.expirationDate + 'T23:59:59') : null;
+        let fechaVenc = null;
+        if (empresa.expirationDate) {
+            const partes = String(empresa.expirationDate).split('T')[0].split('-');
+            if (partes.length === 3) {
+                fechaVenc = new Date(partes[0], partes[1] - 1, partes[2], 23, 59, 59);
+            }
+        }
+
         const estaVencida = fechaVenc && fechaVenc < hoy;
         const estaInactiva = empresa.active === false || estaVencida;
 
@@ -133,12 +147,8 @@ function renderizarTabla(empresas) {
             : `<span class="badge rounded-pill bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-1"><i class="bi bi-check-all me-1"></i>ACTIVO</span>`;
 
         const cleanPhone = empresa.phone ? empresa.phone.replace(/\D/g, '') : '';
-        const msgWS = encodeURIComponent(`Hola ${empresa.name}, te contacto desde la administración central de BáezPOS...`);
-
-        // Extraer y parsear cuota
-        const rawFee = empresa.monthlyFee ?? empresa.monthly_fee ?? empresa.abono ?? empresa.fee ?? 0;
+        const rawFee = empresa.monthlyFee ?? empresa.monthly_fee ?? 0;
         const abonoValor = parsearMonto(rawFee);
-
         const abonoFormateado = '$ ' + abonoValor.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
         tr.innerHTML = `
@@ -162,7 +172,7 @@ function renderizarTabla(empresas) {
                     <button class="btn-action bg-dark text-warning border border-warning border-opacity-25" title="Renovar +30 Días" data-action="renovar" data-id="${empresa.id}"><i class="bi bi-calendar-plus-fill"></i></button>
                     <button class="btn-action bg-dark text-success border border-success border-opacity-25" title="Ver Movimientos" data-action="movimientos" data-id="${empresa.id}" data-name="${escapeHTML(empresa.name)}"><i class="bi bi-eye-fill"></i></button>
                     <button class="btn-action bg-dark text-info border border-info border-opacity-25" title="Editar Comercio" data-action="editar" data-id="${empresa.id}"><i class="bi bi-pencil-fill"></i></button>
-                    <button class="btn-action bg-dark text-success border border-success border-opacity-25" title="WhatsApp" onclick="window.open('https://wa.me/${cleanPhone}?text=${msgWS}')"><i class="bi bi-whatsapp"></i></button>
+                    <button class="btn-action bg-dark text-success border border-success border-opacity-25" title="WhatsApp" data-action="whatsapp" data-phone="${cleanPhone}" data-name="${escapeHTML(empresa.name)}"><i class="bi bi-whatsapp"></i></button>
                     <button class="btn-action bg-dark text-danger border border-danger border-opacity-25" title="Eliminar" data-action="eliminar" data-id="${empresa.id}"><i class="bi bi-trash3"></i></button>
                 </div>
             </td>
@@ -185,6 +195,12 @@ function renderizarTabla(empresas) {
         if (action === 'movimientos') verMovimientos(id, btn.dataset.name);
         if (action === 'editar') prepararEdicion(id);
         if (action === 'eliminar') eliminarEmpresa(id);
+        if (action === 'whatsapp') {
+            const phone = btn.dataset.phone;
+            const name = btn.dataset.name;
+            const msg = encodeURIComponent(`Hola ${name}, te contacto desde la administración central de BáezPOS...`);
+            window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
+        }
     };
 }
 
@@ -212,7 +228,8 @@ async function renovarSuscripcion(id) {
                 if (typeof Swal !== 'undefined') Swal.fire('¡Renovado!', 'Suscripción extendida 30 días.', 'success');
                 cargarTodo();
             } else {
-                if (typeof Swal !== 'undefined') Swal.fire('Error', 'No se pudo extender la suscripción.', 'error');
+                const msg = await extraerMensajeError(resp);
+                if (typeof Swal !== 'undefined') Swal.fire('Error', msg, 'error');
             }
         } catch (err) {
             if (typeof Swal !== 'undefined') Swal.fire('Error', 'Fallo en la comunicación.', 'error');
@@ -230,20 +247,20 @@ function actualizarKpis(empresas) {
     let estimadoMensual = 0;
 
     empresas.forEach(e => {
-        const rawFee = e.monthlyFee ?? e.monthly_fee ?? e.abono ?? e.fee ?? e.abonoMensual ?? 0;
+        const rawFee = e.monthlyFee ?? e.monthly_fee ?? 0;
         const abono = parsearMonto(rawFee);
 
         let fechaVenc = null;
-        if (e.expirationDate || e.expiration_date) {
-            const dateStr = String(e.expirationDate || e.expiration_date).replace(/\//g, '-');
-            fechaVenc = new Date(dateStr.includes('T') ? dateStr : `${dateStr}T23:59:59`);
+        if (e.expirationDate) {
+            const partes = String(e.expirationDate).split('T')[0].split('-');
+            if (partes.length === 3) {
+                fechaVenc = new Date(partes[0], partes[1] - 1, partes[2], 23, 59, 59);
+            }
         }
 
         const esFechaValida = fechaVenc && !isNaN(fechaVenc.getTime());
         const estaVencida = esFechaValida && fechaVenc < hoy;
-
-        const esInactivoExplicito = e.active === false || e.active === "false" || e.active === 0;
-        const estaInactiva = esInactivoExplicito || estaVencida;
+        const estaInactiva = e.active === false || estaVencida;
 
         if (!estaInactiva) {
             estimadoMensual += abono;
@@ -260,7 +277,6 @@ function actualizarKpis(empresas) {
         }
     });
 
-    // Mapeo exacto con los IDs presentes en tu HTML
     const setElem = (id, val) => {
         const el = document.getElementById(id);
         if (el) el.innerText = val;
@@ -271,7 +287,6 @@ function actualizarKpis(empresas) {
     setElem('kpiProntoVencer', prontoVencer);
     setElem('kpiVencidos', vencidos);
 
-    // Mapeo con el badge superior de "ESTIMADO MENSUAL"
     const kpiGanancia = document.getElementById('kpiGanancia');
     if (kpiGanancia) {
         kpiGanancia.innerText = '$ ' + estimadoMensual.toLocaleString('es-AR', {
@@ -281,23 +296,16 @@ function actualizarKpis(empresas) {
     }
 }
 
-// FORMULARIO DE ALTA DE EMPRESA CON VALIDACIÓN DE EMAIL
 const formNueva = document.getElementById('formNuevaEmpresa');
 if (formNueva) {
     formNueva.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         const getVal = (id) => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
-
         const ownerEmail = getVal('masterEmail');
 
-        // Validar sintaxis del mail antes de enviar la petición
         if (!esEmailValido(ownerEmail)) {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire('Email Inválido', 'Por favor, ingrese un correo electrónico válido.', 'warning');
-            } else {
-                alert('Por favor, ingrese un correo electrónico válido.');
-            }
+            if (typeof Swal !== 'undefined') Swal.fire('Email Inválido', 'Por favor, ingrese un correo válido.', 'warning');
             return;
         }
 
@@ -305,24 +313,22 @@ if (formNueva) {
         if (btnSubmit) btnSubmit.disabled = true;
 
         const companyName = getVal('masterNombre');
-        const ownerName = getVal('masterNombreOwner') || companyName;
-        const rawAbono = getVal('masterAbono');
-
         const nuevaEmpresaRequest = {
             companyName: companyName,
             taxId: getVal('masterTaxId'),
             phone: getVal('masterTelefono'),
             address: getVal('masterDireccion'),
-            ownerName: ownerName,
+            ownerName: getVal('masterNombreOwner') || companyName,
             ownerEmail: ownerEmail,
             ownerPassword: getVal('masterPass'),
             expirationDate: document.getElementById('masterVenc')?.value || null,
-            monthlyFee: rawAbono ? parsearMonto(rawAbono) : 0.0
+            monthlyFee: parsearMonto(getVal('masterAbono'))
         };
 
         try {
             const resp = await apiFetch(API_BASE, {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(nuevaEmpresaRequest)
             });
 
@@ -331,10 +337,11 @@ if (formNueva) {
                 cargarTodo();
                 e.target.reset();
             } else {
-                if (typeof Swal !== 'undefined') Swal.fire('Error', 'No se pudo crear el comercio.', 'error');
+                const msg = await extraerMensajeError(resp);
+                if (typeof Swal !== 'undefined') Swal.fire('Error', msg, 'error');
             }
         } catch (err) {
-            if (typeof Swal !== 'undefined') Swal.fire('Error de Red', 'Fallo en la comunicación.', 'error');
+            if (typeof Swal !== 'undefined') Swal.fire('Error de Red', 'No se pudo conectar con el servidor.', 'error');
         } finally {
             if (btnSubmit) btnSubmit.disabled = false;
         }
@@ -367,16 +374,10 @@ if (formEdit) {
     formEdit.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('editId').value;
-        const newPass = document.getElementById('editPass').value.trim();
-        const rawFee = document.getElementById('editMonthlyFee')?.value;
         const editEmail = document.getElementById('editEmail').value.trim();
 
         if (!esEmailValido(editEmail)) {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire('Email Inválido', 'Por favor, ingrese un correo electrónico válido.', 'warning');
-            } else {
-                alert('Por favor, ingrese un correo electrónico válido.');
-            }
+            if (typeof Swal !== 'undefined') Swal.fire('Email Inválido', 'Por favor, ingrese un correo válido.', 'warning');
             return;
         }
 
@@ -387,16 +388,17 @@ if (formEdit) {
             email: editEmail,
             phone: document.getElementById('editPhone').value.trim(),
             address: document.getElementById('editAddress').value.trim(),
-            expirationDate: document.getElementById('editVencimiento').value,
-            monthlyFee: rawFee ? parsearMonto(rawFee) : 0.0,
+            expirationDate: document.getElementById('editVencimiento').value || null,
+            monthlyFee: parsearMonto(document.getElementById('editMonthlyFee')?.value),
             ticketMessage: document.getElementById('editTicketMessage')?.value || '',
             active: document.getElementById('editActive').value === "true",
-            ownerPassword: newPass || null
+            ownerPassword: document.getElementById('editPass').value.trim() || null
         };
 
         try {
             const resp = await apiFetch(`${API_BASE}/${id}`, {
                 method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
@@ -405,15 +407,16 @@ if (formEdit) {
                 if (typeof Swal !== 'undefined') Swal.fire('¡Actualizado!', 'Datos guardados correctamente.', 'success');
                 cargarTodo();
             } else {
-                if (typeof Swal !== 'undefined') Swal.fire('Error', 'No se pudo guardar la información.', 'error');
+                const msg = await extraerMensajeError(resp);
+                if (typeof Swal !== 'undefined') Swal.fire('Error', msg, 'error');
             }
         } catch (err) {
-            if (typeof Swal !== 'undefined') Swal.fire('Error', 'Fallo al guardar.', 'error');
+            if (typeof Swal !== 'undefined') Swal.fire('Error', 'Fallo al guardar cambios.', 'error');
         }
     });
 }
 
-// MOVIMIENTOS Y AUDITORÍA POR TENANT
+// MOVIMIENTOS Y AUDITORÍA DE UN CLIENTE
 async function verMovimientos(id, nombreComercio) {
     document.getElementById('lblClienteMov').innerText = nombreComercio;
     document.getElementById('detTotalVentas').innerText = "—";
@@ -437,7 +440,7 @@ async function verMovimientos(id, nombreComercio) {
             : 'Sin actividad reciente';
 
         if (logsCliente.length === 0) {
-            tbodyMov.innerHTML = '<tr><td colspan="4" class="text-center text-muted p-4">No se registran movimientos recientes para este comercio.</td></tr>';
+            tbodyMov.innerHTML = '<tr><td colspan="4" class="text-center text-muted p-4">No se registran movimientos recientes.</td></tr>';
             return;
         }
 
@@ -457,51 +460,128 @@ async function verMovimientos(id, nombreComercio) {
         }).join('');
 
     } catch (err) {
-        console.error("Error al obtener movimientos del cliente:", err);
+        console.error("Error al obtener movimientos:", err);
         tbodyMov.innerHTML = '<tr><td colspan="4" class="text-center text-danger p-3">Error al cargar el historial.</td></tr>';
     }
 }
 
-// BITÁCORA GLOBAL DEL SISTEMA (PANEL SUPER ADMIN)
+// LOGS GLOBALES CON PAGINACIÓN DINÁMICA DE 20
 async function cargarLogs() {
     try {
-        const resp = await apiFetch(`${LOGS_BASE}?limit=50`);
+        // Obtenemos los últimos 500 registros para permitir paginación fluida
+        const resp = await apiFetch(`${LOGS_BASE}?limit=500`);
         if (!resp || !resp.ok) return;
 
-        const logs = await resp.json();
-        const tbodyLogs = document.getElementById('tablaLogsCompleta');
-        if (!tbodyLogs) return;
-
-        if (!logs || logs.length === 0) {
-            tbodyLogs.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-muted">No hay registros en la bitácora.</td></tr>';
-            return;
-        }
-
-        tbodyLogs.innerHTML = logs.map(log => {
-            const fecha = new Date(log.timestamp).toLocaleString();
-
-            let colorBadge = 'bg-info text-info';
-            if (log.level === 'ERROR' || (log.action && log.action.includes('ELIMINAR'))) {
-                colorBadge = 'bg-danger text-danger';
-            } else if (log.level === 'WARNING') {
-                colorBadge = 'bg-warning text-warning';
-            } else if (log.action && log.action.includes('ALTA')) {
-                colorBadge = 'bg-success text-success';
-            }
-
-            return `
-                <tr>
-                    <td class="ps-3 text-muted small">${fecha}</td>
-                    <td><span class="badge ${colorBadge} bg-opacity-10 border border-opacity-25 px-2.5 py-1">${escapeHTML(log.action || 'EVENTO')}</span></td>
-                    <td class="text-white small fw-bold">${escapeHTML(log.companyName || 'GLOBAL')}</td>
-                    <td class="text-white-50 small">${escapeHTML(log.description)}</td>
-                    <td class="text-end pe-3 text-primary small">${escapeHTML(log.userEmail || 'Sistema')}</td>
-                </tr>
-            `;
-        }).join('');
+        todosLosLogs = await resp.json();
+        paginaActualLogs = 1;
+        renderizarTablaLogsPaginada();
     } catch (err) {
         console.error("Error al obtener logs globales:", err);
     }
+}
+
+function renderizarTablaLogsPaginada() {
+    const tbodyLogs = document.getElementById('tablaLogsCompleta');
+    if (!tbodyLogs) return;
+
+    if (!todosLosLogs || todosLosLogs.length === 0) {
+        tbodyLogs.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-muted">No hay registros en la bitácora.</td></tr>';
+        renderizarControlesPaginacionLogs(0);
+        return;
+    }
+
+    const totalRegistros = todosLosLogs.length;
+    const totalPaginas = Math.ceil(totalRegistros / LOGS_POR_PAGINA);
+
+    if (paginaActualLogs > totalPaginas) paginaActualLogs = totalPaginas;
+    if (paginaActualLogs < 1) paginaActualLogs = 1;
+
+    const inicio = (paginaActualLogs - 1) * LOGS_POR_PAGINA;
+    const fin = Math.min(inicio + LOGS_POR_PAGINA, totalRegistros);
+    const logsPagina = todosLosLogs.slice(inicio, fin);
+
+    tbodyLogs.innerHTML = logsPagina.map(log => {
+        const fecha = new Date(log.timestamp).toLocaleString();
+        let colorBadge = 'bg-info text-info';
+
+        if (log.level === 'ERROR' || (log.action && log.action.includes('ELIMINAR'))) {
+            colorBadge = 'bg-danger text-danger';
+        } else if (log.level === 'WARNING') {
+            colorBadge = 'bg-warning text-warning';
+        } else if (log.action && log.action.includes('ALTA')) {
+            colorBadge = 'bg-success text-success';
+        }
+
+        return `
+            <tr>
+                <td class="ps-3 text-muted small">${fecha}</td>
+                <td><span class="badge ${colorBadge} bg-opacity-10 border border-opacity-25 px-2.5 py-1">${escapeHTML(log.action || 'EVENTO')}</span></td>
+                <td class="text-white small fw-bold">${escapeHTML(log.companyName || 'GLOBAL')}</td>
+                <td class="text-white-50 small">${escapeHTML(log.description)}</td>
+                <td class="text-end pe-3 text-primary small">${escapeHTML(log.userEmail || 'Sistema')}</td>
+            </tr>
+        `;
+    }).join('');
+
+    renderizarControlesPaginacionLogs(totalPaginas, inicio + 1, fin, totalRegistros);
+}
+
+function renderizarControlesPaginacionLogs(totalPaginas, desde = 0, hasta = 0, total = 0) {
+    const container = document.getElementById('paginacionLogs');
+    const infoText = document.getElementById('infoPaginacionLogs');
+
+    if (infoText) {
+        infoText.innerText = total > 0
+            ? `Mostrando ${desde} - ${hasta} de ${total} logs`
+            : 'Mostrando 0 - 0 de 0 logs';
+    }
+
+    if (!container) return;
+
+    if (totalPaginas <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+
+    // Botón Anterior
+    html += `
+        <li class="page-item ${paginaActualLogs === 1 ? 'disabled' : ''}">
+            <button class="page-link bg-dark text-white border-secondary border-opacity-25" onclick="cambiarPaginaLogs(${paginaActualLogs - 1})">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+        </li>
+    `;
+
+    // Generar números de página (1, 2, 3...)
+    for (let i = 1; i <= totalPaginas; i++) {
+        const active = i === paginaActualLogs ? 'active bg-primary text-dark fw-bold border-primary' : 'bg-dark text-white border-secondary border-opacity-25';
+        html += `
+            <li class="page-item ${i === paginaActualLogs ? 'active' : ''}">
+                <button class="page-link ${active}" onclick="cambiarPaginaLogs(${i})">${i}</button>
+            </li>
+        `;
+    }
+
+    // Botón Siguiente
+    html += `
+        <li class="page-item ${paginaActualLogs === totalPaginas ? 'disabled' : ''}">
+            <button class="page-link bg-dark text-white border-secondary border-opacity-25" onclick="cambiarPaginaLogs(${paginaActualLogs + 1})">
+                <i class="bi bi-chevron-right"></i>
+            </button>
+        </li>
+    `;
+
+    container.innerHTML = html;
+}
+
+function cambiarPaginaLogs(nuevaPagina) {
+    const totalPaginas = Math.ceil(todosLosLogs.length / LOGS_POR_PAGINA);
+    if (nuevaPagina < 1 || nuevaPagina > totalPaginas) return;
+
+    paginaActualLogs = nuevaPagina;
+    renderizarTablaLogsPaginada();
 }
 
 async function eliminarEmpresa(id) {
@@ -527,10 +607,11 @@ async function ejecutarEliminacion(id) {
     try {
         const resp = await apiFetch(`${API_BASE}/${id}`, { method: 'DELETE' });
         if (resp && resp.ok) {
-            if (typeof Swal !== 'undefined') Swal.fire('Eliminado', 'Comercio eliminado con éxito.', 'success');
+            if (typeof Swal !== 'undefined') Swal.fire('Eliminado', 'Comercio desactivado con éxito.', 'success');
             cargarTodo();
         } else {
-            if (typeof Swal !== 'undefined') Swal.fire('Error', 'No se pudo eliminar.', 'error');
+            const msg = await extraerMensajeError(resp);
+            if (typeof Swal !== 'undefined') Swal.fire('Error', msg, 'error');
         }
     } catch (err) {
         console.error("Error al eliminar empresa:", err);
@@ -551,9 +632,10 @@ function filtrarEmpresas(termino) {
     renderizarTabla(filtradas);
 }
 
-// Exposición al ámbito global
+// Exposición global
 window.renovarSuscripcion = renovarSuscripcion;
 window.verMovimientos = verMovimientos;
 window.prepararEdicion = prepararEdicion;
 window.eliminarEmpresa = eliminarEmpresa;
 window.cargarLogs = cargarLogs;
+window.cambiarPaginaLogs = cambiarPaginaLogs;

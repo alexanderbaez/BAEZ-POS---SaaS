@@ -47,6 +47,24 @@ function utilFormatearMoneda(monto) {
     return monto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+/**
+ * Controla el foco del buscador evitando desplegar el teclado en dispositivos móviles/táctiles.
+ */
+function enfocarBuscadorInteligente() {
+    const esMovil = window.innerWidth <= 991 || ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+
+    if (esMovil) {
+        // En móviles, cerramos el teclado activo quitando el foco actual
+        if (document.activeElement && typeof document.activeElement.blur === 'function') {
+            document.activeElement.blur();
+        }
+    } else {
+        // En PC/Escritorio, mantenemos el foco para escáneres de barras
+        const buscador = document.getElementById('buscadorVenta');
+        if (buscador) buscador.focus();
+    }
+}
+
 
 // ==========================================
 // 3. CICLO DE VIDA E INICIALIZACIÓN (DOM)
@@ -71,7 +89,8 @@ function inicializarBuscadorProductos() {
 
     if (!buscador) return;
 
-    buscador.focus();
+    // Foco condicional sólo si no estamos en pantalla táctil/móvil
+    enfocarBuscadorInteligente();
 
     buscador.addEventListener('input', function handleInputBuscadorProductos(e) {
         if (sistemaBloqueado) return;
@@ -195,8 +214,7 @@ function inicializarAtajosTecladoGlobales() {
             cancelarVenta();
         }
         if (e.key === 'Escape') {
-            const buscador = document.getElementById('buscadorVenta');
-            if (buscador) buscador.focus();
+            enfocarBuscadorInteligente();
 
             const sugerenciasDiv = document.getElementById('listaSugerencias');
             if (sugerenciasDiv) sugerenciasDiv.style.display = 'none';
@@ -378,8 +396,7 @@ function renderizarCarrito() {
 
     const activeEl = document.activeElement ? document.activeElement.id : '';
     if (activeEl !== 'pagaCon' && activeEl !== 'inputDescuento' && activeEl !== 'buscarClientePos') {
-        const buscador = document.getElementById('buscadorVenta');
-        if (buscador) buscador.focus();
+        enfocarBuscadorInteligente();
     }
 }
 
@@ -452,10 +469,15 @@ function setMetodo(metodo, el) {
     if (metodo === 'CUENTA_CORRIENTE') {
         if (divCli) divCli.classList.remove('d-none');
         if (divVue) divVue.classList.add('d-none');
-        setTimeout(function enfocarClientePos() {
-            const bCli = document.getElementById('buscarClientePos');
-            if (bCli) bCli.focus();
-        }, 100);
+
+        // En móviles no enfocamos automáticamente el input de cliente para evitar abrir el teclado
+        const esMovil = window.innerWidth <= 991 || ('ontouchstart' in window);
+        if (!esMovil) {
+            setTimeout(function enfocarClientePos() {
+                const bCli = document.getElementById('buscarClientePos');
+                if (bCli) bCli.focus();
+            }, 100);
+        }
     } else {
         if (divCli) divCli.classList.add('d-none');
         if (divVue) divVue.classList.remove('d-none');
@@ -476,8 +498,8 @@ function setMetodo(metodo, el) {
             if (vueltoEl) vueltoEl.innerText = "$0.00";
         }
 
-        const buscadorVenta = document.getElementById('buscadorVenta');
-        if (buscadorVenta) buscadorVenta.focus();
+        // Cierra el teclado si estaba abierto y evita redelegar foco
+        enfocarBuscadorInteligente();
     }
 }
 
@@ -493,6 +515,12 @@ function cancelarVenta() {
 
 function seleccionarProducto(p) {
     if (sistemaBloqueado) return;
+
+    // Limpiar el buscador y ocultar sugerencias de entrada
+    const buscador = document.getElementById('buscadorVenta');
+    const sugerencias = document.getElementById('listaSugerencias');
+    if (buscador) buscador.value = '';
+    if (sugerencias) sugerencias.style.display = 'none';
 
     if (p.isFractional) {
         abrirModalCalculoFraccionado(p);
@@ -531,13 +559,8 @@ function seleccionarProducto(p) {
         renderizarCarrito();
     }
 
-    const buscador = document.getElementById('buscadorVenta');
-    const sugerencias = document.getElementById('listaSugerencias');
-    if (buscador) {
-        buscador.value = '';
-        if (sugerencias) sugerencias.style.display = 'none';
-        setTimeout(function enfocarBuscadorVenta() { buscador.focus(); }, 50);
-    }
+    // Usar la función inteligente en lugar de `setTimeout` con `.focus()` directo
+    enfocarBuscadorInteligente();
 }
 
 function seleccionarCliente(c) {
@@ -562,8 +585,7 @@ function seleccionarCliente(c) {
     const buscarCliPos = document.getElementById('buscarClientePos');
     if (buscarCliPos) buscarCliPos.value = '';
 
-    const buscadorVenta = document.getElementById('buscadorVenta');
-    if (buscadorVenta) buscadorVenta.focus();
+    enfocarBuscadorInteligente();
 }
 
 
@@ -583,29 +605,43 @@ function venderPorPesoOImporte(productoBase = null) {
     });
 
     if (pesables.length === 0) {
-        Swal.fire('Atención', 'No hay productos en el catálogo para venta fraccionada.', 'warning');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Atención',
+            text: 'No hay productos en el catálogo para venta fraccionada.',
+            confirmButtonColor: '#0d6efd'
+        });
         return;
     }
 
     Swal.fire({
-        title: '<i class="bi bi-scale me-2 text-primary"></i>Venta por Peso / Importe',
+        title: '<div class="d-flex align-items-center justify-content-center gap-2 fs-5 fw-bold text-dark"><i class="bi bi-scale text-primary fs-4"></i>Venta por Peso / Importe</div>',
         html: `
-            <div class="position-relative text-start mb-3">
-                <label class="small text-muted mb-1">Buscar producto pesable/granel:</label>
-                <input id="pesableNombreBusqueda" class="swal2-input m-0 w-100" placeholder="Ej: Queso, Pan, Harina..." autocomplete="off">
-                <div id="sugerenciasPesables" class="list-group position-absolute w-100 shadow-lg d-none"
-                     style="z-index: 9999; max-height: 200px; overflow-y: auto;">
+            <div class="position-relative text-start my-2">
+                <label class="form-label small fw-semibold text-secondary mb-1">Buscar producto pesable/granel:</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                    <input id="pesableNombreBusqueda" class="form-control border-start-0 ps-0 shadow-none py-2" placeholder="Ej: Queso, Pan, Harina..." autocomplete="off">
+                </div>
+                <div id="sugerenciasPesables" class="list-group position-absolute w-100 shadow-lg rounded-3 border mt-1 d-none overflow-hidden"
+                     style="z-index: 9999; max-height: 220px; overflow-y: auto;">
                 </div>
             </div>
         `,
         showCancelButton: true,
         showConfirmButton: false,
         cancelButtonText: 'Cancelar',
+        customClass: {
+            popup: 'rounded-4 border-0 shadow-lg p-3',
+            cancelButton: 'btn btn-light px-4 fw-semibold text-secondary'
+        },
         didOpen: function handleModalPesablesOpen() {
             const inputBusqueda = document.getElementById('pesableNombreBusqueda');
             const contenedorSugerencias = document.getElementById('sugerenciasPesables');
 
-            if (inputBusqueda) inputBusqueda.focus();
+            // Solo hacemos foco automático en el modal si no es un móvil
+            const esMovil = window.innerWidth <= 991 || ('ontouchstart' in window);
+            if (inputBusqueda && !esMovil) inputBusqueda.focus();
 
             if (inputBusqueda && contenedorSugerencias) {
                 inputBusqueda.addEventListener('input', function handleInputPesables() {
@@ -622,11 +658,14 @@ function venderPorPesoOImporte(productoBase = null) {
                             filtrados.forEach(function renderizarItemPesable(p) {
                                 const btn = document.createElement('button');
                                 btn.type = 'button';
-                                btn.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2';
-                                btn.style.fontSize = '0.9rem';
+                                btn.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 border-0 border-bottom';
+                                btn.style.fontSize = '0.875rem';
                                 btn.innerHTML = `
-                                    <span><i class="bi bi-tag-fill me-2 text-primary"></i>${p.name.toUpperCase()} ${p.isFractional ? '<span class="badge bg-info text-dark ms-1">⚖️ Kg</span>' : ''}</span>
-                                    <span class="badge bg-light text-dark border">$${(p.price || 0).toFixed(2)}/Kg</span>
+                                    <div class="text-start me-2">
+                                        <div class="fw-bold text-dark mb-0">${p.name.toUpperCase()}</div>
+                                        ${p.isFractional ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill" style="font-size:0.65rem;">⚖️ Pesable</span>' : ''}
+                                    </div>
+                                    <span class="badge bg-light text-dark border fw-bold fs-6">$${(p.price || 0).toFixed(2)}/Kg</span>
                                 `;
                                 btn.onclick = function handleClickItemPesable() {
                                     Swal.close();
@@ -662,70 +701,208 @@ function venderPorPesoOImporte(productoBase = null) {
 function abrirModalCalculoFraccionado(p) {
     const salePrice = p.price || 0;
     if (salePrice <= 0) {
-        Swal.fire('Atención', 'El producto debe tener un precio de venta mayor a 0 para calcular fraccionado.', 'warning');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Atención',
+            text: 'El producto debe tener un precio de venta mayor a 0 para calcular fraccionado.',
+            confirmButtonColor: '#0d6efd'
+        });
         return;
     }
 
     let modoActual = 'PESO';
 
     Swal.fire({
-        title: `<div class="d-flex align-items-center justify-content-center text-primary"><i class="bi bi-speedometer2 me-2"></i><span>Venta Fraccionada</span></div>`,
+        width: '100%',
+        padding: '0',
+        showCancelButton: true,
+        confirmButtonText: '<i class="bi bi-cart-plus-fill me-1"></i> AGREGAR AL CARRITO',
+        cancelButtonText: 'Cancelar',
+        buttonsStyling: false,
+        customClass: {
+            popup: 'vfr-popup-container border-0 shadow-lg overflow-hidden',
+            htmlContainer: 'p-0 m-0',
+            actions: 'vfr-actions-wrapper p-3 bg-light border-top d-flex gap-2 m-0',
+            confirmButton: 'btn btn-primary vfr-btn-confirm flex-fill fw-bold py-2 fs-6 shadow-sm',
+            cancelButton: 'btn btn-outline-secondary vfr-btn-cancel py-2 fw-semibold'
+        },
+        title: '', // Título nativo vacío para evitar huecos blancos
         html: `
-            <div class="text-start mb-3 bg-light p-3 rounded-3 border">
-                <div class="fw-bold fs-5 text-dark mb-1">${p.name.toUpperCase()}</div>
-                <div class="d-flex justify-content-between small text-muted">
-                    <span>Precio x Kg/Unid: <strong class="text-success fs-6">$${utilFormatearMoneda(salePrice)}</strong></span>
-                    <span>Stock actual: <strong class="${p.stock > 0 ? 'text-primary' : 'text-danger'}">${p.stock} Kg</strong></span>
+            <style>
+                /* Contenedor Principal */
+                .vfr-popup-container {
+                    max-width: 400px !important;
+                    border-radius: 16px !important;
+                    background: #ffffff;
+                }
+
+                /* Eliminar botones numéricos nativos */
+                .vfr-numeric-input::-webkit-outer-spin-button,
+                .vfr-numeric-input::-webkit-inner-spin-button {
+                    -webkit-appearance: none;
+                    margin: 0;
+                }
+                .vfr-numeric-input { -moz-appearance: textfield; }
+
+                /* Header Integrado BaezPOS */
+                .vfr-header-banner {
+                    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+                    padding: 14px 16px;
+                }
+
+                /* Segmented Control Moderno */
+                .vfr-segmented-control {
+                    background: #f1f5f9;
+                    padding: 3px;
+                    border-radius: 10px;
+                    display: flex;
+                    gap: 4px;
+                    border: 1px solid #e2e8f0;
+                }
+                .vfr-segment-btn {
+                    flex: 1;
+                    border: none;
+                    background: transparent;
+                    padding: 8px 10px;
+                    font-size: 0.85rem;
+                    font-weight: 700;
+                    color: #64748b;
+                    border-radius: 7px;
+                    transition: all 0.2s ease;
+                    white-space: nowrap;
+                }
+                .vfr-segment-btn.active-peso {
+                    background: #0d6efd;
+                    color: #ffffff;
+                    box-shadow: 0 2px 4px rgba(13, 110, 253, 0.2);
+                }
+                .vfr-segment-btn.active-importe {
+                    background: #198754;
+                    color: #ffffff;
+                    box-shadow: 0 2px 4px rgba(25, 135, 84, 0.2);
+                }
+
+                /* Display de Balanza Limpio */
+                .vfr-display-box {
+                    background: #f8fafc;
+                    border: 2px solid #e2e8f0;
+                    border-radius: 12px;
+                    padding: 10px 14px;
+                    transition: all 0.2s ease;
+                }
+                .vfr-display-box.primary-active {
+                    border-color: #93c5fd;
+                    background: #eff6ff;
+                }
+                .vfr-display-box.success-active {
+                    border-color: #86efac;
+                    background: #f0fdf4;
+                }
+
+                .vfr-label-title {
+                    color: #64748b;
+                    font-size: 0.7rem;
+                    font-weight: 700;
+                    letter-spacing: 0.05em;
+                    text-transform: uppercase;
+                }
+                .vfr-value-primary {
+                    color: #0d6efd;
+                    font-size: 1.85rem;
+                    font-weight: 800;
+                    line-height: 1.1;
+                }
+                .vfr-value-success {
+                    color: #198754;
+                    font-size: 1.85rem;
+                    font-weight: 800;
+                    line-height: 1.1;
+                }
+
+                /* Optimización Móvil en Acciones */
+                @media (max-width: 576px) {
+                    .vfr-actions-wrapper {
+                        flex-direction: column-reverse;
+                    }
+                    .vfr-btn-confirm, .vfr-btn-cancel {
+                        width: 100% !important;
+                    }
+                }
+            </style>
+
+            <!-- Cabecera Integrada (Azul BaezPOS sin espacios en blanco) -->
+            <div class="vfr-header-banner text-white d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-scale fs-5"></i>
+                    <span class="fw-bold fs-6 mb-0">Venta Fraccionada</span>
                 </div>
+                <span class="badge bg-white text-primary fw-bold rounded-pill px-2 py-1" style="font-size: 0.7rem;">⚖️ GRANEL</span>
             </div>
 
-            <!-- Botones de Modo -->
-            <div class="btn-group w-100 mb-3" role="group">
-                <button type="button" id="btnModoPeso" class="btn btn-primary fw-bold" onclick="switchModoFraccionado('PESO')">
-                    ⚖️ Por Peso / Cantidad
-                </button>
-                <button type="button" id="btnModoImporte" class="btn btn-outline-primary fw-bold" onclick="switchModoFraccionado('IMPORTE')">
-                    💵 Por Importe $
-                </button>
-            </div>
+            <!-- Cuerpo del Modal -->
+            <div class="p-3 text-start">
 
-            <!-- Input Modo PESO (Escenario A) -->
-            <div id="seccionModoPeso" class="text-start">
-                <label class="form-label small fw-bold text-muted mb-1">Ingresar Peso / Cantidad (Kg):</label>
-                <div class="input-group input-group-lg mb-2">
-                    <input id="inputPesoCantidad" type="number" step="0.001" min="0.001" class="form-control fw-bold text-primary" placeholder="Ej: 0.250">
-                    <span class="input-group-text fw-bold">Kg</span>
+                <!-- Tarjeta del Producto -->
+                <div class="bg-light border rounded-3 p-2 mb-3">
+                    <div class="fw-bold text-dark fs-6 text-truncate mb-1">${p.name.toUpperCase()}</div>
+                    <div class="d-flex justify-content-between align-items-center pt-1 border-top" style="font-size: 0.8rem;">
+                        <span class="text-muted">Precio/Kg: <strong class="text-dark">$${utilFormatearMoneda(salePrice)}</strong></span>
+                        <span class="text-muted">Stock: <strong class="${p.stock > 0 ? 'text-success' : 'text-danger'}">${p.stock} Kg</strong></span>
+                    </div>
                 </div>
-                <div class="d-flex justify-content-between align-items-center bg-primary bg-opacity-10 p-2 rounded border border-primary border-opacity-25">
-                    <span class="small fw-bold text-primary">TOTAL A COBRAR:</span>
-                    <span id="displayTotalPeso" class="fs-4 fw-bold text-primary">$0.00</span>
-                </div>
-            </div>
 
-            <!-- Input Modo IMPORTE (Escenario B) -->
-            <div id="seccionModoImporte" class="text-start d-none">
-                <label class="form-label small fw-bold text-muted mb-1">Ingresar Importe Monetario ($):</label>
-                <div class="input-group input-group-lg mb-2">
-                    <span class="input-group-text fw-bold">$</span>
-                    <input id="inputImporteMoneda" type="number" step="1" min="1" class="form-control fw-bold text-success" placeholder="Ej: 2500">
+                <!-- Selector Modo (Por Peso / Por Importe) -->
+                <div class="vfr-segmented-control mb-3">
+                    <button type="button" id="btnModoPeso" class="vfr-segment-btn active-peso" onclick="switchModoFraccionado('PESO')">
+                        <i class="bi bi-scale me-1"></i> Por Peso (Kg)
+                    </button>
+                    <button type="button" id="btnModoImporte" class="vfr-segment-btn" onclick="switchModoFraccionado('IMPORTE')">
+                        <i class="bi bi-currency-dollar me-1"></i> Por Importe ($)
+                    </button>
                 </div>
-                <div class="d-flex justify-content-between align-items-center bg-success bg-opacity-10 p-2 rounded border border-success border-opacity-25">
-                    <span class="small fw-bold text-success">PESO EQUIVALENTE:</span>
-                    <span id="displayKilosImporte" class="fs-4 fw-bold text-success">0.000 Kg</span>
+
+                <!-- MODO A: INGRESO POR PESO -->
+                <div id="seccionModoPeso">
+                    <label class="form-label text-secondary fw-semibold mb-1" style="font-size: 0.775rem;">Cantidad a Pesar:</label>
+                    <div class="input-group input-group-lg mb-2">
+                        <input id="inputPesoCantidad" type="number" step="0.001" min="0.001" class="form-control fw-bold text-dark fs-4 vfr-numeric-input py-2" placeholder="0.000">
+                        <span class="input-group-text bg-light text-muted fw-bold fs-6">Kg</span>
+                    </div>
+
+                    <div class="vfr-display-box primary-active text-center">
+                        <div class="vfr-label-title mb-1">Total a cobrar</div>
+                        <div id="displayTotalPeso" class="vfr-value-primary">$0,00</div>
+                    </div>
                 </div>
+
+                <!-- MODO B: INGRESO POR IMPORTE -->
+                <div id="seccionModoImporte" class="d-none">
+                    <label class="form-label text-secondary fw-semibold mb-1" style="font-size: 0.775rem;">Monto a cobrar ($):</label>
+                    <div class="input-group input-group-lg mb-2">
+                        <span class="input-group-text bg-light text-muted fw-bold fs-5">$</span>
+                        <input id="inputImporteMoneda" type="number" step="1" min="1" class="form-control fw-bold text-dark fs-4 vfr-numeric-input py-2" placeholder="0">
+                    </div>
+
+                    <div class="vfr-display-box success-active text-center">
+                        <div class="vfr-label-title mb-1">Peso Equivalente</div>
+                        <div id="displayKilosImporte" class="vfr-value-success">0.000 Kg</div>
+                    </div>
+                </div>
+
             </div>
         `,
-        showCancelButton: true,
-        confirmButtonText: '<i class="bi bi-cart-plus me-1"></i> Agregar al Carrito',
-        cancelButtonText: 'Cancelar',
         didOpen: function handleModalFraccionadoOpen() {
             const inputPeso = document.getElementById('inputPesoCantidad');
             const inputImporte = document.getElementById('inputImporteMoneda');
             const displayTotal = document.getElementById('displayTotalPeso');
             const displayKilos = document.getElementById('displayKilosImporte');
 
+            const esMovil = window.innerWidth <= 991 || ('ontouchstart' in window);
+
             if (inputPeso) {
-                inputPeso.focus();
+                // Solo enfocar en escritorio para no abrir teclado en móviles
+                if (!esMovil) inputPeso.focus();
+
                 inputPeso.addEventListener('input', function handleInputModoPeso() {
                     const cantKg = parseFloat(inputPeso.value) || 0;
                     const totalCalculado = cantKg * salePrice;
@@ -759,17 +936,21 @@ function abrirModalCalculoFraccionado(p) {
                 const secImporte = document.getElementById('seccionModoImporte');
 
                 if (modo === 'PESO') {
-                    if (btnPeso) btnPeso.className = 'btn btn-primary fw-bold';
-                    if (btnImporte) btnImporte.className = 'btn btn-outline-primary fw-bold';
+                    if (btnPeso) btnPeso.className = 'vfr-segment-btn active-peso';
+                    if (btnImporte) btnImporte.className = 'vfr-segment-btn';
                     if (secPeso) secPeso.classList.remove('d-none');
                     if (secImporte) secImporte.classList.add('d-none');
-                    if (inputPeso) { inputPeso.focus(); inputPeso.select(); }
+                    if (inputPeso) {
+                        if (!esMovil) { inputPeso.focus(); inputPeso.select(); }
+                    }
                 } else {
-                    if (btnImporte) btnImporte.className = 'btn btn-success fw-bold';
-                    if (btnPeso) btnPeso.className = 'btn btn-outline-primary fw-bold';
+                    if (btnImporte) btnImporte.className = 'vfr-segment-btn active-importe';
+                    if (btnPeso) btnPeso.className = 'vfr-segment-btn';
                     if (secImporte) secImporte.classList.remove('d-none');
                     if (secPeso) secPeso.classList.add('d-none');
-                    if (inputImporte) { inputImporte.focus(); inputImporte.select(); }
+                    if (inputImporte) {
+                        if (!esMovil) { inputImporte.focus(); inputImporte.select(); }
+                    }
                 }
             };
         },
@@ -815,7 +996,8 @@ function abrirModalCalculoFraccionado(p) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'Stock Insuficiente',
-                    text: `El stock actual es ${p.stock} Kg. Ya tenías ${cantActualEnCarrito} Kg en el carrito.`
+                    text: `El stock actual es ${p.stock} Kg. Ya tenías ${cantActualEnCarrito} Kg en el carrito.`,
+                    confirmButtonColor: '#0d6efd'
                 });
                 return;
             }
@@ -839,8 +1021,8 @@ function abrirModalCalculoFraccionado(p) {
             const buscador = document.getElementById('buscadorVenta');
             if (buscador) {
                 buscador.value = '';
-                buscador.focus();
             }
+            enfocarBuscadorInteligente();
         }
     });
 }
@@ -881,8 +1063,8 @@ async function buscarYAgregar(query) {
     const buscador = document.getElementById('buscadorVenta');
     if (buscador) {
         buscador.value = '';
-        buscador.focus();
     }
+    enfocarBuscadorInteligente();
 }
 
 async function serviceConsultarOpenFoodFacts(codigoBarras) {
@@ -1092,7 +1274,8 @@ async function finalizarVenta() {
     } finally {
         if (btnFinalizar) btnFinalizar.disabled = false;
         const buscador = document.getElementById('buscadorVenta');
-        if (buscador) buscador.focus();
+        if (buscador) buscador.value = '';
+        enfocarBuscadorInteligente();
     }
 }
 
@@ -1193,7 +1376,7 @@ function generarPlantillaHTMLTicket(venta) {
             cuit: Number(cuitLimpio),
             ptoVta: 1,
             tipoCmp: tipoComprobante.includes('A') ? 1 : 11,
-            nroCmp: numeroComprobanteEntero, // <-- CORREGIDO: Toma el número de comprobante por empresa
+            nroCmp: numeroComprobanteEntero,
             importe: totalFinal,
             moneda: "ARS",
             ctz: 1,
@@ -1376,6 +1559,11 @@ function reimprimirUltimoTicket() {
 // ==========================================
 document.addEventListener('keydown', function handleCapturaFocoGlobal(e) {
     if (typeof sistemaBloqueado !== 'undefined' && sistemaBloqueado) return;
+
+    // Si es un dispositivo táctil o móvil, ignoramos el autofocus por teclado global
+    const esMovil = window.innerWidth <= 991 || ('ontouchstart' in window);
+    if (esMovil) return;
+
     const buscador = document.getElementById('buscadorVenta');
     const idActivo = document.activeElement ? document.activeElement.id : '';
     const inputsLibres = ['pagaCon', 'inputDescuento', 'buscarClientePos', 'manualNombreBusqueda', 'manualPrecio'];

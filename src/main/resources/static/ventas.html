@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BaezPOS - Ventas</title>
     <!-- Framework UI & Iconos -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -12,110 +12,144 @@
     <style>
         :root {
             --sidebar-width: 250px;
-            --primary-color: #1e3a8a;
+            --primary-dark: #1e3a8a;
             --primary-blue: #0d6efd;
+            --bg-canvas: #f8fafc;
+            --border-color: #e2e8f0;
         }
 
         body {
-            background-color: #f1f5f9;
+            background-color: var(--bg-canvas);
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* Layout Principal */
+        /* Layout Principal Desktop */
         #content {
             margin-left: var(--sidebar-width);
             min-height: 100vh;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             width: calc(100% - var(--sidebar-width));
         }
 
         /* Modos POS Desktop */
-        .card-pos { height: calc(100vh - 100px); border: none; border-radius: 15px; }
-        .total-display { font-size: 3.2rem; font-weight: 900; color: var(--primary-color); line-height: 1; }
-        .table-responsive-pos { height: calc(100vh - 220px); overflow-y: auto; }
-
-        /* Métodos de Pago UI */
-        .metodo-pago { cursor: pointer; border: 2px solid #e2e8f0; border-radius: 10px; transition: 0.2s; padding: 10px; text-align: center; }
-        .metodo-pago.active { border-color: var(--primary-blue); background: #eff6ff; color: var(--primary-blue); font-weight: bold; }
-        .metodo-pago i { font-size: 1.5rem; }
-
-        .sugerencias-box { z-index: 1050; display: none; max-height: 250px; overflow-y: auto; border-radius: 10px; }
-
-        /* Overlay para Menú Móvil - Z-INDEX ELEVADO PARA CUBRIR PANTALLA */
-        #sidebar-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1080;
-            display: none;
-            backdrop-filter: blur(2px);
+        .card-pos {
+            height: calc(100vh - 90px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            background: #ffffff;
         }
 
-        #sidebar-overlay.active {
+        .total-display {
+            font-size: 3rem;
+            font-weight: 900;
+            color: var(--primary-dark);
+            line-height: 1;
+            letter-spacing: -0.03em;
+        }
+
+        .table-responsive-pos {
+            height: calc(100vh - 210px);
+            overflow-y: auto;
+        }
+
+        /* Métodos de Pago UI Modernos */
+        .metodo-pago {
+            cursor: pointer;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            padding: 10px 6px;
+            text-align: center;
+            background: #ffffff;
+            user-select: none;
+        }
+        .metodo-pago:active {
+            transform: scale(0.97);
+        }
+        .metodo-pago.active {
+            border-color: var(--primary-blue);
+            background: #eff6ff;
+            color: var(--primary-blue);
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.12);
+        }
+        .metodo-pago i {
+            font-size: 1.4rem;
             display: block;
+            margin-bottom: 2px;
         }
 
-        /* ==========================================
-           AJUSTES RESPONSIVE PARA MÓVIL Y TABLET
-           ========================================== */
+        .sugerencias-box {
+            z-index: 1050;
+            display: none;
+            max-height: 280px;
+            overflow-y: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* =========================================================
+           OPTIMIZACIONES RESPONSIVAS (MÓVIL / TABLET)
+           ========================================================= */
         @media (max-width: 768px) {
             #content {
                 margin-left: 0 !important;
                 width: 100% !important;
+                padding-bottom: 80px; /* Espacio reservado para barra inferior fija */
             }
 
             .card-pos {
                 height: auto !important;
                 min-height: initial;
+                border-radius: 12px;
             }
 
             .table-responsive-pos {
                 height: auto;
-                max-height: 280px;
+                max-height: 380px;
             }
 
             .total-display {
-                font-size: 2.2rem;
+                font-size: 2.25rem;
             }
 
-            .metodo-pago {
-                padding: 8px 4px;
-            }
-            .metodo-pago i {
-                font-size: 1.2rem;
-            }
-            .metodo-pago small {
-                font-size: 0.7rem;
-            }
-
-            /* Corrección para tabla ajustada en móvil */
+            /* Touch Target en Tabla */
             .table-pos-mobile th,
             .table-pos-mobile td {
-                padding: 0.5rem 0.25rem;
-                font-size: 0.85rem;
+                padding: 0.75rem 0.35rem;
+                font-size: 0.9rem;
+            }
+
+            /* Sticky Bar para Móvil: Cobro instantáneo al alcance del pulgar */
+            .mobile-bottom-bar {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: #ffffff;
+                border-top: 1px solid var(--border-color);
+                padding: 10px 16px;
+                z-index: 1040;
+                box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
             }
         }
     </style>
 </head>
 <body>
 
-<!-- Backdrop u Overlay para cerrar Sidebar al tocar cualquier parte de la pantalla -->
-<div id="sidebar-overlay" onclick="toggleMobileSidebar()"></div>
-
-<!-- Sidebar Dinámico -->
+<!-- Contenedor del Sidebar Dinámico (inyectado por sidebar.js) -->
 <div id="sidebar-container"></div>
 
 <!-- Contenedor Principal -->
-<div id="content" onclick="cerrarSidebarAlTocarContenido(event)">
+<div id="content">
 
     <!-- Navbar Superior Responsivo -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom p-2 p-md-3 sticky-top">
+    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom p-2 p-md-3 sticky-top shadow-sm">
         <div class="container-fluid p-0">
-            <button type="button" id="sidebarCollapse" class="btn btn-outline-primary d-md-none me-2">
+            <!-- Botón de Menú con estilo Outline según diseño UI global -->
+            <button type="button" id="sidebarCollapse" class="btn btn-outline-primary d-md-none me-2 rounded-3">
                 <i class="bi bi-list fs-5"></i>
             </button>
 
@@ -126,14 +160,16 @@
             <div class="ms-auto d-flex align-items-center">
                 <div class="text-end me-2 me-md-3">
                     <div id="userName" class="fw-bold text-dark text-capitalize fs-6">Usuario</div>
-                    <small id="userRoleBadge" class="badge bg-secondary text-uppercase" style="font-size: 0.65rem;">Cargando...</small>
+                    <small id="userRoleBadge" class="badge bg-secondary-subtle text-secondary text-uppercase border" style="font-size: 0.65rem;">Cargando...</small>
                 </div>
-                <i class="bi bi-person-circle fs-3 text-primary"></i>
+                <div class="bg-primary bg-opacity-10 p-2 rounded-circle text-primary d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                    <i class="bi bi-person-fill fs-5"></i>
+                </div>
             </div>
         </div>
     </nav>
 
-    <!-- Alerta Global de Suscripción (Multi-tenant) -->
+    <!-- Alerta Global de Suscripción -->
     <div id="alertaSuscripcion" class="w-100"></div>
 
     <div class="container-fluid p-2 p-md-4">
@@ -141,29 +177,29 @@
 
             <!-- PANEL IZQUIERDO: BÚSQUEDA Y CARRITO -->
             <div class="col-12 col-lg-7 col-xl-8">
-                <div class="card card-pos shadow-sm p-3">
+                <div class="card card-pos p-3 p-md-4 shadow-sm">
 
                     <!-- Buscador Principal de Productos -->
                     <div class="mb-3 position-relative">
-                        <div class="input-group input-group-lg shadow-sm">
-                            <span class="input-group-text bg-white border-end-0 text-primary">
-                                <i class="bi bi-upc-scan"></i>
+                        <div class="input-group input-group-lg shadow-sm rounded-3 overflow-hidden">
+                            <span class="input-group-text bg-white border-end-0 text-primary pe-1">
+                                <i class="bi bi-upc-scan fs-5"></i>
                             </span>
-                            <input type="text" id="buscadorVenta" class="form-control border-start-0 fs-6 fs-md-5" placeholder="Escanea código o busca producto..." autofocus autocomplete="off">
+                            <input type="text" id="buscadorVenta" class="form-control border-start-0 fs-6 fs-md-5 py-2 py-md-3" placeholder="Escanea código o busca producto..." autocomplete="off" inputmode="search" enterkeyhint="search">
                         </div>
                         <div id="listaSugerencias" class="list-group position-absolute w-100 shadow-lg sugerencias-box"></div>
                     </div>
 
                     <!-- Tabla del Carrito de Ventas -->
-                    <div class="table-responsive table-responsive-pos">
+                    <div class="table-responsive table-responsive-pos border rounded-3">
                         <table class="table align-middle table-hover mb-0 table-pos-mobile">
-                            <thead class="text-muted small border-bottom sticky-top bg-white">
+                            <thead class="text-secondary small border-bottom sticky-top bg-light" style="font-size: 0.75rem;">
                             <tr>
-                                <th style="width: 40%;">PRODUCTO</th>
-                                <th class="text-center" style="width: 20%;">CANT.</th>
-                                <th class="text-end" style="width: 20%;">PRECIO</th>
-                                <th class="text-end" style="width: 20%;">SUBTOTAL</th>
-                                <th class="text-center"></th>
+                                <th style="width: 40%;" class="ps-3 py-2">PRODUCTO</th>
+                                <th class="text-center py-2" style="width: 20%;">CANT.</th>
+                                <th class="text-end py-2" style="width: 20%;">PRECIO</th>
+                                <th class="text-end py-2" style="width: 20%;">SUBTOTAL</th>
+                                <th class="text-center py-2 pe-3"></th>
                             </tr>
                             </thead>
                             <tbody id="carritoBody">
@@ -177,26 +213,28 @@
 
             <!-- PANEL DERECHO: TOTALES Y PROCESO DE COBRO -->
             <div class="col-12 col-lg-5 col-xl-4">
-                <div class="card card-pos shadow-sm p-3 p-md-4 d-flex flex-column justify-content-between">
+                <div class="card card-pos p-3 p-md-4 shadow-sm d-flex flex-column justify-content-between">
                     <div>
                         <!-- Encabezado de Total -->
-                        <div class="d-flex justify-content-between align-items-baseline mb-1">
-                            <h6 class="text-muted text-uppercase fw-bold small m-0">Total Final</h6>
-                            <button class="btn btn-sm btn-link text-danger p-0 text-decoration-none" onclick="cancelarVenta()">Vaciar Carrito</button>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-secondary text-uppercase fw-bold small">Total a Cobrar</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger border-0 fw-semibold" onclick="cancelarVenta()">
+                                <i class="bi bi-trash3 me-1"></i>Vaciar Carrito
+                            </button>
                         </div>
 
                         <!-- Visualizador del Monto -->
                         <div class="total-display mb-3 text-break" id="totalVenta">$0.00</div>
 
                         <!-- Sección de Descuentos -->
-                        <div class="bg-light p-2 rounded-3 border mb-3">
-                            <label class="small fw-bold text-muted text-uppercase mb-1 d-block" style="font-size: 0.7rem;">Aplicar Descuento</label>
-                            <div class="row g-1">
+                        <div class="bg-light p-2.5 p-md-3 rounded-3 border mb-3">
+                            <label class="small fw-bold text-secondary text-uppercase mb-1.5 d-block" style="font-size: 0.7rem;">Aplicar Descuento</label>
+                            <div class="row g-2">
                                 <div class="col-7">
-                                    <input type="number" inputmode="decimal" pattern="[0-9]*" id="inputDescuento" class="form-control form-control-sm fw-bold" placeholder="Monto o %" oninput="renderizarCarrito()">
+                                    <input type="number" inputmode="decimal" pattern="[0-9]*" id="inputDescuento" class="form-control form-control-sm fw-bold py-1.5" placeholder="Monto o %" oninput="renderizarCarrito()">
                                 </div>
                                 <div class="col-5">
-                                    <select id="tipoDescuento" class="form-select form-select-sm" onchange="renderizarCarrito()">
+                                    <select id="tipoDescuento" class="form-select form-select-sm fw-semibold py-1.5" onchange="renderizarCarrito()">
                                         <option value="PESOS">$ Pesos</option>
                                         <option value="PORCENTAJE">% Porc.</option>
                                     </select>
@@ -205,39 +243,39 @@
                         </div>
 
                         <!-- Selección de Método de Pago -->
-                        <label class="small fw-bold mb-2 text-muted text-uppercase">Método de Pago</label>
+                        <label class="small fw-bold mb-2 text-secondary text-uppercase" style="font-size: 0.7rem;">Método de Pago</label>
                         <div class="row g-2 mb-3">
                             <div class="col-4">
                                 <div id="btnEfectivo" class="metodo-pago active" onclick="setMetodo('EFECTIVO', this)">
-                                    <i class="bi bi-cash d-block"></i>
-                                    <small>Efectivo</small>
+                                    <i class="bi bi-cash-stack"></i>
+                                    <small class="d-block text-truncate" style="font-size: 0.75rem;">Efectivo</small>
                                 </div>
                             </div>
                             <div class="col-4">
                                 <div id="btnTransf" class="metodo-pago" onclick="setMetodo('TRANSFERENCIA', this)">
-                                    <i class="bi bi-phone d-block"></i>
-                                    <small>Transf/QR</small>
+                                    <i class="bi bi-qr-code-scan"></i>
+                                    <small class="d-block text-truncate" style="font-size: 0.75rem;">Transf/QR</small>
                                 </div>
                             </div>
                             <div class="col-4">
                                 <div id="btnFiado" class="metodo-pago" onclick="setMetodo('CUENTA_CORRIENTE', this)">
-                                    <i class="bi bi-journal-bookmark d-block"></i>
-                                    <small>Libreta</small>
+                                    <i class="bi bi-journal-bookmark-fill"></i>
+                                    <small class="d-block text-truncate" style="font-size: 0.75rem;">Libreta</small>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Selector Cliente Fiado (Oculto por defecto) -->
+                        <!-- Selector Cliente Fiado -->
                         <div id="seccionClienteFiado" class="mb-3 d-none">
-                            <div class="bg-warning bg-opacity-10 p-3 rounded-3 border border-warning shadow-sm">
-                                <label class="small fw-bold text-warning text-uppercase mb-2 text-center d-block">Seleccionar Cliente</label>
+                            <div class="bg-warning bg-opacity-10 p-3 rounded-3 border border-warning border-opacity-50 shadow-sm">
+                                <label class="small fw-bold text-dark text-uppercase mb-2 text-center d-block" style="font-size: 0.75rem;">Seleccionar Cliente</label>
                                 <div class="position-relative">
                                     <input type="text" id="buscarClientePos" class="form-control form-control-sm border-warning" placeholder="Nombre del cliente...">
                                     <div id="sugerenciasClientes" class="list-group position-absolute w-100 shadow-lg sugerencias-box"></div>
                                 </div>
                                 <div id="infoClienteSeleccionado" class="mt-2 d-none">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="badge bg-warning text-dark px-2 py-2" id="nombreClientePos"></span>
+                                    <div class="d-flex justify-content-between align-items-center bg-white p-2 rounded border">
+                                        <span class="badge bg-warning text-dark px-2 py-1" id="nombreClientePos"></span>
                                         <span class="small fw-bold">Debe: <span id="saldoClientePos" class="text-danger"></span></span>
                                     </div>
                                     <input type="hidden" id="idClienteSeleccionado">
@@ -248,25 +286,25 @@
                         <!-- Panel Vuelto / Calculadora rápida -->
                         <div id="seccionVuelto" class="bg-light p-3 rounded-3 border mb-3 shadow-sm">
                             <div class="mb-2">
-                                <label class="small fw-bold text-muted text-uppercase">Paga con:</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-white border-end-0 text-muted">$</span>
-                                    <input type="number" inputmode="decimal" pattern="[0-9]*" id="pagaCon" class="form-control form-control-lg fw-bold border-start-0" placeholder="0.00">
+                                <label class="small fw-bold text-secondary text-uppercase mb-1 d-block" style="font-size: 0.7rem;">Paga con:</label>
+                                <div class="input-group input-group-lg">
+                                    <span class="input-group-text bg-white border-end-0 text-muted fw-bold">$</span>
+                                    <input type="number" inputmode="decimal" pattern="[0-9]*" id="pagaCon" class="form-control fw-bold border-start-0 fs-4" placeholder="0.00">
                                 </div>
                             </div>
-                            <div class="d-flex justify-content-between align-items-center mt-3">
-                                <span class="fw-bold text-muted small">VUELTO:</span>
-                                <span class="h3 mb-0 fw-bold text-success" id="vueltoVenta">$0.00</span>
+                            <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                                <span class="fw-bold text-secondary small">VUELTO:</span>
+                                <span class="h3 mb-0 fw-extrabold text-success" id="vueltoVenta">$0.00</span>
                             </div>
-                            <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-3" onclick="reimprimirUltimoTicket()">
-                                <i class="bi bi-printer me-1"></i> Reimprimir Último Ticket
+                            <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-3 py-2 fw-semibold" onclick="reimprimirUltimoTicket()">
+                                <i class="bi bi-printer me-1.5"></i> Reimprimir Último Ticket
                             </button>
                         </div>
                     </div>
 
-                    <!-- Botón Acción Principal -->
-                    <div class="mt-2">
-                        <button id="btnFinalizarVenta" class="btn btn-primary btn-lg w-100 py-3 fw-bold shadow-sm" onclick="finalizarVenta()">
+                    <!-- Botón Acción Principal en Desktop/Tablet -->
+                    <div class="mt-2 d-none d-md-block">
+                        <button id="btnFinalizarVenta" class="btn btn-primary btn-lg w-100 py-3 fw-bold shadow-sm rounded-3" onclick="finalizarVenta()">
                             <i class="bi bi-check2-all me-2"></i>CONFIRMAR VENTA
                         </button>
                     </div>
@@ -276,31 +314,16 @@
 
         </div>
     </div>
+
+    <!-- STICKY ACTION BAR PARA CELULARES -->
+    <div class="mobile-bottom-bar d-md-none">
+        <button class="btn btn-primary btn-lg w-100 py-2.5 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2 rounded-3" onclick="finalizarVenta()">
+            <i class="bi bi-check2-all fs-4"></i>
+            <span>CONFIRMAR VENTA</span>
+        </button>
+    </div>
+
 </div>
-
-<!-- Scripts de Control de Interacción Móvil -->
-<script>
-    function toggleMobileSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebar-overlay');
-
-        if (sidebar) {
-            sidebar.classList.toggle('active');
-            if (overlay) overlay.classList.toggle('active');
-        }
-    }
-
-    function cerrarSidebarAlTocarContenido(e) {
-        // Cierra el sidebar si se toca la zona del contenido principal en móviles
-        if (window.innerWidth <= 768) {
-            const sidebar = document.getElementById('sidebar');
-            const btnToggle = document.getElementById('sidebarCollapse');
-            if (sidebar && sidebar.classList.contains('active') && !e.target.closest('#sidebarCollapse')) {
-                toggleMobileSidebar();
-            }
-        }
-    }
-</script>
 
 <!-- Scripts Principales -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

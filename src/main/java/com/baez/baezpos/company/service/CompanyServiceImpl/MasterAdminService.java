@@ -6,12 +6,12 @@ import com.baez.baezpos.company.entity.Company;
 import com.baez.baezpos.company.repository.CompanyRepository;
 import com.baez.baezpos.company.service.CompanyService.MasterAdmin;
 import com.baez.baezpos.mail.service.EmailService;
-import com.baez.baezpos.user.entity.User;
 import com.baez.baezpos.user.entity.Role;
+import com.baez.baezpos.user.entity.User;
 import com.baez.baezpos.user.entity.VerificationToken;
 import com.baez.baezpos.user.repository.UserRepository;
-import com.baez.baezpos.shared.exception.ResourceNotFoundException;
 import com.baez.baezpos.user.repository.VerificationTokenRepository;
+import com.baez.baezpos.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -40,41 +40,43 @@ public class MasterAdminService implements MasterAdmin {
     @Override
     @Transactional
     public void registerFullBusiness(MasterRegistrationRequest req) {
-        if (req.getTaxId() != null && !req.getTaxId().isBlank() && companyRepository.existsByTaxId(req.getTaxId())) {
-            throw new IllegalArgumentException("El CUIT/TaxID ya existe en el sistema.");
+        String cleanEmail = req.getOwnerEmail().trim().toLowerCase();
+
+        if (req.getTaxId() != null && !req.getTaxId().isBlank() && companyRepository.existsByTaxId(req.getTaxId().trim())) {
+            throw new IllegalArgumentException("El CUIT/TaxID '" + req.getTaxId() + "' ya se encuentra registrado.");
         }
-        if (req.getOwnerEmail() != null && userRepository.existsByEmail(req.getOwnerEmail())) {
-            throw new IllegalArgumentException("El correo del dueño ya está registrado.");
+        if (userRepository.existsByEmail(cleanEmail)) {
+            throw new IllegalArgumentException("El correo '" + cleanEmail + "' ya pertenece a un usuario en el sistema.");
         }
 
-        // 1. Crear empresa deshabilitada hasta confirmar email
+        // 1. Crear la empresa
         Company company = Company.builder()
-                .name(req.getCompanyName())
-                .taxId(req.getTaxId())
+                .name(req.getCompanyName().trim())
+                .taxId(req.getTaxId() != null ? req.getTaxId().trim() : null)
                 .address(req.getAddress())
                 .phone(req.getPhone())
-                .email(req.getOwnerEmail())
+                .email(cleanEmail)
                 .monthlyFee(req.getMonthlyFee())
                 .expirationDate(req.getExpirationDate() != null ? req.getExpirationDate() : LocalDate.now().plusDays(15))
-                .active(false) // <--- INACTIVA POR DEFECTO
+                .active(false) // Deshabilitada hasta verificación
                 .ticketMessage(req.getTicketMessage())
                 .build();
 
         Company savedCompany = companyRepository.save(company);
 
-        // 2. Crear usuario Admin inactivo
+        // 2. Crear usuario Admin (Dueño)
         User owner = User.builder()
-                .name(req.getOwnerName() != null ? req.getOwnerName() : req.getCompanyName())
-                .email(req.getOwnerEmail())
+                .name(req.getOwnerName() != null && !req.getOwnerName().isBlank() ? req.getOwnerName().trim() : req.getCompanyName().trim())
+                .email(cleanEmail)
                 .password(passwordEncoder.encode(req.getOwnerPassword()))
                 .role(Role.ADMIN)
                 .company(savedCompany)
-                .active(false) // <--- INACTIVO POR DEFECTO
+                .active(false) // Inactivo por seguridad
                 .build();
 
         User savedOwner = userRepository.save(owner);
 
-        // 3. Generar token de verificación (Válido por 24 Horas)
+        // 3. Generar token de verificación (Válido por 24 horas)
         String tokenStr = UUID.randomUUID().toString();
         VerificationToken verificationToken = VerificationToken.builder()
                 .token(tokenStr)
@@ -84,18 +86,18 @@ public class MasterAdminService implements MasterAdmin {
 
         tokenRepository.save(verificationToken);
 
-        // 4. Enviar email de verificación obligatoria
+        // 4. Envío asíncrono/seguro de correo (no revierte la DB si el servidor SMTP falla)
         try {
             String linkActivacion = "https://baezpos.com/api/v1/auth/verify?token=" + tokenStr;
             emailService.enviarMailBienvenida(
                     savedOwner.getEmail(),
                     savedCompany.getName(),
                     savedOwner.getName(),
-                    "Por favor confirme su cuenta ingresando al siguiente enlace: " + linkActivacion
+                    "Enlace de activación: " + linkActivacion
             );
         } catch (Exception e) {
-            log.error("Fallo crítico al enviar correo de activación a {}: {}", savedOwner.getEmail(), e.getMessage());
-            throw new RuntimeException("No se pudo enviar el correo de verificación. Verifique la dirección de email ingresada.");
+            log.error("ADVERTENCIA: La empresa ID {} se creó correctamente, pero falló el envío del correo a {}: {}",
+                    savedCompany.getId(), savedOwner.getEmail(), e.getMessage());
         }
     }
 
@@ -105,25 +107,24 @@ public class MasterAdminService implements MasterAdmin {
         Company company = companyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
 
-        if (dto.getTaxId() != null && !dto.getTaxId().equals(company.getTaxId())) {
-            if (companyRepository.existsByTaxId(dto.getTaxId())) {
-                throw new IllegalArgumentException("El CUIT/TaxID ya está registrado en otra empresa.");
+        if (dto.getTaxId() != null && !dto.getTaxId().trim().equals(company.getTaxId())) {
+            if (companyRepository.existsByTaxId(dto.getTaxId().trim())) {
+                throw new IllegalArgumentException("El CUIT/TaxID ya está asignado a otra empresa.");
             }
-            company.setTaxId(dto.getTaxId());
+            company.setTaxId(dto.getTaxId().trim());
         }
 
         company.setName(dto.getName());
         company.setAddress(dto.getAddress());
         company.setPhone(dto.getPhone());
-        company.setEmail(dto.getEmail());
+        company.setEmail(dto.getEmail() != null ? dto.getEmail().trim().toLowerCase() : null);
         company.setMonthlyFee(dto.getMonthlyFee());
         company.setExpirationDate(dto.getExpirationDate());
         company.setActive(dto.getActive());
         company.setTicketMessage(dto.getTicketMessage());
 
-        // Si se envió una nueva clave desde el modal de edición, actualizar el password del Admin
         if (dto.getOwnerPassword() != null && !dto.getOwnerPassword().trim().isEmpty()) {
-            resetOwnerPassword(id, dto.getOwnerPassword());
+            resetOwnerPassword(id, dto.getOwnerPassword().trim());
         }
 
         companyRepository.save(company);
@@ -143,7 +144,7 @@ public class MasterAdminService implements MasterAdmin {
     public Map<String, Object> getMasterDashboardStats() {
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalCompanies", companyRepository.count());
-        stats.put("activeCompanies", companyRepository.countByActiveTrue()); // Consulta directa optimizada
+        stats.put("activeCompanies", companyRepository.countByActiveTrue());
         return stats;
     }
 
@@ -183,7 +184,7 @@ public class MasterAdminService implements MasterAdmin {
                     newRawPassword
             );
         } catch (Exception e) {
-            log.error("Error al enviar email de reset de password a {}: {}", owner.getEmail(), e.getMessage());
+            log.error("Error al enviar email de restablecimiento de contraseña a {}: {}", owner.getEmail(), e.getMessage());
         }
     }
 
