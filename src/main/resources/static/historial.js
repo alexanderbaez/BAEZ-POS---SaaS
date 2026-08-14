@@ -229,25 +229,55 @@ async function confirmarAnulacion(id) {
 }
 
 // ==========================================
-// HELPER GLOBAL DE FORMATEO DE CANTIDAD
+// HELPER GLOBAL DE FORMATEO DE CANTIDAD (ESTÁNDAR TICKET/HISTORIAL)
 // ==========================================
 function fmtCantidadGlobal(item) {
-    const qty = parseFloat(item.quantity || item.cantidad || 1);
+    if (!item) return '1 un.';
 
-    // Detección basada en banderas de dominio o precisión flotante
+    const qty = parseFloat(item.quantity || item.cantidad || item.weight || item.peso || 1);
+    const nombreProd = (item.productName || item.nombre || '').toUpperCase();
+
+    // Palabras clave para detectar productos de balanza/peso por su nombre
+    const palabrasPesables = ['PAN', 'QUESO', 'CARNE', 'POLLO', 'ASADO', 'FIAMBRE', 'PALETA', 'JAMON', 'MILANESA', 'FRUTA', 'VERDURA', 'VERDURAS', 'FRUTAS', 'KG', 'KILO'];
+    const coincideNombre = palabrasPesables.some(function verificarPalabraPesable(p) {
+        return nombreProd.includes(p);
+    });
+
+    // Detectar unidad en los metadatos del objeto
+    const rawUnit = (
+        item.unitOfMeasure ||
+        item.unitType ||
+        item.unidadMedida ||
+        item.saleType ||
+        item.unit ||
+        item.unidad ||
+        ''
+    ).toString().toUpperCase().trim();
+
     const esFraccionado = Boolean(
         item.isFractional ||
-        ['KG', 'GRAM', 'KILO'].includes((item.unitOfMeasure || item.unitType || '').toUpperCase()) ||
+        item.esFraccionado ||
+        ['KG', 'GRAM', 'KILO', 'GRAMO', 'G', 'GR'].includes(rawUnit) ||
+        coincideNombre ||
         (qty % 1 !== 0)
     );
 
     if (esFraccionado) {
+        // Manejo de Gramos (< 1 KG)
         if (qty < 1 && qty > 0) {
-            return `${Math.round(qty * 1000)} gr`;
+            const gramos = Math.round(qty * 1000);
+            return `${gramos} g`;
         }
-        return `${qty.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} Kg`;
+
+        // Manejo de Kilogramos
+        const qtyFormatted = qty.toLocaleString('es-AR', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 3
+        });
+        return `${qtyFormatted} Kg`;
     }
 
+    // Default: Unidades
     return `${qty} un.`;
 }
 
