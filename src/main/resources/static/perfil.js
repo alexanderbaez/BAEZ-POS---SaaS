@@ -107,15 +107,13 @@ function procesarVencimiento(fechaStr) {
 
     if (!badge) return;
 
-    badge.className = "badge rounded-pill p-2 px-4 shadow-sm ";
-
     if (difDias <= 0) {
-        badge.classList.add("bg-danger");
+        badge.className = "badge rounded-pill px-3 py-2 bg-danger-subtle text-danger border border-danger-subtle fw-bold";
         badge.innerText = "SERVICIO VENCIDO";
         if (alerta) alerta.classList.remove('d-none');
         if (mensajeDias) mensajeDias.innerHTML = `<strong>Tu servicio ha vencido.</strong> Contactá al soporte para renovar tu acceso hoy mismo.`;
     } else if (difDias <= 7) {
-        badge.classList.add("bg-warning", "text-dark");
+        badge.className = "badge rounded-pill px-3 py-2 bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-bold";
         badge.innerText = "VENCE PRONTO";
         if (alerta) {
             alerta.classList.remove('d-none');
@@ -123,7 +121,7 @@ function procesarVencimiento(fechaStr) {
         }
         if (mensajeDias) mensajeDias.innerText = `Tu abono mensual vence en ${difDias} días. ¡No te quedes sin sistema!`;
     } else {
-        badge.classList.add("bg-success");
+        badge.className = "badge rounded-pill px-3 py-2 bg-success-subtle text-success border border-success-subtle fw-bold";
         badge.innerText = "SERVICIO ACTIVO";
         if (alerta) alerta.classList.add('d-none');
     }

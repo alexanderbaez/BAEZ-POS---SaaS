@@ -203,6 +203,8 @@ public class CustomerServiceImpl implements CustomerService {
 
         String validMethod = (method != null && !method.isBlank()) ? method.toUpperCase() : "EFECTIVO";
 
+        // Al registrar el movimiento CREDITO con su paymentMethod y timestamp,
+        // CashRegisterServiceImpl lo sumará automáticamente en sumPaymentsByMethodAndCompanyId
         this.updateBalance(
                 id,
                 amount,

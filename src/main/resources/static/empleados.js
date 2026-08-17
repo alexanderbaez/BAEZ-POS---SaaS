@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
             title: 'Acceso Denegado',
             text: 'Solo los administradores pueden gestionar empleados.',
             icon: 'error',
-            confirmButtonColor: '#3b82f6'
+            confirmButtonColor: '#0d6efd'
         }).then(() => {
             window.location.href = 'dashboard.html';
         });
@@ -48,43 +48,60 @@ async function cargarEmpleados() {
         tbody.innerHTML = '';
 
         if (!Array.isArray(usuarios)) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-warning">Respuesta no válida del servidor.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-warning fw-semibold">Respuesta no válida del servidor.</td></tr>';
             return;
         }
 
-        // Filtrar preventivamente cualquier registro que haya venido inactivo por la API
+        // Filtrar registros inactivos
         const usuariosActivos = usuarios.filter(user => user && (user.active === true || user.active === undefined));
 
         if (usuariosActivos.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-muted">No hay empleados activos registrados.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-muted fw-semibold">No hay empleados activos registrados.</td></tr>';
             return;
         }
 
         usuariosActivos.forEach(user => {
-            let badgeClass = 'bg-light text-dark';
-            const rol = (user.role || '').toUpperCase();
-            if (rol === 'ADMIN' || rol.includes('SUPER')) badgeClass = 'bg-danger text-white';
-            else if (rol === 'VENDEDOR') badgeClass = 'bg-primary text-white';
-            else if (rol === 'CAJERO') badgeClass = 'bg-success text-white';
+            const rol = (user.role || 'VENDEDOR').toUpperCase();
+
+            // Mapeo de badges alineado exactamente con la Enum de Java
+            let badgeClass = 'vendedor';
+            if (rol === 'ADMIN' || rol.includes('SUPER')) {
+                badgeClass = 'admin';
+            }
 
             const userJsonSeguro = JSON.stringify(user).replace(/"/g, '&quot;');
             const nombreSeguro = (user.name || 'Sin Nombre').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            const inicial = (user.name || 'U').charAt(0).toUpperCase();
 
             tbody.innerHTML += `
                 <tr id="empleado-row-${user.id}">
-                    <td class="ps-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center fw-bold text-white shadow-sm" style="width: 38px; height: 38px;">
-                                ${(user.name || 'U').charAt(0).toUpperCase()}
+                    <td>
+                        <div class="mobile-card-top">
+                            <div class="avatar-circle flex-shrink-0">${inicial}</div>
+                            <div class="user-text-container">
+                                <div class="fw-bold text-dark text-truncate">${user.name || 'Sin Nombre'}</div>
+                                <small class="text-muted d-md-none text-truncate d-block">${user.email || '-'}</small>
                             </div>
-                            <span class="fw-bold text-dark">${user.name || 'Sin Nombre'}</span>
                         </div>
                     </td>
-                    <td class="text-secondary align-middle">${user.email || '-'}</td>
-                    <td class="align-middle"><span class="badge ${badgeClass} rounded-pill px-3 py-1">${user.role}</span></td>
-                    <td class="text-end align-middle pe-3">
-                        <button class="btn btn-sm btn-outline-secondary rounded-circle me-1" onclick='abrirEdicion(${userJsonSeguro})' title="Editar"><i class="bi bi-pencil"></i></button>
-                        <button class="btn btn-sm btn-outline-danger rounded-circle" onclick="eliminarEmpleado(${user.id}, '${nombreSeguro}', '${user.role}')" title="Desactivar"><i class="bi bi-trash"></i></button>
+                    <td class="d-none d-md-table-cell text-muted fw-semibold align-middle">
+                        ${user.email || '-'}
+                    </td>
+                    <td class="align-middle">
+                        <div class="mobile-card-middle">
+                            <span class="text-muted small d-md-none fw-bold">ROL</span>
+                            <span class="role-badge ${badgeClass}">${rol}</span>
+                        </div>
+                    </td>
+                    <td class="align-middle text-end">
+                        <div class="mobile-card-bottom">
+                            <button class="btn-icon" onclick='abrirEdicion(${userJsonSeguro})' title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn-icon delete" onclick="eliminarEmpleado(${user.id}, '${nombreSeguro}', '${user.role}')" title="Desactivar">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -116,7 +133,7 @@ if (formEmpleado) {
         if (password) {
             payload.password = password;
         } else if (!isEditing) {
-            Swal.fire('Error', 'La contraseña es obligatoria para un usuario nuevo.', 'warning');
+            Swal.fire('Atención', 'La contraseña es obligatoria para registrar un nuevo usuario.', 'warning');
             return;
         }
 
@@ -157,7 +174,7 @@ if (formEmpleado) {
                 Swal.fire({
                     title: 'Atención',
                     text: errorMessage.toLowerCase().includes('ya existe') || errorMessage.toLowerCase().includes('duplicate')
-                        ? `El correo ${payload.email} ya está registrado en el sistema. Utiliza otro email.`
+                        ? `El correo ${payload.email} ya está registrado en el sistema.`
                         : errorMessage,
                     icon: 'warning',
                     confirmButtonColor: '#0d6efd'
@@ -210,11 +227,11 @@ async function eliminarEmpleado(id, name, rol) {
 
     const { isConfirmed } = await Swal.fire({
         title: `¿Desactivar a ${name}?`,
-        html: "El empleado perderá el acceso al sistema y no aparecerá en la lista de vendedores activos.",
+        html: "El empleado perderá el acceso al sistema y no aparecerá en la lista de usuarios activos.",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#ef4444',
-        cancelButtonColor: '#6b7280',
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar'
     });
@@ -223,7 +240,6 @@ async function eliminarEmpleado(id, name, rol) {
         try {
             const res = await apiFetch(`/users/${id}`, { method: 'DELETE' });
             if (res && res.ok) {
-                // Remueve inmediatamente la fila del DOM
                 const fila = document.getElementById(`empleado-row-${id}`);
                 if (fila) fila.remove();
 

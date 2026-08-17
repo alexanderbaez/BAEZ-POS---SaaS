@@ -13,11 +13,15 @@ import com.baez.baezpos.log.service.AuditService;
 import com.baez.baezpos.product.entity.Product;
 import com.baez.baezpos.product.repository.ProductRepository;
 import com.baez.baezpos.sale.dto.*;
+import com.baez.baezpos.sale.entity.CashRegisterSession;
+import com.baez.baezpos.sale.entity.CashSessionStatus;
 import com.baez.baezpos.sale.entity.Sale;
 import com.baez.baezpos.sale.entity.SaleItem;
+import com.baez.baezpos.sale.repository.CashRegisterSessionRepository;
 import com.baez.baezpos.sale.repository.SaleRepository;
-import com.baez.baezpos.sale.service.SaleService;
+import com.baez.baezpos.sale.service.SaleService.SaleService;
 import com.baez.baezpos.security.util.SecurityUtils;
+import com.baez.baezpos.shared.entity.PaymentMethod;
 import com.baez.baezpos.shared.exception.BadRequestException;
 import com.baez.baezpos.shared.exception.ResourceNotFoundException;
 import com.baez.baezpos.user.entity.User;
@@ -31,7 +35,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -51,6 +54,7 @@ public class SaleServiceImpl implements SaleService {
     private final CompanyRepository companyRepository;
     private final ExpenseRepository expenseRepository;
     private final AuditService auditService;
+    private final CashRegisterSessionRepository cashRegisterSessionRepository;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -61,7 +65,10 @@ public class SaleServiceImpl implements SaleService {
             throw new BadRequestException("La venta debe contener al menos un producto.");
         }
 
-        // 1. Obtención eficiente del usuario emisor
+        CashRegisterSession activeSession = cashRegisterSessionRepository
+                .findFirstByCompanyIdAndStatusOrderByIdDesc(companyId, CashSessionStatus.OPEN)
+                .orElseThrow(() -> new BadRequestException("No hay una caja abierta. Debe abrir la caja antes de registrar ventas."));
+
         User user;
         if (userId != null) {
             user = userRepository.getReferenceById(userId);
@@ -74,7 +81,6 @@ public class SaleServiceImpl implements SaleService {
                     .orElseThrow(() -> new ResourceNotFoundException("Usuario emisor no encontrado: " + currentEmail));
         }
 
-        // 2. Obtención de la empresa
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa asociada no encontrada"));
 
@@ -82,22 +88,22 @@ public class SaleServiceImpl implements SaleService {
         BigDecimal porcentajeRecargo = saleDTO.surchargeRate() != null ? saleDTO.surchargeRate() : BigDecimal.ZERO;
         BigDecimal descuento = saleDTO.discount() != null ? saleDTO.discount() : BigDecimal.ZERO;
 
-        // 3. Asignación del número de comprobante (Hibernate sincroniza al commit por Dirty Checking)
         Long siguienteNumeroTicket = (company.getLastTicketNumber() != null ? company.getLastTicketNumber() : 0L) + 1L;
         company.setLastTicketNumber(siguienteNumeroTicket);
 
         String nroComprobanteFormateado = String.format("00001-%08d", siguienteNumeroTicket);
+        String paymentMethodClean = normalizePaymentMethod(saleDTO.paymentMethod());
 
-        // 4. Mapeo de entidad Venta
         Sale sale = Sale.builder()
                 .user(user)
                 .company(company)
+                .cashRegisterSession(activeSession)
                 .saleDate(LocalDateTime.now())
                 .items(new ArrayList<>())
                 .discount(descuento)
                 .surcharge(recargo)
                 .surchargeRate(porcentajeRecargo)
-                .paymentMethod(saleDTO.paymentMethod().toUpperCase())
+                .paymentMethod(paymentMethodClean)
                 .canceled(false)
                 .total(BigDecimal.ZERO)
                 .nroComprobante(nroComprobanteFormateado)
@@ -106,7 +112,6 @@ public class SaleServiceImpl implements SaleService {
                 .caeVto(Boolean.TRUE.equals(saleDTO.isFiscal()) ? LocalDate.now().plusDays(10).toString() : null)
                 .build();
 
-        // 5. Carga BATCH de productos en 1 sola consulta SQL
         List<Long> productIds = saleDTO.items().stream().map(SaleItemRequestDTO::productId).toList();
         List<Product> products = productRepository.findAllById(productIds);
 
@@ -115,7 +120,6 @@ public class SaleServiceImpl implements SaleService {
 
         BigDecimal subtotalAcumulado = BigDecimal.ZERO;
 
-        // 6. Validaciones y armado de ítems en memoria
         for (SaleItemRequestDTO itemDTO : saleDTO.items()) {
             Product product = productMap.get(itemDTO.productId());
             if (product == null || !product.getCompany().getId().equals(companyId)) {
@@ -143,13 +147,11 @@ public class SaleServiceImpl implements SaleService {
             subtotalAcumulado = subtotalAcumulado.add(subtotalItem);
         }
 
-        // 7. Cálculo final de total y persistencia
         BigDecimal totalFinal = subtotalAcumulado.add(recargo).subtract(descuento);
         sale.setTotal(totalFinal.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : totalFinal);
 
         Sale savedSale = saleRepository.save(sale);
 
-        // 8. Registro de movimientos de stock
         for (SaleItem item : savedSale.getItems()) {
             inventoryService.registerMovement(
                     item.getProduct().getId(),
@@ -159,12 +161,10 @@ public class SaleServiceImpl implements SaleService {
             );
         }
 
-        // 9. Manejo de Cuenta Corriente
-        if ("CUENTA_CORRIENTE".equalsIgnoreCase(saleDTO.paymentMethod())) {
+        if ("CUENTA_CORRIENTE".equals(paymentMethodClean)) {
             handleCreditSale(saleDTO.customerId(), savedSale, companyId);
         }
 
-        // 10. Auditoría desacoplada (no bloqueante)
         try {
             auditService.logAction(
                     "VENTA_REGISTRADA",
@@ -231,78 +231,168 @@ public class SaleServiceImpl implements SaleService {
     public BoxReportDTO getBoxReport(String period, LocalDate from, LocalDate to) {
         Long companyId = requireCompanyContext();
 
-        LocalDateTime startToday = LocalDate.now().atStartOfDay();
-        LocalDateTime endToday = LocalDate.now().atTime(LocalTime.MAX);
+        LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
+        LocalDateTime endOfToday = LocalDate.now().atTime(LocalTime.MAX);
 
-        LocalDateTime startRange = (from != null) ? from.atStartOfDay() : LocalDate.now().withDayOfMonth(1).atStartOfDay();
-        LocalDateTime endRange = (to != null) ? to.atTime(LocalTime.MAX) : LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()).atTime(LocalTime.MAX);
+        // 1. OBTENER CAJAS DE LA JORNADA COMERCIAL (Incluye abiertas de trasnoche pasadas las 00:00 hs)
+        List<CashRegisterSession> todaySessionsEntities = cashRegisterSessionRepository
+                .findCommercialDaySessions(companyId, startOfToday, endOfToday);
 
-        List<Sale> rangeSales = saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, startRange, endRange);
+        List<CashSessionResponseDTO> todaySessions = new ArrayList<>();
 
-        BigDecimal periodSales = BigDecimal.ZERO;
-        BigDecimal periodReplacementCost = BigDecimal.ZERO;
-        long periodOperations = 0;
+        BigDecimal activeInitialAmount = BigDecimal.ZERO;
+        BigDecimal activeCashSales = BigDecimal.ZERO;
+        BigDecimal activeCustomerPayments = BigDecimal.ZERO;
+        BigDecimal activeExpenses = BigDecimal.ZERO;
+        BigDecimal activeRealBalance = BigDecimal.ZERO;
 
-        BigDecimal totalSalesToday = BigDecimal.ZERO;
-        BigDecimal cashSalesToday = BigDecimal.ZERO;
-        BigDecimal transferSalesToday = BigDecimal.ZERO;
-        BigDecimal creditSalesToday = BigDecimal.ZERO;
+        for (CashRegisterSession session : todaySessionsEntities) {
+            CashSessionResponseDTO sessionDTO = mapToSessionResponseDTO(session);
+            todaySessions.add(sessionDTO);
 
-        for (Sale s : rangeSales) {
-            if (Boolean.TRUE.equals(s.getCanceled())) continue;
+            if (session.getStatus() == CashSessionStatus.OPEN || activeRealBalance.equals(BigDecimal.ZERO)) {
+                activeInitialAmount = sessionDTO.initialAmount();
+                activeCashSales = sessionDTO.totalCashSales();
+                activeCustomerPayments = sessionDTO.totalCustomerPayments();
+                activeExpenses = sessionDTO.totalExpenses();
 
-            periodSales = periodSales.add(s.getTotal());
-            periodOperations++;
-
-            for (SaleItem item : s.getItems()) {
-                BigDecimal costUnit = item.getCost() != null ? item.getCost() : BigDecimal.ZERO;
-                periodReplacementCost = periodReplacementCost.add(costUnit.multiply(item.getQuantity()));
-            }
-
-            if (!s.getSaleDate().isBefore(startToday) && !s.getSaleDate().isAfter(endToday)) {
-                totalSalesToday = totalSalesToday.add(s.getTotal());
-
-                if ("EFECTIVO".equalsIgnoreCase(s.getPaymentMethod())) {
-                    cashSalesToday = cashSalesToday.add(s.getTotal());
-                } else if ("TRANSFERENCIA".equalsIgnoreCase(s.getPaymentMethod())) {
-                    transferSalesToday = transferSalesToday.add(s.getTotal());
-                } else if ("CUENTA_CORRIENTE".equalsIgnoreCase(s.getPaymentMethod())) {
-                    creditSalesToday = creditSalesToday.add(s.getTotal());
-                }
+                activeRealBalance = activeInitialAmount
+                        .add(activeCashSales)
+                        .add(activeCustomerPayments)
+                        .subtract(activeExpenses);
             }
         }
 
-        BigDecimal cobrosEfe = customerMovementRepository.sumPaymentsByMethodAndCompanyId("EFECTIVO", companyId, startToday, endToday);
-        BigDecimal cobrosTra = customerMovementRepository.sumPaymentsByMethodAndCompanyId("TRANSFERENCIA", companyId, startToday, endToday);
+        // 2. CAPA COMERCIAL CONSOLIDADA
+        List<Sale> todaySales = saleRepository.findActiveSalesByCompanyAndDateRange(companyId, startOfToday, endOfToday);
+        BigDecimal totalSalesToday = BigDecimal.ZERO;
+        BigDecimal transferSalesToday = BigDecimal.ZERO;
+        BigDecimal creditSalesToday = BigDecimal.ZERO;
 
-        cobrosEfe = (cobrosEfe != null) ? cobrosEfe : BigDecimal.ZERO;
-        cobrosTra = (cobrosTra != null) ? cobrosTra : BigDecimal.ZERO;
-        BigDecimal customerPaymentsToday = cobrosEfe.add(cobrosTra);
+        for (Sale s : todaySales) {
+            if (Boolean.TRUE.equals(s.getCanceled())) continue;
+            totalSalesToday = totalSalesToday.add(s.getTotal());
+            String method = normalizePaymentMethod(s.getPaymentMethod());
 
-        BigDecimal expensesToday = expenseRepository.sumDeductibleExpensesByCompanyIdAndDate(companyId, startToday, endToday);
-        if (expensesToday == null) expensesToday = BigDecimal.ZERO;
+            if ("TRANSFERENCIA".equals(method)) {
+                transferSalesToday = transferSalesToday.add(s.getTotal());
+            } else if ("CUENTA_CORRIENTE".equals(method)) {
+                creditSalesToday = creditSalesToday.add(s.getTotal());
+            }
+        }
 
-        BigDecimal realBalance = cashSalesToday.add(transferSalesToday).add(customerPaymentsToday).subtract(expensesToday);
+        BigDecimal cobrosTraToday = customerMovementRepository.sumPaymentsByMethodAndCompanyId("TRANSFERENCIA", companyId, startOfToday, endOfToday);
+        if (cobrosTraToday != null) transferSalesToday = transferSalesToday.add(cobrosTraToday);
+
+        BigDecimal transferExpensesToday = expenseRepository.sumDeductibleExpensesByPaymentMethod(companyId, PaymentMethod.TRANSFERENCIA, startOfToday, endOfToday);
+        if (transferExpensesToday == null) transferExpensesToday = BigDecimal.ZERO;
 
         BigDecimal totalPendingCredit = customerRepository.sumAllBalancesByCompanyId(companyId);
         if (totalPendingCredit == null) totalPendingCredit = BigDecimal.ZERO;
 
+        // 3. CAPA HISTÓRICA / RANGOS
+        LocalDateTime startRange = (from != null) ? from.atStartOfDay() : LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        LocalDateTime endRange = (to != null) ? to.atTime(LocalTime.MAX) : LocalDate.now().atTime(LocalTime.MAX);
+
+        List<Sale> rangeSales = saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, startRange, endRange);
+        BigDecimal periodSales = BigDecimal.ZERO;
+        BigDecimal periodReplacementCost = BigDecimal.ZERO;
+        long periodOperations = 0;
+
+        for (Sale s : rangeSales) {
+            if (Boolean.TRUE.equals(s.getCanceled())) continue;
+            periodSales = periodSales.add(s.getTotal());
+            periodOperations++;
+            for (SaleItem item : s.getItems()) {
+                BigDecimal costUnit = item.getCost() != null ? item.getCost() : BigDecimal.ZERO;
+                periodReplacementCost = periodReplacementCost.add(costUnit.multiply(item.getQuantity()));
+            }
+        }
+
         BigDecimal periodProfit = periodSales.subtract(periodReplacementCost);
 
         return new BoxReportDTO(
+                activeInitialAmount,
+                activeCashSales,
+                activeCustomerPayments,
+                activeExpenses,
+                activeRealBalance,
                 totalSalesToday,
-                cashSalesToday,
                 transferSalesToday,
+                transferExpensesToday,
                 creditSalesToday,
-                customerPaymentsToday,
-                expensesToday,
-                realBalance,
                 totalPendingCredit,
                 periodSales,
                 periodOperations,
                 periodProfit,
-                periodReplacementCost
+                periodReplacementCost,
+                todaySessions
         );
+    }
+
+    private CashSessionResponseDTO mapToSessionResponseDTO(CashRegisterSession session) {
+        LocalDateTime start = session.getOpenedAt();
+        LocalDateTime end = session.getClosedAt() != null ? session.getClosedAt().plusSeconds(2) : LocalDateTime.now().plusSeconds(2);
+
+        List<Sale> sales = saleRepository.findActiveSalesBySessionId(session.getId());
+
+        BigDecimal cashSales = BigDecimal.ZERO;
+        BigDecimal transferSales = BigDecimal.ZERO;
+        BigDecimal creditSales = BigDecimal.ZERO;
+
+        for (Sale s : sales) {
+            if ("EFECTIVO".equalsIgnoreCase(s.getPaymentMethod())) {
+                cashSales = cashSales.add(s.getTotal());
+            } else if ("TRANSFERENCIA".equalsIgnoreCase(s.getPaymentMethod())) {
+                transferSales = transferSales.add(s.getTotal());
+            } else if ("CUENTA_CORRIENTE".equalsIgnoreCase(s.getPaymentMethod())) {
+                creditSales = creditSales.add(s.getTotal());
+            }
+        }
+
+        BigDecimal cobrosEfe = customerMovementRepository.sumPaymentsByMethodAndCompanyId("EFECTIVO", session.getCompany().getId(), start, end);
+        if (cobrosEfe == null) cobrosEfe = BigDecimal.ZERO;
+
+        BigDecimal expensesEfe = expenseRepository.sumDeductibleCashExpenses(session.getCompany().getId(), start, end);
+        if (expensesEfe == null) expensesEfe = BigDecimal.ZERO;
+
+        String uName = session.getUser() != null ? session.getUser().getName() : "Usuario Desconocido";
+
+        return new CashSessionResponseDTO(
+                session.getId(),
+                session.getSessionNumber() != null ? session.getSessionNumber() : 1,
+                uName,
+                session.getOpenedAt(),
+                session.getClosedAt(),
+                session.getInitialAmount(),
+                session.getDeclaredAmount(),
+                session.getSystemAmount(),
+                session.getDifference(),
+                session.getStatus(),
+                session.getNotes(),
+                cashSales,
+                transferSales,
+                creditSales,
+                cobrosEfe,
+                expensesEfe
+        );
+    }
+
+    private String normalizePaymentMethod(String method) {
+        if (method == null) return "EFECTIVO";
+        String upper = method.trim().toUpperCase();
+
+        if (upper.contains("EFECTIVO") || upper.contains("CASH")) {
+            return "EFECTIVO";
+        }
+        if (upper.contains("TRANSFER") || upper.contains("QR") || upper.contains("DEBITO")
+                || upper.contains("CREDITO") || upper.contains("MP") || upper.contains("MERCADOPAGO")) {
+            return "TRANSFERENCIA";
+        }
+        if (upper.contains("CUENTA_CORRIENTE") || upper.contains("CTA") || upper.contains("FIADO") || upper.contains("LIBRETA")) {
+            return "CUENTA_CORRIENTE";
+        }
+        return upper;
     }
 
     @Override
@@ -392,13 +482,19 @@ public class SaleServiceImpl implements SaleService {
 
     private SaleResponseDTO mapToResponseDTO(Sale sale) {
         List<SaleItemResponseDTO> itemDTOs = sale.getItems().stream()
-                .map(item -> new SaleItemResponseDTO(
-                        item.getProduct().getId(),
-                        item.getProduct().getName(),
-                        item.getQuantity(),
-                        item.getPrice(),
-                        item.getSubtotal()
-                )).toList();
+                .map(item -> {
+                    Product p = item.getProduct();
+                    String unit = (p != null && Boolean.TRUE.equals(p.getIsFractional())) ? "KG" : "UN";
+
+                    return new SaleItemResponseDTO(
+                            p != null ? p.getId() : null,
+                            p != null ? p.getName() : "Producto Eliminado",
+                            item.getQuantity(),
+                            item.getPrice(),
+                            item.getSubtotal(),
+                            unit
+                    );
+                }).toList();
 
         Company comp = sale.getCompany();
         String cName = (comp != null) ? comp.getName() : "SISTEMA BASE";

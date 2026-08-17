@@ -1,6 +1,5 @@
 /**
- * BÁEZ POS - MÓDULO DE GESTIÓN DE EGRESOS (SaaS)
- * Archivo Refactorizado Senior Full-Stack
+ * BAEZ POS - MÓDULO DE GESTIÓN DE EGRESOS (SaaS)
  */
 
 let gastosGlobales = [];
@@ -21,15 +20,17 @@ document.addEventListener('DOMContentLoaded', () => {
         formGasto.addEventListener('submit', guardarGasto);
     }
 
-    // Regla UI: Si no es Efectivo, desactivar por defecto 'Descontar de Caja'
+    // Regla de Negocio UI: Actualizar feedback contextual según el medio de pago
     const metodoPagoGasto = document.getElementById('metodoPagoGasto');
     const deductFromBox = document.getElementById('deductFromBox');
 
     if (metodoPagoGasto && deductFromBox) {
         metodoPagoGasto.addEventListener('change', (e) => {
-            const esEfectivo = e.target.value === 'EFECTIVO_CAJA';
-            deductFromBox.checked = esEfectivo;
+            actualizarEstadoDeductFromBox(e.target.value, deductFromBox);
         });
+
+        // Ejecución inicial para el estado por defecto del select
+        actualizarEstadoDeductFromBox(metodoPagoGasto.value, deductFromBox);
     }
 
     // Filtros con Debounce para optimizar re-renders
@@ -46,6 +47,26 @@ document.addEventListener('DOMContentLoaded', () => {
     if (filtroCategoria) filtroCategoria.addEventListener('change', aplicarFiltros);
     if (filtroMetodo) filtroMetodo.addEventListener('change', aplicarFiltros);
 });
+
+/**
+ * Controla la accesibilidad, estado y feedback contextual del switch 'Descontar de Caja'
+ */
+function actualizarEstadoDeductFromBox(metodoSeleccionado, elementSwitch) {
+    const esEfectivo = (metodoSeleccionado === 'EFECTIVO_CAJA' || metodoSeleccionado === 'EFECTIVO');
+    const lblAyuda = document.getElementById('lblAyudaDeduct');
+
+    elementSwitch.disabled = false;
+
+    if (lblAyuda) {
+        if (esEfectivo) {
+            lblAyuda.innerHTML = `Si está activo, se restará del <strong>Efectivo Físico en Caja</strong>. Desactivalo únicamente si fue abonado con fondos personales por fuera del negocio.`;
+            lblAyuda.className = "text-muted d-block mt-1 style-subtext";
+        } else {
+            lblAyuda.innerHTML = `<i class="bi bi-info-circle-fill text-primary me-1"></i> Si está activo, se descontará del acumulado <strong>Digital (Transferencia/QR)</strong> del Dashboard. Desactivalo si el pago salió de una cuenta personal.`;
+            lblAyuda.className = "text-primary d-block mt-1 style-subtext";
+        }
+    }
+}
 
 async function cargarGastos() {
     const tbody = document.getElementById('listaGastos');
@@ -121,7 +142,6 @@ function renderizarGastos(gastos) {
         return;
     }
 
-    // Mapa de categorías alineado estrictamente con el Enum ExpenseCategory.java
     const mapaCategorias = {
         'PROVEEDOR': { label: 'Proveedor', class: 'bg-primary text-white' },
         'SERVICIOS': { label: 'Servicios', class: 'bg-warning text-dark' },
@@ -133,12 +153,10 @@ function renderizarGastos(gastos) {
     };
 
     const fragment = document.createDocumentFragment();
-
-    // Ordenar de más reciente a más antiguo por la propiedad 'date'
-    const listaOrdenada = [...gastos].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    const listaOrdenada = [...gastos].sort((a, b) => parsearFecha(b.date) - parsearFecha(a.date));
 
     listaOrdenada.forEach(g => {
-        const fechaObj = g.date ? new Date(g.date) : new Date();
+        const fechaObj = parsearFecha(g.date);
         const fechaFormateada = fechaObj.toLocaleDateString('es-AR', {
             day: '2-digit', month: '2-digit', year: 'numeric'
         });
@@ -149,7 +167,6 @@ function renderizarGastos(gastos) {
         const descSegura = escapeHTML(g.description || 'Sin concepto');
         const refSegura = escapeHTML(g.reference || '');
 
-        // Obtener configuración de categoría o usar fallback
         const catKey = g.category ? g.category.toUpperCase() : 'VARIOS_RETIRO';
         const catConfig = mapaCategorias[catKey] || { label: g.category || 'Varios', class: 'bg-secondary text-white' };
 
@@ -163,9 +180,17 @@ function renderizarGastos(gastos) {
             iconoMetodo = 'bi-credit-card text-info';
         }
 
-        const badgeCaja = g.deductFromBox
-            ? '<span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size: 10px;" title="Descontado del turno de caja">-Caja</span>'
-            : '';
+        // LÓGICA DE BADGES SEPARADOS (EFECTIVO VS DIGITAL)
+        const esEfectivo = (g.paymentMethod === 'EFECTIVO_CAJA' || g.paymentMethod === 'EFECTIVO');
+        let badgeCaja = '';
+
+        if (g.deductFromBox) {
+            if (esEfectivo) {
+                badgeCaja = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size: 10px;" title="Restado del efectivo físico en caja">Descuenta Caja (Efectivo)</span>';
+            } else {
+                badgeCaja = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1" style="font-size: 10px;" title="Descontado del acumulado digital del Dashboard">Descuenta Digital</span>';
+            }
+        }
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -241,14 +266,18 @@ async function guardarGasto(e) {
     btnGuardar.disabled = true;
     btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Guardando...';
 
-    // Payload alineado al ExpenseRequestDTO de Java
+    const metodo = document.getElementById('metodoPagoGasto').value;
+    const elementDeduct = document.getElementById('deductFromBox');
+
+    const deductFromBoxValue = elementDeduct ? elementDeduct.checked : true;
+
     const nuevoGasto = {
         description: document.getElementById('descGasto').value.trim(),
         amount: monto,
         category: document.getElementById('catGasto').value,
-        paymentMethod: document.getElementById('metodoPagoGasto').value,
+        paymentMethod: metodo,
         reference: document.getElementById('refComprobante').value.trim() || null,
-        deductFromBox: document.getElementById('deductFromBox').checked
+        deductFromBox: deductFromBoxValue
     };
 
     try {
@@ -265,8 +294,10 @@ async function guardarGasto(e) {
             });
 
             document.getElementById('formGasto').reset();
-            // Aseguramos que al resetear vuelva por defecto a 'true'
-            document.getElementById('deductFromBox').checked = true;
+
+            if (metodoPagoGasto && elementDeduct) {
+                actualizarEstadoDeductFromBox(metodoPagoGasto.value, elementDeduct);
+            }
 
             const modalEl = document.getElementById('modalNuevoGasto');
             if (modalEl) {
@@ -325,7 +356,12 @@ async function confirmarEliminarGasto(id) {
     }
 }
 
-// Helper para sanear HTML y prevenir XSS
+function parsearFecha(fechaCadena) {
+    if (!fechaCadena) return new Date();
+    const fecha = new Date(fechaCadena);
+    return isNaN(fecha.getTime()) ? new Date() : fecha;
+}
+
 function escapeHTML(str) {
     if (!str) return '';
     return String(str).replace(/[&<>'"]/g,

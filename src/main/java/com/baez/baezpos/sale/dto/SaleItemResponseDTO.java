@@ -7,5 +7,6 @@ public record SaleItemResponseDTO(
         String productName,
         BigDecimal quantity,
         BigDecimal price,
-        BigDecimal subtotal
+        BigDecimal subtotal,
+        String unitType
 ) {}

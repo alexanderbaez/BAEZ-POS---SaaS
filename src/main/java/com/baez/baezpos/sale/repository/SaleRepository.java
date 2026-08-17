@@ -42,4 +42,7 @@ public interface SaleRepository extends JpaRepository<Sale, Long> {
 
     @Query("SELECT COUNT(s) FROM Sale s WHERE s.company.id = :companyId AND s.saleDate BETWEEN :start AND :end AND s.canceled = false")
     long countByDateRangeAndCompanyId(@Param("companyId") Long companyId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query("SELECT s FROM Sale s WHERE s.cashRegisterSession.id = :sessionId AND s.canceled = false")
+    List<Sale> findActiveSalesBySessionId(@Param("sessionId") Long sessionId);
 }

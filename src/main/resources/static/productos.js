@@ -1,13 +1,16 @@
 /**
  * BÁEZ POS - GESTIÓN DE INVENTARIO (SAAS MULTITENANT)
- * Alexander Baez - 2026
  */
 
 // Rutas relativas del módulo
 const ENDPOINT_PRODUCTS = '/products';
 const ENDPOINT_CATEGORIES = '/categories';
 
+// Estado global local
 let PRODUCTOS_LOCAL = [];
+let PRODUCTOS_FILTRADOS = [];
+let paginaActual = 1;
+const LIMITE_POR_PAGINA = 20;
 
 // Formateador de moneda reutilizable
 const fmtARS = new Intl.NumberFormat('es-AR', {
@@ -16,19 +19,17 @@ const fmtARS = new Intl.NumberFormat('es-AR', {
     minimumFractionDigits: 2
 });
 
-// Helper para generar un código de barras 100% numérico de 12 dígitos (Ideal para balanzas y ticket)
+// Helper para generar un código de barras 100% numérico de 12 dígitos
 function generarCodigoInterno() {
-    // Prefijo 20 (frecuente para códigos internos de comercio) + timestamp truncado + random
     const timestamp = Date.now().toString().slice(-8);
-    const random = Math.floor(100 + Math.random() * 900); // 3 dígitos aleatorios
-    return `20${timestamp}${random}`; // 12 dígitos en total
+    const random = Math.floor(100 + Math.random() * 900);
+    return `20${timestamp}${random}`;
 }
 
 // ==========================================
 // 1. INICIALIZACIÓN
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Carga inicial de datos multitenant
     listarProductos();
     cargarCategorias();
 
@@ -42,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (buscador) buscador.addEventListener('input', filtrarProductos);
     if (filtroCat) filtroCat.addEventListener('change', filtrarProductos);
 
-    // 2. Receptor de Scanner / Búsqueda Externa vía URL
+    // Receptor de Scanner / Búsqueda Externa vía URL
     const urlParams = new URLSearchParams(window.location.search);
     const nuevoCodigo = urlParams.get('nuevoCodigo');
     const nuevoNombre = urlParams.get('nuevoNombre');
@@ -226,17 +227,56 @@ function formatStockDisplay(stock, isFractional) {
 }
 
 // ==========================================
-// 3. GESTIÓN DE PRODUCTOS
+// 3. GESTIÓN DE PRODUCTOS Y PAGINACIÓN
 // ==========================================
 async function listarProductos() {
     try {
         const res = await apiFetch(ENDPOINT_PRODUCTS);
         if (!res || !res.ok) return;
-        PRODUCTOS_LOCAL = await res.json();
-        renderizarTabla(PRODUCTOS_LOCAL);
+
+        const data = await res.json();
+
+        // Orden alfabético (A-Z)
+        PRODUCTOS_LOCAL = data.sort((a, b) =>
+            (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' })
+        );
+
+        PRODUCTOS_FILTRADOS = [...PRODUCTOS_LOCAL];
+        paginaActual = 1;
+        renderizarVistaPaginada();
     } catch (err) {
         console.error("Error al listar productos:", err);
     }
+}
+
+function filtrarProductos() {
+    const texto = (document.getElementById('buscador')?.value || '').toLowerCase().trim();
+    const catId = document.getElementById('filtroCategoria')?.value || '';
+
+    PRODUCTOS_FILTRADOS = PRODUCTOS_LOCAL.filter(p => {
+        const coincideTexto = (p.name || '').toLowerCase().includes(texto) || (p.barcode && p.barcode.toLowerCase().includes(texto));
+        const coincideCat = catId === "" || p.categoryId == catId;
+        return coincideTexto && coincideCat;
+    }).sort((a, b) =>
+        (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' })
+    );
+
+    paginaActual = 1;
+    renderizarVistaPaginada();
+}
+
+function renderizarVistaPaginada() {
+    const totalProductos = PRODUCTOS_FILTRADOS.length;
+    const totalPaginas = Math.ceil(totalProductos / LIMITE_POR_PAGINA) || 1;
+
+    if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+
+    const inicio = (paginaActual - 1) * LIMITE_POR_PAGINA;
+    const fin = inicio + LIMITE_POR_PAGINA;
+    const productosPagina = PRODUCTOS_FILTRADOS.slice(inicio, fin);
+
+    renderizarTabla(productosPagina);
+    renderizarControlesPaginacion(totalProductos, totalPaginas, inicio, fin);
 }
 
 function renderizarTabla(lista) {
@@ -288,19 +328,75 @@ function renderizarTabla(lista) {
     tabla.appendChild(fragment);
 }
 
-function filtrarProductos() {
-    const texto = (document.getElementById('buscador')?.value || '').toLowerCase().trim();
-    const catId = document.getElementById('filtroCategoria')?.value || '';
+function renderizarControlesPaginacion(totalItems, totalPaginas, inicio, fin) {
+    const infoText = document.getElementById('infoPaginacion');
+    const contenedor = document.getElementById('paginacionContenedor');
 
-    const filtrados = PRODUCTOS_LOCAL.filter(p => {
-        const coincideTexto = (p.name || '').toLowerCase().includes(texto) || (p.barcode && p.barcode.toLowerCase().includes(texto));
-        const coincideCat = catId === "" || p.categoryId == catId;
-        return coincideTexto && coincideCat;
-    });
-    renderizarTabla(filtrados);
+    if (infoText) {
+        if (totalItems === 0) {
+            infoText.innerText = "Mostrando 0 productos";
+        } else {
+            const limiteSuperior = fin > totalItems ? totalItems : fin;
+            infoText.innerText = `Mostrando ${inicio + 1} - ${limiteSuperior} de ${totalItems} productos`;
+        }
+    }
+
+    if (!contenedor) return;
+    contenedor.innerHTML = '';
+
+    if (totalPaginas <= 1) return;
+
+    let html = '';
+
+    // Botón Anterior
+    html += `
+        <li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
+            <button class="page-link" onclick="cambiarPagina(${paginaActual - 1})"><i class="bi bi-chevron-left"></i></button>
+        </li>
+    `;
+
+    // Algoritmo de rango dinámico para evitar Renderizar decenas de números
+    const maxPaginasVisibles = 5;
+    let pagInicio = Math.max(1, paginaActual - Math.floor(maxPaginasVisibles / 2));
+    let pagFin = Math.min(totalPaginas, pagInicio + maxPaginasVisibles - 1);
+
+    if (pagFin - pagInicio + 1 < maxPaginasVisibles) {
+        pagInicio = Math.max(1, pagFin - maxPaginasVisibles + 1);
+    }
+
+    if (pagInicio > 1) {
+        html += `<li class="page-item"><button class="page-link" onclick="cambiarPagina(1)">1</button></li>`;
+        if (pagInicio > 2) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+    }
+
+    for (let i = pagInicio; i <= pagFin; i++) {
+        html += `
+            <li class="page-item ${i === paginaActual ? 'active' : ''}">
+                <button class="page-link" onclick="cambiarPagina(${i})">${i}</button>
+            </li>
+        `;
+    }
+
+    if (pagFin < totalPaginas) {
+        if (pagFin < totalPaginas - 1) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        html += `<li class="page-item"><button class="page-link" onclick="cambiarPagina(${totalPaginas})">${totalPaginas}</button></li>`;
+    }
+
+    // Botón Siguiente
+    html += `
+        <li class="page-item ${paginaActual === totalPaginas ? 'disabled' : ''}">
+            <button class="page-link" onclick="cambiarPagina(${paginaActual + 1})"><i class="bi bi-chevron-right"></i></button>
+        </li>
+    `;
+
+    contenedor.innerHTML = html;
 }
 
-// Acción para autogenerar código desde el botón del Modal
+function cambiarPagina(nuevaPagina) {
+    paginaActual = nuevaPagina;
+    renderizarVistaPaginada();
+}
+
 function autogenerarCodigoInput() {
     const inputBarcode = document.getElementById('prodBarcode');
     if (inputBarcode) {
@@ -319,14 +415,14 @@ async function guardarProducto(e) {
     if (!nombre) return Swal.fire('Error', 'El nombre es obligatorio', 'warning');
     if (!categoriaId) return Swal.fire('Error', 'Selecciona una categoría', 'warning');
 
-    // Si viene vacío, asignamos un código numérico limpio de 12 dígitos
     if (!barcode) {
         barcode = generarCodigoInterno();
     }
 
     const body = {
         name: nombre,
-        description: "Producto registrado",
+        // Captura el valor del campo de descripción del modal
+        description: document.getElementById('prodDescripcion')?.value.trim() || "",
         barcode: barcode,
         cost: parseFloat(document.getElementById('prodCosto').value) || 0,
         price: parseFloat(document.getElementById('prodPrecio').value) || 0,
@@ -365,6 +461,8 @@ function prepararFormulario() {
     const form = document.getElementById('formProducto');
     if (form) form.reset();
     if (document.getElementById('prodId')) document.getElementById('prodId').value = '';
+    // Limpieza explícita del campo de descripción al crear un producto nuevo
+    if (document.getElementById('prodDescripcion')) document.getElementById('prodDescripcion').value = '';
     if (document.getElementById('prodIsFractional')) document.getElementById('prodIsFractional').checked = false;
     if (document.getElementById('modalTitulo')) document.getElementById('modalTitulo').innerText = "Nuevo Producto";
 
@@ -378,6 +476,8 @@ function editarProducto(id) {
 
     if (document.getElementById('prodId')) document.getElementById('prodId').value = p.id;
     if (document.getElementById('prodNombre')) document.getElementById('prodNombre').value = p.name || '';
+    // Carga de la descripción existente en el formulario
+    if (document.getElementById('prodDescripcion')) document.getElementById('prodDescripcion').value = p.description || '';
     if (document.getElementById('prodBarcode')) document.getElementById('prodBarcode').value = p.barcode || '';
     if (document.getElementById('prodCosto')) document.getElementById('prodCosto').value = p.cost || 0;
     if (document.getElementById('prodPrecio')) document.getElementById('prodPrecio').value = p.price || 0;
@@ -504,19 +604,17 @@ async function imprimirEtiqueta(id) {
     let p = PRODUCTOS_LOCAL.find(prod => prod.id === id);
     if (!p) return;
 
-    // Si el producto no tiene código registrado, le generamos uno en el momento y actualizamos
     let barcodeParaImprimir = p.barcode;
     if (!barcodeParaImprimir) {
         barcodeParaImprimir = generarCodigoInterno();
-        p.barcode = barcodeParaImprimir; // Actualización local
+        p.barcode = barcodeParaImprimir;
 
-        // Guardar el código generado en la BD mediante PUT silente
         try {
             await apiFetch(`${ENDPOINT_PRODUCTS}/${p.id}`, {
                 method: 'PUT',
                 body: JSON.stringify({ ...p, barcode: barcodeParaImprimir })
             });
-            listarProductos(); // Refrescar vista
+            listarProductos();
         } catch (err) {
             console.error("Error al asignar código automático:", err);
         }
@@ -604,7 +702,6 @@ async function imprimirEtiqueta(id) {
     ventana.document.close();
 }
 
-// Previene bloqueos de foco con modales de Bootstrap & SweetAlert2
 if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
     bootstrap.Modal.prototype._enforceFocus = function() {};
 }
@@ -619,7 +716,6 @@ async function imprimirEtiquetasMultiples(id) {
     let p = PRODUCTOS_LOCAL.find(prod => prod.id === id);
     if (!p) return;
 
-    // 1. Verificar o autogenerar código de barras si no tiene
     let barcodeParaImprimir = p.barcode;
     if (!barcodeParaImprimir) {
         barcodeParaImprimir = generarCodigoInterno();
@@ -636,12 +732,11 @@ async function imprimirEtiquetasMultiples(id) {
         }
     }
 
-    // 2. Preguntar cantidad deseada
     const { value: cantidad } = await Swal.fire({
         title: 'Impresión Masiva de Etiquetas',
         text: `¿Cuántas etiquetas de "${p.name}" querés generar?`,
         input: 'number',
-        inputValue: 21, // Valor por defecto conveniente para 1 hoja A4
+        inputValue: 21,
         inputAttributes: {
             min: 1,
             max: 200,
@@ -655,13 +750,11 @@ async function imprimirEtiquetasMultiples(id) {
 
     if (!cantidad || cantidad <= 0) return;
 
-    // 3. Abrir ventana de impresión
     const ventana = window.open('', 'PRINT_MULTI', 'height=700,width=900');
     if (!ventana) return Swal.fire('Error', 'Por favor habilita las ventanas emergentes para imprimir.', 'error');
 
     const nameSeguro = (p.name || '').replace(/"/g, '&quot;');
 
-    // Generar la grilla de etiquetas HTML
     let etiquetasHTML = '';
     for (let i = 0; i < cantidad; i++) {
         etiquetasHTML += `
@@ -695,7 +788,7 @@ async function imprimirEtiquetasMultiples(id) {
                     }
                     .grid-container {
                         display: grid;
-                        grid-template-columns: repeat(3, 1fr); /* 3 Columnas por fila */
+                        grid-template-columns: repeat(3, 1fr);
                         gap: 4mm;
                         width: 100%;
                     }
@@ -773,9 +866,6 @@ async function imprimirEtiquetasMultiples(id) {
     ventana.document.close();
 }
 
-// Asegurar exponer la función globalmente
-window.imprimirEtiquetasMultiples = imprimirEtiquetasMultiples;
-
 // ==========================================
 // 7. EXPOSICIÓN AL SCOPE GLOBAL
 // ==========================================
@@ -789,5 +879,7 @@ window.eliminarProducto = eliminarProducto;
 window.abrirPapelera = abrirPapelera;
 window.restaurarProducto = restaurarProducto;
 window.imprimirEtiqueta = imprimirEtiqueta;
+window.imprimirEtiquetasMultiples = imprimirEtiquetasMultiples;
 window.filtrarProductos = filtrarProductos;
 window.autogenerarCodigoInput = autogenerarCodigoInput;
+window.cambiarPagina = cambiarPagina;

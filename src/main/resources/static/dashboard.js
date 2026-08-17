@@ -1,25 +1,27 @@
 /**
- * BÁEZ POS - DASHBOARD DE GESTIÓN SAAS MULTI-TENANT
- * Alexander Baez - 2026
+ * BAEZ POS - DASHBOARD DE GESTIÓN SAAS MULTI-TENANT
+ * Control Estricto de Cajas, Auditoría de Turnos y Medios de Pago
  */
 
-document.addEventListener('DOMContentLoaded', async () => {
-    const elUserLabel = document.getElementById('userNameLabel');
-    if (elUserLabel) {
-        const nombreUsuario = localStorage.getItem('baezpos_user_name');
-        elUserLabel.innerText = nombreUsuario ? nombreUsuario.toUpperCase() : "USUARIO";
-    }
+// Caché en memoria para evitar peticiones redundantes al cambiar de turno
+let cacheSesionesHoy = [];
 
-    if (document.getElementById('fechaActual')) {
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Nombre de usuario y Fecha actual
+    setElementText('userNameLabel', (localStorage.getItem('baezpos_user_name') || 'USUARIO').toUpperCase());
+
+    const elFecha = document.getElementById('fechaActual');
+    if (elFecha) {
         const hoy = new Date();
-        document.getElementById('fechaActual').innerText = hoy.toLocaleDateString('es-AR', {
+        elFecha.innerText = hoy.toLocaleDateString('es-AR', {
             weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
         });
     }
 
-    // Inicializar fechas por defecto (Este mes) y consultar datos
+    // 2. Carga inicial del rango "Este Mes" (Métricas históricas)
     aplicarPresetFecha('ESTE_MES');
 
+    // 3. Ejecución concurrente de cargas independientes
     await Promise.allSettled([
         cargarDatosDashboardHoy(),
         cargarAlertasStock(),
@@ -27,20 +29,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     ]);
 });
 
+// ==========================================
+// UTILIDADES DE FORMATO Y AUXILIARES
+// ==========================================
+function parseNumber(val) {
+    const num = parseFloat(val);
+    return isNaN(num) ? 0 : num;
+}
+
+function setElementText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.innerText = value;
+}
+
 function fmtMoneda(val) {
     return new Intl.NumberFormat('es-AR', {
         style: 'currency',
         currency: 'ARS',
         minimumFractionDigits: 2
-    }).format(val || 0);
+    }).format(parseNumber(val));
 }
 
 function fmtStock(cant, producto = {}) {
-    const stockVal = parseFloat(cant) || 0;
-    const esFraccionado = producto.isFractional ||
-                         producto.unitOfMeasure === 'KG' ||
-                         producto.unitOfMeasure === 'GRAM' ||
-                         producto.unitType === 'KG';
+    const stockVal = parseNumber(cant);
+    const esFraccionado = Boolean(
+        producto.isFractional ||
+        producto.unitOfMeasure === 'KG' ||
+        producto.unitOfMeasure === 'GRAM' ||
+        producto.unitType === 'KG'
+    );
 
     if (esFraccionado) {
         if (stockVal < 1 && stockVal > 0) {
@@ -61,7 +78,7 @@ function formatDateLocal(date) {
 }
 
 // ==========================================
-// 1. CARGA DE KPIS DEL DÍA (HOY)
+// 1. CARGA DE KPIS DEL DÍA / AUDITORÍA DE TURNOS
 // ==========================================
 async function cargarDatosDashboardHoy() {
     try {
@@ -70,39 +87,49 @@ async function cargarDatosDashboardHoy() {
 
         const data = await response.json();
 
-        // Ventas Totales Hoy
-        if (document.getElementById('txtRecaudacion'))
-            document.getElementById('txtRecaudacion').innerText = fmtMoneda(data.totalSalesToday);
+        // ----------------------------------------------------
+        // CAPA 2: CANALES DE RECAUDACIÓN DEL DÍA (CONSOLIDADO)
+        // ----------------------------------------------------
+        const totalSalesToday       = parseNumber(data.totalSalesToday);
+        const transferSalesToday    = parseNumber(data.transferSalesToday);
+        const transferExpensesToday = parseNumber(data.transferExpensesToday);
+        const creditSalesToday      = parseNumber(data.creditSalesToday);
+        const totalPendingCredit    = parseNumber(data.totalPendingCredit);
 
-        // Efectivo en Caja
-        if (document.getElementById('txtEfectivoHoy'))
-            document.getElementById('txtEfectivoHoy').innerText = fmtMoneda(data.cashSalesToday);
+        setElementText('txtRecaudacion', fmtMoneda(totalSalesToday));
+        setElementText('txtTransfHoy', fmtMoneda(transferSalesToday));
+        setElementText('txtFiadoHoy', fmtMoneda(creditSalesToday));
+        setElementText('cardLibreta', fmtMoneda(totalPendingCredit));
 
-        // Transferencias / QR
-        if (document.getElementById('txtTransfHoy'))
-            document.getElementById('txtTransfHoy').innerText = fmtMoneda(data.transferSalesToday);
+        const lblDetalleTransf = document.getElementById('lblDetalleTransf');
+        if (lblDetalleTransf) {
+            lblDetalleTransf.innerHTML = transferExpensesToday > 0
+                ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 0.72rem;">-${fmtMoneda(transferExpensesToday)} gastos digital</span>`
+                : '';
+        }
 
-        // Cobros Cta. Cte. Hoy
-        if (document.getElementById('txtCobrosLibretaHoy'))
-            document.getElementById('txtCobrosLibretaHoy').innerText = fmtMoneda(data.customerPaymentsToday);
+        // ----------------------------------------------------
+        // CAPA 1: AUDITORÍA DE CAJAS / TURNOS MULTI-USUARIO
+        // ----------------------------------------------------
+        cacheSesionesHoy = Array.isArray(data.todaySessions) ? data.todaySessions : [];
+        poblarSelectorTurnos(cacheSesionesHoy);
 
-        // Deuda Pendiente en Cta. Cte.
-        if (document.getElementById('cardLibreta'))
-            document.getElementById('cardLibreta').innerText = fmtMoneda(data.totalPendingCredit);
+        if (cacheSesionesHoy.length > 0) {
+            // Prioridad: Seleccionar la caja abierta activa o la última registrada
+            const cajaActiva = cacheSesionesHoy.find(s => s.status === 'OPEN') || cacheSesionesHoy[0];
 
-        // Balance Real Disponible en Caja
-        if (document.getElementById('cardBalanceReal'))
-            document.getElementById('cardBalanceReal').innerText = fmtMoneda(data.realBalance);
+            const select = document.getElementById('selectTurnoActivo');
+            if (select) select.value = cajaActiva.id;
 
-        // Desglose dinámico de Gastos en el subtítulo del Balance Real
-        const lblDetalleBalance = document.getElementById('lblDetalleBalance');
-        if (lblDetalleBalance) {
-            const gastos = parseFloat(data.expensesToday) || 0;
-            if (gastos > 0) {
-                lblDetalleBalance.innerHTML = `(Efectivo + Transferencias + Cobros) <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1">(Incluye -${fmtMoneda(gastos)} en gastos)</span>`;
-            } else {
-                lblDetalleBalance.innerText = '(Efectivo Ventas + Transferencias + Cobros Cta. Cte. - Gastos)';
-            }
+            renderizarMetricasCaja(cajaActiva);
+        } else {
+            // CORREGIDO: Mapeo exacto con los nombres de BoxReportDTO
+            renderizarMetricasCaja({
+                initialAmount: data.activeInitialAmount,
+                totalCashSales: data.activeCashSales,
+                totalCustomerPayments: data.activeCustomerPayments,
+                totalExpenses: data.activeExpenses
+            });
         }
 
     } catch (err) {
@@ -110,40 +137,182 @@ async function cargarDatosDashboardHoy() {
     }
 }
 
+/**
+ * Llena el elemento <select> de auditoría con todas las cajas iniciadas en la jornada.
+ */
+function poblarSelectorTurnos(sesiones) {
+    const select = document.getElementById('selectTurnoActivo');
+    if (!select) return;
+
+    if (!sesiones || sesiones.length === 0) {
+        select.innerHTML = `<option value="">Sin cajas registradas hoy</option>`;
+        return;
+    }
+
+    let optionsHtml = '';
+    sesiones.forEach((s) => {
+        const horaApertura = s.openedAt
+            ? new Date(s.openedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+            : '--:--';
+
+        const estado = s.status === 'OPEN' ? '🟢 ABIERTA' : '🔴 CERRADA';
+        const usuario = s.userName || 'Usuario Desconocido';
+        const numCaja = s.sessionNumber || s.id; // Uso del número correlativo de sesión
+
+        optionsHtml += `<option value="${s.id}">Caja #${numCaja} (${horaApertura} hs) - ${estado} [${usuario}]</option>`;
+    });
+
+    select.innerHTML = optionsHtml;
+}
+
+/**
+ * Llena el elemento <select> de auditoría con todas las cajas iniciadas el día de hoy.
+ */
+function poblarSelectorTurnos(sesiones) {
+    const select = document.getElementById('selectTurnoActivo');
+    if (!select) return;
+
+    if (!sesiones || sesiones.length === 0) {
+        select.innerHTML = `<option value="">Sin cajas abiertas hoy</option>`;
+        return;
+    }
+
+    let optionsHtml = '';
+    sesiones.forEach((s) => {
+        const horaApertura = new Date(s.openedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+        const estado = s.status === 'OPEN' ? '🟢 ABIERTA' : '🔴 CERRADA';
+        const usuario = s.userName || 'Usuario Desconocido';
+
+        optionsHtml += `<option value="${s.id}">Caja #${s.id} (${horaApertura} hs) - ${estado} [${usuario}]</option>`;
+    });
+
+    select.innerHTML = optionsHtml;
+}
+
+/**
+ * Evento desencadenado al cambiar el selector <select id="selectTurnoActivo">.
+ */
+function filtrarTurnoSeleccionado(sessionId) {
+    if (!sessionId) return;
+
+    const caja = cacheSesionesHoy.find(item => item.id == sessionId);
+    if (caja) {
+        renderizarMetricasCaja(caja);
+    }
+}
+
+/**
+ * Calcula y renderiza el balance físico y desglose de una caja específica.
+ */
+function renderizarMetricasCaja(caja) {
+    const initialAmount         = parseNumber(caja.initialAmount);
+    const cashSalesToday        = parseNumber(caja.totalCashSales);
+    const customerPaymentsToday = parseNumber(caja.totalCustomerPayments);
+    const cashExpensesToday     = parseNumber(caja.totalExpenses);
+
+    // Ecuación de Arqueo Físico de Cajón
+    const realBalance = initialAmount + cashSalesToday + customerPaymentsToday - cashExpensesToday;
+
+    // Componentes del desglose
+    setElementText('txtEfectivoHoy', fmtMoneda(cashSalesToday));
+
+    const lblDetalleEfectivo = document.getElementById('lblDetalleEfectivo');
+    if (lblDetalleEfectivo) {
+        lblDetalleEfectivo.innerHTML = cashExpensesToday > 0
+            ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 0.72rem;">-${fmtMoneda(cashExpensesToday)} gastos caja</span>`
+            : `<span class="fw-bold text-danger fs-5">${fmtMoneda(0)}</span>`;
+    }
+
+    const elCobrosLibreta = document.getElementById('txtCobrosLibretaHoy');
+    if (elCobrosLibreta) {
+        elCobrosLibreta.innerText = fmtMoneda(customerPaymentsToday);
+        elCobrosLibreta.className = customerPaymentsToday > 0 ? "fw-bold text-success fs-5 mt-1" : "fw-bold text-dark fs-5 mt-1";
+    }
+
+    // Hero Card: Dinero Físico en Cajón
+    const cardBalanceReal = document.getElementById('cardBalanceReal');
+    const containerCardBalance = document.getElementById('containerCardBalance');
+    const titleBalanceReal = document.getElementById('titleBalanceReal');
+    const iconBoxBalance = document.getElementById('iconBoxBalance');
+
+    if (cardBalanceReal) {
+        cardBalanceReal.innerText = fmtMoneda(realBalance);
+
+        if (realBalance < 0) {
+            cardBalanceReal.className = "fw-bold mb-0 text-danger mt-1 fs-3 fs-md-2";
+            if (containerCardBalance) containerCardBalance.className = "dashboard-card p-3 p-md-4 border-start border-4 border-danger bg-white h-100 d-flex flex-column justify-content-between";
+            if (titleBalanceReal) titleBalanceReal.className = "kpi-title text-danger";
+            if (iconBoxBalance) iconBoxBalance.className = "icon-box-soft bg-danger text-white rounded-circle p-3 flex-shrink-0";
+        } else {
+            cardBalanceReal.className = "fw-bold mb-0 text-dark mt-1 fs-3 fs-md-2";
+            if (containerCardBalance) containerCardBalance.className = "dashboard-card p-3 p-md-4 border-start border-4 border-primary bg-white h-100 d-flex flex-column justify-content-between";
+            if (titleBalanceReal) titleBalanceReal.className = "kpi-title text-primary";
+            if (iconBoxBalance) iconBoxBalance.className = "icon-box-soft bg-primary text-white rounded-circle p-3 flex-shrink-0";
+        }
+    }
+
+    // Pie Explicativo Dinámico
+    const lblDetalleBalance = document.getElementById('lblDetalleBalance');
+    if (lblDetalleBalance) {
+        let desgloseHtml = `(Fondo: ${fmtMoneda(initialAmount)}`;
+        if (customerPaymentsToday > 0) {
+            desgloseHtml += ` + <span class="fw-semibold text-success">${fmtMoneda(customerPaymentsToday)} cobros</span>`;
+        }
+        if (cashExpensesToday > 0) {
+            desgloseHtml += ` <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1">-${fmtMoneda(cashExpensesToday)} gastos caja</span>`;
+        }
+        desgloseHtml += `)`;
+        lblDetalleBalance.innerHTML = desgloseHtml;
+    }
+}
+
 // ==========================================
-// 2. CONSULTA POR FECHAS LIBRES / PRESETS
+// 2. CONSULTA POR FECHAS Y PRESETS (CAPA 3)
 // ==========================================
 function aplicarPresetFecha(preset) {
     const hoy = new Date();
     let desde, hasta;
 
-    if (preset === 'ESTE_MES') {
-        desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-        hasta = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
-    } else if (preset === 'MES_PASADO') {
-        desde = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
-        hasta = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
-    } else if (preset === '3_MESES') {
-        desde = new Date(hoy.getFullYear(), hoy.getMonth() - 2, 1);
-        hasta = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
-    } else if (preset === 'ESTE_ANO') {
-        desde = new Date(hoy.getFullYear(), 0, 1);
-        hasta = hoy;
-    } else if (preset === 'ANO_PASADO') {
-        desde = new Date(hoy.getFullYear() - 1, 0, 1);
-        hasta = new Date(hoy.getFullYear() - 1, 11, 31);
+    switch (preset) {
+        case 'ESTE_MES':
+            desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            hasta = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+            break;
+        case 'MES_PASADO':
+            desde = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+            hasta = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+            break;
+        case '3_MESES':
+            desde = new Date(hoy.getFullYear(), hoy.getMonth() - 2, 1);
+            hasta = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+            break;
+        case 'ESTE_ANO':
+            desde = new Date(hoy.getFullYear(), 0, 1);
+            hasta = hoy;
+            break;
+        case 'ANO_PASADO':
+            desde = new Date(hoy.getFullYear() - 1, 0, 1);
+            hasta = new Date(hoy.getFullYear() - 1, 11, 31);
+            break;
     }
 
     if (desde && hasta) {
-        document.getElementById('fechaDesde').value = formatDateLocal(desde);
-        document.getElementById('fechaHasta').value = formatDateLocal(hasta);
+        const inputDesde = document.getElementById('fechaDesde');
+        const inputHasta = document.getElementById('fechaHasta');
+        if (inputDesde) inputDesde.value = formatDateLocal(desde);
+        if (inputHasta) inputHasta.value = formatDateLocal(hasta);
         consultarPorFechas();
     }
 }
 
 async function consultarPorFechas() {
-    const desdeVal = document.getElementById('fechaDesde').value;
-    const hastaVal = document.getElementById('fechaHasta').value;
+    const elDesde = document.getElementById('fechaDesde');
+    const elHasta = document.getElementById('fechaHasta');
+
+    if (!elDesde || !elHasta) return;
+
+    const desdeVal = elDesde.value;
+    const hastaVal = elHasta.value;
 
     if (!desdeVal || !hastaVal) {
         return Swal.fire('Atención', 'Por favor selecciona ambas fechas (Desde y Hasta)', 'warning');
@@ -154,53 +323,28 @@ async function consultarPorFechas() {
     }
 
     try {
-        // Formateo ISO con horas límites de inicio (00:00:00) y fin de día (23:59:59)
-        const fromIso = `${desdeVal}T00:00:00`;
-        const toIso = `${hastaVal}T23:59:59`;
-
-        // Se envían parámetros redundantes para compatibilidad con cualquier Controller backend
-        const params = new URLSearchParams({
-            from: desdeVal,
-            to: hastaVal,
-            startDate: fromIso,
-            endDate: toIso,
-            desde: desdeVal,
-            hasta: hastaVal
-        });
-
+        const params = new URLSearchParams({ from: desdeVal, to: hastaVal });
         const response = await apiFetch(`/sales/report/box?${params.toString()}`);
-        if (!response || !response.ok) throw new Error("Error al consultar reporte por fecha");
+
+        if (!response || !response.ok) throw new Error("Error en la respuesta del servidor");
 
         const data = await response.json();
 
-        // Mapeo defensivo de propiedades enviadas por el API
-        const periodSales = data.periodSales ?? data.totalSales ?? data.total ?? 0;
-        const periodProfit = data.periodProfit ?? data.profit ?? data.ganancia ?? 0;
-        const periodReplacementCost = data.periodReplacementCost ?? data.cost ?? data.reposicion ?? 0;
-        const periodOperations = data.periodOperations ?? data.totalOperations ?? data.count ?? 0;
+        const periodSales           = parseNumber(data.periodSales);
+        const periodProfit          = parseNumber(data.periodProfit);
+        const periodReplacementCost = parseNumber(data.periodReplacementCost);
+        const periodOperations      = parseInt(data.periodOperations || 0, 10);
+        const ticketPromedio        = periodOperations > 0 ? (periodSales / periodOperations) : 0;
 
-        // Cálculo del KPI Derivado: Ticket Promedio
-        const ticketPromedio = periodOperations > 0 ? (periodSales / periodOperations) : 0;
-
-        if (document.getElementById('txtRecaudacionMes'))
-            document.getElementById('txtRecaudacionMes').innerText = fmtMoneda(periodSales);
-
-        if (document.getElementById('txtGananciaMes'))
-            document.getElementById('txtGananciaMes').innerText = fmtMoneda(periodProfit);
-
-        if (document.getElementById('txtReposicionMes'))
-            document.getElementById('txtReposicionMes').innerText = fmtMoneda(periodReplacementCost);
-
-        if (document.getElementById('txtVentasCountMes'))
-            document.getElementById('txtVentasCountMes').innerText = periodOperations;
-
-        if (document.getElementById('txtTicketPromedio'))
-            document.getElementById('txtTicketPromedio').innerText = fmtMoneda(ticketPromedio);
+        setElementText('txtRecaudacionMes', fmtMoneda(periodSales));
+        setElementText('txtGananciaMes', fmtMoneda(periodProfit));
+        setElementText('txtReposicionMes', fmtMoneda(periodReplacementCost));
+        setElementText('txtVentasCountMes', periodOperations);
+        setElementText('txtTicketPromedio', fmtMoneda(ticketPromedio));
 
         const f1 = desdeVal.split('-').reverse().join('/');
         const f2 = hastaVal.split('-').reverse().join('/');
-        const lblRango = document.getElementById('lblRangoActivo');
-        if (lblRango) lblRango.innerText = `Mostrando datos del ${f1} al ${f2}`;
+        setElementText('lblRangoActivo', `Mostrando datos del ${f1} al ${f2}`);
 
     } catch (err) {
         console.error("Error al obtener datos por fecha:", err);
@@ -209,7 +353,7 @@ async function consultarPorFechas() {
 }
 
 // ==========================================
-// 3. GRÁFICO DE EVOLUCIÓN
+// 3. GRÁFICO DE EVOLUCIÓN DE VENTAS
 // ==========================================
 async function cargarDatosGrafico() {
     try {
@@ -218,17 +362,18 @@ async function cargarDatosGrafico() {
 
         const data = await response.json();
 
-        if (!data || data.length === 0) {
+        if (!Array.isArray(data) || data.length === 0) {
             renderizarGraficoSemanal([], []);
             return;
         }
 
         const etiquetas = data.map(item => {
+            if (!item.label) return '';
             const partes = item.label.split('-');
             return partes.length === 3 ? `${partes[2]}/${partes[1]}` : item.label;
         });
 
-        const valores = data.map(item => item.total);
+        const valores = data.map(item => parseNumber(item.total));
         renderizarGraficoSemanal(etiquetas, valores);
 
     } catch (err) {
@@ -241,11 +386,14 @@ function renderizarGraficoSemanal(etiquetas, valores) {
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
+
+    if (window.myChart && typeof window.myChart.destroy === 'function') {
+        window.myChart.destroy();
+    }
+
     const gradient = ctx.createLinearGradient(0, 0, 0, 280);
     gradient.addColorStop(0, 'rgba(37, 99, 235, 0.18)');
     gradient.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
-
-    if (window.myChart) window.myChart.destroy();
 
     window.myChart = new Chart(ctx, {
         type: 'line',
@@ -288,7 +436,7 @@ function renderizarGraficoSemanal(etiquetas, valores) {
                     grid: { color: '#f1f5f9' },
                     ticks: {
                         color: '#64748b',
-                        callback: (value) => '$' + value.toLocaleString('es-AR')
+                        callback: (value) => '$' + parseNumber(value).toLocaleString('es-AR')
                     }
                 },
                 x: {
@@ -301,7 +449,7 @@ function renderizarGraficoSemanal(etiquetas, valores) {
 }
 
 // ==========================================
-// 4. INVENTARIO CRÍTICO
+// 4. INVENTARIO CRÍTICO DE STOCK
 // ==========================================
 async function cargarAlertasStock() {
     try {
@@ -309,10 +457,11 @@ async function cargarAlertasStock() {
         if (!res || !res.ok) return;
 
         const productos = await res.json();
-        const criticos = productos.filter(p => p.stock <= 10);
+        if (!Array.isArray(productos)) return;
 
-        const badge = document.getElementById('badgeStockCount');
-        if (badge) badge.innerText = criticos.length;
+        const criticos = productos.filter(p => parseNumber(p.stock) <= 10);
+
+        setElementText('badgeStockCount', criticos.length);
 
         const container = document.getElementById('listaAlertasStock');
         if (!container) return;
@@ -327,8 +476,10 @@ async function cargarAlertasStock() {
         }
 
         container.innerHTML = criticos.map(p => {
-            const textoStock = fmtStock(p.stock, p);
-            const esMuyCritico = p.stock <= 3;
+            const stockNum = parseNumber(p.stock);
+            const textoStock = fmtStock(stockNum, p);
+            const esMuyCritico = stockNum <= 3;
+
             return `
             <div class="stock-item d-flex align-items-center justify-content-between">
                 <div class="pe-2">
@@ -340,13 +491,15 @@ async function cargarAlertasStock() {
                 <span class="badge ${esMuyCritico ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-warning-subtle text-warning-emphasis border border-warning-subtle'} rounded-pill">
                     ${textoStock}
                 </span>
-            </div>
-        `}).join('');
+            </div>`;
+        }).join('');
 
     } catch (err) {
         console.error("Error al cargar alertas de stock:", err);
     }
 }
 
+// Exposición al scope global para bindings en HTML (onchange / onclick)
 window.aplicarPresetFecha = aplicarPresetFecha;
 window.consultarPorFechas = consultarPorFechas;
+window.filtrarTurnoSeleccionado = filtrarTurnoSeleccionado;

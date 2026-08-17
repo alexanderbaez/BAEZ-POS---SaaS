@@ -10,6 +10,7 @@
 // ==========================================
 let sistemaBloqueado = false;
 let mensajeTicketServidor = "";
+let SESION_CAJA_ACTIVA = null;
 
 // Recursos de Audio
 const sndSuccess = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
@@ -77,6 +78,9 @@ document.addEventListener('DOMContentLoaded', async function inicializarModuloVe
     inicializarBuscadorClientes();
     inicializarListenersInterfaz();
     inicializarAtajosTecladoGlobales();
+
+    // Verificación inicial de caja al cargar el módulo
+    await verificarEstadoCaja();
 });
 
 
@@ -1122,46 +1126,63 @@ async function finalizarVenta() {
         return;
     }
 
-    if (!CARRITO || CARRITO.length === 0) {
+    // 1. Guardia de Caja local
+    if (!SESION_CAJA_ACTIVA) {
+        if (window.sndError) window.sndError.play().catch(() => {});
+        Swal.fire({
+            icon: 'warning',
+            title: 'Caja Cerrada',
+            text: 'No hay una sesión de caja abierta. Debe abrir la caja para poder cobrar.',
+            confirmButtonText: '<i class="bi bi-unlock-fill me-1"></i> Abrir Caja Ahora',
+            confirmButtonColor: '#0d6efd',
+            showCancelButton: true,
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) modalAbrirCaja();
+        });
+        return;
+    }
+
+    // 2. Validación de Carrito
+    if (!Array.isArray(CARRITO) || CARRITO.length === 0) {
         Swal.fire('Carrito vacío', 'Agrega productos para cobrar', 'info');
         return;
     }
 
     const totalVentaEl = document.getElementById('totalVenta');
-    const totalRaw = totalVentaEl ? totalVentaEl.innerText : '0';
-    let total = utilParsearMontoTextual(totalRaw);
+    let totalBase = utilParsearMontoTextual(totalVentaEl ? totalVentaEl.innerText : '0');
 
     const pagaConInputEl = document.getElementById('pagaCon');
-    const pagaConInput = pagaConInputEl ? pagaConInputEl.value : '0';
-    const pagaCon = utilParsearMontoTextual(pagaConInput);
+    const pagaCon = utilParsearMontoTextual(pagaConInputEl ? pagaConInputEl.value : '0');
 
-    if (METODO_PAGO === 'EFECTIVO' && pagaCon < total) {
+    if (METODO_PAGO === 'EFECTIVO' && pagaCon < totalBase) {
         Swal.fire('Atención', 'El monto recibido es insuficiente', 'warning');
         return;
     }
 
     let porcentajeRecargo = 0;
     let montoRecargo = 0;
+    let totalFinal = totalBase;
 
     if (METODO_PAGO === 'CUENTA_CORRIENTE') {
-        if (!clienteSeleccionado) {
-            Swal.fire('Atención', 'Debes seleccionar un cliente para vender a la libreta', 'warning');
+        if (!clienteSeleccionado || !clienteSeleccionado.id) {
+            Swal.fire('Atención', 'Debes seleccionar un cliente válido para vender a la libreta', 'warning');
             return;
         }
 
         const { value: recargoIngresado, isConfirmed } = await Swal.fire({
             title: '📈 Recargo por Libreta',
-            html: `Monto base: <b>$${utilFormatearMoneda(total)}</b><br><br>Ingresa el % de recargo:`,
+            html: `Monto base: <b>$${utilFormatearMoneda(totalBase)}</b><br><br>Ingresa el % de recargo:`,
             input: 'number',
             inputValue: 0,
             inputAttributes: { min: 0, max: 200, step: 'any' },
             showCancelButton: true,
             confirmButtonText: 'Confirmar y Cobrar',
             cancelButtonText: 'Cancelar',
-            preConfirm: function handleValidarRecargo(value) {
+            preConfirm: (value) => {
                 const val = parseFloat(value);
                 if (isNaN(val) || val < 0) {
-                    Swal.showValidationMessage('El porcentaje no puede ser negativo');
+                    Swal.showValidationMessage('El porcentaje debe ser un número igual o mayor a 0');
                     return false;
                 }
                 return val;
@@ -1172,15 +1193,16 @@ async function finalizarVenta() {
 
         porcentajeRecargo = recargoIngresado || 0;
         if (porcentajeRecargo > 0) {
-            montoRecargo = (total * porcentajeRecargo) / 100;
-            total = total + montoRecargo;
+            montoRecargo = utilRedondearTresDecimales((totalBase * porcentajeRecargo) / 100);
+            totalFinal = totalBase + montoRecargo;
         }
 
-        if (clienteSeleccionado.creditLimit && (clienteSeleccionado.currentBalance + total) > clienteSeleccionado.creditLimit) {
+        const saldoProyectado = (clienteSeleccionado.currentBalance || 0) + totalFinal;
+        if (clienteSeleccionado.creditLimit && saldoProyectado > clienteSeleccionado.creditLimit) {
             Swal.fire({
                 icon: 'error',
                 title: 'Límite de Crédito Excedido',
-                text: `El cliente no puede deber más de $${utilFormatearMoneda(clienteSeleccionado.creditLimit)}. Con recargo el total queda en $${utilFormatearMoneda(total)}`
+                text: `El límite es $${utilFormatearMoneda(clienteSeleccionado.creditLimit)}. Deuda proyectada: $${utilFormatearMoneda(saldoProyectado)}`
             });
             return;
         }
@@ -1188,88 +1210,90 @@ async function finalizarVenta() {
 
     const configLocal = JSON.parse(localStorage.getItem('config_comercio') || '{}');
     const datosEmpresaContext = (typeof DATOS_EMPRESA !== 'undefined' && DATOS_EMPRESA) ? DATOS_EMPRESA : configLocal;
-    const esFiscalActivo = String(datosEmpresaContext.hasTaxData) === "true";
 
+    // DTO Sanitizado
     const saleRequestDTO = {
-        items: CARRITO.map(function mapItemParaDTO(item) {
-            return {
-                productId: typeof item.id === 'number' ? item.id : null,
-                productName: item.name,
-                quantity: item.cantidad,
-                price: item.price,
-                unitPrice: item.price
-            };
-        }),
-        total: total,
+        cashRegisterId: SESION_CAJA_ACTIVA ? SESION_CAJA_ACTIVA.id : null,
+        items: CARRITO.map(item => ({
+            productId: typeof item.id === 'number' ? item.id : null,
+            productName: String(item.name).trim(),
+            quantity: item.isFractional ? utilRedondearTresDecimales(item.cantidad) : parseInt(item.cantidad, 10),
+            unitPrice: parseFloat(item.price)
+        })),
+        subtotal: totalBase,
+        total: totalFinal,
         discount: typeof DESCUENTO_FINAL_PESOS !== 'undefined' ? DESCUENTO_FINAL_PESOS : 0,
         surcharge: montoRecargo,
         surchargeRate: porcentajeRecargo,
         paymentMethod: METODO_PAGO,
         customerId: clienteSeleccionado ? clienteSeleccionado.id : null,
-        isFiscal: esFiscalActivo,
-        amountPaid: METODO_PAGO === 'EFECTIVO' ? (pagaCon > 0 ? pagaCon : total) : total
+        isFiscal: String(datosEmpresaContext.hasTaxData) === "true",
+        amountPaid: METODO_PAGO === 'EFECTIVO' ? (pagaCon > 0 ? pagaCon : totalFinal) : totalFinal
     };
 
-    const btnFinalizar = document.getElementById('btnFinalizarVenta') || document.querySelector('.btn-primary.btn-lg.w-100.py-3');
+    const btnFinalizar = document.getElementById('btnFinalizarVenta');
     if (btnFinalizar) btnFinalizar.disabled = true;
 
     try {
         const res = await apiFetch('/sales', {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(saleRequestDTO)
         });
 
         if (res.status === 401 || res.status === 403) return;
 
-        let data = {};
         const contentType = res.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-            data = await res.json();
+        const data = (contentType && contentType.includes("application/json")) ? await res.json() : {};
+
+        if (!res.ok) {
+            // Manejo específico si el backend rechaza por caja cerrada
+            if (res.status === 400 || res.status === 409) {
+                SESION_CAJA_ACTIVA = null;
+                actualizarUICaja(false);
+            }
+            throw new Error(data.message || `Error ${res.status}: No se pudo procesar la venta.`);
         }
 
-        if (res.ok) {
-            ULTIMA_VENTA_EXITOSA = data;
-            if (window.sndSuccess) window.sndSuccess.play().catch(function silencioso(){});
+        ULTIMA_VENTA_EXITOSA = data;
+        if (window.sndSuccess) window.sndSuccess.play().catch(() => {});
 
-            // Extraemos la secuencia o el comprobante del backend
-            const numTicketVisual = data.nroComprobante || (data.numeroTicket ? `#${data.numeroTicket}` : `Op #${data.id || 'OK'}`);
+        const numTicketVisual = data.nroComprobante || (data.numeroTicket ? `#${data.numeroTicket}` : `Op #${data.id || 'OK'}`);
 
-            Swal.fire({
-                icon: 'success',
-                title: '¡Venta Realizada!',
-                text: METODO_PAGO === 'CUENTA_CORRIENTE'
-                    ? `Cargado $${utilFormatearMoneda(total)} a la cuenta de ${clienteSeleccionado.name} (${numTicketVisual})`
-                    : `Comprobante ${numTicketVisual}`,
-                showCancelButton: true,
-                confirmButtonText: '<i class="bi bi-printer"></i> Imprimir Ticket',
-                cancelButtonText: 'No imprimir',
-                confirmButtonColor: '#28a745',
-                cancelButtonColor: '#6c757d',
-                reverseButtons: true
-            }).then(function handleRespuestaTicketModal(result) {
-                if (result.isConfirmed && typeof imprimirTicket === 'function') {
-                    imprimirTicket(data);
-                }
-            });
+        Swal.fire({
+            icon: 'success',
+            title: '¡Venta Realizada!',
+            text: METODO_PAGO === 'CUENTA_CORRIENTE'
+                ? `Cargado $${utilFormatearMoneda(totalFinal)} a ${clienteSeleccionado.name} (${numTicketVisual})`
+                : `Comprobante ${numTicketVisual}`,
+            showCancelButton: true,
+            confirmButtonText: '<i class="bi bi-printer"></i> Imprimir Ticket',
+            cancelButtonText: 'No imprimir',
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed && typeof imprimirTicket === 'function') {
+                imprimirTicket(data);
+            }
+        });
 
-            CARRITO = [];
-            clienteSeleccionado = null;
-            const infoCli = document.getElementById('infoClienteSeleccionado');
-            if (infoCli) infoCli.classList.add('d-none');
+        // Limpieza de estado del carrito
+        CARRITO = [];
+        clienteSeleccionado = null;
+        const infoCli = document.getElementById('infoClienteSeleccionado');
+        if (infoCli) infoCli.classList.add('d-none');
 
-            if (pagaConInputEl) pagaConInputEl.value = '';
-            const inputDesc = document.getElementById('inputDescuento');
-            if (inputDesc) inputDesc.value = '';
+        if (pagaConInputEl) pagaConInputEl.value = '';
+        const inputDesc = document.getElementById('inputDescuento');
+        if (inputDesc) inputDesc.value = '';
 
-            renderizarCarrito();
-            if (typeof cargarProductos === 'function') await cargarProductos();
+        renderizarCarrito();
+        if (typeof cargarProductos === 'function') await cargarProductos();
 
-        } else {
-            throw new Error(data.message || `Error ${res.status}: No se pudo procesar la venta en el servidor.`);
-        }
     } catch (err) {
-        console.error("Error en finalizarVenta:", err);
-        if (window.sndError) window.sndError.play().catch(function silencioso(){});
+        console.error("[SalesModule] Error al finalizar venta:", err);
+        if (window.sndError) window.sndError.play().catch(() => {});
         Swal.fire('Error', err.message || 'No se pudo conectar con el servidor.', 'error');
     } finally {
         if (btnFinalizar) btnFinalizar.disabled = false;
@@ -1576,3 +1600,438 @@ document.addEventListener('keydown', function handleCapturaFocoGlobal(e) {
         }
     }
 });
+
+// ==========================================
+// 13. APERTURA Y CIERRE DE CAJA (SaaS Multi-Tenant - Responsive)
+// ==========================================
+
+/**
+ * Función Auxiliar Segura para Formato Moneda
+ */
+function formatearMonedaSegura(monto) {
+    if (typeof utilFormatearMoneda === 'function') {
+        return utilFormatearMoneda(monto);
+    }
+    const val = parseFloat(monto || 0);
+    return val.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/**
+ * Consulta al backend si existe una caja abierta para la sesión actual.
+ */
+async function verificarEstadoCaja() {
+    try {
+        const response = await apiFetch('/cash-register/active');
+
+        if (response && response.ok) {
+            const data = await response.json();
+            if (data && (data.id || data.status === 'OPEN')) {
+                SESION_CAJA_ACTIVA = data;
+                actualizarUICaja(true);
+                return;
+            }
+        }
+
+        SESION_CAJA_ACTIVA = null;
+        actualizarUICaja(false);
+    } catch (error) {
+        console.error("[CashRegister] Error al verificar estado de caja:", error);
+        SESION_CAJA_ACTIVA = null;
+        actualizarUICaja(false);
+    }
+}
+
+/**
+ * Actualización de UI optimizada para Viewports Estrechos (UX Mobile-First)
+ */
+function actualizarUICaja(estaAbierta) {
+    const badge = document.getElementById('badgeEstadoCaja');
+    const btnAbrir = document.getElementById('btnAbrirCajaHeader') || document.getElementById('btnAbrirCajaUI');
+    const btnCerrar = document.getElementById('btnCerrarCajaHeader') || document.getElementById('btnCerrarCajaUI');
+
+    const inputBuscador = document.getElementById('buscadorVenta');
+    const btnFinalizar = document.getElementById('btnFinalizarVenta');
+
+    if (estaAbierta && SESION_CAJA_ACTIVA) {
+        // En móviles ocultamos el badge secundario para evitar el colapso visual
+        if (badge) {
+            badge.className = "badge bg-success-subtle text-success border border-success-subtle px-2 py-1.5 rounded-pill fs-7 d-none d-md-inline-flex align-items-center";
+            badge.innerHTML = `<i class="bi bi-circle-fill text-success fs-8 me-1"></i> Abierta (#${SESION_CAJA_ACTIVA.id || '1'})`;
+        }
+
+        if (btnAbrir) btnAbrir.classList.add('d-none');
+
+        // Botón Cierre Limpio (No envuelve texto)
+        if (btnCerrar) {
+            btnCerrar.classList.remove('d-none');
+            btnCerrar.className = "btn btn-outline-danger btn-sm rounded-pill px-2.5 py-1 fw-bold text-nowrap d-inline-flex align-items-center gap-1 shadow-sm fs-7";
+            btnCerrar.innerHTML = `<i class="bi bi-lock-fill"></i> <span>Cerrar</span>`;
+        }
+
+        if (inputBuscador) {
+            inputBuscador.disabled = false;
+            inputBuscador.placeholder = "Escanea código o busca producto...";
+        }
+        if (btnFinalizar) btnFinalizar.disabled = false;
+
+    } else {
+        // Ocultamos badge para dar paso al CTA unificado
+        if (badge) {
+            badge.className = "d-none d-md-inline-flex badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1.5 rounded-pill fs-7 align-items-center";
+            badge.innerHTML = `<i class="bi bi-x-circle-fill me-1"></i> Caja Cerrada`;
+        }
+
+        if (btnCerrar) btnCerrar.classList.add('d-none');
+
+        // Botón de Apertura Unificado: Evita saltos de línea con 'text-nowrap'
+        if (btnAbrir) {
+            btnAbrir.classList.remove('d-none');
+            btnAbrir.className = "btn btn-success btn-sm rounded-pill px-3 py-1.5 fw-bold text-nowrap d-inline-flex align-items-center gap-1.5 shadow-sm fs-7";
+            btnAbrir.innerHTML = `<i class="bi bi-unlock-fill"></i><span>Abrir Caja</span>`;
+        }
+
+        if (inputBuscador) {
+            inputBuscador.disabled = true;
+            inputBuscador.placeholder = "🔒 Abra la caja para vender...";
+        }
+        if (btnFinalizar) btnFinalizar.disabled = true;
+    }
+}
+
+/**
+ * Modal Responsive SweetAlert2 para APERTURA DE CAJA
+ */
+async function modalAbrirCaja() {
+    if (SESION_CAJA_ACTIVA) {
+        Swal.fire('Atención', 'Ya existe una sesión de caja abierta.', 'info');
+        return;
+    }
+
+    const { value: formValues } = await Swal.fire({
+        title: '<span class="fs-5 fs-md-4">🚀 Apertura de Caja</span>',
+        customClass: {
+            container: 'p-2 p-sm-3',
+            popup: 'rounded-4 shadow-lg border-0 mw-100',
+            htmlContainer: 'mx-0 my-2 px-1 px-sm-3 text-start'
+        },
+        html: `
+            <p class="text-muted small mb-3">Ingrese el monto inicial disponible en el cajón de dinero.</p>
+
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-secondary">Monto Inicial / Fondo ($)</label>
+                <div class="input-group input-group-lg">
+                    <span class="input-group-text bg-light text-secondary fs-5">$</span>
+                    <input id="swal-monto-inicial" type="number" step="0.01" inputmode="decimal" class="form-control fw-bold text-primary fs-4" placeholder="0.00" value="0.00">
+                </div>
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label small fw-bold text-secondary">Notas / Observaciones (Opcional)</label>
+                <textarea id="swal-notas-apertura" class="form-control form-control-sm" rows="2" placeholder="Ej: Cambio en billetes chicos..."></textarea>
+            </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: '<i class="bi bi-box-arrow-in-right me-1"></i> Abrir Caja',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#0d6efd',
+        cancelButtonColor: '#6c757d',
+        allowOutsideClick: false,
+        didOpen: () => {
+            const input = document.getElementById('swal-monto-inicial');
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        },
+        preConfirm: () => {
+            const elMonto = document.getElementById('swal-monto-inicial');
+            const elNotas = document.getElementById('swal-notas-apertura');
+            const monto = parseFloat(elMonto ? elMonto.value : 0);
+            const notas = elNotas ? elNotas.value.trim() : '';
+
+            if (isNaN(monto) || monto < 0) {
+                Swal.showValidationMessage('Ingrese un monto inicial válido (mayor o igual a 0)');
+                return false;
+            }
+            return { initialAmount: monto, notes: notas };
+        }
+    });
+
+    if (formValues) {
+        await ejecutarAperturaCaja(formValues);
+    }
+}
+
+/**
+ * Procesa el envío de Apertura de Caja al servidor mediante apiFetch
+ */
+async function ejecutarAperturaCaja(payload) {
+    try {
+        const response = await apiFetch('/cash-register/open', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response || !response.ok) {
+            const errData = response ? await response.json().catch(() => ({})) : {};
+            throw new Error(errData.message || 'Error al procesar la apertura de caja.');
+        }
+
+        SESION_CAJA_ACTIVA = await response.json();
+        actualizarUICaja(true);
+
+        if (window.sndSuccess) window.sndSuccess.play().catch(() => {});
+
+        Swal.fire({
+            icon: 'success',
+            title: '¡Caja Abierta!',
+            text: 'Turno iniciado correctamente. Ya puede registrar ventas.',
+            timer: 2000,
+            showConfirmButton: false
+        });
+
+        if (typeof enfocarBuscadorInteligente === 'function') {
+            enfocarBuscadorInteligente();
+        }
+
+    } catch (error) {
+        console.error("[CashRegister] Error de apertura:", error);
+        if (window.sndError) window.sndError.play().catch(() => {});
+        Swal.fire({
+            icon: 'error',
+            title: 'Error de Apertura',
+            text: error.message || 'No se pudo conectar con el servidor.'
+        });
+    }
+}
+
+/**
+ * Modal Responsive SweetAlert2 para CIERRE DE CAJA (Arqueo)
+ */
+async function modalCerrarCaja() {
+    if (!SESION_CAJA_ACTIVA) {
+        Swal.fire('Atención', 'No hay ninguna sesión de caja activa para cerrar.', 'warning');
+        return;
+    }
+
+    let report = {};
+    try {
+        const resReport = await apiFetch('/sales/box-report');
+        if (resReport && resReport.ok) {
+            report = await resReport.json();
+        }
+    } catch (e) {
+        console.warn("[CashRegister] No se pudo obtener el reporte de caja previo:", e);
+    }
+
+    const fondoInicial = parseFloat(report.activeInitialAmount ?? report.initialAmount ?? SESION_CAJA_ACTIVA.initialAmount ?? 0);
+    const ventasEfectivo = parseFloat(report.activeCashSales ?? report.cashSalesToday ?? SESION_CAJA_ACTIVA.totalCashSales ?? 0);
+    const cobrosCtaCte = parseFloat(report.activeCustomerPayments ?? report.customerPaymentsToday ?? SESION_CAJA_ACTIVA.totalCustomerPayments ?? 0);
+    const gastosEfectivo = parseFloat(report.activeExpenses ?? report.expensesToday ?? SESION_CAJA_ACTIVA.totalExpenses ?? 0);
+
+    const { value: formValues } = await Swal.fire({
+        title: '<span class="fs-6 fs-sm-5 fw-bold text-dark">🔒 Cierre de Caja & Arqueo</span>',
+        width: '100%',
+        customClass: {
+            container: 'p-1 p-sm-3',
+            popup: 'rounded-4 shadow-lg border-0 my-2 mx-auto',
+            htmlContainer: 'mx-0 my-1 px-2 px-sm-3 text-start'
+        },
+        html: `
+            <!-- Card Compacta de Resumen del Turno -->
+            <div class="bg-light p-2.5 p-sm-3 rounded-3 border mb-2.5">
+                <div class="row g-2 align-items-center fs-7">
+                    <div class="col-6 d-flex flex-column">
+                        <span class="text-muted small">Fondo Inicial:</span>
+                        <span class="fw-bold text-dark">$${formatearMonedaSegura(fondoInicial)}</span>
+                    </div>
+                    <div class="col-6 d-flex flex-column text-end">
+                        <span class="text-muted small">Ventas Efectivo:</span>
+                        <span class="fw-bold text-success">+$${formatearMonedaSegura(ventasEfectivo)}</span>
+                    </div>
+                    <div class="col-6 d-flex flex-column">
+                        <span class="text-muted small">Cobros Cta. Cte.:</span>
+                        <span class="fw-bold text-primary">+$${formatearMonedaSegura(cobrosCtaCte)}</span>
+                    </div>
+                    <div class="col-6 d-flex flex-column text-end">
+                        <span class="text-muted small">Gastos Efectivo:</span>
+                        <span class="fw-bold text-danger">-$${formatearMonedaSegura(gastosEfectivo)}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input de Monto Contado -->
+            <div class="mb-2">
+                <label class="form-label small fw-bold text-dark mb-1">Efectivo Real Físico en Cajón ($) *</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-success-subtle text-success fw-bold fs-6">$</span>
+                    <input id="swal-monto-declarado" type="number" step="0.01" inputmode="decimal" class="form-control fw-bold text-success fs-5" placeholder="0.00">
+                </div>
+                <div class="form-text text-muted" style="font-size: 0.72rem;">Conteo físico del dinero en caja.</div>
+            </div>
+
+            <!-- Observaciones -->
+            <div class="mb-1">
+                <label class="form-label small fw-bold text-secondary mb-1">Notas / Observaciones</label>
+                <textarea id="swal-notas-cierre" class="form-control form-control-sm" rows="2" placeholder="Opcional: Aclaraciones del turno..."></textarea>
+            </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: '<i class="bi bi-lock-fill me-1"></i> Confirmar Cierre',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        allowOutsideClick: false,
+        didOpen: () => {
+            const input = document.getElementById('swal-monto-declarado');
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        },
+        preConfirm: () => {
+            const elMonto = document.getElementById('swal-monto-declarado');
+            const elNotas = document.getElementById('swal-notas-cierre');
+            const montoDeclarado = parseFloat(elMonto ? elMonto.value : -1);
+            const notas = elNotas ? elNotas.value.trim() : '';
+
+            if (isNaN(montoDeclarado) || montoDeclarado < 0) {
+                Swal.showValidationMessage('Ingrese un monto físico contado válido');
+                return false;
+            }
+            return { declaredAmount: montoDeclarado, notes: notas };
+        }
+    });
+
+    if (formValues) {
+        await ejecutarCierreCaja(formValues);
+    }
+}
+
+/**
+ * Procesa el envío de Cierre de Caja al servidor mediante apiFetch y despliega el Informe Auditor
+ */
+async function ejecutarCierreCaja(payload) {
+    try {
+        const response = await apiFetch('/cash-register/close', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response || !response.ok) {
+            const errData = response ? await response.json().catch(() => ({})) : {};
+            throw new Error(errData.message || 'Error al procesar el cierre de caja.');
+        }
+
+        // DTO recibido del Backend: CashSessionResponseDTO
+        const closedSession = await response.json();
+
+        SESION_CAJA_ACTIVA = null;
+        actualizarUICaja(false);
+
+        if (window.sndSuccess) window.sndSuccess.play().catch(() => {});
+
+        // Desplegar resultado de arqueo auditado
+        await mostrarResultadoArqueoModal(closedSession);
+
+    } catch (error) {
+        console.error("[CashRegister] Error de cierre:", error);
+        if (window.sndError) window.sndError.play().catch(() => {});
+        Swal.fire({
+            icon: 'error',
+            title: 'Error al cerrar caja',
+            text: error.message || 'No se pudo conectar con el servidor.'
+        });
+    }
+}
+
+/**
+ * Modal Auditor para mostrar Sobrante / Faltante o Caja Cuadrada (UX Responsive)
+ */
+async function mostrarResultadoArqueoModal(dto) {
+    const sistema = parseFloat(dto.systemAmount ?? 0);
+    const declarado = parseFloat(dto.declaredAmount ?? 0);
+    const diferencia = parseFloat(dto.difference ?? 0);
+
+    let iconType = 'success';
+    let titleHeader = '¡Caja Cerrada!';
+    let diffBadge = `<span class="badge bg-success-subtle text-success fs-7 border border-success-subtle px-2.5 py-1.5 rounded-pill">Diferencia: $0,00</span>`;
+    let estadoTexto = 'El dinero físico coincide con el cálculo del sistema.';
+
+    if (diferencia < 0) {
+        iconType = 'warning';
+        titleHeader = 'Cierre con FALTANTE';
+        diffBadge = `<span class="badge bg-danger-subtle text-danger fs-7 border border-danger-subtle px-2.5 py-1.5 rounded-pill">Faltante: -$${formatearMonedaSegura(Math.abs(diferencia))}</span>`;
+        estadoTexto = 'Se detectó un faltante de dinero respecto al sistema.';
+    } else if (diferencia > 0) {
+        iconType = 'info';
+        titleHeader = 'Cierre con SOBRANTE';
+        diffBadge = `<span class="badge bg-primary-subtle text-primary fs-7 border border-primary-subtle px-2.5 py-1.5 rounded-pill">Sobrante: +$${formatearMonedaSegura(diferencia)}</span>`;
+        estadoTexto = 'Se registró más efectivo que el calculado por el sistema.';
+    }
+
+    await Swal.fire({
+        icon: iconType,
+        title: `<span class="fs-6 fs-sm-5 fw-bold text-dark">${titleHeader}</span>`,
+        width: '100%',
+        customClass: {
+            container: 'p-1 p-sm-3',
+            popup: 'rounded-4 shadow-lg border-0 my-2 mx-auto mw-100',
+            htmlContainer: 'mx-0 my-1 px-2 px-sm-3 text-start'
+        },
+        html: `
+            <div class="text-center mb-2.5">
+                ${diffBadge}
+                <p class="text-muted small mt-1.5 mb-0" style="font-size: 0.78rem;">${estadoTexto}</p>
+            </div>
+
+            <!-- Comparativa Principal -->
+            <div class="bg-light p-2.5 p-sm-3 rounded-3 border mb-2.5 fs-7">
+                <div class="d-flex justify-content-between align-items-center mb-1.5">
+                    <span class="text-secondary">Efectivo Esperado:</span>
+                    <span class="fw-bold text-dark">$${formatearMonedaSegura(sistema)}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-1.5">
+                    <span class="text-secondary">Efectivo Declarado:</span>
+                    <span class="fw-bold text-success">$${formatearMonedaSegura(declarado)}</span>
+                </div>
+                <hr class="my-1.5">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-bold text-dark">Resultado Arqueo:</span>
+                    <span class="fw-bold fs-6 ${diferencia < 0 ? 'text-danger' : (diferencia > 0 ? 'text-primary' : 'text-success')}">
+                        ${diferencia > 0 ? '+' : ''}$${formatearMonedaSegura(diferencia)}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Resumen Operativo en Lista Flex (Zero-Break Overflow) -->
+            <div class="bg-white p-2.5 rounded-3 border text-start fs-7">
+                <span class="fw-bold text-secondary d-block mb-1.5" style="font-size: 0.75rem;">Resumen Operativo del Turno:</span>
+
+                <div class="d-flex justify-content-between align-items-center py-0.5 border-bottom border-light">
+                    <span class="text-muted small">+ Fondo Inicial:</span>
+                    <span class="fw-semibold text-dark">$${formatearMonedaSegura(dto.initialAmount)}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center py-0.5 border-bottom border-light">
+                    <span class="text-muted small">+ Ventas Efec.:</span>
+                    <span class="fw-semibold text-dark">$${formatearMonedaSegura(dto.totalCashSales)}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center py-0.5 border-bottom border-light">
+                    <span class="text-muted small">+ Cobros Cta. Cte.:</span>
+                    <span class="fw-semibold text-dark">$${formatearMonedaSegura(dto.totalCustomerPayments)}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center py-0.5">
+                    <span class="text-muted small">- Gastos Efec.:</span>
+                    <span class="fw-semibold text-danger">-$${formatearMonedaSegura(dto.totalExpenses)}</span>
+                </div>
+            </div>
+        `,
+        confirmButtonText: '<i class="bi bi-check-circle-fill me-1"></i> Entendido',
+        confirmButtonColor: '#0d6efd',
+        allowOutsideClick: false
+    });
+}

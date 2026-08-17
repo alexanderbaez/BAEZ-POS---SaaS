@@ -33,6 +33,11 @@
             width: calc(100% - var(--sidebar-width));
         }
 
+        /* Garantizar que el Navbar Fijo quede siempre por encima en el apilamiento */
+        .navbar.sticky-top {
+            z-index: 1030 !important;
+        }
+
         /* Modos POS Desktop */
         .card-pos {
             height: calc(100vh - 90px);
@@ -157,12 +162,26 @@
                 <span class="fw-bold text-primary fs-5 d-md-none">BaezPOS</span>
             </div>
 
-            <div class="ms-auto d-flex align-items-center">
-                <div class="text-end me-2 me-md-3">
+            <!-- CONTROLES DE CAJA Y USUARIO EN HEADER -->
+            <div class="ms-auto d-flex align-items-center gap-1 gap-sm-2">
+                <!-- Indicador visual y Botones de Apertura/Cierre de Caja -->
+                <div class="d-flex align-items-center gap-1 gap-sm-2 me-1 me-md-3 border-end pe-1 pe-md-3">
+                    <span id="badgeEstadoCaja" class="badge bg-danger fs-6 px-2 py-1 border align-middle">
+                        <i class="bi bi-lock-fill me-1"></i> <span class="d-none d-sm-inline">Caja Cerrada</span>
+                    </span>
+                    <button type="button" id="btnAbrirCajaUI" class="btn btn-sm btn-success fw-bold" onclick="modalAbrirCaja()">
+                        <i class="bi bi-box-arrow-in-right me-1"></i> <span class="d-none d-sm-inline">Abrir Caja</span>
+                    </button>
+                    <button type="button" id="btnCerrarCajaUI" class="btn btn-sm btn-outline-danger fw-bold d-none" onclick="modalCerrarCaja()">
+                        <i class="bi bi-box-arrow-left me-1"></i> <span class="d-none d-sm-inline">Cerrar Caja</span>
+                    </button>
+                </div>
+
+                <div class="text-end me-1 me-md-3 d-none d-sm-block">
                     <div id="userName" class="fw-bold text-dark text-capitalize fs-6">Usuario</div>
                     <small id="userRoleBadge" class="badge bg-secondary-subtle text-secondary text-uppercase border" style="font-size: 0.65rem;">Cargando...</small>
                 </div>
-                <div class="bg-primary bg-opacity-10 p-2 rounded-circle text-primary d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                <div class="bg-primary bg-opacity-10 p-2 rounded-circle text-primary d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
                     <i class="bi bi-person-fill fs-5"></i>
                 </div>
             </div>
@@ -193,7 +212,7 @@
                     <!-- Tabla del Carrito de Ventas -->
                     <div class="table-responsive table-responsive-pos border rounded-3">
                         <table class="table align-middle table-hover mb-0 table-pos-mobile">
-                            <thead class="text-secondary small border-bottom sticky-top bg-light" style="font-size: 0.75rem;">
+                            <thead class="text-secondary small border-bottom bg-light" style="font-size: 0.75rem;">
                             <tr>
                                 <th style="width: 40%;" class="ps-3 py-2">PRODUCTO</th>
                                 <th class="text-center py-2" style="width: 20%;">CANT.</th>
@@ -323,6 +342,85 @@
         </button>
     </div>
 
+</div>
+
+<!-- MODAL: APERTURA DE CAJA -->
+<div class="modal fade" id="modalAbrirCaja" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-door-open-fill me-2"></i>Apertura de Caja</h5>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formAbrirCaja" onsubmit="procesarAperturaCaja(event)">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">Monto Inicial en Caja ($)</label>
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text bg-light fw-bold">$</span>
+                            <input type="number" step="0.01" min="0" id="montoInicialCaja" class="form-control fw-bold" placeholder="0.00" required autocomplete="off">
+                        </div>
+                        <small class="text-muted">Ingrese el efectivo físico disponible en la caja al iniciar el turno.</small>
+                    </div>
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" id="btnConfirmarApertura" class="btn btn-primary btn-lg fw-bold">
+                            <i class="bi bi-check-circle me-2"></i>Abrir Caja e Iniciar Turno
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: CIERRE DE CAJA (ARQUEO) -->
+<div class="modal fade" id="modalCerrarCaja" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-calculator me-2"></i>Cierre y Arqueo de Caja</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Resumen de Totales del Turno -->
+                <div class="bg-light p-3 rounded-3 border mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-secondary">Monto Inicial:</span>
+                        <strong id="resumenMontoInicial">$0.00</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-secondary">Ventas en Efectivo:</span>
+                        <strong id="resumenVentasEfectivo" class="text-success">$0.00</strong>
+                    </div>
+                    <div class="d-flex justify-content-between border-top pt-2 mt-2">
+                        <span class="fw-bold">Efectivo Esperado:</span>
+                        <strong id="resumenEfectivoEsperado" class="fs-5 text-primary">$0.00</strong>
+                    </div>
+                </div>
+
+                <form id="formCerrarCaja" onsubmit="procesarCierreCaja(event)">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">Efectivo Físico Contado ($)</label>
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text bg-light fw-bold">$</span>
+                            <input type="number" step="0.01" min="0" id="montoFinalReal" class="form-control fw-bold" placeholder="0.00" required autocomplete="off">
+                        </div>
+                        <small class="text-muted">Ingrese el total de dinero en billetes/monedas en el cajón.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">Observaciones / Notas</label>
+                        <textarea id="observacionesCierre" class="form-control" rows="2" placeholder="Opcional: aclaraciones de sobrante/faltante..."></textarea>
+                    </div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" id="btnConfirmarCierre" class="btn btn-danger btn-lg fw-bold">
+                            <i class="bi bi-box-arrow-left me-2"></i>Confirmar y Cerrar Caja
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Scripts Principales -->
