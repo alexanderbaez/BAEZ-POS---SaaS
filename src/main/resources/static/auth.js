@@ -2,11 +2,13 @@
  * BÁEZ POS - CENTINELA DE SEGURIDAD Y LICENCIAMIENTO QUIRÚRGICO (SaaS)
  * Alexander Baez - 2026
  */
+
+// Detecta si se está ejecutando en entorno de desarrollo local
 const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-const BACKEND_URL = IS_LOCAL
-    ? 'http://localhost:8080'
-    : 'https://baez-pos-saas.onrender.com';
+// En local apunta directamente a Spring Boot (8080).
+// En producción usa string vacío '' para que Nginx Proxy Manager gestione la ruta /api/v1 con HTTPS.
+const BACKEND_URL = IS_LOCAL ? 'http://localhost:8080' : '';
 
 const BASE_URL = `${BACKEND_URL}/api/v1`;
 const MI_WHATSAPP = "5492645468570";

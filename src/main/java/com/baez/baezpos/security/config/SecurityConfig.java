@@ -36,8 +36,8 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService customUserDetailsService;
 
-    // Agregada la URL de AWS Amplify al fallback por defecto
-    @Value("${app.cors.allowed-origins:https://master.d3gp9of2938ba5.amplifyapp.com,http://localhost:3000,http://localhost:5173,http://localhost:8080}")
+    // Se agregan el dominio principal baezpos.com, subdominios *.baezpos.com y puertos locales
+    @Value("${app.cors.allowed-origins:https://baezpos.com,https://*.baezpos.com,http://baezpos.com,http://localhost:3000,http://localhost:5173,http://localhost:8080,http://127.0.0.1:8080}")
     private String allowedOrigins;
 
     @Bean
@@ -135,7 +135,8 @@ public class SecurityConfig {
                 .filter(s -> !s.isEmpty())
                 .toList();
 
-        config.setAllowedOrigins(origins);
+        // Usa setAllowedOriginPatterns para admitir comodines de subdominios (*.baezpos.com) con credenciales activas
+        config.setAllowedOriginPatterns(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
         config.setExposedHeaders(List.of("Authorization"));
