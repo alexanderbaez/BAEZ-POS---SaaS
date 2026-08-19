@@ -42,4 +42,12 @@ public class User extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = true)
     private Company company;
+
+    // Blindaje extra: Asegura que nunca se guarde como null o falso por descuido al persistir
+    @PrePersist
+    public void prePersist() {
+        if (this.active == null) {
+            this.active = true;
+        }
+    }
 }
