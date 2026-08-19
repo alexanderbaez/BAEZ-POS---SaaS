@@ -7,6 +7,8 @@ import com.baez.baezpos.security.dto.SetupRequest;
 import com.baez.baezpos.security.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,15 +17,24 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
+@Slf4j
 public class AuthController {
 
     private final AuthService authService;
 
     @PostMapping("/authenticate")
-    public ResponseEntity<AuthenticationResponse> authenticate(
+    public ResponseEntity<?> authenticate(
             @Valid @RequestBody AuthenticationRequest request
     ) {
-        return ResponseEntity.ok(authService.authenticate(request));
+        try {
+            log.info("Intento de autenticación para el usuario: {}", request.getEmail());
+            AuthenticationResponse response = authService.authenticate(request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("ERROR CRÍTICO EN AUTENTICACIÓN para {}: {}", request.getEmail(), e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Credenciales incorrectas", "detail", e.getMessage()));
+        }
     }
 
     @GetMapping("/setup-status")
