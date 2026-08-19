@@ -46,6 +46,10 @@ public class AuthService {
         User user = userRepository.findByEmail(cleanEmail)
                 .orElseThrow(() -> new BadCredentialsException("Credenciales incorrectas. Verifique email y contraseña."));
 
+        if (!Boolean.TRUE.equals(user.getActive())) {
+            throw new BadRequestException("La cuenta de usuario se encuentra desactivada.");
+        }
+
         if (user.getPasswordResetAt() != null) {
             LocalDateTime resetAt = user.getPasswordResetAt();
             if (resetAt.plusMinutes(10).isBefore(LocalDateTime.now())) {
@@ -53,17 +57,11 @@ public class AuthService {
             }
         }
 
-        try {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(cleanEmail, request.getPassword())
-            );
-        } catch (Exception e) {
-            throw new BadCredentialsException("Credenciales incorrectas. Verifique email y contraseña.");
-        }
-
-        if (!Boolean.TRUE.equals(user.getActive())) {
-            throw new BadRequestException("La cuenta de usuario se encuentra desactivada.");
-        }
+        // Dejamos que Spring Security maneje la autenticación de forma limpia
+        // sin envolverlo en un catch genérico que oculte posibles errores de configuración.
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(cleanEmail, request.getPassword())
+        );
 
         if (user.getPasswordResetAt() != null) {
             user.setPasswordResetAt(null);
@@ -139,7 +137,6 @@ public class AuthService {
         String cleanEmail = request.getEmail().trim().toLowerCase();
         Optional<User> userOpt = userRepository.findByEmail(cleanEmail);
 
-        // Mitigación de Enumeración de Usuarios: Responder siempre con éxito sin revelar si el correo existe
         if (userOpt.isEmpty()) {
             log.warn("Solicitud de restablecimiento de contraseña para correo no registrado: {}", cleanEmail);
             return;
