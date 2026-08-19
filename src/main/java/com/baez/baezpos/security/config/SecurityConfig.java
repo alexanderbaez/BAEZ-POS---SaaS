@@ -101,9 +101,18 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("*"));
+
+        // Dominios explícitos requeridos cuando allowCredentials es true
+        config.setAllowedOrigins(List.of(
+                "https://baezpos.com",
+                "https://www.baezpos.com",
+                "http://localhost:5173",
+                "http://localhost:3000",
+                "http://localhost:8080"
+        ));
+
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        config.setAllowedHeaders(List.of("*"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
         config.setExposedHeaders(List.of("Authorization"));
         config.setAllowCredentials(true);
 
