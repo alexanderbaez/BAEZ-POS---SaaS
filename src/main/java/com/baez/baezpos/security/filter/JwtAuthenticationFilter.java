@@ -28,6 +28,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final CustomUserDetailsService userDetailsService;
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+        if (path == null || path.isEmpty()) {
+            path = request.getRequestURI();
+        }
+        return path.startsWith("/api/v1/auth/") ||
+                path.equals("/login") ||
+                path.endsWith(".html") ||
+                path.endsWith(".js") ||
+                path.endsWith(".css");
+    }
+
+    @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
@@ -50,13 +63,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (userDetails instanceof UserPrincipal userPrincipal) {
                     if (jwtService.isTokenValid(jwt, userPrincipal.getUsername())) {
 
-                        // 1. Validar que la cuenta del usuario no esté inhabilitada
                         if (!userPrincipal.isEnabled()) {
                             sendJsonError(response, HttpServletResponse.SC_FORBIDDEN, "CUENTA_DESACTIVADA", "La cuenta de usuario se encuentra desactivada.");
                             return;
                         }
 
-                        // 2. Validar suscripción/estado del tenant para métodos de escritura/modificación en el sistema
                         String path = request.getRequestURI();
                         String method = request.getMethod();
                         boolean isMutationOperation = !method.equalsIgnoreCase("GET") && !method.equalsIgnoreCase("OPTIONS");

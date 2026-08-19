@@ -3,7 +3,6 @@ package com.baez.baezpos.security.config;
 import com.baez.baezpos.security.filter.JwtAuthenticationFilter;
 import com.baez.baezpos.security.service.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -14,8 +13,8 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -24,7 +23,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -36,21 +34,21 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService customUserDetailsService;
 
-    // Se agregan el dominio principal baezpos.com, subdominios *.baezpos.com y puertos locales
-    @Value("${app.cors.allowed-origins:https://baezpos.com,https://*.baezpos.com,http://baezpos.com,http://localhost:3000,http://localhost:5173,http://localhost:8080,http://127.0.0.1:8080}")
-    private String allowedOrigins;
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .formLogin(form -> form.disable())
-                .httpBasic(basic -> basic.disable())
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Archivos estáticos y Vistas HTML
+                        // 1. Preflights CORS globales
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // 2. Archivos estáticos y Vistas del Frontend
                         .requestMatchers(
                                 "/",
+                                "/login",
                                 "/login.html",
                                 "/index.html",
                                 "/*.html",
@@ -63,22 +61,16 @@ public class SecurityConfig {
                                 "/error"
                         ).permitAll()
 
-                        // 2. Endpoints públicos del Módulo de Autenticación
-                        .requestMatchers(
-                                "/api/v1/auth/authenticate",
-                                "/api/v1/auth/setup-status",
-                                "/api/v1/auth/setup",
-                                "/api/v1/auth/forgot-password",
-                                "/api/v1/auth/verify"
-                        ).permitAll()
+                        // 3. Endpoints públicos de Autenticación
+                        .requestMatchers("/api/v1/auth/**").permitAll()
 
-                        // 3. Módulo Global Super Admin
+                        // 4. Módulo Global Super Admin
                         .requestMatchers("/api/v1/super-admin/**").hasRole("SUPER_ADMIN")
 
-                        // 4. Perfil de Usuario
+                        // 5. Perfil de Usuario
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/users/update-password").authenticated()
 
-                        // 5. Operaciones de Empresa y POS accesibles por ADMIN y VENDEDOR
+                        // 6. Operaciones de Empresa y POS
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/admin/my-company/status",
                                 "/api/v1/admin/my-company/check-status",
@@ -89,7 +81,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/sales/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/customers/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
 
-                        // 6. Módulos de administración del tenant
+                        // 7. Módulos de administración del tenant
                         .requestMatchers("/api/v1/users/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/inventory/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
@@ -101,11 +93,6 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
-    }
-
-    @Bean
-    public UserDetailsService userDetailsService() {
-        return customUserDetailsService;
     }
 
     @Bean
@@ -130,15 +117,9 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        List<String> origins = Arrays.stream(allowedOrigins.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .toList();
-
-        // Usa setAllowedOriginPatterns para admitir comodines de subdominios (*.baezpos.com) con credenciales activas
-        config.setAllowedOriginPatterns(origins);
+        config.setAllowedOriginPatterns(List.of("*"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
+        config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("Authorization"));
         config.setAllowCredentials(true);
 
