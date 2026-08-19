@@ -42,10 +42,7 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Preflights CORS globales
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-                        // 2. Archivos estáticos y Vistas del Frontend
                         .requestMatchers(
                                 "/",
                                 "/login",
@@ -60,32 +57,20 @@ public class SecurityConfig {
                                 "/favicon.ico",
                                 "/error"
                         ).permitAll()
-
-                        // 3. Endpoints públicos de Autenticación
                         .requestMatchers("/api/v1/auth/**").permitAll()
-
-                        // 4. Módulo Global Super Admin
                         .requestMatchers("/api/v1/super-admin/**").hasRole("SUPER_ADMIN")
-
-                        // 5. Perfil de Usuario
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/users/update-password").authenticated()
-
-                        // 6. Operaciones de Empresa y POS
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/admin/my-company/status",
                                 "/api/v1/admin/my-company/check-status",
                                 "/api/v1/admin/my-company/profile"
                         ).hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
-
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/sales/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/customers/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
-
-                        // 7. Módulos de administración del tenant
                         .requestMatchers("/api/v1/users/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/inventory/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
-
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -116,7 +101,6 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-
         config.setAllowedOriginPatterns(List.of("*"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("*"));

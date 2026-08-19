@@ -32,30 +32,25 @@ public class DataInitializer implements CommandLineRunner {
     public void run(String... args) throws Exception {
         Optional<User> existingSuperAdmin = userRepository.findByEmail(superAdminEmail);
 
-        if (existingSuperAdmin.isEmpty()) {
-            Optional<User> legacySuperAdmin = userRepository.findByEmail("admin@baezpos.com");
-
-            if (legacySuperAdmin.isPresent()) {
-                User userToUpdate = legacySuperAdmin.get();
-                userToUpdate.setEmail(superAdminEmail);
-                userToUpdate.setPassword(passwordEncoder.encode(superAdminPassword));
-                userRepository.save(userToUpdate);
-                log.info("SUPER_ADMIN migrado exitosamente al correo real: {}", superAdminEmail);
-            } else {
-                User superAdmin = User.builder()
-                        .name("Alexander Baez (Super Admin)")
-                        .email(superAdminEmail)
-                        .password(passwordEncoder.encode(superAdminPassword))
-                        .role(Role.SUPER_ADMIN)
-                        .active(true)
-                        .company(null)
-                        .build();
-
-                userRepository.save(superAdmin);
-                log.info("SUPER_ADMIN maestro SaaS creado con éxito: {}", superAdminEmail);
-            }
+        if (existingSuperAdmin.isPresent()) {
+            User admin = existingSuperAdmin.get();
+            admin.setPassword(passwordEncoder.encode(superAdminPassword));
+            admin.setActive(true);
+            admin.setRole(Role.SUPER_ADMIN);
+            userRepository.save(admin);
+            log.info("SUPER_ADMIN actualizado con hash fresco de BCrypt: {}", superAdminEmail);
         } else {
-            log.info("SUPER_ADMIN ya existe en el sistema: {}", superAdminEmail);
+            User superAdmin = User.builder()
+                    .name("Alexander Baez (Super Admin)")
+                    .email(superAdminEmail)
+                    .password(passwordEncoder.encode(superAdminPassword))
+                    .role(Role.SUPER_ADMIN)
+                    .active(true)
+                    .company(null)
+                    .build();
+
+            userRepository.save(superAdmin);
+            log.info("SUPER_ADMIN creado con éxito: {}", superAdminEmail);
         }
     }
 }
