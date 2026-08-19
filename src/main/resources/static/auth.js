@@ -6,10 +6,11 @@
 // Detecta si se está ejecutando en entorno de desarrollo local
 const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-// En local apunta directamente a Spring Boot (8080).
-// En producción usa string vacío '' para que Nginx Proxy Manager gestione la ruta /api/v1 con HTTPS.
+// En local apunta directamente a Spring Boot (http://localhost:8080).
+// En producción usa string vacío '' para que Nginx Proxy Manager gestione las peticiones relativas con HTTPS.
 const BACKEND_URL = IS_LOCAL ? 'http://localhost:8080' : '';
 
+// BASE_URL Centralizado: Mantiene el prefijo /api/v1 para todo el sistema
 const BASE_URL = `${BACKEND_URL}/api/v1`;
 const MI_WHATSAPP = "5492645468570";
 
@@ -64,7 +65,7 @@ function esVistaLogin() {
     }
 })();
 
-// 2. Fetch Helper Universal
+// 2. Fetch Helper Universal (Construye las URLs usando BASE_URL = /api/v1)
 async function apiFetch(path, options = {}) {
     const headers = options.headers ? new Headers(options.headers) : new Headers();
     if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
@@ -173,30 +174,25 @@ function bloquearPantallaVentas(mensaje) {
     if (esVistaLogin()) return;
     if (document.getElementById('bloqueo-pos-overlay')) return;
 
-    // 1. Desactivar carrito si existe
     if (typeof CARRITO !== 'undefined') {
         CARRITO = [];
         if (typeof renderizarCarrito === 'function') renderizarCarrito();
     }
 
-    // 2. Ocultar la barra flotante inferior móvil de cobro
     const mobileBottomBar = document.querySelector('.mobile-bottom-bar');
     if (mobileBottomBar) {
         mobileBottomBar.style.setProperty('display', 'none', 'important');
     }
 
-    // 3. Inyectar corrección CSS estricta para Sidebar y Overlay
     let styleElem = document.getElementById('baezpos-bloqueo-styles');
     if (!styleElem) {
         styleElem = document.createElement('style');
         styleElem.id = 'baezpos-bloqueo-styles';
         styleElem.innerHTML = `
-            /* Navbar siempre visible por encima del overlay */
             .navbar, header, nav {
                 z-index: 1050 !important;
             }
 
-            /* Forzar Sidebar/Menu desplegable arriba de todo y desactivar desenfoque */
             .sidebar, #sidebar, .offcanvas, .sidebar-wrapper, [class*="sidebar"] {
                 z-index: 10000 !important;
                 backdrop-filter: none !important;
@@ -204,7 +200,6 @@ function bloquearPantallaVentas(mensaje) {
                 filter: none !important;
             }
 
-            /* Overlay oscuro de fondo */
             #bloqueo-pos-overlay {
                 position: fixed !important;
                 top: 0 !important;
@@ -235,7 +230,6 @@ function bloquearPantallaVentas(mensaje) {
         document.head.appendChild(styleElem);
     }
 
-    // 4. Crear el overlay
     const overlay = document.createElement('div');
     overlay.id = 'bloqueo-pos-overlay';
 
@@ -274,19 +268,13 @@ function bloquearPantallaVentas(mensaje) {
 
 function removerBloqueoVentas() {
     const overlay = document.getElementById('bloqueo-pos-overlay');
-    if (overlay) {
-        overlay.remove();
-    }
+    if (overlay) overlay.remove();
 
     const styleElem = document.getElementById('baezpos-bloqueo-styles');
-    if (styleElem) {
-        styleElem.remove();
-    }
+    if (styleElem) styleElem.remove();
 
     const mobileBottomBar = document.querySelector('.mobile-bottom-bar');
-    if (mobileBottomBar) {
-        mobileBottomBar.style.display = '';
-    }
+    if (mobileBottomBar) mobileBottomBar.style.display = '';
 }
 
 /**
