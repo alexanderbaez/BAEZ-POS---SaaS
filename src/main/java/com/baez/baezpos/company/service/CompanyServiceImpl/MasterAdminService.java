@@ -76,13 +76,15 @@ public class MasterAdminService implements MasterAdmin {
 
         User savedOwner = userRepository.save(owner);
 
-        // 3. Generar token de verificación (Válido por 24 horas)
+        // 3. Generar o actualizar token de verificación (Válido por 24 horas)
         String tokenStr = UUID.randomUUID().toString();
-        VerificationToken verificationToken = VerificationToken.builder()
-                .token(tokenStr)
-                .user(savedOwner)
-                .expiryDate(LocalDateTime.now().plusHours(24))
-                .build();
+
+        VerificationToken verificationToken = tokenRepository.findByUser(savedOwner)
+                .orElse(new VerificationToken());
+
+        verificationToken.setToken(tokenStr);
+        verificationToken.setUser(savedOwner);
+        verificationToken.setExpiryDate(LocalDateTime.now().plusHours(24));
 
         tokenRepository.save(verificationToken);
 
