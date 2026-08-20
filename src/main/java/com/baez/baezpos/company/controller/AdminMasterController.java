@@ -44,7 +44,7 @@ public class AdminMasterController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<String> update(@PathVariable Long id, @Valid @RequestBody CompanyDTO dto) { // <--- Agregado @Valid
+    public ResponseEntity<String> update(@PathVariable Long id, @Valid @RequestBody CompanyDTO dto) {
         masterAdminService.updateCompanyMaster(id, dto);
         return ResponseEntity.ok("Empresa actualizada correctamente.");
     }

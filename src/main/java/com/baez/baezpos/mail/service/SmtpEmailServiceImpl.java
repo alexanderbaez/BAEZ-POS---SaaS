@@ -40,14 +40,23 @@ public class SmtpEmailServiceImpl implements EmailService {
 
             mailSender.send(message);
             log.info("E-mail enviado con éxito a: {}", destinatario);
-            auditService.logAction("EMAIL_ENVIADO", "Correo enviado a: " + destinatario + " | Asunto: " + asunto, "INFO");
+
+            safeAuditLog("EMAIL_ENVIADO", "Correo enviado a: " + destinatario + " | Asunto: " + asunto, "INFO");
 
         } catch (MessagingException e) {
             log.error("Error al construir o enviar el mensaje SMTP a {}: {}", destinatario, e.getMessage(), e);
-            auditService.logAction("EMAIL_ERROR", "Error SMTP al enviar correo a: " + destinatario + " | Error: " + e.getMessage(), "ERROR");
+            safeAuditLog("EMAIL_ERROR", "Error SMTP al enviar correo a: " + destinatario + " | Error: " + e.getMessage(), "ERROR");
         } catch (Exception e) {
             log.error("Error inesperado en el servicio de correo para {}: {}", destinatario, e.getMessage(), e);
-            auditService.logAction("EMAIL_ERROR", "Excepción no controlada enviando e-mail a: " + destinatario, "ERROR");
+            safeAuditLog("EMAIL_ERROR", "Excepción no controlada enviando e-mail a: " + destinatario, "ERROR");
+        }
+    }
+
+    private void safeAuditLog(String action, String details, String level) {
+        try {
+            auditService.logAction(action, details, level);
+        } catch (Exception ex) {
+            log.warn("No se pudo registrar la auditoría en hilo asíncrono (posible falta de TenantContext/company_id): {}", ex.getMessage());
         }
     }
 
