@@ -49,7 +49,7 @@ public class MasterAdminService implements MasterAdmin {
             throw new IllegalArgumentException("El correo '" + cleanEmail + "' ya pertenece a un usuario en el sistema.");
         }
 
-        // 1. Crear la empresa
+        // 1. Crear la empresa (Activa por defecto)
         Company company = Company.builder()
                 .name(req.getCompanyName().trim())
                 .taxId(req.getTaxId() != null ? req.getTaxId().trim() : null)
@@ -58,20 +58,20 @@ public class MasterAdminService implements MasterAdmin {
                 .email(cleanEmail)
                 .monthlyFee(req.getMonthlyFee())
                 .expirationDate(req.getExpirationDate() != null ? req.getExpirationDate() : LocalDate.now().plusDays(15))
-                .active(false) // Deshabilitada hasta verificación
+                .active(true) // <--- FORZADO A TRUE
                 .ticketMessage(req.getTicketMessage())
                 .build();
 
         Company savedCompany = companyRepository.save(company);
 
-        // 2. Crear usuario Admin (Dueño)
+        // 2. Crear usuario Admin (Dueño activo por defecto)
         User owner = User.builder()
                 .name(req.getOwnerName() != null && !req.getOwnerName().isBlank() ? req.getOwnerName().trim() : req.getCompanyName().trim())
                 .email(cleanEmail)
                 .password(passwordEncoder.encode(req.getOwnerPassword()))
                 .role(Role.ADMIN)
                 .company(savedCompany)
-                .active(false) // Inactivo por seguridad
+                .active(true) // <--- FORZADO A TRUE
                 .build();
 
         User savedOwner = userRepository.save(owner);
@@ -88,7 +88,7 @@ public class MasterAdminService implements MasterAdmin {
 
         tokenRepository.save(verificationToken);
 
-        // 4. Envío asíncrono/seguro de correo (no revierte la DB si el servidor SMTP falla)
+        // 4. Envío asíncrono/seguro de correo
         try {
             String linkActivacion = "https://baezpos.com/api/v1/auth/verify?token=" + tokenStr;
             emailService.enviarMailBienvenida(
