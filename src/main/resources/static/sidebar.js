@@ -13,7 +13,7 @@
                 body {
                     background-color: #f8fafc;
                 }
-                /* Empujamos únicamente el contenedor principal o el body con margen izquierdo limpio */
+                /* Empujamos únicamente el contenedor principal o el body con margen izquierdo limpio (sincronizado a 250px) */
                 body > *:not(#sidebar):not(#sidebar-overlay) {
                     margin-left: 250px !important;
                 }
