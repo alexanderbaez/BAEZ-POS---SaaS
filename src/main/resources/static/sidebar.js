@@ -9,8 +9,11 @@
         const estilos = document.createElement('style');
         estilos.id = 'sidebar-styles';
         estilos.innerHTML = `
-            body {
-                padding-left: 250px !important;
+            @media (min-width: 769px) {
+                body {
+                    margin-left: 250px !important;
+                    padding-left: 0 !important;
+                }
             }
             #sidebar {
                 width: 250px;
@@ -68,7 +71,7 @@
             #sidebar-overlay.active { display: block; }
 
             @media (max-width: 768px) {
-                body { padding-left: 0 !important; }
+                body { margin-left: 0 !important; padding-left: 0 !important; }
                 #sidebar { left: -250px !important; }
                 #sidebar.active { left: 0 !important; }
             }
