@@ -8,9 +8,7 @@ import com.baez.baezpos.company.service.CompanyService.MasterAdmin;
 import com.baez.baezpos.mail.service.EmailService;
 import com.baez.baezpos.user.entity.Role;
 import com.baez.baezpos.user.entity.User;
-import com.baez.baezpos.user.entity.VerificationToken;
 import com.baez.baezpos.user.repository.UserRepository;
-import com.baez.baezpos.user.repository.VerificationTokenRepository;
 import com.baez.baezpos.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,11 +17,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,7 +29,6 @@ public class MasterAdminService implements MasterAdmin {
 
     private final CompanyRepository companyRepository;
     private final UserRepository userRepository;
-    private final VerificationTokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
 
@@ -58,44 +53,30 @@ public class MasterAdminService implements MasterAdmin {
                 .email(cleanEmail)
                 .monthlyFee(req.getMonthlyFee())
                 .expirationDate(req.getExpirationDate() != null ? req.getExpirationDate() : LocalDate.now().plusDays(15))
-                .active(true) // <--- FORZADO A TRUE
+                .active(true)
                 .ticketMessage(req.getTicketMessage())
                 .build();
 
         Company savedCompany = companyRepository.save(company);
 
-        // 2. Crear usuario Admin (Dueño activo por defecto)
-        User owner = User.builder()
-                .name(req.getOwnerName() != null && !req.getOwnerName().isBlank() ? req.getOwnerName().trim() : req.getCompanyName().trim())
-                .email(cleanEmail)
-                .password(passwordEncoder.encode(req.getOwnerPassword()))
-                .role(Role.ADMIN)
-                .company(savedCompany)
-                .active(true) // <--- FORZADO A TRUE
-                .build();
+        // 2. Crear usuario Admin usando setters explícitos para evitar conflictos con Lombok @Builder
+        User owner = new User();
+        owner.setName(req.getOwnerName() != null && !req.getOwnerName().isBlank() ? req.getOwnerName().trim() : req.getCompanyName().trim());
+        owner.setEmail(cleanEmail);
+        owner.setPassword(passwordEncoder.encode(req.getOwnerPassword()));
+        owner.setRole(Role.ADMIN);
+        owner.setCompany(savedCompany);
+        owner.setActive(true); // <--- Asignación garantizada en memoria y BD
 
         User savedOwner = userRepository.save(owner);
 
-        // 3. Generar o actualizar token de verificación (Válido por 24 horas)
-        String tokenStr = UUID.randomUUID().toString();
-
-        VerificationToken verificationToken = tokenRepository.findByUser(savedOwner)
-                .orElse(new VerificationToken());
-
-        verificationToken.setToken(tokenStr);
-        verificationToken.setUser(savedOwner);
-        verificationToken.setExpiryDate(LocalDateTime.now().plusHours(24));
-
-        tokenRepository.save(verificationToken);
-
-        // 4. Envío asíncrono/seguro de correo
+        // 3. Envío directo de correo de bienvenida con sus credenciales de acceso
         try {
-            String linkActivacion = "https://baezpos.com/api/v1/auth/verify?token=" + tokenStr;
             emailService.enviarMailBienvenida(
                     savedOwner.getEmail(),
                     savedCompany.getName(),
                     savedOwner.getName(),
-                    "Enlace de activación: " + linkActivacion
+                    req.getOwnerPassword()
             );
         } catch (Exception e) {
             log.error("ADVERTENCIA: La empresa ID {} se creó correctamente, pero falló el envío del correo a {}: {}",
