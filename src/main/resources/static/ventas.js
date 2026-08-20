@@ -1617,25 +1617,31 @@ function formatearMonedaSegura(monto) {
 }
 
 /**
- * Consulta al backend si existe una caja abierta para la sesión actual.
+ * Consulta al backend si existe una caja abierta para la sesión actual de forma segura.
  */
 async function verificarEstadoCaja() {
     try {
         const response = await apiFetch('/cash-register/active');
 
-        if (response && response.ok) {
-            const data = await response.json();
-            if (data && (data.id || data.status === 'OPEN')) {
-                SESION_CAJA_ACTIVA = data;
-                actualizarUICaja(true);
-                return;
-            }
+        // Si la API responde con un 404 o similar de forma controlada
+        if (!response || !response.ok) {
+            SESION_CAJA_ACTIVA = null;
+            actualizarUICaja(false);
+            return;
         }
 
-        SESION_CAJA_ACTIVA = null;
-        actualizarUICaja(false);
+        const data = await response.json();
+        if (data && (data.id || data.status === 'OPEN')) {
+            SESION_CAJA_ACTIVA = data;
+            actualizarUICaja(true);
+        } else {
+            SESION_CAJA_ACTIVA = null;
+            actualizarUICaja(false);
+        }
     } catch (error) {
-        console.error("[CashRegister] Error al verificar estado de caja:", error);
+        // Un 404 lanzado como error por apiFetch se intercepta aquí de forma pacífica
+        // Sin bloquear la interfaz ni hacer bucles infinitos.
+        console.info("[CashRegister] Sesión sin caja abierta activa (estado normal).");
         SESION_CAJA_ACTIVA = null;
         actualizarUICaja(false);
     }
