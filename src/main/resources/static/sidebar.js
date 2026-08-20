@@ -11,8 +11,15 @@
         estilos.innerHTML = `
             @media (min-width: 769px) {
                 body {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    display: flex !important;
+                    background-color: #f8fafc;
+                }
+                body > *:not(#sidebar):not(#sidebar-overlay) {
                     margin-left: 250px !important;
-                    padding-left: 0 !important;
+                    width: calc(100% - 250px) !important;
+                    box-sizing: border-box !important;
                 }
             }
             #sidebar {
@@ -71,7 +78,8 @@
             #sidebar-overlay.active { display: block; }
 
             @media (max-width: 768px) {
-                body { margin-left: 0 !important; padding-left: 0 !important; }
+                body { margin: 0 !important; padding: 0 !important; }
+                body > *:not(#sidebar):not(#sidebar-overlay) { margin-left: 0 !important; width: 100% !important; }
                 #sidebar { left: -250px !important; }
                 #sidebar.active { left: 0 !important; }
             }
