@@ -65,11 +65,16 @@ public class SecurityConfig {
                                 "/api/v1/admin/my-company/check-status",
                                 "/api/v1/admin/my-company/profile"
                         ).hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/products/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
+                        .requestMatchers("/api/v1/cash-register/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
+                        .requestMatchers("/api/v1/categories/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
+                        .requestMatchers("/api/v1/expenses/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/sales/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/customers/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
-                        .requestMatchers("/api/v1/users/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/products/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
+                        .requestMatchers("/api/v1/products/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/inventory/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        .requestMatchers("/api/v1/audit-logs/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        .requestMatchers("/api/v1/users/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .anyRequest().authenticated()
                 )

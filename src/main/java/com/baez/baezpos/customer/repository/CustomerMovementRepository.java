@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CustomerMovementRepository extends JpaRepository<CustomerMovement, Long> {
@@ -33,4 +34,6 @@ public interface CustomerMovementRepository extends JpaRepository<CustomerMoveme
                                                @Param("companyId") Long companyId,
                                                @Param("start") LocalDateTime start,
                                                @Param("end") LocalDateTime end);
+
+    Optional<CustomerMovement> findFirstBySaleId(Long saleId);
 }

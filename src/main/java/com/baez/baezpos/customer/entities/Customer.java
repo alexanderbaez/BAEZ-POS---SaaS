@@ -38,10 +38,6 @@ public class Customer extends TenantEntity {
     @Builder.Default
     private BigDecimal creditLimit = BigDecimal.valueOf(10000);
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    @Builder.Default
-    private LocalDateTime createdAt = LocalDateTime.now();
-
     @Builder.Default
     @Column(nullable = false)
     private Boolean active = true;
@@ -49,11 +45,4 @@ public class Customer extends TenantEntity {
     @Version
     @Builder.Default
     private Long version = 0L;
-
-    @PrePersist
-    protected void onCreate() {
-        if (this.createdAt == null) {
-            this.createdAt = LocalDateTime.now();
-        }
-    }
 }

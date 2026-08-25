@@ -5,6 +5,7 @@ import com.baez.baezpos.customer.dto.CustomerRequestDTO;
 import com.baez.baezpos.customer.dto.CustomerResponseDTO;
 import com.baez.baezpos.customer.dto.PaymentRequestDTO;
 import com.baez.baezpos.customer.service.CustomerService;
+import com.baez.baezpos.shared.dto.MessageResponseDTO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -13,7 +14,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/customers")
@@ -50,12 +50,12 @@ public class CustomerController {
 
     @PostMapping("/{id}/payments")
     @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'SUPER_ADMIN')")
-    public ResponseEntity<Map<String, String>> receivePayment(
+    public ResponseEntity<MessageResponseDTO> receivePayment(
             @PathVariable Long id,
             @Valid @RequestBody PaymentRequestDTO paymentDTO) {
 
         customerService.processCustomerPayment(id, paymentDTO.amount(), paymentDTO.method());
-        return ResponseEntity.ok(Map.of("message", "Pago registrado con éxito"));
+        return ResponseEntity.ok(MessageResponseDTO.of("Pago registrado con éxito"));
     }
 
     @PutMapping("/{id}")
@@ -66,8 +66,8 @@ public class CustomerController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
-    public ResponseEntity<Map<String, String>> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
         customerService.deleteCustomer(id);
-        return ResponseEntity.ok(Map.of("message", "Cliente desactivado con éxito"));
+        return ResponseEntity.noContent().build();
     }
 }

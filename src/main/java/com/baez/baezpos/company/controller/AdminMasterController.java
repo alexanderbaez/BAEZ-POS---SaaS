@@ -3,6 +3,7 @@ package com.baez.baezpos.company.controller;
 import com.baez.baezpos.company.dto.CompanyDTO;
 import com.baez.baezpos.company.dto.MasterRegistrationRequest;
 import com.baez.baezpos.company.service.CompanyService.MasterAdmin;
+import com.baez.baezpos.shared.dto.MessageResponseDTO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -27,9 +28,9 @@ public class AdminMasterController {
     }
 
     @PostMapping
-    public ResponseEntity<String> registerCompany(@Valid @RequestBody MasterRegistrationRequest req) {
+    public ResponseEntity<MessageResponseDTO> registerCompany(@Valid @RequestBody MasterRegistrationRequest req) {
         masterAdminService.registerFullBusiness(req);
-        return ResponseEntity.ok("Empresa registrada correctamente. Se ha generado la cuenta del administrador.");
+        return ResponseEntity.ok(MessageResponseDTO.of("Empresa registrada correctamente. Se ha generado la cuenta del administrador."));
     }
 
     @DeleteMapping("/{id}")
@@ -44,24 +45,24 @@ public class AdminMasterController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<String> update(@PathVariable Long id, @Valid @RequestBody CompanyDTO dto) {
+    public ResponseEntity<MessageResponseDTO> update(@PathVariable Long id, @Valid @RequestBody CompanyDTO dto) {
         masterAdminService.updateCompanyMaster(id, dto);
-        return ResponseEntity.ok("Empresa actualizada correctamente.");
+        return ResponseEntity.ok(MessageResponseDTO.of("Empresa actualizada correctamente."));
     }
 
     @PatchMapping("/{id}/extend")
-    public ResponseEntity<String> extendSubscription(@PathVariable Long id) {
+    public ResponseEntity<MessageResponseDTO> extendSubscription(@PathVariable Long id) {
         masterAdminService.extendSubscriptionMaster(id);
-        return ResponseEntity.ok("Suscripción extendida 30 días.");
+        return ResponseEntity.ok(MessageResponseDTO.of("Suscripción extendida 30 días."));
     }
 
     @PatchMapping("/{id}/reset-password")
-    public ResponseEntity<String> resetPassword(@PathVariable Long id, @RequestBody Map<String, String> body) {
+    public ResponseEntity<MessageResponseDTO> resetPassword(@PathVariable Long id, @RequestBody Map<String, String> body) {
         String newPass = body.get("password");
         if (newPass == null || newPass.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body("La nueva contraseña no puede estar vacía.");
+            throw new IllegalArgumentException("La nueva contraseña no puede estar vacía.");
         }
         masterAdminService.resetOwnerPassword(id, newPass.trim());
-        return ResponseEntity.ok("Contraseña restablecida correctamente.");
+        return ResponseEntity.ok(MessageResponseDTO.of("Contraseña restablecida correctamente."));
     }
 }

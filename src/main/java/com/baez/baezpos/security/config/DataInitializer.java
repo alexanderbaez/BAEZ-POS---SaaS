@@ -30,27 +30,21 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) throws Exception {
-        Optional<User> existingSuperAdmin = userRepository.findByEmail(superAdminEmail);
-
-        if (existingSuperAdmin.isPresent()) {
-            User admin = existingSuperAdmin.get();
-            admin.setPassword(passwordEncoder.encode(superAdminPassword));
-            admin.setActive(true);
-            admin.setRole(Role.SUPER_ADMIN);
-            userRepository.save(admin);
-            log.info("SUPER_ADMIN actualizado con hash fresco de BCrypt: {}", superAdminEmail);
-        } else {
-            User superAdmin = User.builder()
-                    .name("Alexander Baez (Super Admin)")
-                    .email(superAdminEmail)
-                    .password(passwordEncoder.encode(superAdminPassword))
-                    .role(Role.SUPER_ADMIN)
-                    .active(true)
-                    .company(null)
-                    .build();
-
-            userRepository.save(superAdmin);
-            log.info("SUPER_ADMIN creado con éxito: {}", superAdminEmail);
+        if (userRepository.existsByEmail(superAdminEmail)) {
+            log.info("SUPER_ADMIN ya existe en el sistema. Omitiendo inicialización para preservar credenciales: {}", superAdminEmail);
+            return;
         }
+
+        User superAdmin = User.builder()
+                .name("Alexander Baez (Super Admin)")
+                .email(superAdminEmail)
+                .password(passwordEncoder.encode(superAdminPassword))
+                .role(Role.SUPER_ADMIN)
+                .active(true)
+                .company(null)
+                .build();
+
+        userRepository.save(superAdmin);
+        log.info("SUPER_ADMIN inicializado con éxito: {}", superAdminEmail);
     }
 }

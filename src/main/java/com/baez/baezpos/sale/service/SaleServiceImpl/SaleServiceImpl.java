@@ -3,6 +3,7 @@ package com.baez.baezpos.sale.service.SaleServiceImpl;
 import com.baez.baezpos.company.entity.Company;
 import com.baez.baezpos.company.repository.CompanyRepository;
 import com.baez.baezpos.customer.entities.Customer;
+import com.baez.baezpos.customer.entities.CustomerMovement;
 import com.baez.baezpos.customer.repository.CustomerMovementRepository;
 import com.baez.baezpos.customer.repository.CustomerRepository;
 import com.baez.baezpos.customer.service.CustomerService;
@@ -205,12 +206,9 @@ public class SaleServiceImpl implements SaleService {
     @Override
     @Transactional(readOnly = true)
     public SaleResponseDTO getSaleById(Long id) {
-        Long companyId = SecurityUtils.getCurrentCompanyId();
-        Sale sale = (companyId != null)
-                ? saleRepository.findByIdAndCompanyId(id, companyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada en su empresa"))
-                : saleRepository.findByIdWithDetails(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada"));
+        Long companyId = requireCompanyContext();
+        Sale sale = saleRepository.findByIdAndCompanyId(id, companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada en su empresa"));
 
         return mapToResponseDTO(sale);
     }
@@ -218,10 +216,8 @@ public class SaleServiceImpl implements SaleService {
     @Override
     @Transactional(readOnly = true)
     public List<SaleResponseDTO> getAllSales() {
-        Long companyId = SecurityUtils.getCurrentCompanyId();
-        List<Sale> sales = (companyId != null)
-                ? saleRepository.findByCompanyIdOrderBySaleDateDesc(companyId)
-                : saleRepository.findAllByOrderBySaleDateDesc();
+        Long companyId = requireCompanyContext();
+        List<Sale> sales = saleRepository.findByCompanyIdOrderBySaleDateDesc(companyId);
 
         return sales.stream().map(this::mapToResponseDTO).toList();
     }
@@ -438,15 +434,30 @@ public class SaleServiceImpl implements SaleService {
 
         for (SaleItem item : sale.getItems()) {
             Product product = item.getProduct();
-            BigDecimal currentStock = product.getStock() != null ? product.getStock() : BigDecimal.ZERO;
-            product.setStock(currentStock.add(item.getQuantity()));
+            if (product != null) {
+                inventoryService.registerMovement(
+                        product.getId(),
+                        item.getQuantity(),
+                        MovementType.IN,
+                        "Devolución por anulación de Ticket #" + sale.getNroComprobante()
+                );
+            }
+        }
 
-            inventoryService.registerMovement(
-                    product.getId(),
-                    item.getQuantity(),
-                    MovementType.IN,
-                    "Devolución por anulación de Ticket #" + sale.getNroComprobante()
-            );
+        // Compensación contable en cuenta corriente si el pago fue fiado / cuenta corriente
+        if ("CUENTA_CORRIENTE".equalsIgnoreCase(sale.getPaymentMethod())) {
+            Optional<CustomerMovement> movementOpt = customerMovementRepository.findFirstBySaleId(sale.getId());
+            if (movementOpt.isPresent()) {
+                Customer customer = movementOpt.get().getCustomer();
+                customerService.updateBalance(
+                        customer.getId(),
+                        sale.getTotal(),
+                        "CREDITO",
+                        "Compensación por anulación de Ticket #" + sale.getNroComprobante(),
+                        sale,
+                        sale.getPaymentMethod()
+                );
+            }
         }
 
         saleRepository.save(sale);
@@ -461,13 +472,11 @@ public class SaleServiceImpl implements SaleService {
     @Override
     @Transactional(readOnly = true)
     public List<SaleResponseDTO> getSalesByDateRange(LocalDate desde, LocalDate hasta) {
-        Long companyId = SecurityUtils.getCurrentCompanyId();
+        Long companyId = requireCompanyContext();
         LocalDateTime start = desde.atStartOfDay();
         LocalDateTime end = hasta.atTime(LocalTime.MAX);
 
-        List<Sale> sales = (companyId != null)
-                ? saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, start, end)
-                : saleRepository.findBySaleDateBetweenOrderBySaleDateDesc(start, end);
+        List<Sale> sales = saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, start, end);
 
         return sales.stream().map(this::mapToResponseDTO).toList();
     }

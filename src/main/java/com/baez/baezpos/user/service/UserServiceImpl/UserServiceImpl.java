@@ -11,11 +11,14 @@ import com.baez.baezpos.user.service.UserService.UserService;
 import com.baez.baezpos.security.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -32,27 +35,34 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserResponseDTO createUser(UserRequestDTO dto) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
-        Optional<User> existingUserOpt = userRepository.findByEmail(dto.getEmail());
+        String cleanEmail = dto.getEmail().trim().toLowerCase();
+        Role targetRole = validateRoleAssignment(dto.getRole());
+
+        Optional<User> existingUserOpt = userRepository.findByEmail(cleanEmail);
 
         if (existingUserOpt.isPresent()) {
             User existingUser = existingUserOpt.get();
 
             if (Boolean.TRUE.equals(existingUser.getActive())) {
-                throw new IllegalArgumentException("El email '" + dto.getEmail() + "' ya pertenece a un usuario activo.");
+                throw new IllegalArgumentException("El email '" + cleanEmail + "' ya pertenece a un usuario activo.");
             }
 
-            log.info("Reactivando usuario previamente inactivo: {} para empresa ID: {}", dto.getEmail(), companyId);
+            // Bloquear reasignación de tenants: Queda prohibido cambiar el company_id de un usuario inactivo
+            Long existingCompanyId = (existingUser.getCompany() != null) ? existingUser.getCompany().getId() : null;
+
+            if (!Objects.equals(companyId, existingCompanyId)) {
+                throw new IllegalArgumentException("El email '" + cleanEmail + "' se encuentra registrado en otra empresa o no pertenece a su tenant.");
+            }
+
+            log.info("Reactivando usuario previamente inactivo: {} para empresa ID: {}", cleanEmail, companyId);
             existingUser.setName(dto.getName());
-            existingUser.setRole(dto.getRole() != null ? dto.getRole() : Role.VENDEDOR);
+            existingUser.setRole(targetRole);
 
             if (dto.getPassword() != null && !dto.getPassword().trim().isEmpty()) {
+                if (dto.getPassword().trim().length() < 6) {
+                    throw new IllegalArgumentException("La contraseña debe tener al menos 6 caracteres.");
+                }
                 existingUser.setPassword(passwordEncoder.encode(dto.getPassword()));
-            }
-
-            if (companyId != null) {
-                Company company = companyRepository.findById(companyId)
-                        .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada"));
-                existingUser.setCompany(company);
             }
 
             existingUser.setActive(true);
@@ -61,9 +71,13 @@ public class UserServiceImpl implements UserService {
 
         User user = new User();
         user.setName(dto.getName());
-        user.setEmail(dto.getEmail());
+        user.setEmail(cleanEmail);
+
+        if (dto.getPassword() == null || dto.getPassword().trim().length() < 6) {
+            throw new IllegalArgumentException("Debe proporcionar una contraseña válida de al menos 6 caracteres.");
+        }
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
-        user.setRole(dto.getRole() != null ? dto.getRole() : Role.VENDEDOR);
+        user.setRole(targetRole);
         user.setActive(true);
 
         if (companyId != null) {
@@ -72,7 +86,7 @@ public class UserServiceImpl implements UserService {
             user.setCompany(company);
         }
 
-        log.info("Registrando nuevo usuario: {} asociado a la empresa ID: {}", user.getEmail(), companyId);
+        log.info("Registrando nuevo usuario: {} con rol {} asociado a la empresa ID: {}", user.getEmail(), targetRole, companyId);
         return convertToDTO(userRepository.save(user));
     }
 
@@ -104,8 +118,8 @@ public class UserServiceImpl implements UserService {
         }
 
         return userRepository.findByActiveTrue().stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
     }
 
     @Override
@@ -119,17 +133,19 @@ public class UserServiceImpl implements UserService {
                         .filter(u -> Boolean.TRUE.equals(u.getActive()))
                         .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado o inactivo"));
 
+        String cleanEmail = dto.getEmail().trim().toLowerCase();
         // Validar si intenta cambiar el email por uno que ya existe en el sistema
-        if (!existing.getEmail().equalsIgnoreCase(dto.getEmail())) {
-            if (userRepository.existsByEmail(dto.getEmail())) {
-                throw new IllegalArgumentException("El email '" + dto.getEmail() + "' ya está registrado por otro usuario.");
+        if (!existing.getEmail().equalsIgnoreCase(cleanEmail)) {
+            if (userRepository.existsByEmail(cleanEmail)) {
+                throw new IllegalArgumentException("El email '" + cleanEmail + "' ya está registrado por otro usuario.");
             }
-            existing.setEmail(dto.getEmail());
+            existing.setEmail(cleanEmail);
         }
 
         existing.setName(dto.getName());
         if (dto.getRole() != null) {
-            existing.setRole(dto.getRole());
+            Role targetRole = validateRoleAssignment(dto.getRole());
+            existing.setRole(targetRole);
         }
 
         if (dto.getPassword() != null && !dto.getPassword().trim().isEmpty()) {
@@ -163,11 +179,30 @@ public class UserServiceImpl implements UserService {
         if (newPassword == null || newPassword.trim().length() < 6) {
             throw new IllegalArgumentException("La nueva contraseña debe tener al menos 6 caracteres.");
         }
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmail(email.trim().toLowerCase())
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setPasswordResetAt(null);
         userRepository.save(user);
+    }
+
+    private Role validateRoleAssignment(Role requestedRole) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isSuperAdmin = auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_SUPER_ADMIN".equals(a.getAuthority()));
+
+        if (requestedRole == Role.SUPER_ADMIN && !isSuperAdmin) {
+            throw new IllegalArgumentException("Acceso denegado: No está autorizado para asignar el rol SUPER_ADMIN.");
+        }
+
+        if (!isSuperAdmin) {
+            if (requestedRole != null && requestedRole != Role.VENDEDOR) {
+                throw new IllegalArgumentException("Los administradores de empresa únicamente pueden crear o asignar usuarios con el rol VENDEDOR.");
+            }
+            return Role.VENDEDOR;
+        }
+
+        return requestedRole != null ? requestedRole : Role.VENDEDOR;
     }
 
     private UserResponseDTO convertToDTO(User user) {

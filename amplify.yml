@@ -1,8 +1,18 @@
 version: 1
 frontend:
   phases:
+    preBuild:
+      commands:
+        - echo "Configurando entorno frontend para BáezPOS SaaS..."
+        - |
+          # Si se configuró la variable BACKEND_URL en AWS Amplify Console, se inyecta en auth.js
+          # De lo contrario, se utiliza el endpoint de producción por defecto
+          TARGET_URL="${BACKEND_URL:-https://api.baezpos.com}"
+          echo "Inyectando backend URL: $TARGET_URL"
+          sed -i "s|__BACKEND_URL_PLACEHOLDER__|$TARGET_URL|g" src/main/resources/static/auth.js
     build:
-      commands: []
+      commands:
+        - echo "Build de assets estáticos finalizado con éxito."
   artifacts:
     baseDirectory: src/main/resources/static
     files:
@@ -13,4 +23,8 @@ frontend:
     - source: '/'
       target: '/login.html'
       status: '200'
+      condition: null
+    - source: '/<*>'
+      target: '/login.html'
+      status: '404'
       condition: null

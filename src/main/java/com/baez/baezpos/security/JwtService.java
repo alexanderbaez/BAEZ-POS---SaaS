@@ -1,11 +1,14 @@
 package com.baez.baezpos.security;
 
+import com.baez.baezpos.security.entity.UserPrincipal;
+import com.baez.baezpos.user.entity.Role;
 import com.baez.baezpos.user.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -19,11 +22,18 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    @Value("${application.security.jwt.secret-key:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}")
+    @Value("${application.security.jwt.secret-key}")
     private String secretKey;
 
     @Value("${application.security.jwt.expiration:86400000}")
     private long jwtExpiration;
+
+    @PostConstruct
+    public void validateSecretKey() {
+        if (secretKey == null || secretKey.trim().length() < 32) {
+            throw new IllegalStateException("La clave secreta JWT (application.security.jwt.secret-key) no está configurada o tiene menos de 32 caracteres.");
+        }
+    }
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -39,6 +49,12 @@ public class JwtService {
         });
     }
 
+    public UserPrincipal extractUserPrincipal(String token) {
+        Claims claims = extractAllClaims(token);
+        String email = claims.getSubject();
+        return UserPrincipal.fromClaims(claims, email);
+    }
+
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
@@ -50,9 +66,14 @@ public class JwtService {
         claims.put("authorities", List.of("ROLE_" + user.getRole().name()));
         claims.put("role", user.getRole().name());
         claims.put("userId", user.getId());
+        claims.put("enabled", Boolean.TRUE.equals(user.getActive()));
 
-        if (user.getCompany() != null) {
+        if (user.getRole() != com.baez.baezpos.user.entity.Role.SUPER_ADMIN && user.getCompany() != null) {
             claims.put("companyId", user.getCompany().getId());
+            claims.put("companyActive", Boolean.TRUE.equals(user.getCompany().getActive()));
+            if (user.getCompany().getExpirationDate() != null) {
+                claims.put("companyExpirationDate", user.getCompany().getExpirationDate().toString());
+            }
         }
 
         return Jwts.builder()

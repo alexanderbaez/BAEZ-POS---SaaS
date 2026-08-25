@@ -2,6 +2,7 @@ package com.baez.baezpos.security.entity;
 
 import com.baez.baezpos.user.entity.User;
 import com.baez.baezpos.user.entity.Role;
+import io.jsonwebtoken.Claims;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
@@ -47,6 +48,42 @@ public class UserPrincipal implements UserDetails {
                 expirationDate,
                 user.getRole(),
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
+        );
+    }
+
+    public static UserPrincipal fromClaims(Claims claims, String email) {
+        Object userIdObj = claims.get("userId");
+        Long userId = (userIdObj instanceof Number number) ? number.longValue() : null;
+
+        Object companyIdObj = claims.get("companyId");
+        Long companyId = (companyIdObj instanceof Number number) ? number.longValue() : null;
+
+        String roleStr = (String) claims.get("role");
+        Role role = (roleStr != null) ? Role.valueOf(roleStr) : Role.VENDEDOR;
+
+        Boolean enabled = (Boolean) claims.get("enabled");
+        if (enabled == null) enabled = true;
+
+        Boolean companyActive = (Boolean) claims.get("companyActive");
+        if (companyActive == null) companyActive = true;
+
+        String expDateStr = (String) claims.get("companyExpirationDate");
+        LocalDate companyExpirationDate = (expDateStr != null && !expDateStr.isBlank()) ? LocalDate.parse(expDateStr) : null;
+
+        Collection<SimpleGrantedAuthority> authorities = Collections.singletonList(
+                new SimpleGrantedAuthority("ROLE_" + role.name())
+        );
+
+        return new UserPrincipal(
+                userId,
+                email,
+                "", // Contraseña no requerida en contexto stateless de sesión
+                enabled,
+                companyId,
+                companyActive,
+                companyExpirationDate,
+                role,
+                authorities
         );
     }
 

@@ -75,4 +75,8 @@ public class Company extends BaseEntity {
 
     @Column(name = "condicion_iva", length = 100)
     private String condicionIva;
+
+    @Version
+    @Builder.Default
+    private Long version = 0L;
 }

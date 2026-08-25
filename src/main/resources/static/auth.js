@@ -4,14 +4,54 @@
  */
 
 // Detecta si se está ejecutando en entorno de desarrollo local
-const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const IS_LOCAL = typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-// En local apunta directamente a Spring Boot (http://localhost:8080).
-// En producción usa string vacío '' para que Nginx Proxy Manager gestione las peticiones relativas con HTTPS.
-const BACKEND_URL = IS_LOCAL ? 'http://localhost:8080' : '';
+/**
+ * Resolución dinámica y desacoplada de BACKEND_URL:
+ * 1. Variable global inyectada en runtime (window.__ENV__?.BACKEND_URL o window.BACKEND_URL)
+ * 2. Placeholder reemplazado en la fase de build de AWS Amplify (__BACKEND_URL_PLACEHOLDER__)
+ * 3. Override de desarrollo persistido en localStorage ('baezpos_backend_url')
+ * 4. Si es localhost, apunta a http://localhost:8080
+ * 5. Si es AWS Amplify (*.amplifyapp.com), apunta a la API de producción https://api.baezpos.com
+ * 6. Fallback a cadena vacía para proxy inverso Nginx
+ */
+function resolveBackendUrl() {
+    if (typeof window !== 'undefined' && window.__ENV__ && window.__ENV__.BACKEND_URL) {
+        return window.__ENV__.BACKEND_URL.trim();
+    }
+    if (typeof window !== 'undefined' && window.BACKEND_URL) {
+        return window.BACKEND_URL.trim();
+    }
+
+    const buildPlaceholder = '__BACKEND_URL_PLACEHOLDER__';
+    if (buildPlaceholder && !buildPlaceholder.startsWith('__')) {
+        return buildPlaceholder.trim();
+    }
+
+    if (typeof localStorage !== 'undefined') {
+        const customUrl = localStorage.getItem('baezpos_backend_url');
+        if (customUrl) return customUrl.trim();
+    }
+
+    if (IS_LOCAL) {
+        return 'http://localhost:8080';
+    }
+
+    if (typeof window !== 'undefined' && window.location.hostname.includes('amplifyapp.com')) {
+        return 'https://api.baezpos.com';
+    }
+
+    return '';
+}
+
+const BACKEND_URL = resolveBackendUrl();
 
 // BASE_URL Centralizado: Mantiene el prefijo /api/v1 para todo el sistema
-const BASE_URL = `${BACKEND_URL}/api/v1`;
+const BASE_URL = BACKEND_URL.endsWith('/api/v1') 
+    ? BACKEND_URL 
+    : `${BACKEND_URL.replace(/\/+$/, '')}/api/v1`;
+
 const MI_WHATSAPP = "5492645468570";
 
 // Auxiliar robusto para detectar si la vista actual es el Login (URL o DOM)

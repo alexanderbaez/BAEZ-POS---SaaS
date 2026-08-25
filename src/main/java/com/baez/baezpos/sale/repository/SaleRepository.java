@@ -19,20 +19,10 @@ public interface SaleRepository extends JpaRepository<Sale, Long> {
     Optional<Sale> findByIdAndCompanyId(Long id, Long companyId);
 
     @EntityGraph(attributePaths = {"user", "company", "items", "items.product"})
-    @Query("SELECT s FROM Sale s WHERE s.id = :id")
-    Optional<Sale> findByIdWithDetails(@Param("id") Long id);
-
-    @EntityGraph(attributePaths = {"user", "company", "items", "items.product"})
     List<Sale> findByCompanyIdOrderBySaleDateDesc(Long companyId);
 
     @EntityGraph(attributePaths = {"user", "company", "items", "items.product"})
-    List<Sale> findAllByOrderBySaleDateDesc();
-
-    @EntityGraph(attributePaths = {"user", "company", "items", "items.product"})
     List<Sale> findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(Long companyId, LocalDateTime start, LocalDateTime end);
-
-    @EntityGraph(attributePaths = {"user", "company", "items", "items.product"})
-    List<Sale> findBySaleDateBetweenOrderBySaleDateDesc(LocalDateTime start, LocalDateTime end);
 
     @Query("SELECT s FROM Sale s WHERE s.company.id = :companyId AND s.saleDate BETWEEN :start AND :end AND s.canceled = false")
     List<Sale> findActiveSalesByCompanyAndDateRange(@Param("companyId") Long companyId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);

@@ -2,6 +2,7 @@ package com.baez.baezpos.security.controller;
 
 import com.baez.baezpos.company.entity.Company;
 import com.baez.baezpos.company.repository.CompanyRepository;
+import com.baez.baezpos.shared.dto.MessageResponseDTO;
 import com.baez.baezpos.user.entity.User;
 import com.baez.baezpos.user.entity.VerificationToken;
 import com.baez.baezpos.user.repository.UserRepository;
@@ -20,12 +21,12 @@ public class AuthVerificationController {
     private final CompanyRepository companyRepository;
 
     @GetMapping("/verify")
-    public ResponseEntity<String> confirmAccount(@RequestParam("token") String token) {
+    public ResponseEntity<MessageResponseDTO> confirmAccount(@RequestParam("token") String token) {
         VerificationToken verificationToken = tokenRepository.findByToken(token)
                 .orElseThrow(() -> new IllegalArgumentException("Token de activación inválido o inexistente."));
 
         if (verificationToken.isExpired()) {
-            return ResponseEntity.badRequest().body("El enlace de activación ha expirado. Contacte con soporte.");
+            throw new IllegalArgumentException("El enlace de activación ha expirado. Contacte con soporte.");
         }
 
         User user = verificationToken.getUser();
@@ -40,6 +41,6 @@ public class AuthVerificationController {
 
         tokenRepository.delete(verificationToken);
 
-        return ResponseEntity.ok("¡Cuenta activada con éxito! Ya puede iniciar sesión en BáezPOS.");
+        return ResponseEntity.ok(MessageResponseDTO.of("¡Cuenta activada con éxito! Ya puede iniciar sesión en BáezPOS."));
     }
 }
