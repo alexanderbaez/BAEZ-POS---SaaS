@@ -112,8 +112,9 @@ function toggleSeccionProveedor(categoria) {
  * Controla la accesibilidad, estado y feedback contextual del switch 'Descontar de Caja'
  */
 function actualizarEstadoDeductFromBox(metodoSeleccionado, elementSwitch) {
-    const esEfectivo = (metodoSeleccionado === 'EFECTIVO_CAJA' || metodoSeleccionado === 'EFECTIVO');
+    const esEfectivoCaja = (metodoSeleccionado === 'EFECTIVO_CAJA' || metodoSeleccionado === 'EFECTIVO');
     const esCtaCte = (metodoSeleccionado === 'CUENTA_CORRIENTE');
+    const esCajaFuerte = (metodoSeleccionado === 'EFECTIVO_CAJA_FUERTE');
     const lblAyuda = document.getElementById('lblAyudaDeduct');
 
     if (esCtaCte) {
@@ -126,10 +127,20 @@ function actualizarEstadoDeductFromBox(metodoSeleccionado, elementSwitch) {
         return;
     }
 
+    if (esCajaFuerte) {
+        elementSwitch.checked = false;
+        elementSwitch.disabled = true;
+        if (lblAyuda) {
+            lblAyuda.innerHTML = `<i class="bi bi-safe text-secondary me-1"></i> <strong>Caja Fuerte / Dueño:</strong> No descuenta de la caja diaria física. Se registra el gasto sin alterar el arqueo del turno.`;
+            lblAyuda.className = "text-secondary d-block mt-1 style-subtext";
+        }
+        return;
+    }
+
     elementSwitch.disabled = false;
 
     if (lblAyuda) {
-        if (esEfectivo) {
+        if (esEfectivoCaja) {
             lblAyuda.innerHTML = `Si está activo, se restará del <strong>Efectivo Físico en Caja</strong>. Desactivalo únicamente si fue abonado con fondos personales por fuera del negocio.`;
             lblAyuda.className = "text-muted d-block mt-1 style-subtext";
         } else {
@@ -244,9 +255,12 @@ function renderizarGastos(gastos) {
         const catKey = g.category ? g.category.toUpperCase() : 'VARIOS_RETIRO';
         const catConfig = mapaCategorias[catKey] || { label: g.category || 'Varios', class: 'bg-secondary text-white' };
 
-        let metodoTexto = 'Efectivo';
+        let metodoTexto = 'Efectivo Caja';
         let iconoMetodo = 'bi-cash-stack text-success';
-        if (g.paymentMethod === 'TRANSFERENCIA') {
+        if (g.paymentMethod === 'EFECTIVO_CAJA_FUERTE') {
+            metodoTexto = 'Caja Fuerte';
+            iconoMetodo = 'bi-safe text-secondary';
+        } else if (g.paymentMethod === 'TRANSFERENCIA') {
             metodoTexto = 'Transferencia';
             iconoMetodo = 'bi-bank text-primary';
         } else if (g.paymentMethod === 'TARJETA') {
@@ -257,15 +271,18 @@ function renderizarGastos(gastos) {
             iconoMetodo = 'bi-journal-text text-danger';
         }
 
-        // LÓGICA DE BADGES SEPARADOS (EFECTIVO VS DIGITAL VS CTA CTE)
-        const esEfectivo = (g.paymentMethod === 'EFECTIVO_CAJA' || g.paymentMethod === 'EFECTIVO');
+        // LÓGICA DE BADGES SEPARADOS (EFECTIVO VS DIGITAL VS CTA CTE VS CAJA FUERTE)
+        const esEfectivoCaja = (g.paymentMethod === 'EFECTIVO_CAJA' || g.paymentMethod === 'EFECTIVO');
         const esCtaCte = (g.paymentMethod === 'CUENTA_CORRIENTE');
+        const esCajaFuerte = (g.paymentMethod === 'EFECTIVO_CAJA_FUERTE');
         let badgeCaja = '';
 
         if (esCtaCte) {
             badgeCaja = '<span class="badge bg-warning-subtle text-dark border border-warning ms-1" style="font-size: 10px;" title="Deuda con Proveedor"><i class="bi bi-clock-history me-1"></i>Deuda Cta. Cte</span>';
+        } else if (esCajaFuerte) {
+            badgeCaja = '<span class="badge bg-secondary-subtle text-secondary border border-secondary ms-1" style="font-size: 10px;" title="Fondos de Caja Fuerte / Fuera de caja física"><i class="bi bi-safe me-1"></i>Caja Fuerte</span>';
         } else if (g.deductFromBox) {
-            if (esEfectivo) {
+            if (esEfectivoCaja) {
                 badgeCaja = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size: 10px;" title="Restado del efectivo físico en caja">Descuenta Caja (Efectivo)</span>';
             } else {
                 badgeCaja = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1" style="font-size: 10px;" title="Descontado del acumulado digital del Dashboard">Descuenta Digital</span>';
@@ -365,7 +382,7 @@ async function guardarGasto(e) {
     btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Guardando...';
 
     const elementDeduct = document.getElementById('deductFromBox');
-    const deductFromBoxValue = (metodo === 'CUENTA_CORRIENTE') ? false : (elementDeduct ? elementDeduct.checked : true);
+    const deductFromBoxValue = (metodo === 'EFECTIVO_CAJA') && (elementDeduct ? elementDeduct.checked : true);
 
     const nuevoGasto = {
         description: document.getElementById('descGasto').value.trim(),

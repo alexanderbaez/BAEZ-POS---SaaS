@@ -421,12 +421,16 @@ async function registrarAbono() {
 
         if (res && res.ok) {
             const proveedorActualizado = await res.json();
+            const nombreMetodo = (metodoPago === 'EFECTIVO_CAJA') ? 'Efectivo (Caja)' :
+                                 (metodoPago === 'EFECTIVO_CAJA_FUERTE') ? 'Efectivo (Caja Fuerte / Dueño)' :
+                                 (metodoPago === 'TRANSFERENCIA') ? 'Transferencia' :
+                                 (metodoPago === 'TARJETA') ? 'Tarjeta' : metodoPago;
 
             Swal.fire({
                 icon: 'success',
                 title: '¡Abono registrado con éxito!',
                 html: `
-                    <p class="mb-2">Se registró el pago de <strong>${fmtARS.format(monto)}</strong> por <strong>${metodoPago}</strong>.</p>
+                    <p class="mb-2">Se registró el pago de <strong>${fmtARS.format(monto)}</strong> por <strong>${nombreMetodo}</strong>.</p>
                     <p class="text-muted small mb-0">Nuevo saldo deudor: <strong>${fmtARS.format(proveedorActualizado.currentBalance)}</strong></p>
                 `,
                 confirmButtonColor: '#16a34a'
