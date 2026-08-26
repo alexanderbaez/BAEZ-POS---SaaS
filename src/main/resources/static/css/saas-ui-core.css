@@ -47,6 +47,8 @@
   --saas-radius-md: 12px;
   --saas-radius-lg: 16px;
   --saas-radius-xl: 20px;
+
+  --sidebar-width: 250px;
 }
 
 /* ==========================================================================
@@ -56,11 +58,15 @@
   box-sizing: border-box;
 }
 
-body {
-  font-family: var(--font-sans) !important;
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
   background-color: var(--saas-bg-main) !important;
   color: var(--saas-text-body);
+  font-family: var(--font-sans) !important;
   letter-spacing: -0.011em;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -85,9 +91,21 @@ button, input, select, textarea {
 }
 
 /* ==========================================================================
+   LAYOUT PRINCIPAL (#content)
+   ========================================================================== */
+#content {
+  margin-left: var(--sidebar-width);
+  width: calc(100% - var(--sidebar-width));
+  min-height: 100vh;
+  transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: var(--saas-bg-main);
+  overflow-x: hidden;
+}
+
+/* ==========================================================================
    CARDS Y CONTENEDORES ELEVADOS
    ========================================================================== */
-.card, .stat-card, .table-card {
+.card, .stat-card, .table-card, .data-card, .card-saas {
   background-color: var(--saas-surface) !important;
   border: 1px solid var(--saas-border) !important;
   border-radius: var(--saas-radius-md) !important;
@@ -95,7 +113,7 @@ button, input, select, textarea {
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-.card:hover, .stat-card:hover {
+.card:hover, .stat-card:hover, .data-card:hover, .card-saas:hover {
   box-shadow: var(--saas-shadow-md) !important;
 }
 
@@ -192,14 +210,15 @@ button, input, select, textarea {
 /* ==========================================================================
    TABLAS PULIDAS Y MINIMALISTAS
    ========================================================================== */
-.table {
+.table, .custom-table {
   color: var(--saas-text-body);
   border-collapse: separate;
   border-spacing: 0;
+  width: 100%;
   margin-bottom: 0 !important;
 }
 
-.table thead th {
+.table thead th, .custom-table thead th {
   background-color: #f8fafc !important;
   color: var(--saas-text-muted) !important;
   font-size: 0.72rem !important;
@@ -212,7 +231,7 @@ button, input, select, textarea {
   white-space: nowrap;
 }
 
-.table tbody td {
+.table tbody td, .custom-table tbody td {
   padding: 0.95rem 1rem !important;
   border-bottom: 1px solid var(--saas-border-subtle) !important;
   border-top: none !important;
@@ -221,11 +240,11 @@ button, input, select, textarea {
   transition: background-color 0.15s ease;
 }
 
-.table tbody tr:hover td {
+.table tbody tr:hover td, .custom-table tbody tr:hover td {
   background-color: rgba(241, 245, 249, 0.6) !important;
 }
 
-.table tbody tr:last-child td {
+.table tbody tr:last-child td, .custom-table tbody tr:last-child td {
   border-bottom: none !important;
 }
 
@@ -262,7 +281,7 @@ button, input, select, textarea {
 }
 
 /* ==========================================================================
-   BADGES Y PILLS
+   BADGES, ROLES Y AVATARS
    ========================================================================== */
 .badge {
   font-weight: 600 !important;
@@ -277,6 +296,206 @@ button, input, select, textarea {
   border-radius: 9999px !important;
   font-weight: 700 !important;
   font-size: 0.85rem !important;
+}
+
+.avatar-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: var(--saas-primary-subtle);
+  color: var(--saas-primary);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+.role-badge.admin { background: #fee2e2; color: #dc2626; }
+.role-badge.vendedor { background: #dbeafe; color: #2563eb; }
+
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--saas-border);
+  background: #fff;
+  color: var(--saas-text-muted);
+  transition: all 0.15s ease;
+}
+.btn-icon:hover { background: var(--saas-border-subtle); color: var(--saas-text-heading); }
+.btn-icon.delete:hover { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+
+/* ==========================================================================
+   COMPONENTE: PUNTO DE VENTA (POS VIEW)
+   ========================================================================== */
+.navbar.sticky-top {
+  z-index: 1030 !important;
+}
+
+.card-pos {
+  height: calc(100vh - 90px);
+  border: 1px solid var(--saas-border);
+  border-radius: var(--saas-radius-lg);
+  background: var(--saas-surface);
+}
+
+.total-display {
+  font-size: 3rem;
+  font-weight: 800;
+  color: var(--saas-text-heading);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.table-responsive-pos {
+  height: calc(100vh - 210px);
+  overflow-y: auto;
+}
+
+.metodo-pago {
+  cursor: pointer;
+  border: 2px solid var(--saas-border);
+  border-radius: var(--saas-radius-sm);
+  transition: all 0.18s ease;
+  padding: 10px 6px;
+  text-align: center;
+  background: #ffffff;
+  user-select: none;
+}
+.metodo-pago:active {
+  transform: scale(0.97);
+}
+.metodo-pago.active {
+  border-color: var(--saas-primary);
+  background: var(--saas-primary-subtle);
+  color: var(--saas-primary);
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+}
+.metodo-pago i {
+  font-size: 1.35rem;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.sugerencias-box {
+  z-index: 1050;
+  display: none;
+  max-height: 280px;
+  overflow-y: auto;
+  border-radius: var(--saas-radius-sm);
+  border: 1px solid var(--saas-border);
+  box-shadow: var(--saas-shadow-lg);
+}
+
+.mobile-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border-top: 1px solid var(--saas-border);
+  padding: 10px 16px;
+  z-index: 1040;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* ==========================================================================
+   COMPONENTE: LOGIN SAAS
+   ========================================================================== */
+body.login-page {
+  background: radial-gradient(circle at top right, #3b82f6, #1e3a8a) !important;
+  height: 100vh;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.login-card {
+  background: rgba(255, 255, 255, 0.96) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: var(--saas-radius-xl) !important;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4) !important;
+  overflow: hidden;
+}
+
+.card-header-custom {
+  padding: 36px 20px 12px;
+  text-align: center;
+}
+
+.logo-text {
+  font-weight: 800;
+  font-size: 2.25rem;
+  color: #1e3a8a;
+  letter-spacing: -0.04em;
+  margin-bottom: 0.25rem;
+}
+
+.btn-login {
+  background: linear-gradient(135deg, #1e3a8a, #2563eb) !important;
+  border: none !important;
+  border-radius: var(--saas-radius-sm) !important;
+  padding: 0.75rem 1rem !important;
+  font-weight: 700 !important;
+  color: white !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-login:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3) !important;
+}
+
+.text-id-display {
+  font-family: monospace;
+  font-size: 0.85rem;
+  background: #eef2ff;
+  color: #1e40af;
+  border: 1px dashed #3b82f6;
+}
+
+/* ==========================================================================
+   VISTA PREVIA TICKET TÉRMICO
+   ========================================================================== */
+.sticky-ticket-container {
+  position: sticky;
+  top: 2rem;
+  z-index: 10;
+}
+
+.preview-ticket {
+  font-family: 'Courier New', Courier, monospace !important;
+  border: 2px dashed #cbd5e1 !important;
+  background-color: #ffffff !important;
+  border-radius: var(--saas-radius-sm) !important;
+}
+
+.style-subtext {
+  font-size: 11px;
 }
 
 /* ==========================================================================
@@ -344,4 +563,131 @@ button, input, select, textarea {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* ==========================================================================
+   RESPONSIVIDAD Y MOBILE FIRST BREAKPOINTS (@media (max-width: 768px))
+   ========================================================================= */
+@media (max-width: 768px) {
+  #content {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Títulos y Tipografía Mobile */
+  h1, .h1 { font-size: 1.4rem !important; }
+  h2, .h2 { font-size: 1.25rem !important; }
+  h3, .h3 { font-size: 1.1rem !important; }
+  h4, .h4 { font-size: 1rem !important; }
+  h5, .h5 { font-size: 0.95rem !important; }
+
+  /* Padding compacto en contenedores y Cards */
+  .card, .stat-card, .table-card, .card-saas {
+    padding: 0.9rem !important;
+    border-radius: var(--saas-radius-md) !important;
+    margin-bottom: 0.85rem !important;
+  }
+
+  /* Tablas en Mobile */
+  .table thead th {
+    padding: 0.65rem 0.5rem !important;
+    font-size: 0.68rem !important;
+  }
+  .table tbody td {
+    padding: 0.65rem 0.5rem !important;
+    font-size: 0.8125rem !important;
+  }
+
+  /* POS en Mobile */
+  .card-pos {
+    height: auto !important;
+    min-height: initial;
+    border-radius: var(--saas-radius-md);
+  }
+
+  .table-responsive-pos {
+    height: auto;
+    max-height: 380px;
+  }
+
+  .total-display {
+    font-size: 2.25rem;
+  }
+
+  /* Empleados Mobile Transformation */
+  .data-card {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .custom-table thead { display: none !important; }
+  .custom-table, .custom-table tbody, .custom-table tr, .custom-table td {
+    display: block !important;
+    width: 100% !important;
+  }
+  .custom-table tbody tr {
+    background: #ffffff !important;
+    border: 1px solid var(--saas-border) !important;
+    border-radius: var(--saas-radius-md) !important;
+    padding: 1rem !important;
+    margin-bottom: 0.75rem !important;
+    box-shadow: var(--saas-shadow-sm) !important;
+  }
+  .custom-table td {
+    padding: 0 !important;
+    border: none !important;
+  }
+  .mobile-card-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .mobile-card-middle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 1px dashed var(--saas-border);
+  }
+  .mobile-card-bottom {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  /* Modales en Mobile: Footer vertical con botones al 100% */
+  .modal-dialog {
+    margin: 0.5rem !important;
+  }
+  .modal-content {
+    border-radius: var(--saas-radius-md) !important;
+  }
+  .modal-header {
+    padding: 1rem !important;
+  }
+  .modal-body {
+    padding: 1rem !important;
+  }
+  .modal-footer {
+    padding: 0.75rem 1rem !important;
+    flex-direction: column-reverse !important;
+    gap: 0.5rem !important;
+  }
+  .modal-footer .btn {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  /* Botones de acción */
+  .btn-action {
+    width: 30px;
+    height: 30px;
+  }
+
+  .sticky-ticket-container {
+    position: static !important;
+  }
 }

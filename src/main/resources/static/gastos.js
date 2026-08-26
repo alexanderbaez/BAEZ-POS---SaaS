@@ -306,12 +306,12 @@ function renderizarGastos(gastos) {
                     ${refSegura ? `<small class="text-muted"><i class="bi bi-receipt me-1"></i>Ref: ${refSegura}</small>` : ''}
                 </div>
             </td>
-            <td>
+            <td class="d-none d-sm-table-cell">
                 <span class="badge ${catConfig.class} px-2 py-1 fw-semibold" style="font-size: 11px;">
                     ${catConfig.label}
                 </span>
             </td>
-            <td>
+            <td class="d-none d-md-table-cell">
                 <span class="small text-secondary"><i class="bi ${iconoMetodo} me-1"></i>${metodoTexto}</span>
                 ${badgeCaja}
             </td>

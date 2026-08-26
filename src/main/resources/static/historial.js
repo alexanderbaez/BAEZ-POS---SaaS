@@ -150,22 +150,22 @@ function renderizarTabla(ventas) {
         const totalVal = parseFloat(v.total) || 0;
 
         tr.innerHTML = `
-            <td class="ps-4 align-middle"><span class="fw-bold text-dark">${escapeHtml(numTicketVisual)}</span></td>
-            <td class="text-muted small align-middle text-nowrap">${fechaFormateada}</td>
+            <td class="ps-3 align-middle"><span class="fw-bold text-dark">${escapeHtml(numTicketVisual)}</span></td>
+            <td class="text-muted small align-middle text-nowrap d-none d-md-table-cell">${fechaFormateada}</td>
             <td class="align-middle">
                 <div class="fw-bold text-dark text-truncate" style="max-width: 230px;">${cliente}</div>
                 <div class="text-muted small text-truncate" style="max-width: 230px;" title="${escapeHtml(listaNombresProductos)}">
                     ${resumenProductos}
                 </div>
             </td>
-            <td class="align-middle text-nowrap">
+            <td class="align-middle text-nowrap d-none d-sm-table-cell">
                 <span class="badge bg-light text-dark border px-2 py-1">
                     <i class="bi ${iconClass} me-1"></i> ${escapeHtml(metodoNombre)}
                 </span>
             </td>
-            <td class="text-end text-danger align-middle text-nowrap">-$${descuentoVal.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-            <td class="text-end fw-bold align-middle text-dark text-nowrap">$${totalVal.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-            <td class="text-center align-middle text-nowrap" style="width: 110px;">
+            <td class="text-end text-danger align-middle text-nowrap amount-num d-none d-lg-table-cell">-$${descuentoVal.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+            <td class="text-end fw-bold align-middle text-dark text-nowrap amount-num">$${totalVal.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+            <td class="text-center align-middle text-nowrap pe-3" style="width: 110px;">
                 <div class="d-flex flex-row justify-content-center align-items-center gap-1">
                     <button class="btn btn-sm btn-light" onclick="verDetalle(${v.id})" title="Ver detalle">
                         <i class="bi bi-eye"></i>

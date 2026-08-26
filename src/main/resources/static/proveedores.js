@@ -121,7 +121,7 @@ function renderizarProveedores(lista) {
             : '<span class="text-muted small">-</span>';
 
         tr.innerHTML = `
-            <td>
+            <td class="ps-3">
                 <div class="d-flex align-items-center">
                     <div class="p-2 bg-primary bg-opacity-10 text-primary rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
                         <i class="bi bi-truck"></i>
@@ -132,9 +132,9 @@ function renderizarProveedores(lista) {
                     </div>
                 </div>
             </td>
-            <td>${taxIdHtml}</td>
-            <td>${telHtml}</td>
-            <td>${emailHtml}</td>
+            <td class="d-none d-md-table-cell">${taxIdHtml}</td>
+            <td class="d-none d-sm-table-cell">${telHtml}</td>
+            <td class="d-none d-lg-table-cell">${emailHtml}</td>
             <td class="text-end">${badgeSaldo}</td>
             <td class="text-end pe-3">
                 <div class="d-flex justify-content-end gap-1">

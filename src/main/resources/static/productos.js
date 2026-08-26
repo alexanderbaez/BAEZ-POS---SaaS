@@ -304,16 +304,16 @@ function renderizarTabla(lista) {
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td class="ps-4">
+            <td class="ps-3">
                 <p class="product-name fw-bold mb-0">${nombreSeguro}</p>
                 <span class="product-code text-muted small"><i class="bi bi-barcode me-1"></i>${barcodeSeguro || 'Sin código'}</span>
             </td>
-            <td><span class="badge bg-light text-dark border-0 p-2 px-3 rounded-pill">${catName}</span></td>
-            <td class="text-muted">${fmtARS.format(costo)}</td>
-            <td class="fw-bold text-dark">${fmtARS.format(precio)}</td>
-            <td><span class="text-success small fw-bold">+${margen}%</span></td>
-            <td><span class="badge ${stockClase} p-2 px-3 rounded-pill" style="font-size: 0.8rem;">${stockFormateado}</span></td>
-            <td class="text-end pe-4">
+            <td class="d-none d-md-table-cell"><span class="badge bg-light text-dark border p-2 px-3 rounded-pill">${catName}</span></td>
+            <td class="text-muted amount-num d-none d-lg-table-cell">${fmtARS.format(costo)}</td>
+            <td class="fw-bold text-dark amount-num">${fmtARS.format(precio)}</td>
+            <td class="d-none d-lg-table-cell"><span class="text-success small fw-bold">+${margen}%</span></td>
+            <td><span class="badge ${stockClase} p-2 px-3 rounded-pill">${stockFormateado}</span></td>
+            <td class="text-end pe-3">
                 <div class="btn-group shadow-sm rounded-3">
                     <button class="btn btn-white btn-sm border-end" title="Imprimir 1 Etiqueta" onclick="imprimirEtiqueta(${p.id})"><i class="bi bi-printer text-primary"></i></button>
                     <button class="btn btn-white btn-sm border-end" title="Imprimir Hoja Masiva A4" onclick="imprimirEtiquetasMultiples(${p.id})"><i class="bi bi-grid-3x3-gap text-success"></i></button>

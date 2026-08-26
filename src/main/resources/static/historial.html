@@ -9,41 +9,6 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
   <link rel="stylesheet" href="css/saas-ui-core.css">
-
-  <style>
-    :root {
-      --sidebar-width: 250px;
-      --primary-color: #1e3a8a;
-      --primary-blue: #0d6efd;
-    }
-    body {
-      background-color: #f8fafc;
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      overflow-x: hidden;
-    }
-
-    #content {
-      margin-left: var(--sidebar-width);
-      width: calc(100% - var(--sidebar-width));
-      transition: all 0.3s ease;
-      min-height: 100vh;
-    }
-
-    .card { border-radius: 15px; border: none; }
-    .table thead th {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: #6c757d;
-      white-space: nowrap;
-    }
-    .dashed { border-top: 2px dashed #dee2e6; opacity: 1; }
-
-    /* AJUSTES RESPONSIVE MÓVIL Y TABLET */
-    @media (max-width: 768px) {
-        #content { margin-left: 0; width: 100%; }
-    }
-  </style>
 </head>
 <body>
 
@@ -91,27 +56,27 @@
     <!-- Tarjetas Resumen del Día -->
     <div class="row g-3 mb-4">
       <div class="col-12 col-md-4">
-        <div class="card shadow-sm p-3 text-center border-start border-4 border-success">
+        <div class="card stat-card shadow-sm p-3 text-center border-start border-4 border-success">
           <small class="text-muted fw-bold">HOY EFECTIVO</small>
-          <h4 class="mb-0 fw-bold text-success" id="resumenEfectivo">$0,00</h4>
+          <h4 class="mb-0 fw-bold text-success amount-num" id="resumenEfectivo">$0,00</h4>
         </div>
       </div>
       <div class="col-12 col-md-4">
-        <div class="card shadow-sm p-3 text-center border-start border-4 border-primary">
+        <div class="card stat-card shadow-sm p-3 text-center border-start border-4 border-primary">
           <small class="text-muted fw-bold">HOY TRANSF / QR</small>
-          <h4 class="mb-0 fw-bold text-primary" id="resumenTransf">$0,00</h4>
+          <h4 class="mb-0 fw-bold text-primary amount-num" id="resumenTransf">$0,00</h4>
         </div>
       </div>
       <div class="col-12 col-md-4">
-        <div class="card shadow-sm p-3 text-center border-start border-4 border-warning">
+        <div class="card stat-card shadow-sm p-3 text-center border-start border-4 border-warning">
           <small class="text-muted fw-bold">HOY EN LIBRETA</small>
-          <h4 class="mb-0 fw-bold text-warning" id="resumenLibreta">$0,00</h4>
+          <h4 class="mb-0 fw-bold text-warning amount-num" id="resumenLibreta">$0,00</h4>
         </div>
       </div>
     </div>
 
     <!-- Barra de Filtros -->
-    <div class="bg-white p-3 rounded-4 shadow-sm mb-4">
+    <div class="card p-3 shadow-sm mb-4">
       <div class="row g-2 g-md-3 align-items-center">
         <div class="col-6 col-md-3">
           <label class="small fw-bold text-muted text-uppercase mb-1 d-block" for="fechaDesde">Desde:</label>
@@ -139,21 +104,21 @@
     </div>
 
     <!-- Tabla de Ventas (Estructura Optimizada Multi-tenant) -->
-    <div class="card shadow-sm p-2 p-md-3">
+    <div class="card table-card shadow-sm p-2 p-md-3">
       <div class="table-responsive" style="min-height: 400px;">
-        <table class="table table-hover align-middle mb-0" style="min-width: 850px;">
+        <table class="table table-hover align-middle mb-0">
           <thead class="table-light">
           <tr>
-            <th class="ps-4" style="width: 14%;">Comprobante</th>
-            <th style="width: 16%;">Fecha y Hora</th>
-            <th style="width: 28%;">Cliente / Productos</th>
-            <th style="width: 14%;">Método Pago</th>
-            <th class="text-end" style="width: 11%;">Descuento</th>
-            <th class="text-end" style="width: 11%;">Total Final</th>
-            <th class="text-center text-nowrap" style="width: 110px;">Acciones</th>
+            <th class="ps-3">Comprobante</th>
+            <th class="d-none d-md-table-cell">Fecha y Hora</th>
+            <th>Cliente / Detalle</th>
+            <th class="d-none d-sm-table-cell">Método Pago</th>
+            <th class="text-end d-none d-lg-table-cell">Descuento</th>
+            <th class="text-end">Total Final</th>
+            <th class="text-center pe-3">Acciones</th>
           </tr>
           </thead>
-          <tbody id="listaVentas" style="font-size: 13.5px;">
+          <tbody id="listaVentas">
           <tr><td colspan="7" class="text-center p-4 text-muted">Cargando ventas...</td></tr>
           </tbody>
         </table>
@@ -164,25 +129,25 @@
   <!-- Modal Detalle de Venta / Ticket -->
   <div class="modal fade" id="modalDetalleVenta" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+      <div class="modal-content border-0 shadow-lg">
         <div class="modal-header bg-dark text-white p-3">
           <h5 class="modal-title fw-bold">Comprobante #<span id="txtIdVenta"></span></h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body p-3 p-md-4">
           <div id="contenedorItems"></div>
-          <hr class="dashed my-3">
+          <hr class="my-3 border-secondary">
           <div class="d-flex justify-content-between mb-1">
             <span class="text-muted small">Subtotal:</span>
-            <span id="txtSubtotalModal" class="fw-bold"></span>
+            <span id="txtSubtotalModal" class="fw-bold amount-num"></span>
           </div>
           <div class="d-flex justify-content-between mb-1 text-danger small">
             <span>Descuento aplicado:</span>
-            <span id="txtDescuentoModal"></span>
+            <span id="txtDescuentoModal" class="amount-num"></span>
           </div>
           <div class="d-flex justify-content-between mt-2 pt-2 border-top border-dark">
             <span class="h5 fw-bold text-dark mb-0">TOTAL PAGADO:</span>
-            <span id="txtTotalModal" class="h5 fw-bold text-primary mb-0"></span>
+            <span id="txtTotalModal" class="h5 fw-bold text-primary mb-0 amount-num"></span>
           </div>
           <div class="text-center mt-3">
             <span class="badge bg-light text-dark border w-100 py-2" id="txtMetodoModal"></span>

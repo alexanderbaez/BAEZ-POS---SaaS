@@ -125,12 +125,12 @@ function renderizarClientes(clientes) {
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td class="ps-4">
+            <td class="ps-3">
                 <div class="fw-bold text-dark">${sanitizeHTML(c.name)}</div>
-                <small class="text-muted" style="font-size: 0.75rem;">Límite: ${formatCurrency(c.creditLimit)}</small>
+                <small class="text-muted d-block" style="font-size: 0.75rem;">Límite: ${formatCurrency(c.creditLimit)}</small>
             </td>
-            <td class="text-muted small">${c.dniCuit ? sanitizeHTML(c.dniCuit) : '<span class="opacity-25">-</span>'}</td>
-            <td>
+            <td class="text-muted small d-none d-md-table-cell">${c.dniCuit ? sanitizeHTML(c.dniCuit) : '<span class="opacity-25">-</span>'}</td>
+            <td class="d-none d-sm-table-cell">
                 ${numTelefono ?
                     `<a href="${linkWs}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-success border-0 rounded-pill px-3 fw-bold" style="font-size: 0.75rem;">
                         <i class="bi bi-whatsapp me-1"></i> Recordatorio
@@ -138,10 +138,10 @@ function renderizarClientes(clientes) {
                     '<span class="text-muted small">Sin contacto</span>'
                 }
             </td>
-            <td>
-                <span class="balance-badge ${badgeClass} px-2 py-1 fw-bold rounded-2">${formatCurrency(saldo)}</span>
+            <td class="text-end">
+                <span class="balance-badge ${badgeClass}">${formatCurrency(saldo)}</span>
             </td>
-            <td class="text-end pe-4">
+            <td class="text-end pe-3">
                 <div class="d-flex justify-content-end gap-2">
                     <button class="btn btn-sm btn-light border btn-action" data-action="editar" data-id="${c.id}" title="Editar">
                         <i class="bi bi-pencil text-warning"></i>
