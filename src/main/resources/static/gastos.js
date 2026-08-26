@@ -1,8 +1,10 @@
 /**
- * BAEZ POS - MÓDULO DE GESTIÓN DE EGRESOS (SaaS)
+ * BAEZ POS - MÓDULO DE GESTIÓN DE EGRESOS (SaaS Multi-tenant)
+ * Alexander Baez - 2026
  */
 
 let gastosGlobales = [];
+let proveedoresDisponibles = [];
 let debounceTimer = null;
 
 // Formateador estándar de moneda local (ARS)
@@ -14,6 +16,7 @@ const fmtARS = new Intl.NumberFormat('es-AR', {
 
 document.addEventListener('DOMContentLoaded', () => {
     cargarGastos();
+    cargarProveedoresParaSelect();
 
     const formGasto = document.getElementById('formGasto');
     if (formGasto) {
@@ -33,6 +36,15 @@ document.addEventListener('DOMContentLoaded', () => {
         actualizarEstadoDeductFromBox(metodoPagoGasto.value, deductFromBox);
     }
 
+    // Regla de Negocio UI: Mostrar/Ocultar campos de Proveedor según categoría
+    const catGasto = document.getElementById('catGasto');
+    if (catGasto) {
+        catGasto.addEventListener('change', (e) => {
+            toggleSeccionProveedor(e.target.value);
+        });
+        toggleSeccionProveedor(catGasto.value);
+    }
+
     // Filtros con Debounce para optimizar re-renders
     const filtroTexto = document.getElementById('filtroTexto');
     const filtroCategoria = document.getElementById('filtroCategoria');
@@ -49,11 +61,70 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
+ * Carga los proveedores activos para el selector de compras a proveedores
+ */
+async function cargarProveedoresParaSelect() {
+    try {
+        const res = await apiFetch('/providers');
+        if (res && res.ok) {
+            proveedoresDisponibles = await res.json();
+            poblarSelectProveedores();
+        }
+    } catch (e) {
+        console.warn("No se pudieron precargar proveedores:", e);
+    }
+}
+
+function poblarSelectProveedores() {
+    const select = document.getElementById('provGasto');
+    if (!select) return;
+    select.innerHTML = '<option value="">-- Seleccionar Proveedor --</option>';
+    proveedoresDisponibles.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        const saldo = parseFloat(p.currentBalance) || 0;
+        opt.textContent = `${p.businessName} (Deuda: ${fmtARS.format(saldo)})`;
+        select.appendChild(opt);
+    });
+}
+
+function toggleSeccionProveedor(categoria) {
+    const seccionProv = document.getElementById('seccionProveedor');
+    const provGasto = document.getElementById('provGasto');
+    if (!seccionProv) return;
+
+    if (categoria === 'PROVEEDOR') {
+        seccionProv.classList.remove('d-none');
+        if (proveedoresDisponibles.length === 0) {
+            cargarProveedoresParaSelect();
+        } else {
+            poblarSelectProveedores();
+        }
+    } else {
+        seccionProv.classList.add('d-none');
+        if (provGasto) provGasto.value = '';
+        const nroFactura = document.getElementById('nroFacturaGasto');
+        if (nroFactura) nroFactura.value = '';
+    }
+}
+
+/**
  * Controla la accesibilidad, estado y feedback contextual del switch 'Descontar de Caja'
  */
 function actualizarEstadoDeductFromBox(metodoSeleccionado, elementSwitch) {
     const esEfectivo = (metodoSeleccionado === 'EFECTIVO_CAJA' || metodoSeleccionado === 'EFECTIVO');
+    const esCtaCte = (metodoSeleccionado === 'CUENTA_CORRIENTE');
     const lblAyuda = document.getElementById('lblAyudaDeduct');
+
+    if (esCtaCte) {
+        elementSwitch.checked = false;
+        elementSwitch.disabled = true;
+        if (lblAyuda) {
+            lblAyuda.innerHTML = `<i class="bi bi-clock-history text-warning me-1"></i> <strong>Cuenta Corriente:</strong> No descuenta dinero de caja física. Se acumula automáticamente en el saldo deudor del proveedor.`;
+            lblAyuda.className = "text-warning d-block mt-1 style-subtext";
+        }
+        return;
+    }
 
     elementSwitch.disabled = false;
 
@@ -107,7 +178,9 @@ function aplicarFiltros() {
     const metodo = document.getElementById('filtroMetodoPago')?.value || '';
 
     const filtrados = gastosGlobales.filter(g => {
-        const matchTexto = (g.description || '').toLowerCase().includes(texto) || (g.reference || '').toLowerCase().includes(texto);
+        const matchTexto = (g.description || '').toLowerCase().includes(texto) ||
+                           (g.reference || '').toLowerCase().includes(texto) ||
+                           (g.invoiceNumber || '').toLowerCase().includes(texto);
         const matchCat = cat === '' || g.category === cat;
         const matchMetodo = metodo === '' || g.paymentMethod === metodo;
         return matchTexto && matchCat && matchMetodo;
@@ -166,6 +239,7 @@ function renderizarGastos(gastos) {
 
         const descSegura = escapeHTML(g.description || 'Sin concepto');
         const refSegura = escapeHTML(g.reference || '');
+        const invSegura = escapeHTML(g.invoiceNumber || '');
 
         const catKey = g.category ? g.category.toUpperCase() : 'VARIOS_RETIRO';
         const catConfig = mapaCategorias[catKey] || { label: g.category || 'Varios', class: 'bg-secondary text-white' };
@@ -178,13 +252,19 @@ function renderizarGastos(gastos) {
         } else if (g.paymentMethod === 'TARJETA') {
             metodoTexto = 'Tarjeta';
             iconoMetodo = 'bi-credit-card text-info';
+        } else if (g.paymentMethod === 'CUENTA_CORRIENTE') {
+            metodoTexto = 'Cta. Corriente';
+            iconoMetodo = 'bi-journal-text text-danger';
         }
 
-        // LÓGICA DE BADGES SEPARADOS (EFECTIVO VS DIGITAL)
+        // LÓGICA DE BADGES SEPARADOS (EFECTIVO VS DIGITAL VS CTA CTE)
         const esEfectivo = (g.paymentMethod === 'EFECTIVO_CAJA' || g.paymentMethod === 'EFECTIVO');
+        const esCtaCte = (g.paymentMethod === 'CUENTA_CORRIENTE');
         let badgeCaja = '';
 
-        if (g.deductFromBox) {
+        if (esCtaCte) {
+            badgeCaja = '<span class="badge bg-warning-subtle text-dark border border-warning ms-1" style="font-size: 10px;" title="Deuda con Proveedor"><i class="bi bi-clock-history me-1"></i>Deuda Cta. Cte</span>';
+        } else if (g.deductFromBox) {
             if (esEfectivo) {
                 badgeCaja = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size: 10px;" title="Restado del efectivo físico en caja">Descuenta Caja (Efectivo)</span>';
             } else {
@@ -200,7 +280,10 @@ function renderizarGastos(gastos) {
             </td>
             <td>
                 <span class="fw-semibold text-dark d-block">${descSegura}</span>
-                ${refSegura ? `<small class="text-muted"><i class="bi bi-receipt me-1"></i>Ref: ${refSegura}</small>` : ''}
+                <div class="d-flex flex-wrap gap-2 mt-1">
+                    ${invSegura ? `<small class="text-primary fw-semibold"><i class="bi bi-file-earmark-text me-1"></i>Fac: ${invSegura}</small>` : ''}
+                    ${refSegura ? `<small class="text-muted"><i class="bi bi-receipt me-1"></i>Ref: ${refSegura}</small>` : ''}
+                </div>
             </td>
             <td>
                 <span class="badge ${catConfig.class} px-2 py-1 fw-semibold" style="font-size: 11px;">
@@ -261,22 +344,37 @@ async function guardarGasto(e) {
         });
     }
 
+    const categoria = document.getElementById('catGasto').value;
+    const metodo = document.getElementById('metodoPagoGasto').value;
+    const provIdVal = document.getElementById('provGasto')?.value;
+    const providerId = (categoria === 'PROVEEDOR' && provIdVal) ? parseInt(provIdVal) : null;
+    const invoiceNumber = document.getElementById('nroFacturaGasto')?.value.trim() || null;
+
+    if (categoria === 'PROVEEDOR' && metodo === 'CUENTA_CORRIENTE' && !providerId) {
+        return Swal.fire({
+            icon: 'warning',
+            title: 'Proveedor Requerido',
+            text: 'Para registrar un gasto en Cuenta Corriente, debe seleccionar a qué proveedor se le sumará la deuda.',
+            confirmButtonColor: '#e11d48'
+        });
+    }
+
     const btnGuardar = e.target.querySelector('button[type="submit"]');
     const originalText = btnGuardar.innerHTML;
     btnGuardar.disabled = true;
     btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Guardando...';
 
-    const metodo = document.getElementById('metodoPagoGasto').value;
     const elementDeduct = document.getElementById('deductFromBox');
-
-    const deductFromBoxValue = elementDeduct ? elementDeduct.checked : true;
+    const deductFromBoxValue = (metodo === 'CUENTA_CORRIENTE') ? false : (elementDeduct ? elementDeduct.checked : true);
 
     const nuevoGasto = {
         description: document.getElementById('descGasto').value.trim(),
         amount: monto,
-        category: document.getElementById('catGasto').value,
+        category: categoria,
         paymentMethod: metodo,
         reference: document.getElementById('refComprobante').value.trim() || null,
+        providerId: providerId,
+        invoiceNumber: invoiceNumber,
         deductFromBox: deductFromBoxValue
     };
 
@@ -286,7 +384,7 @@ async function guardarGasto(e) {
             body: JSON.stringify(nuevoGasto)
         });
 
-        if (res && res.ok) {
+        if (res && (res.ok || res.status === 201)) {
             Swal.fire({
                 toast: true, position: 'top-end', icon: 'success',
                 title: 'Egreso asentado correctamente',
@@ -298,6 +396,7 @@ async function guardarGasto(e) {
             if (metodoPagoGasto && elementDeduct) {
                 actualizarEstadoDeductFromBox(metodoPagoGasto.value, elementDeduct);
             }
+            toggleSeccionProveedor(document.getElementById('catGasto').value);
 
             const modalEl = document.getElementById('modalNuevoGasto');
             if (modalEl) {
@@ -306,6 +405,7 @@ async function guardarGasto(e) {
             }
 
             cargarGastos();
+            cargarProveedoresParaSelect();
         } else {
             let errorMsg = "Ocurrió un problema al asentar el gasto.";
             try {

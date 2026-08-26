@@ -137,6 +137,11 @@
                   </a>
 
                   ${isAdmin ? `
+                  <a href="proveedores.html" class="nav-link-custom ${paginaActual === 'proveedores.html' ? 'active-page' : ''}">
+                    <i class="bi bi-truck me-3 fs-5"></i> Proveedores
+                  </a>` : ''}
+
+                  ${isAdmin ? `
                   <a href="gastos.html" class="nav-link-custom ${paginaActual === 'gastos.html' ? 'active-page' : ''}">
                     <i class="bi bi-wallet2 me-3 fs-5"></i> Gastos
                   </a>` : ''}
