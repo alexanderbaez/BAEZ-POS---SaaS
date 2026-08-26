@@ -3,6 +3,7 @@ package com.baez.baezpos.security.config;
 import com.baez.baezpos.security.filter.JwtAuthenticationFilter;
 import com.baez.baezpos.security.service.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -30,6 +31,9 @@ import java.util.List;
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+    @Value("#{'${app.cors.allowed-origins}'.split(',')}")
+    private List<String> allowedOrigins;
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService customUserDetailsService;
@@ -107,14 +111,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Dominios explícitos requeridos cuando allowCredentials es true
-        config.setAllowedOrigins(List.of(
-                "https://baezpos.com",
-                "https://www.baezpos.com",
-                "http://localhost:5173",
-                "http://localhost:3000",
-                "http://localhost:8080"
-        ));
+        // Orígenes permitidos inyectados dinámicamente desde application.properties
+        config.setAllowedOrigins(allowedOrigins);
 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
