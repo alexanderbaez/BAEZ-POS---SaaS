@@ -45,134 +45,341 @@
 
   <div class="container-fluid p-3 p-md-4">
 
-    <!-- FILA 1: KPIS PRINCIPALES DEL MES -->
-    <div class="row g-3 mb-4">
-      <!-- 1. Ventas del Mes -->
-      <div class="col-12 col-md-6 col-lg-3">
-        <div class="card stat-card p-3 h-100 border-start border-4 border-primary">
-          <div class="d-flex justify-content-between align-items-start mb-2">
-            <span class="text-muted small fw-bold text-uppercase">Ventas del Mes</span>
-            <div class="icon-box p-2 bg-primary bg-opacity-10 text-primary rounded-3">
-              <i class="bi bi-graph-up-arrow fs-5"></i>
-            </div>
-          </div>
-          <h3 class="fw-bold mb-1 text-dark amount-num fs-4 fs-xl-3" id="kpiVentasMes">$0,00</h3>
-          <small class="text-muted d-block" id="kpiVentasCount">0 operaciones</small>
-        </div>
-      </div>
-
-      <!-- 2. Gastos del Mes -->
-      <div class="col-12 col-md-6 col-lg-3">
-        <div class="card stat-card p-3 h-100 border-start border-4 border-danger">
-          <div class="d-flex justify-content-between align-items-start mb-2">
-            <span class="text-muted small fw-bold text-uppercase">Gastos del Mes</span>
-            <div class="icon-box p-2 bg-danger bg-opacity-10 text-danger rounded-3">
-              <i class="bi bi-wallet2 fs-5"></i>
-            </div>
-          </div>
-          <h3 class="fw-bold mb-1 text-danger amount-num fs-4 fs-xl-3" id="kpiGastosMes">$0,00</h3>
-          <small class="text-muted d-block" id="kpiGastosCount">0 egresos registrados</small>
-        </div>
-      </div>
-
-      <!-- 3. Ganancia Neta -->
-      <div class="col-12 col-md-6 col-lg-3">
-        <div class="card stat-card p-3 h-100 border-start border-4 border-success">
-          <div class="d-flex justify-content-between align-items-start mb-2">
-            <span class="text-muted small fw-bold text-uppercase">Ganancia Neta</span>
-            <div class="icon-box p-2 bg-success bg-opacity-10 text-success rounded-3">
-              <i class="bi bi-cash-coin fs-5"></i>
-            </div>
-          </div>
-          <h3 class="fw-bold mb-1 text-success amount-num fs-4 fs-xl-3" id="kpiGananciaNeta">$0,00</h3>
-          <small class="text-muted d-block">Balance neto acumulado</small>
-        </div>
-      </div>
-
-      <!-- 4. Deuda a Proveedores -->
-      <div class="col-12 col-md-6 col-lg-3">
-        <div class="card stat-card p-3 h-100 border-start border-4 border-warning">
-          <div class="d-flex justify-content-between align-items-start mb-2">
-            <span class="text-muted small fw-bold text-uppercase">Deuda Proveedores</span>
-            <div class="icon-box p-2 bg-warning bg-opacity-10 text-warning-emphasis rounded-3">
-              <i class="bi bi-truck fs-5"></i>
-            </div>
-          </div>
-          <h3 class="fw-bold mb-1 text-dark amount-num fs-4 fs-xl-3" id="kpiDeudaProveedores">$0,00</h3>
-          <small class="text-muted d-block" id="kpiProveedoresCount">0 con saldo pendiente</small>
-        </div>
-      </div>
+    <!-- SISTEMA DE PESTAÑAS (NAV-PILLS SAAS PREMIUM) -->
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mb-4">
+      <ul class="nav nav-pills p-1 bg-white border rounded-3 shadow-sm" id="dashboardTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active fw-bold" id="tab-gerencial-btn" data-bs-toggle="pill" data-bs-target="#tab-gerencial" type="button" role="tab" aria-controls="tab-gerencial" aria-selected="true">
+            <i class="bi bi-speedometer2 me-1.5"></i> Vista Gerencial
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link fw-bold" id="tab-analisis-btn" data-bs-toggle="pill" data-bs-target="#tab-analisis" type="button" role="tab" aria-controls="tab-analisis" aria-selected="false">
+            <i class="bi bi-sliders me-1.5"></i> Análisis Detallado
+          </button>
+        </li>
+      </ul>
     </div>
 
-    <!-- FILA 2: GRÁFICO CENTRAL ANCHO -->
-    <div class="row g-3 mb-4">
-      <div class="col-12">
-        <div class="card p-3 p-md-4">
-          <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mb-3">
+    <!-- CONTENEDOR DE PANELES -->
+    <div class="tab-content" id="dashboardTabsContent">
+
+      <!-- ===================================================================
+           TAB 1: VISTA GERENCIAL (RESUMEN EJECUTIVO EN 3 FILAS)
+           =================================================================== -->
+      <div class="tab-pane fade show active" id="tab-gerencial" role="tabpanel" aria-labelledby="tab-gerencial-btn">
+
+        <!-- FILA 1: KPIS PRINCIPALES DEL MES -->
+        <div class="row g-3 mb-4">
+          <!-- 1. Ventas del Mes -->
+          <div class="col-12 col-md-6 col-lg-3">
+            <div class="card stat-card p-3 h-100 border-start border-4 border-primary">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="text-muted small fw-bold text-uppercase">Ventas del Mes</span>
+                <div class="icon-box p-2 bg-primary bg-opacity-10 text-primary rounded-3">
+                  <i class="bi bi-graph-up-arrow fs-5"></i>
+                </div>
+              </div>
+              <h3 class="fw-bold mb-1 text-dark amount-num fs-4 fs-xl-3" id="kpiVentasMes">$0,00</h3>
+              <small class="text-muted d-block" id="kpiVentasCount">0 operaciones</small>
+            </div>
+          </div>
+
+          <!-- 2. Gastos del Mes -->
+          <div class="col-12 col-md-6 col-lg-3">
+            <div class="card stat-card p-3 h-100 border-start border-4 border-danger">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="text-muted small fw-bold text-uppercase">Gastos del Mes</span>
+                <div class="icon-box p-2 bg-danger bg-opacity-10 text-danger rounded-3">
+                  <i class="bi bi-wallet2 fs-5"></i>
+                </div>
+              </div>
+              <h3 class="fw-bold mb-1 text-danger amount-num fs-4 fs-xl-3" id="kpiGastosMes">$0,00</h3>
+              <small class="text-muted d-block" id="kpiGastosCount">0 egresos registrados</small>
+            </div>
+          </div>
+
+          <!-- 3. Ganancia Neta -->
+          <div class="col-12 col-md-6 col-lg-3">
+            <div class="card stat-card p-3 h-100 border-start border-4 border-success">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="text-muted small fw-bold text-uppercase">Ganancia Neta</span>
+                <div class="icon-box p-2 bg-success bg-opacity-10 text-success rounded-3">
+                  <i class="bi bi-cash-coin fs-5"></i>
+                </div>
+              </div>
+              <h3 class="fw-bold mb-1 text-success amount-num fs-4 fs-xl-3" id="kpiGananciaNeta">$0,00</h3>
+              <small class="text-muted d-block">Balance neto acumulado</small>
+            </div>
+          </div>
+
+          <!-- 4. Deuda a Proveedores -->
+          <div class="col-12 col-md-6 col-lg-3">
+            <div class="card stat-card p-3 h-100 border-start border-4 border-warning">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="text-muted small fw-bold text-uppercase">Deuda Proveedores</span>
+                <div class="icon-box p-2 bg-warning bg-opacity-10 text-warning-emphasis rounded-3">
+                  <i class="bi bi-truck fs-5"></i>
+                </div>
+              </div>
+              <h3 class="fw-bold mb-1 text-dark amount-num fs-4 fs-xl-3" id="kpiDeudaProveedores">$0,00</h3>
+              <small class="text-muted d-block" id="kpiProveedoresCount">0 con saldo pendiente</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- FILA 2: GRÁFICO CENTRAL ANCHO -->
+        <div class="row g-3 mb-4">
+          <div class="col-12">
+            <div class="card p-3 p-md-4">
+              <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mb-3">
+                <div>
+                  <h5 class="fw-bold text-dark mb-0"><i class="bi bi-bar-chart-line-fill text-primary me-2"></i>Evolución Semanal de Facturación</h5>
+                  <small class="text-muted">Total de ventas en los últimos 7 días</small>
+                </div>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 fw-semibold">
+                  <i class="bi bi-lightning-charge me-1"></i> Actualización en Tiempo Real
+                </span>
+              </div>
+              <div style="position: relative; height: 350px; width: 100%;">
+                <canvas id="chartSemanal"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FILA 3: TABLAS RÁPIDAS (TOP PRODUCTOS & ÚLTIMOS MOVIMIENTOS) -->
+        <div class="row g-3 mb-4">
+          <!-- Izquierda: Top 5 Productos Vendidos -->
+          <div class="col-12 col-lg-6">
+            <div class="card table-card h-100">
+              <div class="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-trophy-fill text-warning me-2"></i>Top 5 Productos Más Vendidos</h6>
+                <a href="productos.html" class="btn btn-sm btn-link text-decoration-none fw-bold p-0">Ver inventario <i class="bi bi-chevron-right small"></i></a>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th class="ps-3">Producto</th>
+                      <th class="text-center">Unidades</th>
+                      <th class="text-end pe-3">Recaudación</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaTopProductos">
+                    <tr><td colspan="3" class="text-center p-4 text-muted">Cargando productos...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Derecha: Últimos 5 Movimientos -->
+          <div class="col-12 col-lg-6">
+            <div class="card table-card h-100">
+              <div class="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-arrow-left-right text-primary me-2"></i>Últimos 5 Movimientos</h6>
+                <a href="historial.html" class="btn btn-sm btn-link text-decoration-none fw-bold p-0">Ver historial <i class="bi bi-chevron-right small"></i></a>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th class="ps-3">Tipo / Concepto</th>
+                      <th class="d-none d-sm-table-cell">Medio</th>
+                      <th class="text-end pe-3">Monto</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaUltimosMovimientos">
+                    <tr><td colspan="3" class="text-center p-4 text-muted">Cargando movimientos...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===================================================================
+           TAB 2: ANÁLISIS DETALLADO (FILTRO DE RANGOS & MÉTRICAS HISTÓRICAS)
+           =================================================================== -->
+      <div class="tab-pane fade" id="tab-analisis" role="tabpanel" aria-labelledby="tab-analisis-btn">
+
+        <!-- BARRA DE FILTRO POR FECHAS -->
+        <div class="card p-3 p-md-4 mb-4 shadow-sm">
+          <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
             <div>
-              <h5 class="fw-bold text-dark mb-0"><i class="bi bi-bar-chart-line-fill text-primary me-2"></i>Evolución Semanal de Facturación</h5>
-              <small class="text-muted">Total de ventas en los últimos 7 días</small>
+              <h5 class="fw-bold text-dark mb-0"><i class="bi bi-sliders me-2 text-primary"></i>Filtro de Análisis Histórico</h5>
+              <small class="text-muted" id="lblRangoActivo">Selecciona un rango para auditar métricas</small>
             </div>
-            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 fw-semibold">
-              <i class="bi bi-lightning-charge me-1"></i> Actualización en Tiempo Real
-            </span>
-          </div>
-          <div style="position: relative; height: 350px; width: 100%;">
-            <canvas id="chartSemanal"></canvas>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- FILA 3: TABLAS RÁPIDAS (TOP PRODUCTOS & ÚLTIMOS MOVIMIENTOS) -->
-    <div class="row g-3 mb-4">
-      <!-- Izquierda: Top 5 Productos Vendidos -->
-      <div class="col-12 col-lg-6">
-        <div class="card table-card h-100">
-          <div class="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center">
-            <h6 class="fw-bold text-dark mb-0"><i class="bi bi-trophy-fill text-warning me-2"></i>Top 5 Productos Más Vendidos</h6>
-            <a href="productos.html" class="btn btn-sm btn-link text-decoration-none fw-bold p-0">Ver inventario <i class="bi bi-chevron-right small"></i></a>
-          </div>
-          <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-              <thead>
-                <tr>
-                  <th class="ps-3">Producto</th>
-                  <th class="text-center">Unidades</th>
-                  <th class="text-end pe-3">Recaudación</th>
-                </tr>
-              </thead>
-              <tbody id="tablaTopProductos">
-                <tr><td colspan="3" class="text-center p-4 text-muted">Cargando productos...</td></tr>
-              </tbody>
-            </table>
+            <div class="d-flex flex-column flex-sm-row flex-wrap align-items-stretch align-items-sm-center gap-2">
+              <select id="selectPresetFechas" class="form-select form-select-sm fw-semibold shadow-sm" style="width: auto;" onchange="aplicarPresetFecha(this.value)">
+                <option value="ESTE_MES" selected>Este Mes</option>
+                <option value="MES_PASADO">Mes Pasado</option>
+                <option value="3_MESES">Últimos 3 Meses</option>
+                <option value="ESTE_ANO">Año Actual</option>
+                <option value="ANO_PASADO">Año Pasado</option>
+                <option value="HOY">Hoy</option>
+                <option value="AYER">Ayer</option>
+              </select>
+
+              <div class="d-flex align-items-center gap-1 bg-light px-2.5 py-1 rounded-3 border">
+                <span class="small text-muted fw-bold">Desde:</span>
+                <input type="date" id="fechaDesde" class="form-control form-control-sm border-0 bg-transparent p-0" style="width: 115px;">
+              </div>
+
+              <div class="d-flex align-items-center gap-1 bg-light px-2.5 py-1 rounded-3 border">
+                <span class="small text-muted fw-bold">Hasta:</span>
+                <input type="date" id="fechaHasta" class="form-control form-control-sm border-0 bg-transparent p-0" style="width: 115px;">
+              </div>
+
+              <button class="btn btn-sm btn-primary px-3 fw-bold shadow-sm" onclick="consultarPorFechas()">
+                <i class="bi bi-search me-1"></i> Filtrar
+              </button>
+            </div>
           </div>
         </div>
+
+        <!-- FILA A: MÉTRICAS FINANCIERAS EN EL RANGO -->
+        <div class="row g-3 mb-4">
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card p-3 stat-card border-start border-4 border-dark h-100">
+              <span class="text-muted small fw-bold text-uppercase">Recaudación Rango</span>
+              <h3 class="fw-bold text-dark mb-1 mt-1 amount-num fs-4" id="txtRecaudacionMes">$0,00</h3>
+              <small class="text-muted d-block">Facturación bruta del período</small>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card p-3 stat-card border-start border-4 border-success h-100">
+              <span class="text-muted small fw-bold text-uppercase">Ganancia Neta Est.</span>
+              <h3 class="fw-bold text-success mb-1 mt-1 amount-num fs-4" id="txtGananciaMes">$0,00</h3>
+              <small class="text-muted d-block">Margen bruto menos costos</small>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card p-3 stat-card border-start border-4 border-warning h-100">
+              <span class="text-muted small fw-bold text-uppercase">Costo Reposición</span>
+              <h3 class="fw-bold text-dark mb-1 mt-1 amount-num fs-4" id="txtReposicionMes">$0,00</h3>
+              <small class="text-muted d-block">Costo base de mercadería</small>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card p-3 stat-card border-start border-4 border-primary h-100">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <span class="text-muted small fw-bold text-uppercase">Operaciones</span>
+                  <h4 class="fw-bold text-primary mb-0 mt-1" id="txtVentasCountMes">0</h4>
+                </div>
+                <div class="text-end border-start ps-3">
+                  <span class="text-muted small fw-bold text-uppercase">Ticket Prom.</span>
+                  <h5 class="fw-bold text-dark mb-0 mt-1 amount-num" id="txtTicketPromedio">$0,00</h5>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FILA B: DESGLOSE DE INGRESOS POR MEDIO DE PAGO EN EL RANGO -->
+        <div class="mb-4">
+          <h6 class="fw-bold text-dark mb-3"><i class="bi bi-wallet-fill text-primary me-2"></i>Ingresos por Medio de Pago en el Período</h6>
+          <div class="row g-3">
+            <!-- Efectivo -->
+            <div class="col-12 col-sm-6 col-xl-3">
+              <div class="card p-3 border shadow-sm">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <span class="text-muted small fw-semibold text-uppercase">Efectivo Caja</span>
+                  <i class="bi bi-cash-coin text-success fs-5"></i>
+                </div>
+                <div class="fs-4 fw-bold text-dark amount-num" id="txtEfectivoRango">$0,00</div>
+                <small class="text-muted d-block mt-1" id="countEfectivoRango">0 tickets cobrados</small>
+              </div>
+            </div>
+
+            <!-- Transferencia / QR -->
+            <div class="col-12 col-sm-6 col-xl-3">
+              <div class="card p-3 border shadow-sm">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <span class="text-muted small fw-semibold text-uppercase">Transferencias / QR</span>
+                  <i class="bi bi-qr-code-scan text-info fs-5"></i>
+                </div>
+                <div class="fs-4 fw-bold text-dark amount-num" id="txtTransfRango">$0,00</div>
+                <small class="text-muted d-block mt-1" id="countTransfRango">0 transferencias</small>
+              </div>
+            </div>
+
+            <!-- Tarjetas -->
+            <div class="col-12 col-sm-6 col-xl-3">
+              <div class="card p-3 border shadow-sm">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <span class="text-muted small fw-semibold text-uppercase">Tarjetas</span>
+                  <i class="bi bi-credit-card text-primary fs-5"></i>
+                </div>
+                <div class="fs-4 fw-bold text-dark amount-num" id="txtTarjetaRango">$0,00</div>
+                <small class="text-muted d-block mt-1" id="countTarjetaRango">0 operaciones POS</small>
+              </div>
+            </div>
+
+            <!-- Fiado / Libreta -->
+            <div class="col-12 col-sm-6 col-xl-3">
+              <div class="card p-3 border shadow-sm border-warning-subtle">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <span class="text-warning-emphasis small fw-bold text-uppercase">Fiado Emitido</span>
+                  <i class="bi bi-journal-bookmark-fill text-warning fs-5"></i>
+                </div>
+                <div class="fs-4 fw-bold text-dark amount-num" id="txtFiadoRango">$0,00</div>
+                <small class="text-muted d-block mt-1" id="countFiadoRango">0 a cuenta corriente</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FILA C: EGRESOS CLASIFICADOS & CLIENTES / STOCK -->
+        <div class="row g-3 mb-4">
+          <!-- Izquierda: Egresos del Período -->
+          <div class="col-12 col-lg-6">
+            <div class="card p-3 p-md-4 h-100">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-pie-chart-fill text-danger me-2"></i>Egresos del Período Clasificados</h6>
+                <span class="badge bg-danger text-white amount-num px-2.5 py-1" id="txtTotalEgresosRango">$0,00</span>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th class="ps-3">Categoría</th>
+                      <th class="text-center">Comprobantes</th>
+                      <th class="text-end pe-3">Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaEgresosCategorias">
+                    <tr><td colspan="3" class="text-center p-3 text-muted">Cargando egresos...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Derecha: Alertas de Stock & Cuentas Corrientes -->
+          <div class="col-12 col-lg-6">
+            <div class="card p-3 p-md-4 h-100">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Alertas de Inventario Crítico</h6>
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5" id="badgeStockCount">0</span>
+              </div>
+              <div id="listaAlertasStock" class="overflow-y-auto" style="max-height: 260px;">
+                <p class="text-muted small text-center py-4">Analizando inventario...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
 
-      <!-- Derecha: Últimos 5 Movimientos -->
-      <div class="col-12 col-lg-6">
-        <div class="card table-card h-100">
-          <div class="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center">
-            <h6 class="fw-bold text-dark mb-0"><i class="bi bi-arrow-left-right text-primary me-2"></i>Últimos 5 Movimientos</h6>
-            <a href="historial.html" class="btn btn-sm btn-link text-decoration-none fw-bold p-0">Ver historial <i class="bi bi-chevron-right small"></i></a>
-          </div>
-          <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-              <thead>
-                <tr>
-                  <th class="ps-3">Tipo / Concepto</th>
-                  <th class="d-none d-sm-table-cell">Medio</th>
-                  <th class="text-end pe-3">Monto</th>
-                </tr>
-              </thead>
-              <tbody id="tablaUltimosMovimientos">
-                <tr><td colspan="3" class="text-center p-4 text-muted">Cargando movimientos...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
     </div>
 
   </div>

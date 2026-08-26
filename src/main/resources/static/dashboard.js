@@ -1,5 +1,5 @@
 /**
- * BÁEZ POS - SAAS DASHBOARD (Rediseño Limpio y Minimalista)
+ * BÁEZ POS - SAAS DASHBOARD (Vista Gerencial & Análisis Detallado)
  * Alexander Baez - 2026
  */
 
@@ -28,16 +28,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // 2. Carga paralela de componentes
+    // 2. Configurar listener para resize de Chart.js al cambiar de pestañas
+    const tabGerencialBtn = document.getElementById('tab-gerencial-btn');
+    if (tabGerencialBtn) {
+        tabGerencialBtn.addEventListener('shown.bs.tab', () => {
+            if (chartSemanalInstance) {
+                chartSemanalInstance.resize();
+            }
+        });
+    }
+
+    // 3. Inicializar preset por defecto en Análisis Detallado
+    aplicarPresetFecha('ESTE_MES');
+
+    // 4. Carga concurrente inicial
     await Promise.allSettled([
         cargarKpisYTablas(),
-        cargarGraficoSemanal()
+        cargarGraficoSemanal(),
+        cargarAlertasStock()
     ]);
 });
 
-// ==========================================
-// 1. CARGA DE KPIS DEL MES Y TABLAS RÁPIDAS
-// ==========================================
+// ===================================================================
+// TAB 1: VISTA GERENCIAL (RESUMEN MENSUAL Y ACTIVIDAD RECIENTE)
+// ===================================================================
 async function cargarKpisYTablas() {
     const ahora = new Date();
     const primerDiaMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
@@ -47,7 +61,6 @@ async function cargarKpisYTablas() {
     const hastaStr = ultimoDiaMes.toISOString().split('T')[0];
 
     try {
-        // Peticiones paralelas de ventas, gastos y proveedores
         const [resVentas, resGastos, resProveedores] = await Promise.allSettled([
             apiFetch(`/sales?desde=${desdeStr}&hasta=${hastaStr}`),
             apiFetch('/api/v1/expenses'),
@@ -93,10 +106,10 @@ async function cargarKpisYTablas() {
             totalGastosMes += parseFloat(g.amount) || 0;
         });
 
-        // --- CALCULAR GANANCIA NETA ---
+        // --- GANANCIA NETA ---
         const gananciaNeta = totalVentasMes - totalGastosMes;
 
-        // --- DEUDA A PROVEEDORES ---
+        // --- DEUDA PROVEEDORES ---
         let totalDeudaProveedores = 0;
         let proveedoresConDeuda = 0;
         listaProveedores.forEach(p => {
@@ -107,7 +120,7 @@ async function cargarKpisYTablas() {
             }
         });
 
-        // --- ACTUALIZAR DOM DE KPIS ---
+        // --- ACTUALIZAR DOM KPIS GERENCIAL ---
         setElementText('kpiVentasMes', fmtARS.format(totalVentasMes));
         setElementText('kpiVentasCount', `${ventasActivasMes.length} operaciones este mes`);
 
@@ -127,20 +140,17 @@ async function cargarKpisYTablas() {
         }
 
         setElementText('kpiDeudaProveedores', fmtARS.format(totalDeudaProveedores));
-        setElementText('kpiProveedoresCount', `${proveedoresConDeuda} proveedores con saldo`);
+        setElementText('kpiProveedoresCount', `${proveedoresConDeuda} con saldo pendiente`);
 
-        // --- RENDERIZAR TABLAS RÁPIDAS ---
+        // --- RENDERIZAR TABLAS GERENCIALES ---
         renderizarTopProductos(ventasActivasMes);
         renderizarUltimosMovimientos(listaVentas, listaGastos);
 
     } catch (err) {
-        console.error("Error al cargar KPIs del dashboard:", err);
+        console.error("Error cargando KPIs gerenciales:", err);
     }
 }
 
-// ==========================================
-// 2. TOP 5 PRODUCTOS MÁS VENDIDOS
-// ==========================================
 function renderizarTopProductos(ventas) {
     const tbody = document.getElementById('tablaTopProductos');
     if (!tbody) return;
@@ -187,7 +197,7 @@ function renderizarTopProductos(ventas) {
                     <span class="badge bg-light text-dark border me-2" style="width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem;">
                         #${idx + 1}
                     </span>
-                    <strong class="text-dark">${escapeHTML(p.nombre)}</strong>
+                    <strong class="text-dark text-truncate" style="max-width: 220px;">${escapeHTML(p.nombre)}</strong>
                 </div>
             </td>
             <td class="text-center">
@@ -205,9 +215,6 @@ function renderizarTopProductos(ventas) {
     tbody.appendChild(fragment);
 }
 
-// ==========================================
-// 3. ÚLTIMOS 5 MOVIMIENTOS (VENTAS / GASTOS)
-// ==========================================
 function renderizarUltimosMovimientos(ventas, gastos) {
     const tbody = document.getElementById('tablaUltimosMovimientos');
     if (!tbody) return;
@@ -222,11 +229,9 @@ function renderizarUltimosMovimientos(ventas, gastos) {
             tipo: 'VENTA',
             id: v.id,
             concepto: v.nroComprobante || (v.numeroTicket ? `Ticket #${v.numeroTicket}` : `Venta #${v.id}`),
-            subdetalle: v.customerName || 'Consumidor Final',
             fecha: isNaN(fechaObj.getTime()) ? new Date() : fechaObj,
             metodo: (v.paymentMethod || 'EFECTIVO').replace(/_/g, ' '),
-            monto: parseFloat(v.total) || 0,
-            anulada: Boolean(v.canceled || v.status === 'ANULADA')
+            monto: parseFloat(v.total) || 0
         });
     });
 
@@ -238,15 +243,12 @@ function renderizarUltimosMovimientos(ventas, gastos) {
             tipo: 'GASTO',
             id: g.id,
             concepto: g.description || 'Egreso operativo',
-            subdetalle: g.category || 'Gasto',
             fecha: isNaN(fechaObj.getTime()) ? new Date() : fechaObj,
             metodo: (g.paymentMethod || 'EFECTIVO_CAJA').replace(/_/g, ' '),
-            monto: parseFloat(g.amount) || 0,
-            anulada: false
+            monto: parseFloat(g.amount) || 0
         });
     });
 
-    // Ordenar cronológicamente descendente y tomar los 5 más recientes
     const ultimos5 = movimientos
         .sort((a, b) => b.fecha - a.fecha)
         .slice(0, 5);
@@ -301,9 +303,9 @@ function renderizarUltimosMovimientos(ventas, gastos) {
     tbody.appendChild(fragment);
 }
 
-// ==========================================
-// 4. GRÁFICO CENTRAL DE EVOLUCIÓN (CHART.JS)
-// ==========================================
+// ===================================================================
+// GRÁFICO CENTRAL DE EVOLUCIÓN (CHART.JS)
+// ===================================================================
 async function cargarGraficoSemanal() {
     const canvas = document.getElementById('chartSemanal');
     if (!canvas) return;
@@ -317,7 +319,6 @@ async function cargarGraficoSemanal() {
             if (!Array.isArray(data)) data = [];
         }
 
-        // Generar etiquetas de los últimos 7 días si los datos vienen vacíos
         let labels = [];
         let valores = [];
 
@@ -337,7 +338,7 @@ async function cargarGraficoSemanal() {
             }
         }
 
-        // Destruir instancia previa para evitar glitches al redimensionar
+        // Destruir instancia previa para evitar glitches
         if (chartSemanalInstance) {
             chartSemanalInstance.destroy();
             chartSemanalInstance = null;
@@ -371,9 +372,7 @@ async function cargarGraficoSemanal() {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        display: false
-                    },
+                    legend: { display: false },
                     tooltip: {
                         backgroundColor: '#0f172a',
                         titleFont: { family: 'Inter', size: 12, weight: 'bold' },
@@ -397,10 +396,7 @@ async function cargarGraficoSemanal() {
                     },
                     y: {
                         beginAtZero: true,
-                        grid: {
-                            color: '#f1f5f9',
-                            borderDash: [4, 4]
-                        },
+                        grid: { color: '#f1f5f9', borderDash: [4, 4] },
                         ticks: {
                             font: { family: 'Inter', size: 11 },
                             color: '#64748b',
@@ -420,12 +416,291 @@ async function cargarGraficoSemanal() {
     }
 }
 
-// ==========================================
-// UTILIDADES AUXILIARES
-// ==========================================
+// ===================================================================
+// TAB 2: ANÁLISIS DETALLADO (PRESETS & CONSULTA DE RANGO HISTÓRICO)
+// ===================================================================
+function aplicarPresetFecha(preset) {
+    const hoy = new Date();
+    let desde, hasta;
+
+    switch (preset) {
+        case 'HOY':
+            desde = hoy;
+            hasta = hoy;
+            break;
+        case 'AYER':
+            desde = new Date(hoy);
+            desde.setDate(hoy.getDate() - 1);
+            hasta = desde;
+            break;
+        case 'ESTE_MES':
+            desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            hasta = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+            break;
+        case 'MES_PASADO':
+            desde = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+            hasta = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+            break;
+        case '3_MESES':
+            desde = new Date(hoy.getFullYear(), hoy.getMonth() - 2, 1);
+            hasta = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+            break;
+        case 'ESTE_ANO':
+            desde = new Date(hoy.getFullYear(), 0, 1);
+            hasta = hoy;
+            break;
+        case 'ANO_PASADO':
+            desde = new Date(hoy.getFullYear() - 1, 0, 1);
+            hasta = new Date(hoy.getFullYear() - 1, 11, 31);
+            break;
+    }
+
+    if (desde && hasta) {
+        const inputDesde = document.getElementById('fechaDesde');
+        const inputHasta = document.getElementById('fechaHasta');
+        if (inputDesde) inputDesde.value = formatInputDate(desde);
+        if (inputHasta) inputHasta.value = formatInputDate(hasta);
+        consultarPorFechas();
+    }
+}
+
+async function consultarPorFechas() {
+    const elDesde = document.getElementById('fechaDesde');
+    const elHasta = document.getElementById('fechaHasta');
+    if (!elDesde || !elHasta) return;
+
+    const desdeVal = elDesde.value;
+    const hastaVal = elHasta.value;
+
+    if (!desdeVal || !hastaVal) {
+        return Swal.fire('Atención', 'Por favor selecciona ambas fechas (Desde y Hasta)', 'warning');
+    }
+
+    if (desdeVal > hastaVal) {
+        return Swal.fire('Error', 'La fecha "Desde" no puede ser posterior a "Hasta"', 'error');
+    }
+
+    try {
+        // Consultas paralelas para el análisis detallado
+        const [resBox, resVentasRango, resGastos] = await Promise.allSettled([
+            apiFetch(`/sales/report/box?from=${desdeVal}&to=${hastaVal}`),
+            apiFetch(`/sales?desde=${desdeVal}&hasta=${hastaVal}`),
+            apiFetch('/api/v1/expenses')
+        ]);
+
+        // 1. Métricas de Reporte / Box
+        if (resBox.status === 'fulfilled' && resBox.value && resBox.value.ok) {
+            const dataBox = await resBox.value.json();
+
+            const periodSales = parseFloat(dataBox.periodSales) || 0;
+            const periodProfit = parseFloat(dataBox.periodProfit) || 0;
+            const periodReplacementCost = parseFloat(dataBox.periodReplacementCost) || 0;
+            const periodOperations = parseInt(dataBox.periodOperations || 0, 10);
+            const ticketPromedio = periodOperations > 0 ? (periodSales / periodOperations) : 0;
+
+            setElementText('txtRecaudacionMes', fmtARS.format(periodSales));
+            setElementText('txtGananciaMes', fmtARS.format(periodProfit));
+            setElementText('txtReposicionMes', fmtARS.format(periodReplacementCost));
+            setElementText('txtVentasCountMes', periodOperations);
+            setElementText('txtTicketPromedio', fmtARS.format(ticketPromedio));
+        }
+
+        // 2. Desglose de Ventas por Medio de Pago en el Rango
+        if (resVentasRango.status === 'fulfilled' && resVentasRango.value && resVentasRango.value.ok) {
+            const ventasRango = await resVentasRango.value.json();
+            const activas = Array.isArray(ventasRango) ? ventasRango.filter(v => !v.canceled && v.status !== 'ANULADA') : [];
+
+            let sumEfectivo = 0, countEfe = 0;
+            let sumTransf = 0, countTra = 0;
+            let sumTarjeta = 0, countTar = 0;
+            let sumFiado = 0, countFia = 0;
+
+            activas.forEach(v => {
+                const total = parseFloat(v.total) || 0;
+                const m = (v.paymentMethod || 'EFECTIVO').toUpperCase();
+
+                if (m === 'EFECTIVO') {
+                    sumEfectivo += total;
+                    countEfe++;
+                } else if (m === 'TRANSFERENCIA') {
+                    sumTransf += total;
+                    countTra++;
+                } else if (m === 'TARJETA') {
+                    sumTarjeta += total;
+                    countTar++;
+                } else if (m === 'CUENTA_CORRIENTE') {
+                    sumFiado += total;
+                    countFia++;
+                } else {
+                    sumEfectivo += total;
+                    countEfe++;
+                }
+            });
+
+            setElementText('txtEfectivoRango', fmtARS.format(sumEfectivo));
+            setElementText('countEfectivoRango', `${countEfe} operaciones`);
+
+            setElementText('txtTransfRango', fmtARS.format(sumTransf));
+            setElementText('countTransfRango', `${countTra} transferencias`);
+
+            setElementText('txtTarjetaRango', fmtARS.format(sumTarjeta));
+            setElementText('countTarjetaRango', `${countTar} cobros POS`);
+
+            setElementText('txtFiadoRango', fmtARS.format(sumFiado));
+            setElementText('countFiadoRango', `${countFia} en libreta`);
+        }
+
+        // 3. Egresos en el Rango Clasificados
+        if (resGastos.status === 'fulfilled' && resGastos.value && resGastos.value.ok) {
+            const todosGastos = await resGastos.value.json();
+            const desdeDate = new Date(desdeVal + 'T00:00:00');
+            const hastaDate = new Date(hastaVal + 'T23:59:59');
+
+            const gastosFiltrados = (Array.isArray(todosGastos) ? todosGastos : []).filter(g => {
+                if (!g.date) return false;
+                const fg = new Date(g.date);
+                return fg >= desdeDate && fg <= hastaDate;
+            });
+
+            renderizarEgresosCategorias(gastosFiltrados);
+        }
+
+        const f1 = desdeVal.split('-').reverse().join('/');
+        const f2 = hastaVal.split('-').reverse().join('/');
+        setElementText('lblRangoActivo', `Datos auditados del ${f1} al ${f2}`);
+
+    } catch (err) {
+        console.error("Error al consultar datos detallados:", err);
+    }
+}
+
+function renderizarEgresosCategorias(gastos) {
+    const tbody = document.getElementById('tablaEgresosCategorias');
+    if (!tbody) return;
+
+    let totalEgresos = 0;
+    const mapaCategorias = new Map();
+
+    const NOMBRES_CAT = {
+        'PROVEEDOR': 'Pago a Proveedor',
+        'SERVICIOS': 'Servicios (Luz, Gas, Internet)',
+        'LOGISTICA': 'Fletes y Logística',
+        'SUELDOS': 'Sueldos y Adelantos',
+        'MANTENIMIENTO': 'Mantenimiento / Insumos',
+        'CAJA_CHICA': 'Caja Chica',
+        'VARIOS_RETIRO': 'Retiros / Gastos Varios'
+    };
+
+    gastos.forEach(g => {
+        const monto = parseFloat(g.amount) || 0;
+        totalEgresos += monto;
+
+        const catClave = g.category || 'VARIOS_RETIRO';
+        const catNombre = NOMBRES_CAT[catClave] || catClave.replace(/_/g, ' ');
+
+        if (!mapaCategorias.has(catNombre)) {
+            mapaCategorias.set(catNombre, { nombre: catNombre, cantidad: 0, total: 0 });
+        }
+        const obj = mapaCategorias.get(catNombre);
+        obj.cantidad++;
+        obj.total += monto;
+    });
+
+    setElementText('txtTotalEgresosRango', fmtARS.format(totalEgresos));
+
+    const listaCategorias = Array.from(mapaCategorias.values()).sort((a, b) => b.total - a.total);
+
+    if (listaCategorias.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center p-3 text-muted">Sin egresos registrados en este rango.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+
+    listaCategorias.forEach(c => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="ps-3 fw-semibold text-dark">${escapeHTML(c.nombre)}</td>
+            <td class="text-center">
+                <span class="badge bg-light text-secondary border px-2 py-1">${c.cantidad}</span>
+            </td>
+            <td class="text-end pe-3 fw-bold text-danger amount-num">-${fmtARS.format(c.total)}</td>
+        `;
+        fragment.appendChild(tr);
+    });
+
+    tbody.appendChild(fragment);
+}
+
+// ===================================================================
+// ALERTAS DE INVENTARIO CRÍTICO
+// ===================================================================
+async function cargarAlertasStock() {
+    const container = document.getElementById('listaAlertasStock');
+    if (!container) return;
+
+    try {
+        const res = await apiFetch('/products');
+        if (!res || !res.ok) return;
+
+        const productos = await res.json();
+        if (!Array.isArray(productos)) return;
+
+        const criticos = productos.filter(p => {
+            const stock = parseFloat(p.stock) || 0;
+            const minStock = parseFloat(p.minStock) || 5;
+            return stock <= minStock;
+        });
+
+        setElementText('badgeStockCount', criticos.length);
+
+        if (criticos.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="bi bi-check-circle-fill fs-2 text-success opacity-75"></i>
+                    <p class="mt-2 mb-0 small text-muted">Stock en niveles óptimos.</p>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = criticos.map(p => {
+            const stockNum = parseFloat(p.stock) || 0;
+            const minNum = parseFloat(p.minStock) || 5;
+            const esMuyCritico = stockNum <= 0;
+
+            return `
+            <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                <div class="pe-2 text-truncate" style="max-width: 220px;">
+                    <span class="d-block fw-semibold text-dark small text-truncate">
+                        ${escapeHTML(p.name || 'Producto')}
+                    </span>
+                    <small class="text-muted" style="font-size: 0.72rem;">Mínimo: ${minNum} u.</small>
+                </div>
+                <span class="badge ${esMuyCritico ? 'bg-danger text-white' : 'bg-warning-subtle text-warning-emphasis border border-warning-subtle'} rounded-pill px-2.5 py-1">
+                    ${stockNum} u.
+                </span>
+            </div>`;
+        }).join('');
+
+    } catch (err) {
+        console.error("Error al cargar alertas de stock:", err);
+    }
+}
+
+// ===================================================================
+// HELPERS Y UTILIDADES
+// ===================================================================
 function setElementText(id, text) {
     const el = document.getElementById(id);
     if (el) el.innerText = text;
+}
+
+function formatInputDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 function escapeHTML(str) {
@@ -437,3 +712,7 @@ function escapeHTML(str) {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
 }
+
+// Exposición al scope global para eventos onclick/onchange en el DOM
+window.aplicarPresetFecha = aplicarPresetFecha;
+window.consultarPorFechas = consultarPorFechas;
