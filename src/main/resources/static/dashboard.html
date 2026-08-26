@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
   <link rel="stylesheet" href="css/saas-ui-core.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 </head>
 <body>
 
@@ -20,318 +19,162 @@
 <div id="content">
 
   <!-- TOPBAR / ENCABEZADO PRINCIPAL -->
-  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center pb-3 mb-4 border-bottom gap-3">
-    <div class="d-flex justify-content-between align-items-center w-100 w-md-auto">
+  <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom p-3 sticky-top">
+    <div class="container-fluid p-0">
+      <button type="button" id="sidebarCollapse" class="btn btn-outline-primary d-md-none me-2">
+        <i class="bi bi-list fs-5"></i>
+      </button>
+
       <div>
-        <h3 class="fw-bold m-0 text-dark fs-4 fs-md-3">Panel de Control</h3>
+        <h3 class="fw-bold m-0 text-dark fs-4">Panel de Control</h3>
         <p class="text-muted small mb-0"><i class="bi bi-calendar3 me-1"></i><span id="fechaActual">Cargando fecha...</span></p>
       </div>
 
-      <button class="btn btn-outline-secondary d-md-none ms-auto" id="sidebarCollapse">
-        <i class="bi bi-list fs-5"></i>
-      </button>
-    </div>
-
-    <!-- Contenedor del Comercio Activo -->
-    <div class="d-flex align-items-center gap-3 w-100 w-md-auto justify-content-start justify-content-md-end">
-      <div class="d-flex align-items-center gap-2 bg-white px-3 py-2 rounded-3 border shadow-sm w-auto">
-        <div class="icon-box-soft bg-primary bg-opacity-10 text-primary flex-shrink-0" style="width:34px; height:34px;">
-          <i class="bi bi-shop fs-6"></i>
+      <!-- Contenedor del Comercio Activo -->
+      <div class="ms-auto d-flex align-items-center gap-2">
+        <div class="text-end me-2 d-none d-sm-block">
+          <div class="fw-bold text-dark text-capitalize fs-6" id="userNameLabel">Usuario</div>
+          <small class="badge bg-primary-subtle text-primary text-uppercase" style="font-size: 0.65rem;">Comercio Activo</small>
         </div>
-        <div class="text-truncate" style="max-width: 260px;">
-          <span class="d-block text-muted" style="font-size: 0.68rem; line-height: 1;">Comercio Activo</span>
-          <span class="fw-bold text-dark text-truncate d-block" id="userNameLabel" style="font-size: 0.85rem;">Cargando...</span>
+        <div class="p-2 bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+          <i class="bi bi-shop fs-5"></i>
         </div>
       </div>
     </div>
-  </div>
+  </nav>
 
-  <!-- ==========================================
-       CAPA 1: CONTROL DE CAJA CHICA (TURNO ACTIVO)
-       ========================================== -->
-  <div class="mb-4">
-    <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-2 mb-2">
-      <span class="section-header-title text-primary">
-        <i class="bi bi-safe2-fill me-1"></i> Control de Caja Chica
-      </span>
+  <div class="container-fluid p-3 p-md-4">
 
-      <!-- SELECTOR DINÁMICO DE AUDITORÍA DE TURNOS -->
-      <div class="d-flex align-items-center gap-2">
-        <label for="selectTurnoActivo" class="small text-muted fw-bold text-nowrap" style="font-size: 0.75rem;">Auditar Caja:</label>
-        <select id="selectTurnoActivo" class="form-select form-select-sm border-primary-subtle fw-semibold shadow-sm" style="min-width: 240px;" onchange="filtrarTurnoSeleccionado(this.value)">
-          <option value="">Cargando cajas del día...</option>
-        </select>
+    <!-- FILA 1: KPIS PRINCIPALES DEL MES -->
+    <div class="row g-3 mb-4">
+      <!-- 1. Ventas del Mes -->
+      <div class="col-12 col-md-6 col-lg-3">
+        <div class="card stat-card p-3 h-100 border-start border-4 border-primary">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <span class="text-muted small fw-bold text-uppercase">Ventas del Mes</span>
+            <div class="icon-box p-2 bg-primary bg-opacity-10 text-primary rounded-3">
+              <i class="bi bi-graph-up-arrow fs-5"></i>
+            </div>
+          </div>
+          <h3 class="fw-bold mb-1 text-dark amount-num fs-4 fs-xl-3" id="kpiVentasMes">$0,00</h3>
+          <small class="text-muted d-block" id="kpiVentasCount">0 operaciones</small>
+        </div>
+      </div>
+
+      <!-- 2. Gastos del Mes -->
+      <div class="col-12 col-md-6 col-lg-3">
+        <div class="card stat-card p-3 h-100 border-start border-4 border-danger">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <span class="text-muted small fw-bold text-uppercase">Gastos del Mes</span>
+            <div class="icon-box p-2 bg-danger bg-opacity-10 text-danger rounded-3">
+              <i class="bi bi-wallet2 fs-5"></i>
+            </div>
+          </div>
+          <h3 class="fw-bold mb-1 text-danger amount-num fs-4 fs-xl-3" id="kpiGastosMes">$0,00</h3>
+          <small class="text-muted d-block" id="kpiGastosCount">0 egresos registrados</small>
+        </div>
+      </div>
+
+      <!-- 3. Ganancia Neta -->
+      <div class="col-12 col-md-6 col-lg-3">
+        <div class="card stat-card p-3 h-100 border-start border-4 border-success">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <span class="text-muted small fw-bold text-uppercase">Ganancia Neta</span>
+            <div class="icon-box p-2 bg-success bg-opacity-10 text-success rounded-3">
+              <i class="bi bi-cash-coin fs-5"></i>
+            </div>
+          </div>
+          <h3 class="fw-bold mb-1 text-success amount-num fs-4 fs-xl-3" id="kpiGananciaNeta">$0,00</h3>
+          <small class="text-muted d-block">Balance neto acumulado</small>
+        </div>
+      </div>
+
+      <!-- 4. Deuda a Proveedores -->
+      <div class="col-12 col-md-6 col-lg-3">
+        <div class="card stat-card p-3 h-100 border-start border-4 border-warning">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <span class="text-muted small fw-bold text-uppercase">Deuda Proveedores</span>
+            <div class="icon-box p-2 bg-warning bg-opacity-10 text-warning-emphasis rounded-3">
+              <i class="bi bi-truck fs-5"></i>
+            </div>
+          </div>
+          <h3 class="fw-bold mb-1 text-dark amount-num fs-4 fs-xl-3" id="kpiDeudaProveedores">$0,00</h3>
+          <small class="text-muted d-block" id="kpiProveedoresCount">0 con saldo pendiente</small>
+        </div>
       </div>
     </div>
 
-    <div class="row g-3">
-      <!-- HERO CARD: DINERO REAL FÍSICO EN CAJÓN -->
-      <div class="col-12 col-xl-5">
-        <div class="dashboard-card p-3 p-md-4 border-start border-4 border-primary bg-white h-100 d-flex flex-column justify-content-between" id="containerCardBalance">
-          <div class="d-flex align-items-center justify-content-between">
+    <!-- FILA 2: GRÁFICO CENTRAL ANCHO -->
+    <div class="row g-3 mb-4">
+      <div class="col-12">
+        <div class="card p-3 p-md-4">
+          <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mb-3">
             <div>
-              <span class="kpi-title text-primary" id="titleBalanceReal">Dinero Físico en Cajón</span>
-              <h2 class="fw-bold mb-0 text-dark mt-1 fs-3 fs-md-2" id="cardBalanceReal">$0,00</h2>
-              <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">Estimación disponible en la caja seleccionada</small>
+              <h5 class="fw-bold text-dark mb-0"><i class="bi bi-bar-chart-line-fill text-primary me-2"></i>Evolución Semanal de Facturación</h5>
+              <small class="text-muted">Total de ventas en los últimos 7 días</small>
             </div>
-            <div class="icon-box-soft bg-primary text-white rounded-circle p-3 flex-shrink-0" id="iconBoxBalance">
-              <i class="bi bi-wallet2 fs-4"></i>
-            </div>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 fw-semibold">
+              <i class="bi bi-lightning-charge me-1"></i> Actualización en Tiempo Real
+            </span>
           </div>
-
-          <!-- Pie explicativo interactivo -->
-          <div class="pt-3 mt-3 border-top">
-            <div class="d-flex align-items-center justify-content-between">
-              <span id="lblDetalleBalance" class="text-muted small fw-medium" style="font-size: 0.78rem;">
-                (Calculando estado de caja...)
-              </span>
-              <a class="text-decoration-none text-primary fw-semibold small" style="font-size: 0.75rem;"
-                 data-bs-toggle="collapse" href="#collapseCalculoCaja" role="button" aria-expanded="false">
-                <i class="bi bi-info-circle me-1"></i> Ver fórmula
-              </a>
-            </div>
-
-            <!-- Desglose Didáctico Colapsable -->
-            <div class="collapse mt-2" id="collapseCalculoCaja">
-              <div class="p-2 bg-light rounded-3 text-muted small border" style="font-size: 0.72rem;">
-                <i class="bi bi-calculator me-1 text-primary"></i>
-                <strong>Fórmula de Cajón:</strong> Fondo Inicial + Ventas Efectivo + Cobros Fiados - Gastos Efectivo.
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- DESGLOSE DE ENTRADAS/SALIDAS DEL TURNO -->
-      <div class="col-12 col-xl-7">
-        <div class="dashboard-card p-3 p-md-4 h-100 d-flex flex-column justify-content-between">
-          <span class="kpi-title d-block mb-3">Composición del Dinero en Turno</span>
-
-          <div class="row g-2">
-            <!-- Efectivo Ventas Directas -->
-            <div class="col-6 col-sm-6">
-              <div class="subcard-mini">
-                <div class="d-flex align-items-center justify-content-between">
-                  <span class="text-muted small text-uppercase fw-semibold" style="font-size: 0.68rem;">Efectivo Ventas</span>
-                  <i class="bi bi-cash-coin text-success fs-6"></i>
-                </div>
-                <div class="fw-bold text-dark fs-5 mt-1" id="txtEfectivoHoy">$0,00</div>
-                <span class="text-muted extra-small d-block" style="font-size: 0.7rem;">Directas de caja</span>
-              </div>
-            </div>
-
-            <!-- Cobros Cta Cte -->
-            <div class="col-6 col-sm-6">
-              <div class="subcard-mini">
-                <div class="d-flex align-items-center justify-content-between">
-                  <span class="text-muted small text-uppercase fw-semibold" style="font-size: 0.68rem;">Cobros Fiados</span>
-                  <i class="bi bi-journal-check text-warning-emphasis fs-6"></i>
-                </div>
-                <div class="fw-bold text-dark fs-5 mt-1" id="txtCobrosLibretaHoy">$0,00</div>
-                <span class="text-muted extra-small d-block" style="font-size: 0.7rem;">Ingresos de libreta</span>
-              </div>
-            </div>
-
-            <!-- Gastos en Efectivo -->
-            <div class="col-6 col-sm-6">
-              <div class="subcard-mini">
-                <div class="d-flex align-items-center justify-content-between">
-                  <span class="text-muted small text-uppercase fw-semibold" style="font-size: 0.68rem;">Gastos Caja</span>
-                  <i class="bi bi-arrow-up-right-circle text-danger fs-6"></i>
-                </div>
-                <div id="lblDetalleEfectivo" class="mt-1">
-                  <!-- Inyecta badge o monto -->
-                  <span class="fw-bold text-danger fs-5">$0,00</span>
-                </div>
-                <span class="text-muted extra-small d-block" style="font-size: 0.7rem;">Salidas en efectivo</span>
-              </div>
-            </div>
-
-            <!-- Deuda Global Cta Cte -->
-            <div class="col-6 col-sm-6">
-              <div class="subcard-mini border-warning-subtle bg-warning-subtle bg-opacity-10">
-                <div class="d-flex align-items-center justify-content-between">
-                  <span class="text-warning-emphasis small text-uppercase fw-bold" style="font-size: 0.68rem;">Deuda Clientes</span>
-                  <i class="bi bi-journal-bookmark text-warning-emphasis fs-6"></i>
-                </div>
-                <div class="fw-bold text-dark fs-5 mt-1" id="cardLibreta">$0,00</div>
-                <span class="text-muted extra-small d-block" style="font-size: 0.7rem;">Total acumulado a cobrar</span>
-              </div>
-            </div>
+          <div style="position: relative; height: 350px; width: 100%;">
+            <canvas id="chartSemanal"></canvas>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- ==========================================
-       CAPA 2: RECAUDACIÓN COMERCIAL DEL DÍA HOY
-       ========================================== -->
-  <div class="mb-4">
-    <div class="d-flex align-items-center justify-content-between mb-2">
-      <span class="section-header-title text-secondary">
-        <i class="bi bi-cart-check-fill me-1"></i> Canales de Recaudación del Día
-      </span>
-    </div>
-
-    <div class="row g-3">
-      <!-- Ventas Totales del Día -->
-      <div class="col-12 col-md-4">
-        <div class="dashboard-card p-3 border-start border-4 border-dark">
-          <div class="d-flex justify-content-between align-items-start">
-            <div>
-              <span class="kpi-title">Ventas Totales Hoy</span>
-              <div class="kpi-value text-dark mt-1" id="txtRecaudacion">$0,00</div>
-              <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">Facturación bruta acumulada</small>
-            </div>
-            <div class="icon-box-soft bg-dark bg-opacity-10 text-dark">
-              <i class="bi bi-bag-check-fill"></i>
-            </div>
+    <!-- FILA 3: TABLAS RÁPIDAS (TOP PRODUCTOS & ÚLTIMOS MOVIMIENTOS) -->
+    <div class="row g-3 mb-4">
+      <!-- Izquierda: Top 5 Productos Vendidos -->
+      <div class="col-12 col-lg-6">
+        <div class="card table-card h-100">
+          <div class="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center">
+            <h6 class="fw-bold text-dark mb-0"><i class="bi bi-trophy-fill text-warning me-2"></i>Top 5 Productos Más Vendidos</h6>
+            <a href="productos.html" class="btn btn-sm btn-link text-decoration-none fw-bold p-0">Ver inventario <i class="bi bi-chevron-right small"></i></a>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th class="ps-3">Producto</th>
+                  <th class="text-center">Unidades</th>
+                  <th class="text-end pe-3">Recaudación</th>
+                </tr>
+              </thead>
+              <tbody id="tablaTopProductos">
+                <tr><td colspan="3" class="text-center p-4 text-muted">Cargando productos...</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
 
-      <!-- Transferencias / Digital -->
-      <div class="col-12 col-md-4">
-        <div class="dashboard-card p-3 border-start border-4 border-info">
-          <div class="d-flex justify-content-between align-items-start">
-            <div>
-              <span class="kpi-title">Transferencias / QR</span>
-              <div class="kpi-value text-dark mt-1" id="txtTransfHoy">$0,00</div>
-              <div id="lblDetalleTransf" class="mt-1" style="min-height: 20px;"></div>
-            </div>
-            <div class="icon-box-soft bg-info bg-opacity-10 text-info">
-              <i class="bi bi-qr-code-scan"></i>
-            </div>
+      <!-- Derecha: Últimos 5 Movimientos -->
+      <div class="col-12 col-lg-6">
+        <div class="card table-card h-100">
+          <div class="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center">
+            <h6 class="fw-bold text-dark mb-0"><i class="bi bi-arrow-left-right text-primary me-2"></i>Últimos 5 Movimientos</h6>
+            <a href="historial.html" class="btn btn-sm btn-link text-decoration-none fw-bold p-0">Ver historial <i class="bi bi-chevron-right small"></i></a>
           </div>
-        </div>
-      </div>
-
-      <!-- Fiado Emita Hoy -->
-      <div class="col-12 col-md-4">
-        <div class="dashboard-card p-3 border-start border-4 border-warning">
-          <div class="d-flex justify-content-between align-items-start">
-            <div>
-              <span class="kpi-title">Fiado Emitido Hoy</span>
-              <div class="kpi-value text-dark mt-1" id="txtFiadoHoy">$0,00</div>
-              <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">Ventas a Cta. Cte. generadas hoy</small>
-            </div>
-            <div class="icon-box-soft bg-warning bg-opacity-10 text-warning">
-              <i class="bi bi-arrow-up-right-square"></i>
-            </div>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th class="ps-3">Tipo / Concepto</th>
+                  <th class="d-none d-sm-table-cell">Medio</th>
+                  <th class="text-end pe-3">Monto</th>
+                </tr>
+              </thead>
+              <tbody id="tablaUltimosMovimientos">
+                <tr><td colspan="3" class="text-center p-4 text-muted">Cargando movimientos...</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- ==========================================
-       CAPA 3: RENDIMIENTO HISTÓRICO Y AUDITORÍA (ADMIN)
-       ========================================== -->
-  <div class="only-admin mb-4">
-    <div class="dashboard-card p-3 p-md-4 mb-3">
-      <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
-        <div>
-          <h6 class="fw-bold text-dark mb-0"><i class="bi bi-sliders me-1 text-primary"></i> Rendimiento Comercial e Histórico</h6>
-          <small class="text-muted" id="lblRangoActivo">Cargando período...</small>
-        </div>
-
-        <!-- FILTROS UNIFICADOS RESPONSIVE -->
-        <div class="d-flex flex-column flex-sm-row flex-wrap align-items-stretch align-items-sm-center gap-2 filter-box-mobile">
-          <select id="selectPresetFechas" class="form-select form-select-sm border-secondary-subtle fw-semibold shadow-sm" style="width: auto;" onchange="aplicarPresetFecha(this.value)">
-            <option value="ESTE_MES" selected>Este Mes</option>
-            <option value="MES_PASADO">Mes Pasado</option>
-            <option value="3_MESES">Últimos 3 Meses</option>
-            <option value="ESTE_ANO">Año Actual</option>
-            <option value="ANO_PASADO">Año Pasado</option>
-          </select>
-
-          <div class="d-flex align-items-center justify-content-between gap-1 bg-light px-2 py-1 rounded border">
-            <span class="small text-muted" style="font-size: 0.75rem;">Desde:</span>
-            <input type="date" id="fechaDesde" class="form-control form-control-sm border-0 bg-transparent p-0" style="width: 110px;">
-          </div>
-
-          <div class="d-flex align-items-center justify-content-between gap-1 bg-light px-2 py-1 rounded border">
-            <span class="small text-muted" style="font-size: 0.75rem;">Hasta:</span>
-            <input type="date" id="fechaHasta" class="form-control form-control-sm border-0 bg-transparent p-0" style="width: 110px;">
-          </div>
-
-          <button class="btn btn-sm btn-primary px-3 rounded-2 fw-semibold shadow-sm" onclick="consultarPorFechas()">
-            <i class="bi bi-funnel me-1"></i> Filtrar
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- TARJETAS DE MÉTRICAS DE RANGO -->
-    <div class="row g-3">
-      <div class="col-12 col-sm-6 col-xl-3">
-        <div class="dashboard-card p-3">
-          <span class="kpi-title">Recaudación Rango</span>
-          <h4 class="fw-bold text-dark mb-0 mt-1" id="txtRecaudacionMes">$0,00</h4>
-        </div>
-      </div>
-
-      <div class="col-12 col-sm-6 col-xl-3">
-        <div class="dashboard-card p-3">
-          <span class="kpi-title text-success">Ganancia Neta Est.</span>
-          <h4 class="fw-bold text-success mb-0 mt-1" id="txtGananciaMes">$0,00</h4>
-        </div>
-      </div>
-
-      <div class="col-12 col-sm-6 col-xl-3">
-        <div class="dashboard-card p-3">
-          <span class="kpi-title text-warning-emphasis">Costo Reposición</span>
-          <h4 class="fw-bold text-dark mb-0 mt-1" id="txtReposicionMes">$0,00</h4>
-        </div>
-      </div>
-
-      <div class="col-12 col-sm-6 col-xl-3">
-        <div class="dashboard-card p-3">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <span class="kpi-title">Operaciones</span>
-              <h4 class="fw-bold text-primary mb-0 mt-1" id="txtVentasCountMes">0</h4>
-            </div>
-            <div class="text-end border-start ps-3">
-              <span class="kpi-title">Ticket Prom.</span>
-              <h5 class="fw-bold text-dark mb-0 mt-1" id="txtTicketPromedio">$0,00</h5>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- SECCIÓN 4: ANALÍTICA VISUAL & ESTADO DEL INVENTARIO -->
-  <div class="row g-4">
-    <!-- GRÁFICO DE EVOLUCIÓN -->
-    <div class="col-12 col-lg-8">
-      <div class="dashboard-card p-3 p-md-4 h-100">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <div>
-            <h6 class="fw-bold text-dark m-0"><i class="bi bi-graph-up-arrow me-2 text-primary"></i>Evolución Semanal de Ventas</h6>
-            <small class="text-muted">Total facturado en los últimos 7 días</small>
-          </div>
-        </div>
-        <div style="position: relative; height: 290px; width: 100%;">
-          <canvas id="chartSemanal"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <!-- ALERTAS DE STOCK CRÍTICO -->
-    <div class="col-12 col-lg-4">
-      <div class="dashboard-card p-3 p-md-4 h-100">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h6 class="fw-bold text-dark m-0"><i class="bi bi-exclamation-triangle me-2 text-danger"></i>Stock Crítico</h6>
-          <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5" id="badgeStockCount">0</span>
-        </div>
-        <div id="listaAlertasStock" style="max-height: 290px; overflow-y: auto;">
-          <p class="text-muted small text-center py-4">Analizando inventario...</p>
-        </div>
-      </div>
-    </div>
   </div>
 
 </div>

@@ -1,505 +1,439 @@
 /**
- * BAEZ POS - DASHBOARD DE GESTIÓN SAAS MULTI-TENANT
- * Control Estricto de Cajas, Auditoría de Turnos y Medios de Pago
+ * BÁEZ POS - SAAS DASHBOARD (Rediseño Limpio y Minimalista)
+ * Alexander Baez - 2026
  */
 
-// Caché en memoria para evitar peticiones redundantes al cambiar de turno
-let cacheSesionesHoy = [];
+let chartSemanalInstance = null;
+
+const fmtARS = new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 2
+});
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Nombre de usuario y Fecha actual
-    setElementText('userNameLabel', (localStorage.getItem('baezpos_user_name') || 'USUARIO').toUpperCase());
+    const userName = (localStorage.getItem('baezpos_user_name') || 'Usuario').toUpperCase();
+    const userEl = document.getElementById('userNameLabel');
+    if (userEl) userEl.innerText = userName;
 
-    const elFecha = document.getElementById('fechaActual');
-    if (elFecha) {
+    const fechaEl = document.getElementById('fechaActual');
+    if (fechaEl) {
         const hoy = new Date();
-        elFecha.innerText = hoy.toLocaleDateString('es-AR', {
-            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        fechaEl.innerText = hoy.toLocaleDateString('es-AR', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
         });
     }
 
-    // 2. Carga inicial del rango "Este Mes" (Métricas históricas)
-    aplicarPresetFecha('ESTE_MES');
-
-    // 3. Ejecución concurrente de cargas independientes
+    // 2. Carga paralela de componentes
     await Promise.allSettled([
-        cargarDatosDashboardHoy(),
-        cargarAlertasStock(),
-        cargarDatosGrafico()
+        cargarKpisYTablas(),
+        cargarGraficoSemanal()
     ]);
 });
 
 // ==========================================
-// UTILIDADES DE FORMATO Y AUXILIARES
+// 1. CARGA DE KPIS DEL MES Y TABLAS RÁPIDAS
 // ==========================================
-function parseNumber(val) {
-    const num = parseFloat(val);
-    return isNaN(num) ? 0 : num;
-}
+async function cargarKpisYTablas() {
+    const ahora = new Date();
+    const primerDiaMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+    const ultimoDiaMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0);
 
-function setElementText(id, value) {
-    const el = document.getElementById(id);
-    if (el) el.innerText = value;
-}
-
-function fmtMoneda(val) {
-    return new Intl.NumberFormat('es-AR', {
-        style: 'currency',
-        currency: 'ARS',
-        minimumFractionDigits: 2
-    }).format(parseNumber(val));
-}
-
-function fmtStock(cant, producto = {}) {
-    const stockVal = parseNumber(cant);
-    const esFraccionado = Boolean(
-        producto.isFractional ||
-        producto.unitOfMeasure === 'KG' ||
-        producto.unitOfMeasure === 'GRAM' ||
-        producto.unitType === 'KG'
-    );
-
-    if (esFraccionado) {
-        if (stockVal < 1 && stockVal > 0) {
-            const gramos = Math.round(stockVal * 1000);
-            return `${gramos} gr`;
-        }
-        return `${stockVal.toLocaleString('es-AR', { maximumFractionDigits: 3 })} Kg`;
-    }
-
-    return `${stockVal.toLocaleString('es-AR', { maximumFractionDigits: 2 })} u.`;
-}
-
-function formatDateLocal(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
-// ==========================================
-// 1. CARGA DE KPIS DEL DÍA / AUDITORÍA DE TURNOS
-// ==========================================
-async function cargarDatosDashboardHoy() {
-    try {
-        const response = await apiFetch('/sales/report/box?period=today');
-        if (!response || !response.ok) return;
-
-        const data = await response.json();
-
-        // ----------------------------------------------------
-        // CAPA 2: CANALES DE RECAUDACIÓN DEL DÍA (CONSOLIDADO)
-        // ----------------------------------------------------
-        const totalSalesToday       = parseNumber(data.totalSalesToday);
-        const transferSalesToday    = parseNumber(data.transferSalesToday);
-        const transferExpensesToday = parseNumber(data.transferExpensesToday);
-        const creditSalesToday      = parseNumber(data.creditSalesToday);
-        const totalPendingCredit    = parseNumber(data.totalPendingCredit);
-
-        setElementText('txtRecaudacion', fmtMoneda(totalSalesToday));
-        setElementText('txtTransfHoy', fmtMoneda(transferSalesToday));
-        setElementText('txtFiadoHoy', fmtMoneda(creditSalesToday));
-        setElementText('cardLibreta', fmtMoneda(totalPendingCredit));
-
-        const lblDetalleTransf = document.getElementById('lblDetalleTransf');
-        if (lblDetalleTransf) {
-            lblDetalleTransf.innerHTML = transferExpensesToday > 0
-                ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 0.72rem;">-${fmtMoneda(transferExpensesToday)} gastos digital</span>`
-                : '';
-        }
-
-        // ----------------------------------------------------
-        // CAPA 1: AUDITORÍA DE CAJAS / TURNOS MULTI-USUARIO
-        // ----------------------------------------------------
-        cacheSesionesHoy = Array.isArray(data.todaySessions) ? data.todaySessions : [];
-        poblarSelectorTurnos(cacheSesionesHoy);
-
-        if (cacheSesionesHoy.length > 0) {
-            // Prioridad: Seleccionar la caja abierta activa o la última registrada
-            const cajaActiva = cacheSesionesHoy.find(s => s.status === 'OPEN') || cacheSesionesHoy[0];
-
-            const select = document.getElementById('selectTurnoActivo');
-            if (select) select.value = cajaActiva.id;
-
-            renderizarMetricasCaja(cajaActiva);
-        } else {
-            // CORREGIDO: Mapeo exacto con los nombres de BoxReportDTO
-            renderizarMetricasCaja({
-                initialAmount: data.activeInitialAmount,
-                totalCashSales: data.activeCashSales,
-                totalCustomerPayments: data.activeCustomerPayments,
-                totalExpenses: data.activeExpenses
-            });
-        }
-
-    } catch (err) {
-        console.error("Error al cargar KPIs de Hoy:", err);
-    }
-}
-
-/**
- * Llena el elemento <select> de auditoría con todas las cajas iniciadas en la jornada.
- */
-function poblarSelectorTurnos(sesiones) {
-    const select = document.getElementById('selectTurnoActivo');
-    if (!select) return;
-
-    if (!sesiones || sesiones.length === 0) {
-        select.innerHTML = `<option value="">Sin cajas registradas hoy</option>`;
-        return;
-    }
-
-    let optionsHtml = '';
-    sesiones.forEach((s) => {
-        const horaApertura = s.openedAt
-            ? new Date(s.openedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
-            : '--:--';
-
-        const estado = s.status === 'OPEN' ? '🟢 ABIERTA' : '🔴 CERRADA';
-        const usuario = s.userName || 'Usuario Desconocido';
-        const numCaja = s.sessionNumber || s.id; // Uso del número correlativo de sesión
-
-        optionsHtml += `<option value="${s.id}">Caja #${numCaja} (${horaApertura} hs) - ${estado} [${usuario}]</option>`;
-    });
-
-    select.innerHTML = optionsHtml;
-}
-
-/**
- * Llena el elemento <select> de auditoría con todas las cajas iniciadas el día de hoy.
- */
-function poblarSelectorTurnos(sesiones) {
-    const select = document.getElementById('selectTurnoActivo');
-    if (!select) return;
-
-    if (!sesiones || sesiones.length === 0) {
-        select.innerHTML = `<option value="">Sin cajas abiertas hoy</option>`;
-        return;
-    }
-
-    let optionsHtml = '';
-    sesiones.forEach((s) => {
-        const horaApertura = new Date(s.openedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-        const estado = s.status === 'OPEN' ? '🟢 ABIERTA' : '🔴 CERRADA';
-        const usuario = s.userName || 'Usuario Desconocido';
-
-        optionsHtml += `<option value="${s.id}">Caja #${s.id} (${horaApertura} hs) - ${estado} [${usuario}]</option>`;
-    });
-
-    select.innerHTML = optionsHtml;
-}
-
-/**
- * Evento desencadenado al cambiar el selector <select id="selectTurnoActivo">.
- */
-function filtrarTurnoSeleccionado(sessionId) {
-    if (!sessionId) return;
-
-    const caja = cacheSesionesHoy.find(item => item.id == sessionId);
-    if (caja) {
-        renderizarMetricasCaja(caja);
-    }
-}
-
-/**
- * Calcula y renderiza el balance físico y desglose de una caja específica.
- */
-function renderizarMetricasCaja(caja) {
-    const initialAmount         = parseNumber(caja.initialAmount);
-    const cashSalesToday        = parseNumber(caja.totalCashSales);
-    const customerPaymentsToday = parseNumber(caja.totalCustomerPayments);
-    const cashExpensesToday     = parseNumber(caja.totalExpenses);
-
-    // Ecuación de Arqueo Físico de Cajón
-    const realBalance = initialAmount + cashSalesToday + customerPaymentsToday - cashExpensesToday;
-
-    // Componentes del desglose
-    setElementText('txtEfectivoHoy', fmtMoneda(cashSalesToday));
-
-    const lblDetalleEfectivo = document.getElementById('lblDetalleEfectivo');
-    if (lblDetalleEfectivo) {
-        lblDetalleEfectivo.innerHTML = cashExpensesToday > 0
-            ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 0.72rem;">-${fmtMoneda(cashExpensesToday)} gastos caja</span>`
-            : `<span class="fw-bold text-danger fs-5">${fmtMoneda(0)}</span>`;
-    }
-
-    const elCobrosLibreta = document.getElementById('txtCobrosLibretaHoy');
-    if (elCobrosLibreta) {
-        elCobrosLibreta.innerText = fmtMoneda(customerPaymentsToday);
-        elCobrosLibreta.className = customerPaymentsToday > 0 ? "fw-bold text-success fs-5 mt-1" : "fw-bold text-dark fs-5 mt-1";
-    }
-
-    // Hero Card: Dinero Físico en Cajón
-    const cardBalanceReal = document.getElementById('cardBalanceReal');
-    const containerCardBalance = document.getElementById('containerCardBalance');
-    const titleBalanceReal = document.getElementById('titleBalanceReal');
-    const iconBoxBalance = document.getElementById('iconBoxBalance');
-
-    if (cardBalanceReal) {
-        cardBalanceReal.innerText = fmtMoneda(realBalance);
-
-        if (realBalance < 0) {
-            cardBalanceReal.className = "fw-bold mb-0 text-danger mt-1 fs-3 fs-md-2";
-            if (containerCardBalance) containerCardBalance.className = "dashboard-card p-3 p-md-4 border-start border-4 border-danger bg-white h-100 d-flex flex-column justify-content-between";
-            if (titleBalanceReal) titleBalanceReal.className = "kpi-title text-danger";
-            if (iconBoxBalance) iconBoxBalance.className = "icon-box-soft bg-danger text-white rounded-circle p-3 flex-shrink-0";
-        } else {
-            cardBalanceReal.className = "fw-bold mb-0 text-dark mt-1 fs-3 fs-md-2";
-            if (containerCardBalance) containerCardBalance.className = "dashboard-card p-3 p-md-4 border-start border-4 border-primary bg-white h-100 d-flex flex-column justify-content-between";
-            if (titleBalanceReal) titleBalanceReal.className = "kpi-title text-primary";
-            if (iconBoxBalance) iconBoxBalance.className = "icon-box-soft bg-primary text-white rounded-circle p-3 flex-shrink-0";
-        }
-    }
-
-    // Pie Explicativo Dinámico
-    const lblDetalleBalance = document.getElementById('lblDetalleBalance');
-    if (lblDetalleBalance) {
-        let desgloseHtml = `(Fondo: ${fmtMoneda(initialAmount)}`;
-        if (customerPaymentsToday > 0) {
-            desgloseHtml += ` + <span class="fw-semibold text-success">${fmtMoneda(customerPaymentsToday)} cobros</span>`;
-        }
-        if (cashExpensesToday > 0) {
-            desgloseHtml += ` <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1">-${fmtMoneda(cashExpensesToday)} gastos caja</span>`;
-        }
-        desgloseHtml += `)`;
-        lblDetalleBalance.innerHTML = desgloseHtml;
-    }
-}
-
-// ==========================================
-// 2. CONSULTA POR FECHAS Y PRESETS (CAPA 3)
-// ==========================================
-function aplicarPresetFecha(preset) {
-    const hoy = new Date();
-    let desde, hasta;
-
-    switch (preset) {
-        case 'ESTE_MES':
-            desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-            hasta = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
-            break;
-        case 'MES_PASADO':
-            desde = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
-            hasta = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
-            break;
-        case '3_MESES':
-            desde = new Date(hoy.getFullYear(), hoy.getMonth() - 2, 1);
-            hasta = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
-            break;
-        case 'ESTE_ANO':
-            desde = new Date(hoy.getFullYear(), 0, 1);
-            hasta = hoy;
-            break;
-        case 'ANO_PASADO':
-            desde = new Date(hoy.getFullYear() - 1, 0, 1);
-            hasta = new Date(hoy.getFullYear() - 1, 11, 31);
-            break;
-    }
-
-    if (desde && hasta) {
-        const inputDesde = document.getElementById('fechaDesde');
-        const inputHasta = document.getElementById('fechaHasta');
-        if (inputDesde) inputDesde.value = formatDateLocal(desde);
-        if (inputHasta) inputHasta.value = formatDateLocal(hasta);
-        consultarPorFechas();
-    }
-}
-
-async function consultarPorFechas() {
-    const elDesde = document.getElementById('fechaDesde');
-    const elHasta = document.getElementById('fechaHasta');
-
-    if (!elDesde || !elHasta) return;
-
-    const desdeVal = elDesde.value;
-    const hastaVal = elHasta.value;
-
-    if (!desdeVal || !hastaVal) {
-        return Swal.fire('Atención', 'Por favor selecciona ambas fechas (Desde y Hasta)', 'warning');
-    }
-
-    if (desdeVal > hastaVal) {
-        return Swal.fire('Error', 'La fecha "Desde" no puede ser mayor que "Hasta"', 'error');
-    }
+    const desdeStr = primerDiaMes.toISOString().split('T')[0];
+    const hastaStr = ultimoDiaMes.toISOString().split('T')[0];
 
     try {
-        const params = new URLSearchParams({ from: desdeVal, to: hastaVal });
-        const response = await apiFetch(`/sales/report/box?${params.toString()}`);
+        // Peticiones paralelas de ventas, gastos y proveedores
+        const [resVentas, resGastos, resProveedores] = await Promise.allSettled([
+            apiFetch(`/sales?desde=${desdeStr}&hasta=${hastaStr}`),
+            apiFetch('/api/v1/expenses'),
+            apiFetch('/api/v1/providers')
+        ]);
 
-        if (!response || !response.ok) throw new Error("Error en la respuesta del servidor");
-
-        const data = await response.json();
-
-        const periodSales           = parseNumber(data.periodSales);
-        const periodProfit          = parseNumber(data.periodProfit);
-        const periodReplacementCost = parseNumber(data.periodReplacementCost);
-        const periodOperations      = parseInt(data.periodOperations || 0, 10);
-        const ticketPromedio        = periodOperations > 0 ? (periodSales / periodOperations) : 0;
-
-        setElementText('txtRecaudacionMes', fmtMoneda(periodSales));
-        setElementText('txtGananciaMes', fmtMoneda(periodProfit));
-        setElementText('txtReposicionMes', fmtMoneda(periodReplacementCost));
-        setElementText('txtVentasCountMes', periodOperations);
-        setElementText('txtTicketPromedio', fmtMoneda(ticketPromedio));
-
-        const f1 = desdeVal.split('-').reverse().join('/');
-        const f2 = hastaVal.split('-').reverse().join('/');
-        setElementText('lblRangoActivo', `Mostrando datos del ${f1} al ${f2}`);
-
-    } catch (err) {
-        console.error("Error al obtener datos por fecha:", err);
-        Swal.fire('Error', 'No se pudieron recuperar los datos para el rango seleccionado', 'error');
-    }
-}
-
-// ==========================================
-// 3. GRÁFICO DE EVOLUCIÓN DE VENTAS
-// ==========================================
-async function cargarDatosGrafico() {
-    try {
-        const response = await apiFetch('/sales/report/chart');
-        if (!response || !response.ok) return;
-
-        const data = await response.json();
-
-        if (!Array.isArray(data) || data.length === 0) {
-            renderizarGraficoSemanal([], []);
-            return;
+        let listaVentas = [];
+        if (resVentas.status === 'fulfilled' && resVentas.value && resVentas.value.ok) {
+            listaVentas = await resVentas.value.json();
+            if (!Array.isArray(listaVentas)) listaVentas = [];
         }
 
-        const etiquetas = data.map(item => {
-            if (!item.label) return '';
-            const partes = item.label.split('-');
-            return partes.length === 3 ? `${partes[2]}/${partes[1]}` : item.label;
+        let listaGastos = [];
+        if (resGastos.status === 'fulfilled' && resGastos.value && resGastos.value.ok) {
+            listaGastos = await resGastos.value.json();
+            if (!Array.isArray(listaGastos)) listaGastos = [];
+        }
+
+        let listaProveedores = [];
+        if (resProveedores.status === 'fulfilled' && resProveedores.value && resProveedores.value.ok) {
+            listaProveedores = await resProveedores.value.json();
+            if (!Array.isArray(listaProveedores)) listaProveedores = [];
+        }
+
+        // --- FILTRAR VENTAS ACTIVAS DEL MES ---
+        const ventasActivasMes = listaVentas.filter(v => !v.canceled && v.status !== 'ANULADA');
+        let totalVentasMes = 0;
+        ventasActivasMes.forEach(v => {
+            totalVentasMes += parseFloat(v.total) || 0;
         });
 
-        const valores = data.map(item => parseNumber(item.total));
-        renderizarGraficoSemanal(etiquetas, valores);
+        // --- FILTRAR GASTOS DEL MES ---
+        const mesActual = ahora.getMonth();
+        const anioActual = ahora.getFullYear();
+        const gastosMes = listaGastos.filter(g => {
+            if (!g.date) return false;
+            const fechaG = new Date(g.date);
+            return fechaG.getMonth() === mesActual && fechaG.getFullYear() === anioActual;
+        });
+
+        let totalGastosMes = 0;
+        gastosMes.forEach(g => {
+            totalGastosMes += parseFloat(g.amount) || 0;
+        });
+
+        // --- CALCULAR GANANCIA NETA ---
+        const gananciaNeta = totalVentasMes - totalGastosMes;
+
+        // --- DEUDA A PROVEEDORES ---
+        let totalDeudaProveedores = 0;
+        let proveedoresConDeuda = 0;
+        listaProveedores.forEach(p => {
+            const saldo = parseFloat(p.currentBalance) || 0;
+            if (saldo > 0) {
+                totalDeudaProveedores += saldo;
+                proveedoresConDeuda++;
+            }
+        });
+
+        // --- ACTUALIZAR DOM DE KPIS ---
+        setElementText('kpiVentasMes', fmtARS.format(totalVentasMes));
+        setElementText('kpiVentasCount', `${ventasActivasMes.length} operaciones este mes`);
+
+        setElementText('kpiGastosMes', fmtARS.format(totalGastosMes));
+        setElementText('kpiGastosCount', `${gastosMes.length} egresos este mes`);
+
+        const gananciaEl = document.getElementById('kpiGananciaNeta');
+        if (gananciaEl) {
+            gananciaEl.innerText = fmtARS.format(gananciaNeta);
+            if (gananciaNeta < 0) {
+                gananciaEl.classList.remove('text-success');
+                gananciaEl.classList.add('text-danger');
+            } else {
+                gananciaEl.classList.remove('text-danger');
+                gananciaEl.classList.add('text-success');
+            }
+        }
+
+        setElementText('kpiDeudaProveedores', fmtARS.format(totalDeudaProveedores));
+        setElementText('kpiProveedoresCount', `${proveedoresConDeuda} proveedores con saldo`);
+
+        // --- RENDERIZAR TABLAS RÁPIDAS ---
+        renderizarTopProductos(ventasActivasMes);
+        renderizarUltimosMovimientos(listaVentas, listaGastos);
 
     } catch (err) {
-        console.error("Error cargando el gráfico:", err);
+        console.error("Error al cargar KPIs del dashboard:", err);
     }
 }
 
-function renderizarGraficoSemanal(etiquetas, valores) {
+// ==========================================
+// 2. TOP 5 PRODUCTOS MÁS VENDIDOS
+// ==========================================
+function renderizarTopProductos(ventas) {
+    const tbody = document.getElementById('tablaTopProductos');
+    if (!tbody) return;
+
+    const mapaProductos = new Map();
+
+    ventas.forEach(v => {
+        const items = Array.isArray(v.items) ? v.items : [];
+        items.forEach(item => {
+            const nombre = item.productName || item.nombre || item.title || 'Producto';
+            const cantidad = parseFloat(item.quantity) || 0;
+            const subtotal = parseFloat(item.subtotal) || (cantidad * (parseFloat(item.price) || 0));
+
+            if (!mapaProductos.has(nombre)) {
+                mapaProductos.set(nombre, { nombre, cantidad: 0, total: 0 });
+            }
+            const prod = mapaProductos.get(nombre);
+            prod.cantidad += cantidad;
+            prod.total += subtotal;
+        });
+    });
+
+    const listaOrdenada = Array.from(mapaProductos.values())
+        .sort((a, b) => b.cantidad - a.cantidad)
+        .slice(0, 5);
+
+    if (listaOrdenada.length === 0) {
+        if (typeof renderEmptyState === 'function') {
+            renderEmptyState('tablaTopProductos', 'bi-trophy', 'Sin ventas este mes', 'Los productos más vendidos aparecerán aquí automáticamente.', '', 3);
+        } else {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center p-4 text-muted">Sin registros de ventas en este período.</td></tr>';
+        }
+        return;
+    }
+
+    tbody.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+
+    listaOrdenada.forEach((p, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="ps-3">
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-light text-dark border me-2" style="width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem;">
+                        #${idx + 1}
+                    </span>
+                    <strong class="text-dark">${escapeHTML(p.nombre)}</strong>
+                </div>
+            </td>
+            <td class="text-center">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 fw-bold">
+                    ${p.cantidad.toLocaleString('es-AR')} u.
+                </span>
+            </td>
+            <td class="text-end pe-3 fw-bold text-dark amount-num">
+                ${fmtARS.format(p.total)}
+            </td>
+        `;
+        fragment.appendChild(tr);
+    });
+
+    tbody.appendChild(fragment);
+}
+
+// ==========================================
+// 3. ÚLTIMOS 5 MOVIMIENTOS (VENTAS / GASTOS)
+// ==========================================
+function renderizarUltimosMovimientos(ventas, gastos) {
+    const tbody = document.getElementById('tablaUltimosMovimientos');
+    if (!tbody) return;
+
+    const movimientos = [];
+
+    // Normalizar ventas
+    (ventas || []).forEach(v => {
+        const fechaRaw = v.saleDate || v.created_at || v.createdAt || new Date();
+        const fechaObj = new Date(fechaRaw);
+        movimientos.push({
+            tipo: 'VENTA',
+            id: v.id,
+            concepto: v.nroComprobante || (v.numeroTicket ? `Ticket #${v.numeroTicket}` : `Venta #${v.id}`),
+            subdetalle: v.customerName || 'Consumidor Final',
+            fecha: isNaN(fechaObj.getTime()) ? new Date() : fechaObj,
+            metodo: (v.paymentMethod || 'EFECTIVO').replace(/_/g, ' '),
+            monto: parseFloat(v.total) || 0,
+            anulada: Boolean(v.canceled || v.status === 'ANULADA')
+        });
+    });
+
+    // Normalizar gastos
+    (gastos || []).forEach(g => {
+        const fechaRaw = g.date || new Date();
+        const fechaObj = new Date(fechaRaw);
+        movimientos.push({
+            tipo: 'GASTO',
+            id: g.id,
+            concepto: g.description || 'Egreso operativo',
+            subdetalle: g.category || 'Gasto',
+            fecha: isNaN(fechaObj.getTime()) ? new Date() : fechaObj,
+            metodo: (g.paymentMethod || 'EFECTIVO_CAJA').replace(/_/g, ' '),
+            monto: parseFloat(g.amount) || 0,
+            anulada: false
+        });
+    });
+
+    // Ordenar cronológicamente descendente y tomar los 5 más recientes
+    const ultimos5 = movimientos
+        .sort((a, b) => b.fecha - a.fecha)
+        .slice(0, 5);
+
+    if (ultimos5.length === 0) {
+        if (typeof renderEmptyState === 'function') {
+            renderEmptyState('tablaUltimosMovimientos', 'bi-arrow-left-right', 'Sin movimientos registrados', 'Las transacciones recientes se reflejarán aquí.', '', 3);
+        } else {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center p-4 text-muted">No hay movimientos recientes.</td></tr>';
+        }
+        return;
+    }
+
+    tbody.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+
+    ultimos5.forEach(m => {
+        const esVenta = m.tipo === 'VENTA';
+        const icono = esVenta ? 'bi-cart-check-fill text-success' : 'bi-wallet2 text-danger';
+        const badgeBg = esVenta ? 'bg-success bg-opacity-10' : 'bg-danger bg-opacity-10';
+        const montoTexto = esVenta ? `+${fmtARS.format(m.monto)}` : `-${fmtARS.format(m.monto)}`;
+        const montoClase = esVenta ? 'text-success' : 'text-danger';
+
+        const horaFormateada = m.fecha.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+        const diaFormateado = m.fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="ps-3">
+                <div class="d-flex align-items-center">
+                    <div class="p-2 ${badgeBg} rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                        <i class="bi ${icono} fs-6"></i>
+                    </div>
+                    <div>
+                        <strong class="text-dark d-block text-truncate" style="max-width: 200px;">${escapeHTML(m.concepto)}</strong>
+                        <small class="text-muted">${diaFormateado} - ${horaFormateada} hs</small>
+                    </div>
+                </div>
+            </td>
+            <td class="d-none d-sm-table-cell">
+                <span class="badge bg-light text-dark border px-2 py-1" style="font-size: 0.75rem;">
+                    ${escapeHTML(m.metodo)}
+                </span>
+            </td>
+            <td class="text-end pe-3 fw-bold ${montoClase} amount-num">
+                ${montoTexto}
+            </td>
+        `;
+        fragment.appendChild(tr);
+    });
+
+    tbody.appendChild(fragment);
+}
+
+// ==========================================
+// 4. GRÁFICO CENTRAL DE EVOLUCIÓN (CHART.JS)
+// ==========================================
+async function cargarGraficoSemanal() {
     const canvas = document.getElementById('chartSemanal');
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    try {
+        const response = await apiFetch('/sales/report/chart');
+        let data = [];
 
-    if (window.myChart && typeof window.myChart.destroy === 'function') {
-        window.myChart.destroy();
-    }
+        if (response && response.ok) {
+            data = await response.json();
+            if (!Array.isArray(data)) data = [];
+        }
 
-    const gradient = ctx.createLinearGradient(0, 0, 0, 280);
-    gradient.addColorStop(0, 'rgba(37, 99, 235, 0.18)');
-    gradient.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
+        // Generar etiquetas de los últimos 7 días si los datos vienen vacíos
+        let labels = [];
+        let valores = [];
 
-    window.myChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: etiquetas,
-            datasets: [{
-                label: 'Ventas ($)',
-                data: valores,
-                borderColor: '#2563eb',
-                borderWidth: 2.5,
-                backgroundColor: gradient,
-                fill: true,
-                tension: 0.3,
-                pointRadius: 4,
-                pointHoverRadius: 6,
-                pointBackgroundColor: '#2563eb',
-                pointBorderColor: '#ffffff',
-                pointBorderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: '#0f172a',
-                    titleFont: { size: 13, weight: 'bold' },
-                    bodyFont: { size: 12 },
-                    padding: 10,
-                    cornerRadius: 8,
-                    callbacks: {
-                        label: (ctx) => ` Ventas: ${fmtMoneda(ctx.raw)}`
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: { color: '#f1f5f9' },
-                    ticks: {
-                        color: '#64748b',
-                        callback: (value) => '$' + parseNumber(value).toLocaleString('es-AR')
-                    }
-                },
-                x: {
-                    grid: { display: false },
-                    ticks: { color: '#64748b' }
-                }
+        if (data.length > 0) {
+            labels = data.map(d => {
+                const dateObj = new Date(d.date + 'T00:00:00');
+                return dateObj.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' });
+            });
+            valores = data.map(d => parseFloat(d.total) || 0);
+        } else {
+            const hoy = new Date();
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date(hoy);
+                d.setDate(hoy.getDate() - i);
+                labels.push(d.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' }));
+                valores.push(0);
             }
         }
-    });
-}
 
-// ==========================================
-// 4. INVENTARIO CRÍTICO DE STOCK
-// ==========================================
-async function cargarAlertasStock() {
-    try {
-        const res = await apiFetch('/products');
-        if (!res || !res.ok) return;
-
-        const productos = await res.json();
-        if (!Array.isArray(productos)) return;
-
-        const criticos = productos.filter(p => parseNumber(p.stock) <= 10);
-
-        setElementText('badgeStockCount', criticos.length);
-
-        const container = document.getElementById('listaAlertasStock');
-        if (!container) return;
-
-        if (criticos.length === 0) {
-            container.innerHTML = `
-                <div class="text-center py-4">
-                    <i class="bi bi-check-circle-fill fs-2 text-success opacity-75"></i>
-                    <p class="mt-2 mb-0 small text-muted">Stock en niveles óptimos.</p>
-                </div>`;
-            return;
+        // Destruir instancia previa para evitar glitches al redimensionar
+        if (chartSemanalInstance) {
+            chartSemanalInstance.destroy();
+            chartSemanalInstance = null;
         }
 
-        container.innerHTML = criticos.map(p => {
-            const stockNum = parseNumber(p.stock);
-            const textoStock = fmtStock(stockNum, p);
-            const esMuyCritico = stockNum <= 3;
+        const ctx = canvas.getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, 'rgba(37, 99, 235, 0.28)');
+        gradient.addColorStop(1, 'rgba(37, 99, 235, 0.01)');
 
-            return `
-            <div class="stock-item d-flex align-items-center justify-content-between">
-                <div class="pe-2">
-                    <span class="d-block fw-semibold text-dark small text-truncate" style="max-width: 180px;">
-                        ${(p.name || '').toUpperCase()}
-                    </span>
-                    <small class="text-muted" style="font-size: 0.75rem;">Mínimo recomendado: 10 u.</small>
-                </div>
-                <span class="badge ${esMuyCritico ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-warning-subtle text-warning-emphasis border border-warning-subtle'} rounded-pill">
-                    ${textoStock}
-                </span>
-            </div>`;
-        }).join('');
+        chartSemanalInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Ventas ($ ARS)',
+                    data: valores,
+                    borderColor: '#2563eb',
+                    backgroundColor: gradient,
+                    borderWidth: 2.5,
+                    fill: true,
+                    tension: 0.35,
+                    pointBackgroundColor: '#2563eb',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4.5,
+                    pointHoverRadius: 6.5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: '#0f172a',
+                        titleFont: { family: 'Inter', size: 12, weight: 'bold' },
+                        bodyFont: { family: 'Inter', size: 12 },
+                        padding: 10,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function(context) {
+                                return ` Ventas: ${fmtARS.format(context.parsed.y)}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                            font: { family: 'Inter', size: 11, weight: '500' },
+                            color: '#64748b'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: '#f1f5f9',
+                            borderDash: [4, 4]
+                        },
+                        ticks: {
+                            font: { family: 'Inter', size: 11 },
+                            color: '#64748b',
+                            callback: function(value) {
+                                if (value >= 1000000) return '$' + (value / 1000000).toFixed(1) + 'M';
+                                if (value >= 1000) return '$' + (value / 1000).toFixed(0) + 'k';
+                                return '$' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
 
     } catch (err) {
-        console.error("Error al cargar alertas de stock:", err);
+        console.error("Error al renderizar gráfico semanal:", err);
     }
 }
 
-// Exposición al scope global para bindings en HTML (onchange / onclick)
-window.aplicarPresetFecha = aplicarPresetFecha;
-window.consultarPorFechas = consultarPorFechas;
-window.filtrarTurnoSeleccionado = filtrarTurnoSeleccionado;
+// ==========================================
+// UTILIDADES AUXILIARES
+// ==========================================
+function setElementText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.innerText = text;
+}
+
+function escapeHTML(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
