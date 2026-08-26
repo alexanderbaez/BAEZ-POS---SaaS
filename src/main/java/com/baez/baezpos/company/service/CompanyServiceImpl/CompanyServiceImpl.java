@@ -70,6 +70,10 @@ public class CompanyServiceImpl implements CompanyService {
         company.setInicioActividades(dto.getInicioActividades());
         company.setCondicionIva(dto.getCondicionIva());
 
+        if (company.getVersion() == null) {
+            company.setVersion(0L);
+        }
+
         Company savedCompany = companyRepository.save(company);
 
         try {

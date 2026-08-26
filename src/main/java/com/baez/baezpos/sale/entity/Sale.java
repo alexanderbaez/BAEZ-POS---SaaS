@@ -78,10 +78,6 @@ public class Sale extends TenantEntity {
     @JoinColumn(name = "cash_register_session_id")
     private CashRegisterSession cashRegisterSession;
 
-    @Version
-    @Builder.Default
-    private Long version = 0L;
-
     public void addItem(SaleItem item) {
         items.add(item);
         item.setSale(this);

@@ -55,8 +55,4 @@ public class Product extends TenantEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
-
-    @Version
-    @Builder.Default
-    private Long version = 0L;
 }

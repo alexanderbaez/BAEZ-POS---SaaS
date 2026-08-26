@@ -58,8 +58,4 @@ public class CashRegisterSession extends TenantEntity {
 
     @Column(columnDefinition = "TEXT")
     private String notes;
-
-    @Version
-    @Builder.Default
-    private Long version = 0L;
 }

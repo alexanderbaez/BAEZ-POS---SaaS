@@ -55,6 +55,7 @@ public class MasterAdminService implements MasterAdmin {
                 .expirationDate(req.getExpirationDate() != null ? req.getExpirationDate() : LocalDate.now().plusDays(15))
                 .active(true)
                 .ticketMessage(req.getTicketMessage())
+                .version(0L)
                 .build();
 
         Company savedCompany = companyRepository.save(company);
@@ -63,6 +64,7 @@ public class MasterAdminService implements MasterAdmin {
         User owner = new User();
         owner.setName(req.getOwnerName() != null && !req.getOwnerName().isBlank() ? req.getOwnerName().trim() : req.getCompanyName().trim());
         owner.setEmail(cleanEmail);
+        owner.setVersion(0L);
         owner.setPassword(passwordEncoder.encode(req.getOwnerPassword()));
         owner.setRole(Role.ADMIN);
         owner.setCompany(savedCompany);
@@ -110,6 +112,10 @@ public class MasterAdminService implements MasterAdmin {
             resetOwnerPassword(id, dto.getOwnerPassword().trim());
         }
 
+        if (company.getVersion() == null) {
+            company.setVersion(0L);
+        }
+
         companyRepository.save(company);
     }
 
@@ -119,6 +125,9 @@ public class MasterAdminService implements MasterAdmin {
         Company company = companyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
         company.setActive(false);
+        if (company.getVersion() == null) {
+            company.setVersion(0L);
+        }
         companyRepository.save(company);
     }
 
@@ -141,6 +150,9 @@ public class MasterAdminService implements MasterAdmin {
                 ? hoy.plusDays(30) : company.getExpirationDate().plusDays(30);
         company.setExpirationDate(nuevaFecha);
         company.setActive(true);
+        if (company.getVersion() == null) {
+            company.setVersion(0L);
+        }
         companyRepository.save(company);
     }
 

@@ -41,8 +41,4 @@ public class Customer extends TenantEntity {
     @Builder.Default
     @Column(nullable = false)
     private Boolean active = true;
-
-    @Version
-    @Builder.Default
-    private Long version = 0L;
 }

@@ -42,6 +42,7 @@ public class DataInitializer implements CommandLineRunner {
                 .role(Role.SUPER_ADMIN)
                 .active(true)
                 .company(null)
+                .version(0L)
                 .build();
 
         userRepository.save(superAdmin);

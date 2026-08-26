@@ -98,6 +98,7 @@ public class AuthService {
                 .ticketMessage(request.getTicketMessage())
                 .active(true)
                 .expirationDate(LocalDate.now().plusDays(30))
+                .version(0L)
                 .build();
         Company savedCompany = companyRepository.save(company);
 
@@ -108,6 +109,7 @@ public class AuthService {
                 .role(Role.ADMIN)
                 .company(savedCompany)
                 .active(true)
+                .version(0L)
                 .build();
         userRepository.save(adminUser);
 
