@@ -216,13 +216,17 @@ function renderizarGastos(gastos) {
     tbody.innerHTML = '';
 
     if (!gastos || gastos.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="6" class="text-center p-5 text-muted">
-                    <i class="bi bi-inbox fs-3 d-block mb-1 text-slate-400"></i>
-                    Sin registros de egresos para el criterio seleccionado.
-                </td>
-            </tr>`;
+        if (typeof renderEmptyState === 'function') {
+            renderEmptyState('listaGastos', 'bi-wallet2', 'Sin egresos registrados', 'No se encontraron registros de gastos para el criterio seleccionado.', '', 6);
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center p-5 text-muted">
+                        <i class="bi bi-inbox fs-3 d-block mb-1 text-slate-400"></i>
+                        Sin registros de egresos para el criterio seleccionado.
+                    </td>
+                </tr>`;
+        }
         return;
     }
 

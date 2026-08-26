@@ -77,13 +77,17 @@ function renderizarProveedores(lista) {
     tbody.innerHTML = '';
 
     if (!lista || lista.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="6" class="text-center p-5 text-muted">
-                    <i class="bi bi-inbox fs-3 d-block mb-1 text-secondary"></i>
-                    No se encontraron proveedores registrados o coincidentes.
-                </td>
-            </tr>`;
+        if (typeof renderEmptyState === 'function') {
+            renderEmptyState('tablaProveedores', 'bi-truck', 'Sin proveedores registrados', 'No se encontraron proveedores activos o coincidentes con la búsqueda.', '<button class="btn btn-primary btn-sm fw-bold" onclick="abrirModalNuevoProveedor()"><i class="bi bi-truck me-1"></i>Nuevo Proveedor</button>', 6);
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center p-5 text-muted">
+                        <i class="bi bi-inbox fs-3 d-block mb-1 text-secondary"></i>
+                        No se encontraron proveedores registrados o coincidentes.
+                    </td>
+                </tr>`;
+        }
         return;
     }
 

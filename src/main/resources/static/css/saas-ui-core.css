@@ -1,0 +1,347 @@
+/* ==========================================================================
+   BÁEZ POS - SAAS UI CORE DESIGN SYSTEM (Stripe / Vercel Standard)
+   Alexander Baez - 2026
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  /* Tipografía y Fuentes */
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+
+  /* Paleta Base Light Premium */
+  --saas-bg-main: #f8fafc;
+  --saas-surface: #ffffff;
+  --saas-border: #e2e8f0;
+  --saas-border-subtle: #f1f5f9;
+  
+  /* Textos */
+  --saas-text-heading: #0f172a;
+  --saas-text-body: #334155;
+  --saas-text-muted: #64748b;
+  --saas-text-subtle: #94a3b8;
+
+  /* Colores de Marca y Acción */
+  --saas-primary: #2563eb;
+  --saas-primary-hover: #1d4ed8;
+  --saas-primary-subtle: #eff6ff;
+  --saas-primary-border: #bfdbfe;
+
+  --saas-success: #16a34a;
+  --saas-success-subtle: #f0fdf4;
+  --saas-danger: #e11d48;
+  --saas-danger-subtle: #fff1f2;
+  --saas-warning: #f59e0b;
+  --saas-warning-subtle: #fffbeb;
+
+  /* Sombras Modernas Multinivel (Vercel / Stripe Style) */
+  --saas-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  --saas-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.06);
+  --saas-shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.07), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+  --saas-shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+  --saas-shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+  --saas-shadow-modal: 0 25px 50px -12px rgba(15, 23, 42, 0.18);
+
+  /* Radios de curvatura estándar */
+  --saas-radius-sm: 8px;
+  --saas-radius-md: 12px;
+  --saas-radius-lg: 16px;
+  --saas-radius-xl: 20px;
+}
+
+/* ==========================================================================
+   RESETEOS GLOBALES Y TIPOGRAFÍA
+   ========================================================================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans) !important;
+  background-color: var(--saas-bg-main) !important;
+  color: var(--saas-text-body);
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6 {
+  font-family: var(--font-sans) !important;
+  color: var(--saas-text-heading);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+button, input, select, textarea {
+  font-family: var(--font-sans) !important;
+}
+
+/* Tipografía Tabular para Números e Importes Financieros */
+.amount-num, .font-mono-num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  letter-spacing: -0.02em;
+}
+
+/* ==========================================================================
+   CARDS Y CONTENEDORES ELEVADOS
+   ========================================================================== */
+.card, .stat-card, .table-card {
+  background-color: var(--saas-surface) !important;
+  border: 1px solid var(--saas-border) !important;
+  border-radius: var(--saas-radius-md) !important;
+  box-shadow: var(--saas-shadow) !important;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.card:hover, .stat-card:hover {
+  box-shadow: var(--saas-shadow-md) !important;
+}
+
+.table-card {
+  border-radius: var(--saas-radius-lg) !important;
+  overflow: hidden;
+}
+
+/* Stat Cards con Borde Lateral Acentuado */
+.stat-card {
+  border-start-width: 4px !important;
+}
+
+/* ==========================================================================
+   BOTONES PREMIUM
+   ========================================================================== */
+.btn {
+  border-radius: var(--saas-radius-sm) !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  padding: 0.55rem 1.15rem !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  letter-spacing: -0.01em;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  background-color: var(--saas-primary) !important;
+  border-color: var(--saas-primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+}
+
+.btn-primary:hover {
+  background-color: var(--saas-primary-hover) !important;
+  border-color: var(--saas-primary-hover) !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28) !important;
+  transform: translateY(-1px);
+}
+
+.btn-action {
+  border: 1px solid var(--saas-border) !important;
+  background: var(--saas-surface) !important;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--saas-radius-sm) !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--saas-text-muted) !important;
+  transition: all 0.15s ease;
+  padding: 0 !important;
+}
+
+.btn-action:hover {
+  background: var(--saas-border-subtle) !important;
+  color: var(--saas-text-heading) !important;
+  border-color: var(--saas-text-subtle) !important;
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   INPUTS Y FORMULARIOS
+   ========================================================================== */
+.form-control, .form-select {
+  border-radius: var(--saas-radius-sm) !important;
+  border: 1px solid var(--saas-border) !important;
+  padding: 0.55rem 0.85rem !important;
+  font-size: 0.875rem !important;
+  color: var(--saas-text-heading) !important;
+  background-color: #ffffff !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--saas-primary) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14) !important;
+  outline: none;
+}
+
+.input-group-text {
+  border-radius: var(--saas-radius-sm) !important;
+  border-color: var(--saas-border) !important;
+  font-size: 0.875rem !important;
+}
+
+/* ==========================================================================
+   TABLAS PULIDAS Y MINIMALISTAS
+   ========================================================================== */
+.table {
+  color: var(--saas-text-body);
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-bottom: 0 !important;
+}
+
+.table thead th {
+  background-color: #f8fafc !important;
+  color: var(--saas-text-muted) !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  padding: 0.85rem 1rem !important;
+  border-top: none !important;
+  border-bottom: 1px solid var(--saas-border) !important;
+  white-space: nowrap;
+}
+
+.table tbody td {
+  padding: 0.95rem 1rem !important;
+  border-bottom: 1px solid var(--saas-border-subtle) !important;
+  border-top: none !important;
+  vertical-align: middle;
+  font-size: 0.875rem;
+  transition: background-color 0.15s ease;
+}
+
+.table tbody tr:hover td {
+  background-color: rgba(241, 245, 249, 0.6) !important;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none !important;
+}
+
+/* ==========================================================================
+   MODALES PREMIUM (ESTILO VERCEL / STRIPE)
+   ========================================================================== */
+.modal-content {
+  border: 1px solid var(--saas-border) !important;
+  border-radius: var(--saas-radius-lg) !important;
+  box-shadow: var(--saas-shadow-modal) !important;
+  overflow: hidden;
+  background-color: #ffffff !important;
+}
+
+.modal-backdrop.show {
+  opacity: 0.45;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.modal-header {
+  border-bottom: 1px solid var(--saas-border) !important;
+  padding: 1.25rem 1.5rem !important;
+}
+
+.modal-body {
+  padding: 1.5rem !important;
+}
+
+.modal-footer {
+  border-top: 1px solid var(--saas-border) !important;
+  padding: 1rem 1.5rem !important;
+  background-color: #f8fafc;
+}
+
+/* ==========================================================================
+   BADGES Y PILLS
+   ========================================================================== */
+.badge {
+  font-weight: 600 !important;
+  font-size: 0.75rem !important;
+  padding: 0.35rem 0.65rem !important;
+  border-radius: 9999px !important;
+  letter-spacing: 0.02em;
+}
+
+.balance-badge {
+  padding: 0.35rem 0.75rem !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+  font-size: 0.85rem !important;
+}
+
+/* ==========================================================================
+   ESTADO VACÍO PROFESIONAL (.empty-state)
+   ========================================================================== */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3.5rem 1.5rem;
+  margin: 0 auto;
+}
+
+.empty-state-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: var(--saas-border-subtle);
+  color: var(--saas-text-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  margin-bottom: 1.25rem;
+  box-shadow: var(--saas-shadow-sm);
+}
+
+.empty-state-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--saas-text-heading);
+  margin-bottom: 0.35rem;
+}
+
+.empty-state-message {
+  font-size: 0.875rem;
+  color: var(--saas-text-muted);
+  max-width: 380px;
+  margin-bottom: 1.25rem;
+  line-height: 1.5;
+}
+
+.empty-state-action {
+  margin-top: 0.25rem;
+}
+
+/* ==========================================================================
+   SCROLLBAR ELEGANTE
+   ========================================================================== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
