@@ -68,6 +68,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/cash-register/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/categories/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/expenses/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
+                        .requestMatchers("/api/v1/providers/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/sales/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/customers/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/**").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN")

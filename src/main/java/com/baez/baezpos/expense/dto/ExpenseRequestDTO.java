@@ -27,5 +27,10 @@ public record ExpenseRequestDTO(
         PaymentMethod paymentMethod,
 
         @Size(max = 100, message = "La referencia no puede superar los 100 caracteres.")
-        String reference
+        String reference,
+
+        Long providerId,
+
+        @Size(max = 50, message = "El número de comprobante/factura no puede superar los 50 caracteres.")
+        String invoiceNumber
 ) {}

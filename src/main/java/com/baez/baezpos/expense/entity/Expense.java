@@ -44,4 +44,10 @@ public class Expense extends TenantEntity {
 
     @Column(name = "reference", length = 100)
     private String reference;
+
+    @Column(name = "provider_id")
+    private Long providerId;
+
+    @Column(name = "invoice_number", length = 50)
+    private String invoiceNumber;
 }

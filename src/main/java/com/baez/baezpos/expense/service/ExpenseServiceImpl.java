@@ -5,10 +5,13 @@ import com.baez.baezpos.company.repository.CompanyRepository;
 import com.baez.baezpos.expense.dto.ExpenseRequestDTO;
 import com.baez.baezpos.expense.dto.ExpenseResponseDTO;
 import com.baez.baezpos.expense.entity.Expense;
+import com.baez.baezpos.expense.entity.ExpenseCategory;
 import com.baez.baezpos.expense.repository.ExpenseRepository;
 import com.baez.baezpos.log.service.AuditService;
+import com.baez.baezpos.provider.entity.Provider;
+import com.baez.baezpos.provider.repository.ProviderRepository;
 import com.baez.baezpos.security.util.SecurityUtils;
-import com.baez.baezpos.shared.exception.BadRequestException;
+import com.baez.baezpos.shared.entity.PaymentMethod;
 import com.baez.baezpos.shared.exception.ResourceNotFoundException;
 import com.baez.baezpos.shared.exception.UnauthorizedException;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -26,6 +30,7 @@ public class ExpenseServiceImpl implements ExpenseService {
 
     private final ExpenseRepository expenseRepository;
     private final CompanyRepository companyRepository;
+    private final ProviderRepository providerRepository;
     private final AuditService auditService;
 
     @Override
@@ -39,28 +44,50 @@ public class ExpenseServiceImpl implements ExpenseService {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada con ID: " + companyId));
 
-        boolean deductFromBox = (dto.deductFromBox() != null) ? dto.deductFromBox() : true;
+        // Solo si el método es EFECTIVO_CAJA, deductFromBox es true para descontar de la caja física
+        boolean isEfectivoCaja = (dto.paymentMethod() == PaymentMethod.EFECTIVO_CAJA);
+        boolean deductFromBox = isEfectivoCaja && (dto.deductFromBox() == null || dto.deductFromBox());
+
+        // Si el método es CUENTA_CORRIENTE y existe un providerId, suma el monto a su currentBalance
+        if (dto.paymentMethod() == PaymentMethod.CUENTA_CORRIENTE && dto.providerId() != null) {
+            Provider provider = providerRepository.findByIdAndCompanyId(dto.providerId(), companyId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado con ID: " + dto.providerId()));
+
+            BigDecimal currentBal = (provider.getCurrentBalance() != null) ? provider.getCurrentBalance() : BigDecimal.ZERO;
+            BigDecimal newBalance = currentBal.add(dto.amount());
+            provider.setCurrentBalance(newBalance);
+            providerRepository.save(provider);
+
+            log.info("Empresa [{}]: Sumado $ {} a cuenta corriente del Proveedor [{}] '{}'. Nuevo saldo: $ {}",
+                    companyId, dto.amount(), provider.getId(), provider.getBusinessName(), newBalance);
+        }
+
+        ExpenseCategory category = dto.category() != null
+                ? dto.category()
+                : (dto.providerId() != null ? ExpenseCategory.PROVEEDOR : ExpenseCategory.CAJA_CHICA);
 
         Expense expense = Expense.builder()
                 .description(dto.description().trim())
                 .amount(dto.amount())
                 .deductFromBox(deductFromBox)
-                .category(dto.category())
+                .category(category)
                 .paymentMethod(dto.paymentMethod())
                 .reference(dto.reference() != null ? dto.reference().trim() : null)
+                .providerId(dto.providerId())
+                .invoiceNumber(dto.invoiceNumber() != null ? dto.invoiceNumber().trim() : null)
                 .expenseDate(LocalDateTime.now())
                 .build();
 
         expense.setCompany(company);
 
         Expense saved = expenseRepository.save(expense);
-        log.info("Empresa [{}]: Gasto registrado por $ {} - Cat: {} - Descuenta Caja: {}",
-                companyId, saved.getAmount(), saved.getCategory(), saved.getDeductFromBox());
+        log.info("Empresa [{}]: Gasto registrado por $ {} - Cat: {} - Descuenta Caja: {} - Método: {}",
+                companyId, saved.getAmount(), saved.getCategory(), saved.getDeductFromBox(), saved.getPaymentMethod());
 
         auditService.logAction(
                 "GASTO_CREADO",
-                String.format("Gasto ID [%d] registrado por $ %.2f (%s) - Categoría: %s",
-                        saved.getId(), saved.getAmount(), saved.getDescription(), saved.getCategory()),
+                String.format("Gasto ID [%d] registrado por $ %.2f (%s) - Categoría: %s - Método: %s",
+                        saved.getId(), saved.getAmount(), saved.getDescription(), saved.getCategory(), saved.getPaymentMethod()),
                 "INFO"
         );
 
@@ -112,7 +139,9 @@ public class ExpenseServiceImpl implements ExpenseService {
                 expense.getDeductFromBox() != null ? expense.getDeductFromBox() : true,
                 expense.getCategory(),
                 expense.getPaymentMethod(),
-                expense.getReference()
+                expense.getReference(),
+                expense.getProviderId(),
+                expense.getInvoiceNumber()
         );
     }
 }

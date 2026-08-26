@@ -14,5 +14,7 @@ public record ExpenseResponseDTO(
         Boolean deductFromBox,
         ExpenseCategory category,
         PaymentMethod paymentMethod,
-        String reference
+        String reference,
+        Long providerId,
+        String invoiceNumber
 ) {}
