@@ -25,10 +25,11 @@
                 top: 0;
                 left: 0;
                 background: #1e293b !important;
-                z-index: 1090 !important;
+                z-index: 1000 !important;
                 display: flex;
                 flex-direction: column;
                 justify-content: space-between;
+                transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             }
             .nav-link-custom {
                 color: #94a3b8 !important;
@@ -60,21 +61,27 @@
                 margin: 10px 12px;
                 border: 1px solid rgba(255, 255, 255, 0.1);
             }
-            #sidebar-overlay {
+            .sidebar-backdrop {
                 position: fixed;
                 top: 0;
                 left: 0;
                 width: 100vw;
                 height: 100vh;
-                background: rgba(0, 0, 0, 0.4);
-                z-index: 1085 !important;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 999;
                 display: none;
+                opacity: 0;
+                transition: opacity 0.3s ease;
                 backdrop-filter: blur(2px);
+                -webkit-backdrop-filter: blur(2px);
             }
-            #sidebar-overlay.active { display: block; }
+            .sidebar-backdrop.show {
+                display: block;
+                opacity: 1;
+            }
 
             @media (max-width: 768px) {
-                body > *:not(#sidebar):not(#sidebar-overlay) { margin-left: 0 !important; }
+                body > *:not(#sidebar):not(.sidebar-backdrop) { margin-left: 0 !important; }
                 #sidebar { left: -250px !important; }
                 #sidebar.active { left: 0 !important; }
             }
@@ -194,6 +201,8 @@
             elUserRoleBadge.className = `badge text-uppercase ${isSuperAdmin ? 'bg-warning text-dark' : (isAdmin ? 'bg-primary' : 'bg-secondary')}`;
             elUserRoleBadge.style.fontSize = '0.65rem';
         }
+
+        inicializarGestosSidebar();
     }
 
     if (document.getElementById('sidebar-container')) {
@@ -203,17 +212,53 @@
     }
 })();
 
-// Control de eventos globales y Overlay
-document.addEventListener('DOMContentLoaded', asegurarOverlayGlobal);
+// Control de eventos globales, Backdrop y Swipe
+document.addEventListener('DOMContentLoaded', () => {
+    asegurarBackdropGlobal();
+    inicializarGestosSidebar();
+});
 
-function asegurarOverlayGlobal() {
-    let overlay = document.getElementById('sidebar-overlay');
-    if (!overlay) {
-        overlay = document.createElement('div');
-        overlay.id = 'sidebar-overlay';
-        document.body.prepend(overlay);
+function asegurarBackdropGlobal() {
+    let backdrop = document.querySelector('.sidebar-backdrop');
+    if (!backdrop) {
+        backdrop = document.createElement('div');
+        backdrop.className = 'sidebar-backdrop';
+        backdrop.id = 'sidebar-backdrop';
+        document.body.appendChild(backdrop);
     }
-    overlay.onclick = cerrarSidebar;
+    backdrop.onclick = cerrarSidebar;
+    return backdrop;
+}
+
+// Variables para control de deslizamiento (Swipe)
+let touchStartX = 0;
+let touchStartY = 0;
+
+function inicializarGestosSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebar || sidebar.dataset.swipeAttached) return;
+    sidebar.dataset.swipeAttached = "true";
+
+    sidebar.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches.length > 0) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }
+    }, { passive: true });
+
+    sidebar.addEventListener('touchend', (e) => {
+        if (e.changedTouches && e.changedTouches.length > 0) {
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+            const diffX = touchStartX - touchEndX;
+            const diffY = Math.abs(touchStartY - touchEndY);
+
+            // Si el usuario desliza hacia la izquierda (diferencia de X > 50px)
+            if (diffX > 50 && diffX > diffY) {
+                cerrarSidebar();
+            }
+        }
+    }, { passive: true });
 }
 
 document.addEventListener('click', (event) => {
@@ -234,18 +279,33 @@ document.addEventListener('click', (event) => {
 
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebar-overlay');
+    if (sidebar && sidebar.classList.contains('active')) {
+        cerrarSidebar();
+    } else {
+        abrirSidebar();
+    }
+}
+
+function abrirSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const backdrop = asegurarBackdropGlobal();
     if (sidebar) {
-        sidebar.classList.toggle('active');
-        if (overlay) overlay.classList.toggle('active', sidebar.classList.contains('active'));
+        sidebar.classList.add('active');
+    }
+    if (backdrop) {
+        backdrop.classList.add('show');
     }
 }
 
 function cerrarSidebar() {
     const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebar-overlay');
-    if (sidebar) sidebar.classList.remove('active');
-    if (overlay) overlay.classList.remove('active');
+    const backdrop = document.querySelector('.sidebar-backdrop');
+    if (sidebar) {
+        sidebar.classList.remove('active');
+    }
+    if (backdrop) {
+        backdrop.classList.remove('show');
+    }
 }
 
 // Interceptor de Cierre de Sesión
