@@ -250,30 +250,22 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
-                <!-- Resumen de Totales del Turno -->
-                <div class="bg-light p-3 rounded-3 border mb-3">
-                    <div class="d-flex justify-content-between mb-1">
-                        <span class="text-secondary">Monto Inicial:</span>
-                        <strong id="resumenMontoInicial">$0.00</strong>
+                <div class="text-center mb-3">
+                    <div class="p-3 bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex mb-2">
+                        <i class="bi bi-safe fs-1"></i>
                     </div>
-                    <div class="d-flex justify-content-between mb-1">
-                        <span class="text-secondary">Ventas en Efectivo:</span>
-                        <strong id="resumenVentasEfectivo" class="text-success">$0.00</strong>
-                    </div>
-                    <div class="d-flex justify-content-between border-top pt-2 mt-2">
-                        <span class="fw-bold">Efectivo Esperado:</span>
-                        <strong id="resumenEfectivoEsperado" class="fs-5 text-primary">$0.00</strong>
-                    </div>
+                    <h6 class="fw-bold text-dark mb-1">Arqueo Físico del Cajón</h6>
+                    <p class="text-muted small mb-0">Cuente el efectivo físico en billetes y monedas en la caja.</p>
                 </div>
 
-                <form id="formCerrarCaja" onsubmit="procesarCierreCaja(event)">
+                <form id="formCerrarCaja" onsubmit="modalCerrarCaja(); return false;">
                     <div class="mb-3">
-                        <label class="form-label fw-bold text-secondary">Efectivo Físico Contado ($)</label>
-                        <div class="input-group input-group-lg">
-                            <span class="input-group-text bg-light fw-bold">$</span>
-                            <input type="number" step="0.01" min="0" id="montoFinalReal" class="form-control fw-bold" placeholder="0.00" required autocomplete="off">
+                        <label class="form-label fw-bold text-dark fs-6 mb-1">Ingrese el efectivo físico total en la caja *</label>
+                        <div class="input-group input-group-lg shadow-sm">
+                            <span class="input-group-text bg-success text-white fw-bold fs-4">$</span>
+                            <input type="number" step="0.01" min="0" id="montoFinalReal" class="form-control text-center fw-bold text-success fs-3" placeholder="0.00" required autocomplete="off">
                         </div>
-                        <small class="text-muted">Ingrese el total de dinero en billetes/monedas en el cajón.</small>
+                        <small class="text-muted text-center d-block mt-1">El sistema calculará automáticamente la diferencia con el arqueo teórico tras confirmar.</small>
                     </div>
 
                     <div class="mb-3">
@@ -283,7 +275,7 @@
 
                     <div class="d-grid gap-2 mt-4">
                         <button type="submit" id="btnConfirmarCierre" class="btn btn-danger btn-lg fw-bold">
-                            <i class="bi bi-box-arrow-left me-2"></i>Confirmar y Cerrar Caja
+                            <i class="bi bi-lock-fill me-2"></i>Confirmar y Cerrar Caja
                         </button>
                     </div>
                 </form>

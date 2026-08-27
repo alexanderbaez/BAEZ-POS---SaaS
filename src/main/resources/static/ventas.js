@@ -427,7 +427,96 @@ function calcularVuelto() {
     }
 }
 
-function cambiarCant(index, valor) {
+// ==========================================
+// 7.1 AUTORIZACIÓN POR PIN DE SUPERVISOR
+// ==========================================
+async function solicitarPinSupervisorSiEsVendedor(motivo = "realizar esta acción") {
+    const rawRole = (localStorage.getItem('baezpos_user_role') || 'VENDEDOR').toUpperCase().trim();
+    const esAdminOSuper = (rawRole === 'ADMIN' || rawRole === 'SUPER_ADMIN' || rawRole === 'SUPERVISOR' || rawRole === 'OWNER' || rawRole === 'ADMINISTRADOR');
+
+    // Si ya es Admin o Supervisor, no requiere autorización
+    if (esAdminOSuper) {
+        return true;
+    }
+
+    // Modal para solicitar PIN de Supervisor
+    const { value: pin, isConfirmed } = await Swal.fire({
+        title: '<span class="fs-5 fw-bold text-dark">🔐 PIN de Supervisor Requerido</span>',
+        html: `
+            <p class="text-muted small mb-3">Se requiere autorización de un Administrador o Supervisor para <strong>${motivo}</strong>.</p>
+            <div class="mb-2">
+                <input type="password" id="swal-input-pin" class="form-control text-center fs-3 fw-bold tracking-widest" 
+                       maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="••••" autocomplete="off" style="letter-spacing: 0.5rem;">
+            </div>
+            <small class="text-muted" style="font-size: 0.75rem;">Ingrese el PIN de 4 a 6 dígitos</small>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: '<i class="bi bi-shield-check me-1"></i> Autorizar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#2563eb',
+        cancelButtonColor: '#64748b',
+        allowOutsideClick: false,
+        didOpen: () => {
+            const input = document.getElementById('swal-input-pin');
+            if (input) input.focus();
+        },
+        preConfirm: () => {
+            const input = document.getElementById('swal-input-pin');
+            const val = input ? input.value.trim() : '';
+            if (!val || val.length < 4) {
+                Swal.showValidationMessage('Ingrese un PIN de al menos 4 dígitos');
+                return false;
+            }
+            return val;
+        }
+    });
+
+    if (!isConfirmed || !pin) {
+        return false;
+    }
+
+    try {
+        Swal.fire({
+            title: 'Verificando autorización...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        const respuesta = await apiFetch('/users/validate-pin', {
+            method: 'POST',
+            body: JSON.stringify({ pin: pin })
+        });
+
+        const esValido = (respuesta === true || respuesta?.valid === true);
+
+        if (esValido) {
+            Swal.close();
+            return true;
+        } else {
+            if (sndError) sndError.play().catch(() => {});
+            await Swal.fire({
+                icon: 'error',
+                title: 'PIN Inválido',
+                text: 'El PIN ingresado no pertenece a un Supervisor o Administrador de este comercio.',
+                confirmButtonColor: '#ef4444'
+            });
+            return false;
+        }
+    } catch (error) {
+        console.error("[PIN Supervisor] Error al validar:", error);
+        if (sndError) sndError.play().catch(() => {});
+        await Swal.fire({
+            icon: 'error',
+            title: 'Error de Validación',
+            text: 'No se pudo verificar el PIN de supervisor. Intente nuevamente.',
+            confirmButtonColor: '#ef4444'
+        });
+        return false;
+    }
+}
+
+async function cambiarCant(index, valor) {
     if (sistemaBloqueado) return;
     const item = CARRITO[index];
     const original = PRODUCTOS_DB.find(function buscarStockOriginal(p) { return p.id === item.id; });
@@ -450,13 +539,23 @@ function cambiarCant(index, valor) {
         return;
     }
 
-    item.cantidad = nuevaCant;
-    if (item.cantidad <= 0) CARRITO.splice(index, 1);
+    if (nuevaCant <= 0) {
+        const autorizado = await solicitarPinSupervisorSiEsVendedor(`eliminar ${item.name} del carrito`);
+        if (!autorizado) return;
+        CARRITO.splice(index, 1);
+    } else {
+        item.cantidad = nuevaCant;
+    }
     renderizarCarrito();
 }
 
-function eliminarItem(index) {
+async function eliminarItem(index) {
     if (sistemaBloqueado) return;
+    const item = CARRITO[index];
+    const nombreProd = item ? item.name : 'este producto';
+    const autorizado = await solicitarPinSupervisorSiEsVendedor(`eliminar "${nombreProd}" del carrito`);
+    if (!autorizado) return;
+
     CARRITO.splice(index, 1);
     renderizarCarrito();
 }
@@ -507,8 +606,11 @@ function setMetodo(metodo, el) {
     }
 }
 
-function cancelarVenta() {
+async function cancelarVenta() {
     if (sistemaBloqueado || CARRITO.length === 0) return;
+    const autorizado = await solicitarPinSupervisorSiEsVendedor("vaciar todo el carrito");
+    if (!autorizado) return;
+
     CARRITO = [];
     const pagaConEl = document.getElementById('pagaCon');
     if (pagaConEl) pagaConEl.value = '';
@@ -1816,7 +1918,8 @@ async function ejecutarAperturaCaja(payload) {
 }
 
 /**
- * Modal Responsive SweetAlert2 para CIERRE DE CAJA (Arqueo)
+ * Modal Responsive SweetAlert2 para CIERRE DE CAJA (Arqueo Ciego)
+ * En el arqueo ciego, NO se muestra el dinero teórico al cajero.
  */
 async function modalCerrarCaja() {
     if (!SESION_CAJA_ACTIVA) {
@@ -1824,23 +1927,8 @@ async function modalCerrarCaja() {
         return;
     }
 
-    let report = {};
-    try {
-        const resReport = await apiFetch('/sales/box-report');
-        if (resReport && resReport.ok) {
-            report = await resReport.json();
-        }
-    } catch (e) {
-        console.warn("[CashRegister] No se pudo obtener el reporte de caja previo:", e);
-    }
-
-    const fondoInicial = parseFloat(report.activeInitialAmount ?? report.initialAmount ?? SESION_CAJA_ACTIVA.initialAmount ?? 0);
-    const ventasEfectivo = parseFloat(report.activeCashSales ?? report.cashSalesToday ?? SESION_CAJA_ACTIVA.totalCashSales ?? 0);
-    const cobrosCtaCte = parseFloat(report.activeCustomerPayments ?? report.customerPaymentsToday ?? SESION_CAJA_ACTIVA.totalCustomerPayments ?? 0);
-    const gastosEfectivo = parseFloat(report.activeExpenses ?? report.expensesToday ?? SESION_CAJA_ACTIVA.totalExpenses ?? 0);
-
     const { value: formValues } = await Swal.fire({
-        title: '<span class="fs-6 fs-sm-5 fw-bold text-dark">🔒 Cierre de Caja & Arqueo</span>',
+        title: '<span class="fs-5 fw-bold text-dark">🔒 Cierre de Caja & Arqueo Ciego</span>',
         width: '100%',
         customClass: {
             container: 'p-1 p-sm-3',
@@ -1848,42 +1936,30 @@ async function modalCerrarCaja() {
             htmlContainer: 'mx-0 my-1 px-2 px-sm-3 text-start'
         },
         html: `
-            <!-- Card Compacta de Resumen del Turno -->
-            <div class="bg-light p-2.5 p-sm-3 rounded-3 border mb-2.5">
-                <div class="row g-2 align-items-center fs-7">
-                    <div class="col-6 d-flex flex-column">
-                        <span class="text-muted small">Fondo Inicial:</span>
-                        <span class="fw-bold text-dark">$${formatearMonedaSegura(fondoInicial)}</span>
-                    </div>
-                    <div class="col-6 d-flex flex-column text-end">
-                        <span class="text-muted small">Ventas Efectivo:</span>
-                        <span class="fw-bold text-success">+$${formatearMonedaSegura(ventasEfectivo)}</span>
-                    </div>
-                    <div class="col-6 d-flex flex-column">
-                        <span class="text-muted small">Cobros Cta. Cte.:</span>
-                        <span class="fw-bold text-primary">+$${formatearMonedaSegura(cobrosCtaCte)}</span>
-                    </div>
-                    <div class="col-6 d-flex flex-column text-end">
-                        <span class="text-muted small">Gastos Efectivo:</span>
-                        <span class="fw-bold text-danger">-$${formatearMonedaSegura(gastosEfectivo)}</span>
-                    </div>
+            <div class="text-center mb-3">
+                <div class="p-3 bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex mb-2">
+                    <i class="bi bi-safe fs-1"></i>
                 </div>
+                <h6 class="fw-bold text-dark mb-1">Arqueo Físico del Cajón</h6>
+                <p class="text-muted small mb-0">Cuente el efectivo físico disponible en billetes y monedas.</p>
             </div>
 
-            <!-- Input de Monto Contado -->
-            <div class="mb-2">
-                <label class="form-label small fw-bold text-dark mb-1">Efectivo Real Físico en Cajón ($) *</label>
-                <div class="input-group">
-                    <span class="input-group-text bg-success-subtle text-success fw-bold fs-6">$</span>
-                    <input id="swal-monto-declarado" type="number" step="0.01" inputmode="decimal" class="form-control fw-bold text-success fs-5" placeholder="0.00">
+            <!-- Input Gigante de Monto Contado (Arqueo Ciego) -->
+            <div class="mb-3">
+                <label class="form-label fw-bold text-dark fs-6 mb-1">Ingrese el efectivo físico total en la caja *</label>
+                <div class="input-group input-group-lg shadow-sm">
+                    <span class="input-group-text bg-success text-white fw-bold fs-4">$</span>
+                    <input id="swal-monto-declarado" type="number" step="0.01" inputmode="decimal" class="form-control text-center fw-bold text-success fs-3" placeholder="0.00" autocomplete="off">
                 </div>
-                <div class="form-text text-muted" style="font-size: 0.72rem;">Conteo físico del dinero en caja.</div>
+                <div class="form-text text-muted text-center mt-1.5" style="font-size: 0.75rem;">
+                    <i class="bi bi-shield-lock me-1"></i> El sistema auditará la diferencia contra el cálculo teórico tras confirmar.
+                </div>
             </div>
 
             <!-- Observaciones -->
             <div class="mb-1">
-                <label class="form-label small fw-bold text-secondary mb-1">Notas / Observaciones</label>
-                <textarea id="swal-notas-cierre" class="form-control form-control-sm" rows="2" placeholder="Opcional: Aclaraciones del turno..."></textarea>
+                <label class="form-label small fw-bold text-secondary mb-1">Notas / Observaciones del Turno</label>
+                <textarea id="swal-notas-cierre" class="form-control" rows="2" placeholder="Opcional: Aclaraciones del turno, retiros, etc..."></textarea>
             </div>
         `,
         focusConfirm: false,
@@ -1966,15 +2042,15 @@ async function mostrarResultadoArqueoModal(dto) {
     const diferencia = parseFloat(dto.difference ?? 0);
 
     let iconType = 'success';
-    let titleHeader = '¡Caja Cerrada!';
-    let diffBadge = `<span class="badge bg-success-subtle text-success fs-7 border border-success-subtle px-2.5 py-1.5 rounded-pill">Diferencia: $0,00</span>`;
+    let titleHeader = '¡Caja Cerrada Exitosamente!';
+    let diffBadge = `<span class="badge bg-success-subtle text-success fs-7 border border-success-subtle px-2.5 py-1.5 rounded-pill">Diferencia: $0,00 (Cuadrada)</span>`;
     let estadoTexto = 'El dinero físico coincide con el cálculo del sistema.';
 
     if (diferencia < 0) {
         iconType = 'warning';
         titleHeader = 'Cierre con FALTANTE';
         diffBadge = `<span class="badge bg-danger-subtle text-danger fs-7 border border-danger-subtle px-2.5 py-1.5 rounded-pill">Faltante: -$${formatearMonedaSegura(Math.abs(diferencia))}</span>`;
-        estadoTexto = 'Se detectó un faltante de dinero respecto al sistema.';
+        estadoTexto = 'Se detectó un faltante de dinero respecto al cálculo del sistema.';
     } else if (diferencia > 0) {
         iconType = 'info';
         titleHeader = 'Cierre con SOBRANTE';
@@ -1982,7 +2058,7 @@ async function mostrarResultadoArqueoModal(dto) {
         estadoTexto = 'Se registró más efectivo que el calculado por el sistema.';
     }
 
-    await Swal.fire({
+    const resultado = await Swal.fire({
         icon: iconType,
         title: `<span class="fs-6 fs-sm-5 fw-bold text-dark">${titleHeader}</span>`,
         width: '100%',
@@ -1997,35 +2073,35 @@ async function mostrarResultadoArqueoModal(dto) {
                 <p class="text-muted small mt-1.5 mb-0" style="font-size: 0.78rem;">${estadoTexto}</p>
             </div>
 
-            <!-- Comparativa Principal -->
+            <!-- Comparativa Principal (Auditoría Arqueo Ciego) -->
             <div class="bg-light p-2.5 p-sm-3 rounded-3 border mb-2.5 fs-7">
                 <div class="d-flex justify-content-between align-items-center mb-1.5">
-                    <span class="text-secondary">Efectivo Esperado:</span>
+                    <span class="text-secondary">Efectivo Teórico (Sistema):</span>
                     <span class="fw-bold text-dark">$${formatearMonedaSegura(sistema)}</span>
                 </div>
                 <div class="d-flex justify-content-between align-items-center mb-1.5">
-                    <span class="text-secondary">Efectivo Declarado:</span>
+                    <span class="text-secondary">Efectivo Declarado (Físico):</span>
                     <span class="fw-bold text-success">$${formatearMonedaSegura(declarado)}</span>
                 </div>
                 <hr class="my-1.5">
                 <div class="d-flex justify-content-between align-items-center">
-                    <span class="fw-bold text-dark">Resultado Arqueo:</span>
+                    <span class="fw-bold text-dark">Diferencia Final:</span>
                     <span class="fw-bold fs-6 ${diferencia < 0 ? 'text-danger' : (diferencia > 0 ? 'text-primary' : 'text-success')}">
                         ${diferencia > 0 ? '+' : ''}$${formatearMonedaSegura(diferencia)}
                     </span>
                 </div>
             </div>
 
-            <!-- Resumen Operativo en Lista Flex (Zero-Break Overflow) -->
+            <!-- Resumen Operativo en Lista Flex -->
             <div class="bg-white p-2.5 rounded-3 border text-start fs-7">
-                <span class="fw-bold text-secondary d-block mb-1.5" style="font-size: 0.75rem;">Resumen Operativo del Turno:</span>
+                <span class="fw-bold text-secondary d-block mb-1.5" style="font-size: 0.75rem;">Desglose del Turno:</span>
 
                 <div class="d-flex justify-content-between align-items-center py-0.5 border-bottom border-light">
                     <span class="text-muted small">+ Fondo Inicial:</span>
                     <span class="fw-semibold text-dark">$${formatearMonedaSegura(dto.initialAmount)}</span>
                 </div>
                 <div class="d-flex justify-content-between align-items-center py-0.5 border-bottom border-light">
-                    <span class="text-muted small">+ Ventas Efec.:</span>
+                    <span class="text-muted small">+ Ventas en Efectivo:</span>
                     <span class="fw-semibold text-dark">$${formatearMonedaSegura(dto.totalCashSales)}</span>
                 </div>
                 <div class="d-flex justify-content-between align-items-center py-0.5 border-bottom border-light">
@@ -2033,13 +2109,119 @@ async function mostrarResultadoArqueoModal(dto) {
                     <span class="fw-semibold text-dark">$${formatearMonedaSegura(dto.totalCustomerPayments)}</span>
                 </div>
                 <div class="d-flex justify-content-between align-items-center py-0.5">
-                    <span class="text-muted small">- Gastos Efec.:</span>
+                    <span class="text-muted small">- Gastos en Efectivo:</span>
                     <span class="fw-semibold text-danger">-$${formatearMonedaSegura(dto.totalExpenses)}</span>
                 </div>
             </div>
         `,
-        confirmButtonText: '<i class="bi bi-check-circle-fill me-1"></i> Entendido',
-        confirmButtonColor: '#0d6efd',
+        showCancelButton: true,
+        confirmButtonText: '<i class="bi bi-printer me-1"></i> Imprimir Comprobante',
+        cancelButtonText: 'Finalizar',
+        confirmButtonColor: '#2563eb',
+        cancelButtonColor: '#64748b',
         allowOutsideClick: false
     });
+
+    if (resultado.isConfirmed) {
+        imprimirTicketCierreCaja(dto);
+    }
+}
+
+/**
+ * Genera el ticket térmico oficial de cierre de caja con desglose de Teórico, Declarado y Diferencia
+ */
+function imprimirTicketCierreCaja(dto) {
+    const empresa = DATOS_EMPRESA || { name: 'BÁEZ POS', address: '', phone: '', taxId: '' };
+    const fechaCierre = dto.closedAt ? new Date(dto.closedAt).toLocaleString('es-AR') : new Date().toLocaleString('es-AR');
+    const fechaApertura = dto.openedAt ? new Date(dto.openedAt).toLocaleString('es-AR') : '-';
+    const cajero = dto.userName || localStorage.getItem('baezpos_user_name') || 'Admin';
+    const inicial = parseFloat(dto.initialAmount ?? 0);
+    const ventasEfe = parseFloat(dto.totalCashSales ?? 0);
+    const cobrosEfe = parseFloat(dto.totalCustomerPayments ?? 0);
+    const gastosEfe = parseFloat(dto.totalExpenses ?? 0);
+    const teorico = parseFloat(dto.systemAmount ?? 0);
+    const declarado = parseFloat(dto.declaredAmount ?? 0);
+    const diferencia = parseFloat(dto.difference ?? 0);
+
+    const ticketWindow = window.open('', '_blank', 'width=380,height=600');
+    if (!ticketWindow) {
+        Swal.fire('Atención', 'Permite las ventanas emergentes en tu navegador para imprimir el comprobante de cierre.', 'info');
+        return;
+    }
+
+    let diffText = `$${formatearMonedaSegura(Math.abs(diferencia))}`;
+    let diffLabel = "DIFERENCIA:";
+    if (diferencia < 0) {
+        diffLabel = "FALTANTE:";
+        diffText = `-$${formatearMonedaSegura(Math.abs(diferencia))}`;
+    } else if (diferencia > 0) {
+        diffLabel = "SOBRANTE:";
+        diffText = `+$${formatearMonedaSegura(diferencia)}`;
+    } else {
+        diffLabel = "DIFERENCIA:";
+        diffText = `$0,00 (CUADRADA)`;
+    }
+
+    const htmlTicket = `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="utf-8">
+            <title>Ticket de Cierre de Caja - #${dto.sessionNumber || 1}</title>
+            <style>
+                @page { margin: 0; size: 80mm auto; }
+                body {
+                    font-family: 'Courier New', Courier, monospace;
+                    font-size: 12px;
+                    line-height: 1.3;
+                    margin: 0;
+                    padding: 10px;
+                    width: 280px;
+                    color: #000;
+                    background: #fff;
+                }
+                .text-center { text-align: center; }
+                .text-end { text-align: right; }
+                .fw-bold { font-weight: bold; }
+                .divider { border-top: 1px dashed #000; margin: 6px 0; }
+                .row { display: flex; justify-content: space-between; margin: 3px 0; }
+                .fs-lg { font-size: 13px; }
+                .fs-title { font-size: 15px; font-weight: bold; }
+            </style>
+        </head>
+        <body onload="window.print();">
+            <div class="text-center">
+                <div class="fs-title">${(empresa.name || 'BÁEZ POS').toUpperCase()}</div>
+                <div>${empresa.address || ''}</div>
+                <div>CUIT: ${empresa.taxId || 'S/C'}</div>
+                <div class="divider"></div>
+                <div class="fw-bold">COMPROBANTE DE CIERRE DE CAJA</div>
+                <div>Caja Turno #${dto.sessionNumber || 1}</div>
+                <div class="divider"></div>
+            </div>
+            <div class="row"><span>Apertura:</span><span>${fechaApertura}</span></div>
+            <div class="row"><span>Cierre:</span><span>${fechaCierre}</span></div>
+            <div class="row"><span>Cajero/a:</span><span>${cajero}</span></div>
+            <div class="divider"></div>
+            <div class="row"><span>+ Fondo Inicial:</span><span>$${formatearMonedaSegura(inicial)}</span></div>
+            <div class="row"><span>+ Ventas Efectivo:</span><span>$${formatearMonedaSegura(ventasEfe)}</span></div>
+            <div class="row"><span>+ Cobros Cta. Cte.:</span><span>$${formatearMonedaSegura(cobrosEfe)}</span></div>
+            <div class="row"><span>- Gastos Efectivo:</span><span>-$${formatearMonedaSegura(gastosEfe)}</span></div>
+            <div class="divider"></div>
+            <div class="row fw-bold"><span>EFECTIVO TEÓRICO:</span><span>$${formatearMonedaSegura(teorico)}</span></div>
+            <div class="row fw-bold"><span>EFECTIVO DECLARADO:</span><span>$${formatearMonedaSegura(declarado)}</span></div>
+            <div class="divider"></div>
+            <div class="row fw-bold fs-lg"><span>${diffLabel}</span><span>${diffText}</span></div>
+            ${dto.notes ? `<div class="divider"></div><div><strong>Notas:</strong> ${dto.notes}</div>` : ''}
+            <div class="divider"></div>
+            <div class="text-center" style="margin-top: 25px;">
+                <div>_____________________________</div>
+                <div style="font-size: 10px; margin-top: 4px;">Firma del Responsable / Cajero</div>
+            </div>
+        </body>
+        </html>
+    `;
+
+    ticketWindow.document.write(htmlTicket);
+    ticketWindow.document.close();
 }

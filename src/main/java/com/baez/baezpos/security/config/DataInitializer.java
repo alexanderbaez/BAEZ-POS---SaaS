@@ -30,8 +30,14 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) throws Exception {
-        if (userRepository.existsByEmail(superAdminEmail)) {
-            log.info("SUPER_ADMIN ya existe en el sistema. Omitiendo inicialización para preservar credenciales: {}", superAdminEmail);
+        Optional<User> superAdminOpt = userRepository.findByEmail(superAdminEmail);
+        if (superAdminOpt.isPresent()) {
+            User existing = superAdminOpt.get();
+            if (existing.getSecurityPin() == null) {
+                existing.setSecurityPin("1234");
+                userRepository.save(existing);
+            }
+            log.info("SUPER_ADMIN verificado en el sistema: {}", superAdminEmail);
             return;
         }
 
@@ -42,6 +48,7 @@ public class DataInitializer implements CommandLineRunner {
                 .role(Role.SUPER_ADMIN)
                 .active(true)
                 .company(null)
+                .securityPin("1234")
                 .version(0L)
                 .build();
 

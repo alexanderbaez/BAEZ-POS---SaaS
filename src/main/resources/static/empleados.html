@@ -101,10 +101,16 @@
                         <input type="password" class="form-control" id="empPassword" autocomplete="new-password">
                         <small class="text-muted d-none" style="font-size: 0.75rem;">Dejar en blanco para no cambiarla.</small>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-secondary">PIN de Seguridad / Supervisor (Opcional)</label>
+                        <input type="password" class="form-control" id="empPin" maxlength="6" inputmode="numeric" placeholder="4 a 6 dígitos (Ej: 1234)">
+                        <small class="text-muted" style="font-size: 0.72rem;">Permite autorizar cancelaciones y arqueos en el Punto de Venta.</small>
+                    </div>
                     <div class="mb-4">
                         <label class="form-label fw-bold small text-secondary">Rol Operativo</label>
                         <select class="form-select" id="empRol" required>
                             <option value="VENDEDOR">Vendedor</option>
+                            <option value="SUPERVISOR">Supervisor</option>
                             <option value="ADMIN">Administrador</option>
                         </select>
                     </div>

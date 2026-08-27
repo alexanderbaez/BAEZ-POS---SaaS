@@ -11,4 +11,5 @@ public interface UserService {
     UserResponseDTO updateUser(Long id, UserRequestDTO dto);
     void deleteUser(Long id);
     void updatePasswordOnly(String email, String newPassword);
+    boolean validatePin(String pin);
 }

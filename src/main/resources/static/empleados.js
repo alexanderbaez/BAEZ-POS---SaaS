@@ -65,8 +65,10 @@ async function cargarEmpleados() {
 
             // Mapeo de badges alineado exactamente con la Enum de Java
             let badgeClass = 'vendedor';
-            if (rol === 'ADMIN' || rol.includes('SUPER')) {
+            if (rol === 'ADMIN' || rol.includes('SUPER_ADMIN')) {
                 badgeClass = 'admin';
+            } else if (rol === 'SUPERVISOR') {
+                badgeClass = 'supervisor';
             }
 
             const userJsonSeguro = JSON.stringify(user).replace(/"/g, '&quot;');
@@ -135,6 +137,13 @@ if (formEmpleado) {
         } else if (!isEditing) {
             Swal.fire('Atención', 'La contraseña es obligatoria para registrar un nuevo usuario.', 'warning');
             return;
+        }
+
+        const pin = document.getElementById('empPin') ? document.getElementById('empPin').value.trim() : '';
+        if (pin) {
+            payload.securityPin = pin;
+        } else if (isEditing) {
+            payload.securityPin = "";
         }
 
         try {
@@ -208,6 +217,9 @@ function abrirEdicion(user) {
     document.getElementById('empEmail').value = user.email || '';
     document.getElementById('empRol').value = user.role || 'VENDEDOR';
     document.getElementById('empPassword').value = '';
+    if (document.getElementById('empPin')) {
+        document.getElementById('empPin').value = user.securityPin || '';
+    }
 
     const smallHint = document.querySelector('#passwordContainer small');
     if (smallHint) smallHint.classList.remove('d-none');

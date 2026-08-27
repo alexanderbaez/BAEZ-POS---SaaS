@@ -65,4 +65,11 @@ public class UserController {
         userService.updatePasswordOnly(email, newPassword);
         return ResponseEntity.ok(MessageResponseDTO.of("Contraseña actualizada correctamente"));
     }
+
+    @PostMapping("/validate-pin")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Boolean> validatePin(@RequestBody Map<String, String> request) {
+        String pin = request != null ? request.get("pin") : null;
+        return ResponseEntity.ok(userService.validatePin(pin));
+    }
 }

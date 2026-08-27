@@ -17,4 +17,6 @@ public class UserRequestDTO {
     private String password; // Opcional en actualizaciones
 
     private Role role;
+
+    private String securityPin; // PIN numérico opcional (4-6 dígitos)
 }

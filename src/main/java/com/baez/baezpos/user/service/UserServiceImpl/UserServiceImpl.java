@@ -77,6 +77,10 @@ public class UserServiceImpl implements UserService {
                 existingUser.setPassword(passwordEncoder.encode(dto.getPassword()));
             }
 
+            if (dto.getSecurityPin() != null) {
+                existingUser.setSecurityPin(dto.getSecurityPin().trim().isEmpty() ? null : dto.getSecurityPin().trim());
+            }
+
             existingUser.setActive(true);
             return convertToDTO(userRepository.save(existingUser));
         }
@@ -101,6 +105,10 @@ public class UserServiceImpl implements UserService {
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setRole(targetRole);
         user.setActive(true);
+
+        if (dto.getSecurityPin() != null && !dto.getSecurityPin().trim().isEmpty()) {
+            user.setSecurityPin(dto.getSecurityPin().trim());
+        }
 
         if (companyId != null) {
             Company company = companyRepository.findById(companyId)
@@ -177,6 +185,10 @@ public class UserServiceImpl implements UserService {
             existing.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
 
+        if (dto.getSecurityPin() != null) {
+            existing.setSecurityPin(dto.getSecurityPin().trim().isEmpty() ? null : dto.getSecurityPin().trim());
+        }
+
         return convertToDTO(userRepository.save(existing));
     }
 
@@ -208,6 +220,16 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public boolean validatePin(String pin) {
+        if (pin == null || pin.trim().isEmpty()) {
+            return false;
+        }
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        return userRepository.existsValidSupervisorPin(pin.trim(), companyId);
+    }
+
     private Role validateRoleAssignment(Role requestedRole) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         boolean isSuperAdmin = auth != null && auth.getAuthorities().stream()
@@ -218,10 +240,10 @@ public class UserServiceImpl implements UserService {
         }
 
         if (!isSuperAdmin) {
-            if (requestedRole != null && requestedRole != Role.VENDEDOR) {
-                throw new IllegalArgumentException("Los administradores de empresa únicamente pueden crear o asignar usuarios con el rol VENDEDOR.");
+            if (requestedRole != null && requestedRole != Role.VENDEDOR && requestedRole != Role.SUPERVISOR) {
+                throw new IllegalArgumentException("Los administradores de empresa únicamente pueden crear o asignar usuarios con rol VENDEDOR o SUPERVISOR.");
             }
-            return Role.VENDEDOR;
+            return requestedRole != null ? requestedRole : Role.VENDEDOR;
         }
 
         return requestedRole != null ? requestedRole : Role.VENDEDOR;
@@ -234,6 +256,7 @@ public class UserServiceImpl implements UserService {
                 .email(user.getEmail())
                 .role(user.getRole())
                 .active(user.getActive())
+                .securityPin(user.getSecurityPin())
                 .build();
     }
 }
