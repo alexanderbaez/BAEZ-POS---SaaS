@@ -786,3 +786,111 @@ body.login-page {
     position: static !important;
   }
 }
+
+/* ==========================================================================
+   PANEL MAESTRO SUPER ADMIN - TEMA OSCURO EXCLUSIVO (.master-theme-dark)
+   ========================================================================== */
+.master-theme-dark {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+.master-theme-dark .card {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+}
+
+.master-theme-dark h1,
+.master-theme-dark h2,
+.master-theme-dark h3,
+.master-theme-dark h4,
+.master-theme-dark h5,
+.master-theme-dark h6,
+.master-theme-dark label,
+.master-theme-dark .form-label,
+.master-theme-dark .form-group label {
+  color: #f8fafc !important;
+}
+
+.master-theme-dark .text-muted,
+.master-theme-dark .kpi-label,
+.master-theme-dark .text-subtext {
+  color: #94a3b8 !important;
+}
+
+.master-theme-dark .form-control,
+.master-theme-dark .form-select {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+}
+
+.master-theme-dark .form-control:focus,
+.master-theme-dark .form-select:focus {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25) !important;
+}
+
+.master-theme-dark .form-control::placeholder {
+  color: #64748b !important;
+}
+
+.master-theme-dark .form-select option {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+.master-theme-dark .table {
+  color: #f8fafc !important;
+}
+
+.master-theme-dark .table thead th {
+  background-color: #0f172a !important;
+  color: #cbd5e1 !important;
+  border-bottom: 1px solid #334155 !important;
+}
+
+.master-theme-dark .table tbody td {
+  border-bottom: 1px solid rgba(51, 65, 85, 0.5) !important;
+  color: #f8fafc !important;
+}
+
+.master-theme-dark .table tbody tr:hover td {
+  background-color: rgba(51, 65, 85, 0.4) !important;
+}
+
+.master-theme-dark .modal-content {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+}
+
+.master-theme-dark .modal-header {
+  border-bottom: 1px solid #334155 !important;
+}
+
+.master-theme-dark .modal-footer {
+  border-top: 1px solid #334155 !important;
+  background-color: #0f172a !important;
+}
+
+.master-theme-dark .page-link {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.master-theme-dark .page-item.active .page-link {
+  background-color: #2563eb !important;
+  border-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+.master-theme-dark .page-item.disabled .page-link {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #64748b !important;
+}
