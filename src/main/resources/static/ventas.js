@@ -1330,6 +1330,9 @@ async function finalizarVenta() {
     const configLocal = JSON.parse(localStorage.getItem('config_comercio') || '{}');
     const datosEmpresaContext = (typeof DATOS_EMPRESA !== 'undefined' && DATOS_EMPRESA) ? DATOS_EMPRESA : configLocal;
 
+    const chkEmitirFiscal = document.getElementById('chkEmitirFactura');
+    const emitirComprobanteFiscal = chkEmitirFiscal ? chkEmitirFiscal.checked : (String(datosEmpresaContext.hasTaxData) === "true");
+
     // DTO Sanitizado
     const saleRequestDTO = {
         cashRegisterId: SESION_CAJA_ACTIVA ? SESION_CAJA_ACTIVA.id : null,
@@ -1346,7 +1349,8 @@ async function finalizarVenta() {
         surchargeRate: porcentajeRecargo,
         paymentMethod: METODO_PAGO,
         customerId: clienteSeleccionado ? clienteSeleccionado.id : null,
-        isFiscal: String(datosEmpresaContext.hasTaxData) === "true",
+        isFiscal: emitirComprobanteFiscal,
+        emitInvoice: emitirComprobanteFiscal,
         amountPaid: METODO_PAGO === 'EFECTIVO' ? (pagaCon > 0 ? pagaCon : totalFinal) : totalFinal
     };
 
@@ -1720,16 +1724,13 @@ function generarPlantillaHTMLTicket(venta) {
         }
     }
 
-    const tipoComprobante = fiscalActivo
-        ? (venta.tipoComprobante || infoEmpresa.tipoComprobante || 'FACTURA C').toUpperCase()
-        : (venta.tipoComprobante || 'TICKET INTERNO');
+    const tipoComprobante = (venta.invoiceType || venta.tipoComprobante || infoEmpresa.tipoComprobante || (fiscalActivo ? 'FACTURA C' : 'TICKET INTERNO')).toUpperCase();
 
     const cae = venta.cae || '';
-    const caeVto = venta.caeVto || '';
+    const caeVto = venta.caeExpiration || venta.caeVto || '';
 
-    // Si nroComprobante viene de Java (Ej: "00001-00000001"), lo respeta.
-    // Si no, lo genera con nroTicket / id.
-    const nroComprobante = venta.nroComprobante || `00001-${String(venta.numeroTicket || venta.id || 1).padStart(8, '0')}`;
+    // Si nroComprobante/invoiceNumber viene del backend, lo respeta.
+    const nroComprobante = venta.invoiceNumber || venta.nroComprobante || `00001-${String(venta.numeroTicket || venta.id || 1).padStart(8, '0')}`;
     const fechaVenta = venta.saleDate ? new Date(venta.saleDate).toLocaleString('es-AR') : new Date().toLocaleString('es-AR');
     const cajeroNombre = escapeHtml(venta.userName || (typeof localStorage !== 'undefined' ? localStorage.getItem('baezpos_user_name') : '') || 'Admin').toUpperCase();
     const metodoPago = (venta.paymentMethod || 'EFECTIVO').replace(/_/g, ' ').toUpperCase();
@@ -1744,13 +1745,13 @@ function generarPlantillaHTMLTicket(venta) {
     const subtotalProductos = (totalFinal - recargoMonto) + descuentoMonto;
 
     let qrText = '';
-    if (fiscalActivo && cae) {
+    if (cae) {
         const cuitLimpio = cuitLocal.replace(/\D/g, '');
         const cuitClienteLimpio = cuitCliente.replace(/\D/g, '');
 
-        // Extraemos solo el número secuencial del comprobante "00001-00000005" -> 5
-        const numeroComprobanteEntero = venta.nroComprobante
-            ? parseInt(venta.nroComprobante.split('-')[1], 10)
+        // Extraemos el número secuencial del comprobante "0001-00000005" -> 5
+        const numeroComprobanteEntero = nroComprobante.includes('-')
+            ? parseInt(nroComprobante.split('-')[1], 10)
             : (venta.numeroTicket || venta.id || 1);
 
         const datosQr = {
@@ -1880,13 +1881,15 @@ function generarPlantillaHTMLTicket(venta) {
                         <span class="total-amount">$${utilFormatearMoneda(totalFinal)}</span>
                     </div>
                 </div>
-                ${(fiscalActivo && cae) ? `
-                    <div class="arca-container">
-                        <div class="arca-logo">ARCA / AFIP</div>
-                        <div class="small-info" style="font-size: 8px;">Comprobante Autorizado Electrónicamente</div>
-                        <div class="qr-box" id="qrcode"></div>
-                        <div class="cae-info">CAE: ${cae}</div>
-                        <div class="cae-info">Vto. CAE: ${caeVto}</div>
+                ${cae ? `
+                    <div class="arca-container" style="border-top: 1px dashed #0f172a; margin-top: 10px; padding-top: 8px; text-align: left;">
+                        <div class="arca-logo" style="text-align: center; font-weight: 900; font-size: 11px; letter-spacing: 2px;">ARCA / AFIP</div>
+                        <div class="small-info center" style="font-size: 8px; margin-bottom: 6px; text-align: center;">Comprobante Autorizado Electrónicamente</div>
+                        ${qrText ? `<div class="qr-box" id="qrcode" style="display: flex; justify-content: center; margin: 6px 0;"></div>` : ''}
+                        <div class="cae-info" style="font-size: 8.5px; font-weight: 700; margin-top: 4px;">CUIT: ${cuitLocal}</div>
+                        <div class="cae-info" style="font-size: 8.5px; font-weight: 700;">Comprobante: ${tipoComprobante} Nro: ${nroComprobante}</div>
+                        <div class="cae-info" style="font-size: 8.5px; font-weight: 700;">CAE: ${cae}</div>
+                        <div class="cae-info" style="font-size: 8.5px; font-weight: 700;">Vto. CAE: ${caeVto}</div>
                     </div>
                 ` : ''}
                 <div class="ticket-footer">
@@ -1895,7 +1898,7 @@ function generarPlantillaHTMLTicket(venta) {
                     <div class="powered">BAEZPOS v3.5 - POWERED BY BAEZ ALEXANDER</div>
                 </div>
                 <script>
-                    if (${Boolean(fiscalActivo && cae && qrText)}) {
+                    if (${Boolean(cae && qrText)}) {
                         try {
                             new QRCode(document.getElementById("qrcode"), {
                                 text: "${qrText}",

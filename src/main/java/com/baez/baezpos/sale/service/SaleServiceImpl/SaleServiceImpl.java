@@ -56,6 +56,7 @@ public class SaleServiceImpl implements SaleService {
     private final ExpenseRepository expenseRepository;
     private final AuditService auditService;
     private final CashRegisterSessionRepository cashRegisterSessionRepository;
+    private final com.baez.baezpos.afip.service.AfipBillingService afipBillingService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -94,11 +95,6 @@ public class SaleServiceImpl implements SaleService {
         BigDecimal recargo = saleDTO.surcharge() != null ? saleDTO.surcharge() : BigDecimal.ZERO;
         BigDecimal porcentajeRecargo = saleDTO.surchargeRate() != null ? saleDTO.surchargeRate() : BigDecimal.ZERO;
         BigDecimal descuento = saleDTO.discount() != null ? saleDTO.discount() : BigDecimal.ZERO;
-
-        Long siguienteNumeroTicket = (company.getLastTicketNumber() != null ? company.getLastTicketNumber() : 0L) + 1L;
-        company.setLastTicketNumber(siguienteNumeroTicket);
-
-        String nroComprobanteFormateado = String.format("00001-%08d", siguienteNumeroTicket);
         String paymentMethodClean = normalizePaymentMethod(saleDTO.paymentMethod());
 
         Sale sale = Sale.builder()
@@ -113,10 +109,6 @@ public class SaleServiceImpl implements SaleService {
                 .paymentMethod(paymentMethodClean)
                 .canceled(false)
                 .total(BigDecimal.ZERO)
-                .nroComprobante(nroComprobanteFormateado)
-                .tipoComprobante(Boolean.TRUE.equals(saleDTO.isFiscal()) ? "FACTURA C" : "TICKET INTERNO")
-                .cae(Boolean.TRUE.equals(saleDTO.isFiscal()) ? "76543210987654" : null)
-                .caeVto(Boolean.TRUE.equals(saleDTO.isFiscal()) ? LocalDate.now().plusDays(10).toString() : null)
                 .build();
 
         List<Long> productIds = saleDTO.items().stream().map(SaleItemRequestDTO::productId).toList();
@@ -156,6 +148,22 @@ public class SaleServiceImpl implements SaleService {
 
         BigDecimal totalFinal = subtotalAcumulado.add(recargo).subtract(descuento);
         sale.setTotal(totalFinal.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : totalFinal);
+
+        // ==========================================
+        // EMISIÓN FISCAL AFIP WSFEv1
+        // ==========================================
+        if (saleDTO.shouldEmitInvoice()) {
+            afipBillingService.processFiscalSale(sale, company);
+        } else {
+            Long siguienteNumeroTicket = (company.getLastTicketNumber() != null ? company.getLastTicketNumber() : 0L) + 1L;
+            company.setLastTicketNumber(siguienteNumeroTicket);
+            String nroComprobanteFormateado = String.format("00001-%08d", siguienteNumeroTicket);
+
+            sale.setInvoiceType("TICKET INTERNO");
+            sale.setTipoComprobante("TICKET INTERNO");
+            sale.setInvoiceNumber(nroComprobanteFormateado);
+            sale.setNroComprobante(nroComprobanteFormateado);
+        }
 
         Sale savedSale = saleRepository.save(sale);
 
@@ -534,7 +542,10 @@ public class SaleServiceImpl implements SaleService {
                 sale.getCae(),
                 sale.getCaeVto(),
                 sale.getTipoComprobante(),
-                sale.getNroComprobante()
+                sale.getNroComprobante(),
+                sale.getInvoiceType(),
+                sale.getInvoiceNumber(),
+                sale.getCaeExpiration()
         );
     }
 }

@@ -111,6 +111,14 @@ public class MasterAdminService implements MasterAdmin {
         company.setExpirationDate(dto.getExpirationDate());
         company.setActive(dto.getActive());
         company.setTicketMessage(dto.getTicketMessage());
+        if (dto.getHasTaxData() != null) company.setHasTaxData(dto.getHasTaxData());
+        if (dto.getAfipEnvironment() != null) company.setAfipEnvironment(dto.getAfipEnvironment());
+        if (dto.getPosNumber() != null) company.setPosNumber(dto.getPosNumber());
+        if (dto.getCuit() != null) company.setCuit(dto.getCuit());
+        if (dto.getCertPassword() != null) company.setCertPassword(dto.getCertPassword());
+        if (dto.getIibb() != null) company.setIibb(dto.getIibb());
+        if (dto.getInicioActividades() != null) company.setInicioActividades(dto.getInicioActividades());
+        if (dto.getCondicionIva() != null) company.setCondicionIva(dto.getCondicionIva());
 
         if (dto.getOwnerPassword() != null && !dto.getOwnerPassword().trim().isEmpty()) {
             resetOwnerPassword(id, dto.getOwnerPassword().trim());
@@ -201,6 +209,10 @@ public class MasterAdminService implements MasterAdmin {
                 .active(c.getActive())
                 .ticketMessage(c.getTicketMessage())
                 .hasTaxData(c.getHasTaxData())
+                .afipEnvironment(c.getAfipEnvironment())
+                .posNumber(c.getPosNumber())
+                .cuit(c.getCuit())
+                .certPassword(c.getCertPassword())
                 .iibb(c.getIibb())
                 .inicioActividades(c.getInicioActividades())
                 .condicionIva(c.getCondicionIva())

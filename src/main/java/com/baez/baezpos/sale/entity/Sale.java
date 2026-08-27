@@ -7,6 +7,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,17 +52,26 @@ public class Sale extends TenantEntity {
     private Boolean canceled = false;
 
     // ==========================================
-    // CAMPOS PARA ARCA / AFIP
+    // CAMPOS PARA ARCA / AFIP (WSFEv1)
     // ==========================================
     @Column(name = "cae", length = 14)
     private String cae;
 
+    @Column(name = "cae_expiration")
+    private LocalDate caeExpiration;
+
     @Column(name = "cae_vto", length = 20)
     private String caeVto;
+
+    @Column(name = "invoice_type", length = 50)
+    private String invoiceType;
 
     @Column(name = "tipo_comprobante", length = 50)
     @Builder.Default
     private String tipoComprobante = "TICKET INTERNO";
+
+    @Column(name = "invoice_number", length = 30)
+    private String invoiceNumber;
 
     @Column(name = "nro_comprobante", length = 30)
     private String nroComprobante;
@@ -81,5 +91,38 @@ public class Sale extends TenantEntity {
     public void addItem(SaleItem item) {
         items.add(item);
         item.setSale(this);
+    }
+
+    public String getInvoiceType() {
+        return this.invoiceType != null ? this.invoiceType : this.tipoComprobante;
+    }
+
+    public void setInvoiceType(String invoiceType) {
+        this.invoiceType = invoiceType;
+        this.tipoComprobante = invoiceType;
+    }
+
+    public String getInvoiceNumber() {
+        return this.invoiceNumber != null ? this.invoiceNumber : this.nroComprobante;
+    }
+
+    public void setInvoiceNumber(String invoiceNumber) {
+        this.invoiceNumber = invoiceNumber;
+        this.nroComprobante = invoiceNumber;
+    }
+
+    public LocalDate getCaeExpiration() {
+        if (this.caeExpiration != null) return this.caeExpiration;
+        if (this.caeVto != null && !this.caeVto.isBlank()) {
+            try { return LocalDate.parse(this.caeVto); } catch (Exception e) {}
+        }
+        return null;
+    }
+
+    public void setCaeExpiration(LocalDate caeExpiration) {
+        this.caeExpiration = caeExpiration;
+        if (caeExpiration != null) {
+            this.caeVto = caeExpiration.toString();
+        }
     }
 }

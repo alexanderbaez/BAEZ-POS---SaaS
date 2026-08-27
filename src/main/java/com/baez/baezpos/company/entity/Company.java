@@ -65,11 +65,25 @@ public class Company extends BaseEntity {
     private Long lastTicketNumber = 0L;
 
     // ==========================================
-    // CAMPOS FISCALES ARCA / AFIP
+    // CAMPOS FISCALES ARCA / AFIP (WSFEv1)
     // ==========================================
     @Builder.Default
     @Column(name = "has_tax_data")
     private Boolean hasTaxData = true;
+
+    @Builder.Default
+    @Column(name = "afip_environment", length = 10)
+    private String afipEnvironment = "HOMO";
+
+    @Builder.Default
+    @Column(name = "pos_number")
+    private Integer posNumber = 1;
+
+    @Column(name = "cuit", length = 20)
+    private String cuit;
+
+    @Column(name = "cert_password", length = 100)
+    private String certPassword;
 
     @Column(length = 50)
     private String iibb;
@@ -79,4 +93,8 @@ public class Company extends BaseEntity {
 
     @Column(name = "condicion_iva", length = 100)
     private String condicionIva;
+
+    public String getCuit() {
+        return (this.cuit != null && !this.cuit.isBlank()) ? this.cuit : this.taxId;
+    }
 }

@@ -40,6 +40,10 @@ public class CompanyDTO {
 
     // CAMPOS FISCALES (ARCA / AFIP)
     private Boolean hasTaxData;
+    private String afipEnvironment;
+    private Integer posNumber;
+    private String cuit;
+    private String certPassword;
     private String iibb;
     private String inicioActividades;
     private String condicionIva;

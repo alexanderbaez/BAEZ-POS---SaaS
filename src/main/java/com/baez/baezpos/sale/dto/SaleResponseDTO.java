@@ -1,6 +1,7 @@
 package com.baez.baezpos.sale.dto;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -21,5 +22,8 @@ public record SaleResponseDTO(
         String cae,
         String caeVto,
         String tipoComprobante,
-        String nroComprobante
+        String nroComprobante,
+        String invoiceType,
+        String invoiceNumber,
+        LocalDate caeExpiration
 ) {}

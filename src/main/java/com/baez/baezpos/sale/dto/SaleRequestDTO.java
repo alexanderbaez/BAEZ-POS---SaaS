@@ -26,5 +26,10 @@ public record SaleRequestDTO(
         String paymentMethod,
 
         Long customerId,
-        Boolean isFiscal
-) {}
+        Boolean isFiscal,
+        Boolean emitInvoice
+) {
+    public boolean shouldEmitInvoice() {
+        return Boolean.TRUE.equals(emitInvoice) || Boolean.TRUE.equals(isFiscal);
+    }
+}
