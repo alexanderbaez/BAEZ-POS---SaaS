@@ -52,6 +52,7 @@ public class MasterAdminService implements MasterAdmin {
                 .phone(req.getPhone())
                 .email(cleanEmail)
                 .monthlyFee(req.getMonthlyFee())
+                .maxEmployees(req.getMaxEmployees() != null ? req.getMaxEmployees() : 1)
                 .expirationDate(req.getExpirationDate() != null ? req.getExpirationDate() : LocalDate.now().plusDays(15))
                 .active(true)
                 .ticketMessage(req.getTicketMessage())
@@ -104,6 +105,9 @@ public class MasterAdminService implements MasterAdmin {
         company.setPhone(dto.getPhone());
         company.setEmail(dto.getEmail() != null ? dto.getEmail().trim().toLowerCase() : null);
         company.setMonthlyFee(dto.getMonthlyFee());
+        if (dto.getMaxEmployees() != null) {
+            company.setMaxEmployees(dto.getMaxEmployees());
+        }
         company.setExpirationDate(dto.getExpirationDate());
         company.setActive(dto.getActive());
         company.setTicketMessage(dto.getTicketMessage());
@@ -192,6 +196,7 @@ public class MasterAdminService implements MasterAdmin {
                 .phone(c.getPhone())
                 .email(c.getEmail())
                 .monthlyFee(c.getMonthlyFee())
+                .maxEmployees(c.getMaxEmployees() != null ? c.getMaxEmployees() : 1)
                 .expirationDate(c.getExpirationDate())
                 .active(c.getActive())
                 .ticketMessage(c.getTicketMessage())

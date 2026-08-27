@@ -12,6 +12,7 @@ import com.baez.baezpos.user.entity.Role;
 import com.baez.baezpos.user.entity.User;
 import com.baez.baezpos.user.repository.UserRepository;
 import com.baez.baezpos.shared.exception.ResourceNotFoundException;
+import com.baez.baezpos.shared.exception.BadRequestException;
 import com.baez.baezpos.security.util.SecurityUtils;
 
 import lombok.RequiredArgsConstructor;
@@ -128,6 +129,12 @@ public class CompanyServiceImpl implements CompanyService {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
 
+        int maxEmployees = company.getMaxEmployees() != null ? company.getMaxEmployees() : 1;
+        long activeEmployees = userRepository.countByCompanyIdAndActiveTrue(companyId);
+        if (activeEmployees >= maxEmployees) {
+            throw new BadRequestException("Límite de empleados alcanzado en su plan actual. Comuníquese con soporte para actualizar su suscripción.");
+        }
+
         if (userRepository.existsByEmail(dto.getEmail())) {
             throw new IllegalArgumentException("El email '" + dto.getEmail() + "' ya se encuentra registrado.");
         }
@@ -238,6 +245,7 @@ public class CompanyServiceImpl implements CompanyService {
         dto.setTicketMessage(entity.getTicketMessage());
         dto.setExpirationDate(entity.getExpirationDate());
         dto.setActive(entity.getActive());
+        dto.setMaxEmployees(entity.getMaxEmployees() != null ? entity.getMaxEmployees() : 1);
 
         dto.setHasTaxData(entity.getHasTaxData() != null ? entity.getHasTaxData() : true);
         dto.setIibb(entity.getIibb());

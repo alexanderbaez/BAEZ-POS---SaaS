@@ -70,16 +70,22 @@ public class SaleServiceImpl implements SaleService {
                 .findFirstByCompanyIdAndStatusOrderByIdDesc(companyId, CashSessionStatus.OPEN)
                 .orElseThrow(() -> new BadRequestException("No hay una caja abierta. Debe abrir la caja antes de registrar ventas."));
 
-        User user;
-        if (userId != null) {
-            user = userRepository.getReferenceById(userId);
-        } else {
+        Long authenticatedUserId = SecurityUtils.getCurrentUserId();
+        User user = null;
+        if (authenticatedUserId != null) {
+            user = userRepository.findById(authenticatedUserId).orElse(null);
+        }
+        if (user == null) {
             String currentEmail = SecurityUtils.getCurrentUserEmail();
-            if (currentEmail == null) {
-                throw new BadRequestException("No se pudo identificar al usuario emisor de la venta.");
+            if (currentEmail != null) {
+                user = userRepository.findByEmail(currentEmail).orElse(null);
             }
-            user = userRepository.findByEmail(currentEmail)
-                    .orElseThrow(() -> new ResourceNotFoundException("Usuario emisor no encontrado: " + currentEmail));
+        }
+        if (user == null && userId != null) {
+            user = userRepository.findById(userId).orElse(null);
+        }
+        if (user == null) {
+            throw new BadRequestException("No se pudo identificar al usuario emisor de la venta.");
         }
 
         Company company = companyRepository.findById(companyId)

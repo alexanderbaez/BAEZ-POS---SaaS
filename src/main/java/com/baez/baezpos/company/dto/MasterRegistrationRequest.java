@@ -22,6 +22,7 @@ public class MasterRegistrationRequest {
     private String phone;
     private String ticketMessage;
     private BigDecimal monthlyFee;
+    private Integer maxEmployees;
     private LocalDate expirationDate;
 
     // --- DATOS DEL DUEÑO (ADMIN) ---

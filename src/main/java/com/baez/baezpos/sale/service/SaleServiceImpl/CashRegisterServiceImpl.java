@@ -29,6 +29,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -163,6 +164,11 @@ public class CashRegisterServiceImpl implements CashRegisterService {
     }
 
     private User getCurrentUser() {
+        Long userId = SecurityUtils.getCurrentUserId();
+        if (userId != null) {
+            Optional<User> userOpt = userRepository.findById(userId);
+            if (userOpt.isPresent()) return userOpt.get();
+        }
         String email = SecurityUtils.getCurrentUserEmail();
         if (email == null) {
             throw new BadRequestException("No se identificó el usuario autenticado.");

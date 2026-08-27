@@ -331,6 +331,10 @@
               <input type="number" id="masterAbono" class="form-control border-success border-opacity-50" placeholder="25000" step="500" required>
             </div>
             <div class="col-12 col-sm-6 col-lg-12 col-xl-6 mb-3">
+              <label class="form-label text-primary" for="masterMaxEmployees"><i class="bi bi-people me-1"></i> Límite Empleados</label>
+              <input type="number" id="masterMaxEmployees" class="form-control border-primary border-opacity-50" placeholder="1" min="1" value="1" required>
+            </div>
+            <div class="col-12 mb-3">
               <label class="form-label text-warning" for="masterVenc"><i class="bi bi-calendar-event me-1"></i> Vencimiento</label>
               <input type="date" id="masterVenc" class="form-control border-warning border-opacity-50" required>
             </div>
@@ -461,6 +465,10 @@
             <div class="col-12 col-md-6">
               <label class="form-label text-success" for="editMonthlyFee">Abono Mensual ($)</label>
               <input type="number" id="editMonthlyFee" class="form-control border-success border-opacity-50" step="500">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label text-primary" for="editMaxEmployees"><i class="bi bi-people me-1"></i> Límite de Empleados</label>
+              <input type="number" id="editMaxEmployees" class="form-control border-primary border-opacity-50" min="1" value="1" required>
             </div>
             <div class="col-12 col-md-6">
               <label class="form-label text-warning fw-bold" for="editVencimiento">Fecha de Vencimiento</label>

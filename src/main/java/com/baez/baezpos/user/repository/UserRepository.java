@@ -23,6 +23,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // ==========================================
     List<User> findByCompanyIdAndActiveTrue(Long companyId);
 
+    long countByCompanyIdAndActiveTrue(Long companyId);
+
     List<User> findByActiveTrue();
 
     Optional<User> findByIdAndCompanyIdAndActiveTrue(Long id, Long companyId);

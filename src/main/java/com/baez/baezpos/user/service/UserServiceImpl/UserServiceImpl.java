@@ -8,6 +8,8 @@ import com.baez.baezpos.user.entity.Role;
 import com.baez.baezpos.user.entity.User;
 import com.baez.baezpos.user.repository.UserRepository;
 import com.baez.baezpos.user.service.UserService.UserService;
+import com.baez.baezpos.shared.exception.BadRequestException;
+import com.baez.baezpos.shared.exception.ResourceNotFoundException;
 import com.baez.baezpos.security.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +56,16 @@ public class UserServiceImpl implements UserService {
                 throw new IllegalArgumentException("El email '" + cleanEmail + "' se encuentra registrado en otra empresa o no pertenece a su tenant.");
             }
 
+            if (companyId != null) {
+                Company company = companyRepository.findById(companyId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
+                int maxEmployees = company.getMaxEmployees() != null ? company.getMaxEmployees() : 1;
+                long activeEmployees = userRepository.countByCompanyIdAndActiveTrue(companyId);
+                if (activeEmployees >= maxEmployees) {
+                    throw new BadRequestException("Límite de empleados alcanzado en su plan actual. Comuníquese con soporte para actualizar su suscripción.");
+                }
+            }
+
             log.info("Reactivando usuario previamente inactivo: {} para empresa ID: {}", cleanEmail, companyId);
             existingUser.setName(dto.getName());
             existingUser.setRole(targetRole);
@@ -69,6 +81,16 @@ public class UserServiceImpl implements UserService {
             return convertToDTO(userRepository.save(existingUser));
         }
 
+        if (companyId != null) {
+            Company company = companyRepository.findById(companyId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
+            int maxEmployees = company.getMaxEmployees() != null ? company.getMaxEmployees() : 1;
+            long activeEmployees = userRepository.countByCompanyIdAndActiveTrue(companyId);
+            if (activeEmployees >= maxEmployees) {
+                throw new BadRequestException("Límite de empleados alcanzado en su plan actual. Comuníquese con soporte para actualizar su suscripción.");
+            }
+        }
+
         User user = new User();
         user.setName(dto.getName());
         user.setEmail(cleanEmail);
@@ -82,7 +104,7 @@ public class UserServiceImpl implements UserService {
 
         if (companyId != null) {
             Company company = companyRepository.findById(companyId)
-                    .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
             user.setCompany(company);
         }
 

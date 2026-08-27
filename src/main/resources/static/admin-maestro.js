@@ -322,7 +322,8 @@ if (formNueva) {
             ownerEmail: ownerEmail,
             ownerPassword: getVal('masterPass'),
             expirationDate: document.getElementById('masterVenc')?.value || null,
-            monthlyFee: parsearMonto(getVal('masterAbono'))
+            monthlyFee: parsearMonto(getVal('masterAbono')),
+            maxEmployees: parseInt(getVal('masterMaxEmployees') || '1', 10)
         };
 
         try {
@@ -362,6 +363,7 @@ function prepararEdicion(id) {
     setVal('editAddress', empresa.address);
     setVal('editVencimiento', empresa.expirationDate);
     setVal('editMonthlyFee', empresa.monthlyFee);
+    setVal('editMaxEmployees', empresa.maxEmployees || 1);
     setVal('editTicketMessage', empresa.ticketMessage);
     setVal('editPass', '');
     setVal('editActive', empresa.active !== false ? "true" : "false");
@@ -390,6 +392,7 @@ if (formEdit) {
             address: document.getElementById('editAddress').value.trim(),
             expirationDate: document.getElementById('editVencimiento').value || null,
             monthlyFee: parsearMonto(document.getElementById('editMonthlyFee')?.value),
+            maxEmployees: parseInt(document.getElementById('editMaxEmployees')?.value || '1', 10),
             ticketMessage: document.getElementById('editTicketMessage')?.value || '',
             active: document.getElementById('editActive').value === "true",
             ownerPassword: document.getElementById('editPass').value.trim() || null

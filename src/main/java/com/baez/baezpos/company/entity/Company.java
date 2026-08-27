@@ -41,6 +41,10 @@ public class Company extends BaseEntity {
     @Column(nullable = false)
     private Boolean active = true;
 
+    @Builder.Default
+    @Column(name = "max_employees", nullable = false)
+    private Integer maxEmployees = 1;
+
     @Column(name = "monthly_fee", precision = 12, scale = 2)
     private BigDecimal monthlyFee; // <--- CAMPO CLAVE PARA EL CALCULO DE MRR EN EL FRONTEND
 

@@ -33,6 +33,7 @@ public class CompanyDTO {
 
     private LocalDate expirationDate;
     private Boolean active;
+    private Integer maxEmployees;
     private BigDecimal monthlyFee;
     private String ticketMessage;
     private String ownerPassword; // Se utiliza únicamente si el SuperAdmin la envía para resetear
