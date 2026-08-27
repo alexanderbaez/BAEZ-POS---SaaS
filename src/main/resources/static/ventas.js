@@ -81,6 +81,14 @@ document.addEventListener('DOMContentLoaded', async function inicializarModuloVe
 
     // Verificación inicial de caja al cargar el módulo
     await verificarEstadoCaja();
+
+    // Actualizar contador y sincronizar ventas offline pendientes si hay conexión
+    if (typeof actualizarIndicadorVentasPendientes === 'function') {
+        await actualizarIndicadorVentasPendientes();
+    }
+    if (navigator.onLine && typeof syncPendingSales === 'function') {
+        syncPendingSales();
+    }
 });
 
 
@@ -256,10 +264,19 @@ async function serviceCargarInfoEmpresa() {
 async function serviceCargarProductos() {
     try {
         const res = await apiFetch('/products');
-        if (!res || !res.ok) return;
-        PRODUCTOS_DB = await res.json();
+        if (res && res.ok) {
+            PRODUCTOS_DB = await res.json();
+            localStorage.setItem('baezpos_cached_products', JSON.stringify(PRODUCTOS_DB));
+        } else {
+            const cached = localStorage.getItem('baezpos_cached_products');
+            if (cached) PRODUCTOS_DB = JSON.parse(cached);
+        }
     } catch (err) {
-        console.error("Error de conexión al cargar productos:", err);
+        console.warn("[OfflinePOS] Error de red al cargar productos, usando catálogo local persistido:", err);
+        const cached = localStorage.getItem('baezpos_cached_products');
+        if (cached) {
+            try { PRODUCTOS_DB = JSON.parse(cached); } catch (e) {}
+        }
     }
 }
 
@@ -1333,8 +1350,80 @@ async function finalizarVenta() {
         amountPaid: METODO_PAGO === 'EFECTIVO' ? (pagaCon > 0 ? pagaCon : totalFinal) : totalFinal
     };
 
-    const btnFinalizar = document.getElementById('btnFinalizarVenta');
-    if (btnFinalizar) btnFinalizar.disabled = true;
+    // ==========================================
+    // 10.1 ARQUITECTURA OFFLINE-FIRST: INTERCEPTACIÓN
+    // ==========================================
+    if (!navigator.onLine) {
+        try {
+            const offlineSaleId = (typeof savePendingSale === 'function')
+                ? await savePendingSale(saleRequestDTO)
+                : Date.now();
+
+            const offlineSaleData = {
+                ...saleRequestDTO,
+                id: offlineSaleId,
+                numeroTicket: `OFF-${offlineSaleId}`,
+                nroComprobante: `OFF-${String(offlineSaleId).padStart(6, '0')}`,
+                saleDate: new Date().toISOString(),
+                isOffline: true,
+                userName: (typeof localStorage !== 'undefined' ? localStorage.getItem('baezpos_user_name') : '') || 'Cajero',
+                clienteNombre: clienteSeleccionado ? clienteSeleccionado.name : 'CONSUMIDOR FINAL'
+            };
+
+            ULTIMA_VENTA_EXITOSA = offlineSaleData;
+            if (window.sndSuccess) window.sndSuccess.play().catch(() => {});
+
+            Swal.fire({
+                icon: 'success',
+                title: '¡Venta Guardada Offline!',
+                html: `
+                    <div class="text-center">
+                        <div class="badge bg-warning text-dark fs-6 px-3 py-1.5 mb-2 rounded-pill shadow-sm">
+                            <i class="bi bi-wifi-off me-1"></i> Pendiente de Sincronización
+                        </div>
+                        <p class="text-secondary small mb-1">La venta ha sido registrada de forma segura en la memoria del dispositivo.</p>
+                        <p class="text-muted small mb-0" style="font-size: 0.78rem;">Se sincronizará con el servidor tan pronto como regrese la conexión.</p>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: '<i class="bi bi-printer me-1"></i> Imprimir Ticket Offline',
+                cancelButtonText: 'Listo',
+                confirmButtonColor: '#2563eb',
+                cancelButtonColor: '#6c757d',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed && typeof imprimirTicket === 'function') {
+                    imprimirTicket(offlineSaleData);
+                }
+            });
+
+            // Limpieza de estado del carrito
+            CARRITO = [];
+            clienteSeleccionado = null;
+            const infoCli = document.getElementById('infoClienteSeleccionado');
+            if (infoCli) infoCli.classList.add('d-none');
+
+            if (pagaConInputEl) pagaConInputEl.value = '';
+            const inputDesc = document.getElementById('inputDescuento');
+            if (inputDesc) inputDesc.value = '';
+
+            renderizarCarrito();
+            if (typeof actualizarIndicadorVentasPendientes === 'function') {
+                await actualizarIndicadorVentasPendientes();
+            }
+            return;
+
+        } catch (errOffline) {
+            console.error("[OfflinePOS] Error al guardar venta local:", errOffline);
+            Swal.fire('Error', 'No se pudo guardar la venta en la base de datos local.', 'error');
+            return;
+        } finally {
+            if (btnFinalizar) btnFinalizar.disabled = false;
+            const buscador = document.getElementById('buscadorVenta');
+            if (buscador) buscador.value = '';
+            enfocarBuscadorInteligente();
+        }
+    }
 
     try {
         const res = await apiFetch('/sales', {
@@ -1395,6 +1484,58 @@ async function finalizarVenta() {
 
     } catch (err) {
         console.error("[SalesModule] Error al finalizar venta:", err);
+        // Si el fallo fue por corte súbito de conexión a internet, guardar offline
+        if (!navigator.onLine || err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError')) {
+            try {
+                const offlineSaleId = (typeof savePendingSale === 'function')
+                    ? await savePendingSale(saleRequestDTO)
+                    : Date.now();
+
+                const offlineSaleData = {
+                    ...saleRequestDTO,
+                    id: offlineSaleId,
+                    numeroTicket: `OFF-${offlineSaleId}`,
+                    nroComprobante: `OFF-${String(offlineSaleId).padStart(6, '0')}`,
+                    saleDate: new Date().toISOString(),
+                    isOffline: true,
+                    userName: (typeof localStorage !== 'undefined' ? localStorage.getItem('baezpos_user_name') : '') || 'Cajero',
+                    clienteNombre: clienteSeleccionado ? clienteSeleccionado.name : 'CONSUMIDOR FINAL'
+                };
+
+                ULTIMA_VENTA_EXITOSA = offlineSaleData;
+                if (window.sndSuccess) window.sndSuccess.play().catch(() => {});
+
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Sin Conexión: Guardada Offline',
+                    html: `
+                        <p class="small text-secondary mb-1">Se interrumpió la conexión al servidor. La venta se almacenó localmente con éxito.</p>
+                        <div class="badge bg-warning text-dark fs-7">Se sincronizará automáticamente</div>
+                    `,
+                    showCancelButton: true,
+                    confirmButtonText: '<i class="bi bi-printer"></i> Imprimir Ticket Offline',
+                    cancelButtonText: 'Continuar',
+                    confirmButtonColor: '#2563eb'
+                }).then((result) => {
+                    if (result.isConfirmed && typeof imprimirTicket === 'function') {
+                        imprimirTicket(offlineSaleData);
+                    }
+                });
+
+                CARRITO = [];
+                clienteSeleccionado = null;
+                const infoCli = document.getElementById('infoClienteSeleccionado');
+                if (infoCli) infoCli.classList.add('d-none');
+                renderizarCarrito();
+                if (typeof actualizarIndicadorVentasPendientes === 'function') {
+                    await actualizarIndicadorVentasPendientes();
+                }
+                return;
+            } catch (errFallback) {
+                console.error("[SalesModule] Falló respaldo offline:", errFallback);
+            }
+        }
+
         if (window.sndError) window.sndError.play().catch(() => {});
         Swal.fire('Error', err.message || 'No se pudo conectar con el servidor.', 'error');
     } finally {
@@ -1404,6 +1545,121 @@ async function finalizarVenta() {
         enfocarBuscadorInteligente();
     }
 }
+
+// ==========================================
+// 10.2 SINCRONIZACIÓN DE VENTAS OFFLINE
+// ==========================================
+let isSyncingSales = false;
+
+async function syncPendingSales() {
+    if (isSyncingSales) return;
+    if (!navigator.onLine) {
+        console.log('[Sync] No hay conexión a Internet para sincronizar ventas.');
+        return;
+    }
+    if (typeof getPendingSales !== 'function') return;
+
+    try {
+        const pendingSales = await getPendingSales();
+        if (!pendingSales || pendingSales.length === 0) {
+            await actualizarIndicadorVentasPendientes();
+            return;
+        }
+
+        isSyncingSales = true;
+        let syncedCount = 0;
+        let failedCount = 0;
+
+        console.log(`[Sync] Iniciando sincronización de ${pendingSales.length} ventas offline...`);
+
+        for (const sale of pendingSales) {
+            try {
+                const localId = sale.id;
+                const payload = {
+                    cashRegisterId: sale.cashRegisterId,
+                    items: sale.items,
+                    subtotal: sale.subtotal,
+                    total: sale.total,
+                    discount: sale.discount,
+                    surcharge: sale.surcharge,
+                    surchargeRate: sale.surchargeRate,
+                    paymentMethod: sale.paymentMethod,
+                    customerId: sale.customerId,
+                    isFiscal: sale.isFiscal,
+                    amountPaid: sale.amountPaid
+                };
+
+                const res = await apiFetch('/sales', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res && res.ok) {
+                    if (typeof deletePendingSale === 'function') {
+                        await deletePendingSale(localId);
+                    }
+                    syncedCount++;
+                } else {
+                    failedCount++;
+                    console.warn(`[Sync] Venta #${localId} no pudo sincronizarse (HTTP ${res?.status})`);
+                }
+            } catch (errOne) {
+                failedCount++;
+                console.error('[Sync] Error sincronizando venta individual:', errOne);
+                break;
+            }
+        }
+
+        isSyncingSales = false;
+        await actualizarIndicadorVentasPendientes();
+
+        if (syncedCount > 0) {
+            if (typeof showSaasToast === 'function') {
+                showSaasToast('success', `¡${syncedCount} ${syncedCount === 1 ? 'venta offline sincronizada' : 'ventas offline sincronizadas'} con éxito!`);
+            } else if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: `Sincronizadas ${syncedCount} ventas offline`,
+                    showConfirmButton: false,
+                    timer: 3500
+                });
+            }
+
+            if (typeof serviceCargarProductos === 'function') {
+                await serviceCargarProductos();
+            }
+        }
+    } catch (errSync) {
+        console.error('[Sync] Error general de sincronización:', errSync);
+        isSyncingSales = false;
+    }
+}
+
+async function actualizarIndicadorVentasPendientes() {
+    if (typeof countPendingSales !== 'function') return;
+    try {
+        const count = await countPendingSales();
+        const btnSync = document.getElementById('btnSyncPendingSales');
+        const badgeCount = document.getElementById('syncBadgeCount');
+
+        if (btnSync && badgeCount) {
+            if (count > 0) {
+                badgeCount.innerText = count;
+                btnSync.classList.remove('d-none');
+            } else {
+                btnSync.classList.add('d-none');
+            }
+        }
+    } catch (e) {
+        console.warn('[Sync] No se pudo actualizar contador de ventas pendientes:', e);
+    }
+}
+
+window.syncPendingSales = syncPendingSales;
+window.actualizarIndicadorVentasPendientes = actualizarIndicadorVentasPendientes;
 
 
 // ==========================================
@@ -1589,6 +1845,11 @@ function generarPlantillaHTMLTicket(venta) {
                         </div>
                     ` : ''}
                     <div class="line"></div>
+                    ${(venta.isOffline || (typeof venta.numeroTicket === 'string' && venta.numeroTicket.startsWith('OFF-')) || (typeof venta.nroComprobante === 'string' && venta.nroComprobante.startsWith('OFF-'))) ? `
+                        <div style="background: #fef2f2; color: #b91c1c; border: 1.5px dashed #dc2626; padding: 4px; border-radius: 4px; font-weight: 900; font-size: 8.5px; text-align: center; margin: 4px 0;">
+                            ⚠️ TICKET PENDIENTE DE SINCRONIZACIÓN
+                        </div>
+                    ` : ''}
                     <div class="small-info"><strong>${tipoComprobante} N° ${nroComprobante}</strong></div>
                     <div class="small-info">Fecha: ${fechaVenta}</div>
                     <div class="small-info">Cajero: ${cajeroNombre}</div>

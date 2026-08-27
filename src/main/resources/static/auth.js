@@ -369,12 +369,85 @@ function removerNotificacionVencimiento() {
     if (banner) banner.remove();
 }
 
+// ==========================================
+// 6. ARQUITECTURA OFFLINE-FIRST Y SERVICE WORKER
+// ==========================================
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+            .then((reg) => console.log('[SW] Service Worker registrado exitosamente con scope:', reg.scope))
+            .catch((err) => console.warn('[SW] No se pudo registrar el Service Worker:', err));
+    });
+}
+
+/**
+ * Centinela de Estado de Red (Online / Offline)
+ */
+function actualizarEstadoRedGlobal() {
+    const isOnline = navigator.onLine;
+    let badgeOffline = document.getElementById('badgeModoOfflineGlobal');
+
+    if (!isOnline) {
+        if (typeof showSaasToast === 'function') {
+            showSaasToast('warning', 'Modo Offline activo: Las ventas se guardarán localmente');
+        } else if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'warning',
+                title: 'Modo Offline: Sin conexión',
+                showConfirmButton: false,
+                timer: 3000
+            });
+        }
+
+        if (!badgeOffline) {
+            badgeOffline = document.createElement('span');
+            badgeOffline.id = 'badgeModoOfflineGlobal';
+            badgeOffline.className = 'badge bg-danger shadow-sm px-2.5 py-1.5 align-middle me-2 fw-bold';
+            badgeOffline.innerHTML = '<i class="bi bi-wifi-off me-1"></i> Modo Offline';
+
+            const navbarControls = document.querySelector('.navbar .ms-auto') || document.querySelector('.navbar');
+            if (navbarControls) {
+                navbarControls.insertBefore(badgeOffline, navbarControls.firstChild);
+            }
+        } else {
+            badgeOffline.classList.remove('d-none');
+        }
+    } else {
+        if (badgeOffline) {
+            badgeOffline.classList.add('d-none');
+        }
+
+        // Si vuelve la conexión y hay función de sincronización, ejecutarla
+        if (typeof window.syncPendingSales === 'function') {
+            window.syncPendingSales();
+        }
+    }
+}
+
+window.addEventListener('online', () => {
+    actualizarEstadoRedGlobal();
+    if (typeof showSaasToast === 'function') {
+        showSaasToast('success', 'Conexión a Internet restablecida');
+    }
+});
+
+window.addEventListener('offline', () => {
+    actualizarEstadoRedGlobal();
+});
+
 // Inicialización de ciclo de vida seguro
 document.addEventListener('DOMContentLoaded', () => {
     if (esVistaLogin()) {
         removerNotificacionVencimiento();
         removerBloqueoVentas();
         return;
+    }
+
+    // Verificar estado de red inicial
+    if (!navigator.onLine) {
+        actualizarEstadoRedGlobal();
     }
 
     chequearEstadoLicencia();
