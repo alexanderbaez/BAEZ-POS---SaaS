@@ -141,15 +141,6 @@
     .row-vencido { background-color: rgba(248, 113, 113, 0.12) !important; border-left: 4px solid var(--danger); }
     .row-pronto { background-color: rgba(251, 191, 36, 0.12) !important; border-left: 4px solid var(--warning); }
 
-    .form-label {
-        font-size: 0.75rem;
-        font-weight: 700;
-        color: #e2e8f0;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 0.4rem;
-    }
-
     .btn-action {
         width: 34px;
         height: 34px;
@@ -303,15 +294,15 @@
           </div>
           <div class="row g-2">
             <div class="col-12 col-sm-6 col-lg-12 col-xl-6 mb-3">
-              <label class="form-label text-success" for="masterAbono"><i class="bi bi-currency-dollar me-1"></i> Abono/Mes ($)</label>
+              <label class="form-label" for="masterAbono"><i class="bi bi-currency-dollar me-1"></i> Abono/Mes ($)</label>
               <input type="number" id="masterAbono" class="form-control" placeholder="25000" step="500" required>
             </div>
             <div class="col-12 col-sm-6 col-lg-12 col-xl-6 mb-3">
-              <label class="form-label text-primary" for="masterMaxEmployees"><i class="bi bi-people me-1"></i> Límite Empleados</label>
+              <label class="form-label" for="masterMaxEmployees"><i class="bi bi-people me-1"></i> Límite Empleados</label>
               <input type="number" id="masterMaxEmployees" class="form-control" placeholder="1" min="1" value="1" required>
             </div>
             <div class="col-12 mb-3">
-              <label class="form-label text-warning" for="masterVenc"><i class="bi bi-calendar-event me-1"></i> Vencimiento</label>
+              <label class="form-label" for="masterVenc"><i class="bi bi-calendar-event me-1"></i> Vencimiento</label>
               <input type="date" id="masterVenc" class="form-control" required>
             </div>
           </div>
@@ -428,26 +419,26 @@
               <input type="email" id="editEmail" class="form-control" autocomplete="username" required>
             </div>
             <div class="col-12 col-md-6">
-              <label class="form-label text-warning" for="editPass">Contraseña Nueva <small class="text-muted">(Dejar vacío si no cambia)</small></label>
+              <label class="form-label" for="editPass">Contraseña Nueva <small class="text-muted">(Dejar vacío si no cambia)</small></label>
               <input type="password" id="editPass" class="form-control" placeholder="••••••••" autocomplete="new-password">
             </div>
             <div class="col-12 col-md-6">
-              <label class="form-label text-info" for="editActive">Estado de Licencia</label>
+              <label class="form-label" for="editActive">Estado de Licencia</label>
               <select id="editActive" class="form-select">
                 <option value="true">ACTIVO / HABILITADO</option>
                 <option value="false">SUSPENDIDO / BLOQUEADO</option>
               </select>
             </div>
             <div class="col-12 col-md-6">
-              <label class="form-label text-success" for="editMonthlyFee">Abono Mensual ($)</label>
+              <label class="form-label" for="editMonthlyFee">Abono Mensual ($)</label>
               <input type="number" id="editMonthlyFee" class="form-control" step="500">
             </div>
             <div class="col-12 col-md-6">
-              <label class="form-label text-primary" for="editMaxEmployees"><i class="bi bi-people me-1"></i> Límite de Empleados</label>
+              <label class="form-label" for="editMaxEmployees"><i class="bi bi-people me-1"></i> Límite de Empleados</label>
               <input type="number" id="editMaxEmployees" class="form-control" min="1" value="1" required>
             </div>
             <div class="col-12 col-md-6">
-              <label class="form-label text-warning fw-bold" for="editVencimiento">Fecha de Vencimiento</label>
+              <label class="form-label fw-bold" for="editVencimiento">Fecha de Vencimiento</label>
               <input type="date" id="editVencimiento" class="form-control">
             </div>
             <div class="col-12 col-md-6">
@@ -459,7 +450,7 @@
               <input type="text" id="editAddress" class="form-control">
             </div>
             <div class="col-12">
-              <label class="form-label text-info" for="editTicketMessage">Mensaje Predeterminado de Ticket</label>
+              <label class="form-label" for="editTicketMessage">Mensaje Predeterminado de Ticket</label>
               <textarea id="editTicketMessage" class="form-control" rows="2" placeholder="Ej: Gracias por su compra."></textarea>
             </div>
           </div>

@@ -12,35 +12,47 @@
 
 <div id="sidebar-container"></div>
 
-<main id="content">
-  <!-- Botón Toggle Sidebar Móvil -->
-  <button type="button" id="sidebarCollapse" class="btn btn-white border d-lg-none mb-3 shadow-sm">
-    <i class="bi bi-list fs-5"></i>
-  </button>
-
-  <!-- Banner de Suscripción / Vencimiento -->
-  <div id="alertaVencimiento" class="alert alert-danger d-none border-0 shadow-sm mb-4 rounded-4">
-    <div class="d-flex align-items-center">
-      <i class="bi bi-exclamation-triangle-fill fs-3 me-3 flex-shrink-0"></i>
-      <div>
-        <h6 class="fw-bold mb-0">Atención con tu Suscripción</h6>
-        <p class="mb-0 small" id="mensajeDias">Tu servicio vence pronto. Contactá al soporte para renovar tu acceso.</p>
+<div id="content">
+  <!-- Navbar con Información de Usuario / Tenant -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom p-3">
+    <div class="container-fluid p-0">
+      <button type="button" id="sidebarCollapse" class="btn btn-outline-primary d-md-none me-2">
+        <i class="bi bi-list"></i>
+      </button>
+      <div class="ms-auto d-flex align-items-center">
+        <div class="text-end me-2 me-md-3">
+          <div id="userName" class="fw-bold text-dark text-capitalize fs-6">Usuario</div>
+          <small id="userRoleBadge" class="badge bg-secondary text-uppercase" style="font-size: 0.65rem;">Cargando...</small>
+        </div>
+        <i class="bi bi-person-circle fs-3 text-primary"></i>
       </div>
     </div>
-  </div>
+  </nav>
 
-  <!-- Encabezado del Módulo -->
-  <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
-    <div>
-      <h3 class="fw-bold m-0 text-slate-900">Configuración del Negocio</h3>
-      <p class="text-muted small mb-0">Administrá los datos públicos de tu comercio, parámetros fiscales y credenciales.</p>
+  <div class="container-fluid p-3 p-md-4">
+    <!-- Banner de Suscripción / Vencimiento -->
+    <div id="alertaVencimiento" class="alert alert-danger d-none border-0 shadow-sm mb-4 rounded-4">
+      <div class="d-flex align-items-center">
+        <i class="bi bi-exclamation-triangle-fill fs-3 me-3 flex-shrink-0"></i>
+        <div>
+          <h6 class="fw-bold mb-0">Atención con tu Suscripción</h6>
+          <p class="mb-0 small" id="mensajeDias">Tu servicio vence pronto. Contactá al soporte para renovar tu acceso.</p>
+        </div>
+      </div>
     </div>
-    <div>
-      <span id="badgeEstado" class="badge rounded-pill px-3 py-2 bg-success-subtle text-success border border-success-subtle fw-bold fs-7">
-        SERVICIO ACTIVO
-      </span>
+
+    <!-- Encabezado del Módulo -->
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+      <div>
+        <h2 class="fw-bold m-0 text-dark fs-3 fs-md-2">Configuración del Negocio</h2>
+        <p class="text-muted small mb-0">Administrá los datos públicos de tu comercio, parámetros fiscales y credenciales.</p>
+      </div>
+      <div>
+        <span id="badgeEstado" class="badge rounded-pill px-3 py-2 bg-success-subtle text-success border border-success-subtle fw-bold fs-7">
+          SERVICIO ACTIVO
+        </span>
+      </div>
     </div>
-  </div>
 
   <div class="row g-4">
     <!-- Columna Principal: Formulario de Configuración -->
@@ -207,9 +219,8 @@
         </div>
       </div>
     </div>
-
   </div>
-</main>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

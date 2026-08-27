@@ -211,6 +211,14 @@ button, input, select, textarea {
 /* ==========================================================================
    INPUTS Y FORMULARIOS (DISEÑO CLARO, CONTRASTE ÓPTIMO Y FOCUS PREMIUM)
    ========================================================================== */
+label.form-label, .form-label, .form-group label {
+  color: #334155 !important;
+  font-weight: 500 !important;
+  font-size: 0.85rem !important;
+  margin-bottom: 0.4rem !important;
+  display: inline-block;
+}
+
 .form-control, .form-select {
   background-color: #ffffff !important;
   color: #1e293b !important;
