@@ -57,14 +57,14 @@ async function cargarKpisYTablas() {
     const primerDiaMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
     const ultimoDiaMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0);
 
-    const desdeStr = primerDiaMes.toISOString().split('T')[0];
-    const hastaStr = ultimoDiaMes.toISOString().split('T')[0];
+    const desdeStr = formatInputDate(primerDiaMes);
+    const hastaStr = formatInputDate(ultimoDiaMes);
 
     try {
         const [resVentas, resGastos, resProveedores] = await Promise.allSettled([
             apiFetch(`/sales?desde=${desdeStr}&hasta=${hastaStr}`),
-            apiFetch('/api/v1/expenses'),
-            apiFetch('/api/v1/providers')
+            apiFetch('/expenses'),
+            apiFetch('/providers')
         ]);
 
         let listaVentas = [];
@@ -485,7 +485,7 @@ async function consultarPorFechas() {
         const [resBox, resVentasRango, resGastos] = await Promise.allSettled([
             apiFetch(`/sales/report/box?from=${desdeVal}&to=${hastaVal}`),
             apiFetch(`/sales?desde=${desdeVal}&hasta=${hastaVal}`),
-            apiFetch('/api/v1/expenses')
+            apiFetch('/expenses')
         ]);
 
         // 1. Métricas de Reporte / Box

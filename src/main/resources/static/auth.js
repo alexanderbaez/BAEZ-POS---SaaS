@@ -99,6 +99,11 @@ async function apiFetch(path, options = {}) {
     }
 
     let cleanPath = path.startsWith('/') ? path : `/${path}`;
+    if (cleanPath.startsWith('/api/v1/')) {
+        cleanPath = cleanPath.substring('/api/v1'.length);
+    } else if (cleanPath === '/api/v1') {
+        cleanPath = '';
+    }
     if (cleanPath.endsWith('/') && cleanPath.length > 1) {
         cleanPath = cleanPath.slice(0, -1);
     }
