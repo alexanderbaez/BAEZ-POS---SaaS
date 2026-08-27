@@ -1373,6 +1373,7 @@ function generarPlantillaHTMLTicket(venta) {
     // Si no, lo genera con nroTicket / id.
     const nroComprobante = venta.nroComprobante || `00001-${String(venta.numeroTicket || venta.id || 1).padStart(8, '0')}`;
     const fechaVenta = venta.saleDate ? new Date(venta.saleDate).toLocaleString('es-AR') : new Date().toLocaleString('es-AR');
+    const cajeroNombre = escapeHtml(venta.userName || (typeof localStorage !== 'undefined' ? localStorage.getItem('baezpos_user_name') : '') || 'Admin').toUpperCase();
     const metodoPago = (venta.paymentMethod || 'EFECTIVO').replace(/_/g, ' ').toUpperCase();
 
     const nombreCliente = (venta.clienteNombre || (typeof clienteSeleccionado !== 'undefined' && clienteSeleccionado ? clienteSeleccionado.name : 'CONSUMIDOR FINAL')).toUpperCase();
@@ -1488,6 +1489,7 @@ function generarPlantillaHTMLTicket(venta) {
                     <div class="line"></div>
                     <div class="small-info"><strong>${tipoComprobante} N° ${nroComprobante}</strong></div>
                     <div class="small-info">Fecha: ${fechaVenta}</div>
+                    <div class="small-info">Cajero: ${cajeroNombre}</div>
                     <div class="small-info" style="text-align: left; margin-top: 4px;"><strong>A:</strong> ${nombreCliente} ${cuitCliente ? `(CUIT: ${cuitCliente})` : ''}</div>
                 </div>
                 <div class="ticket-body">

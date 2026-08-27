@@ -171,14 +171,28 @@ if (formEmpleado) {
                     if (errText) errorMessage = errText;
                 }
 
-                Swal.fire({
-                    title: 'Atención',
-                    text: errorMessage.toLowerCase().includes('ya existe') || errorMessage.toLowerCase().includes('duplicate')
-                        ? `El correo ${payload.email} ya está registrado en el sistema.`
-                        : errorMessage,
-                    icon: 'warning',
-                    confirmButtonColor: '#0d6efd'
-                });
+                if (errorMessage.toLowerCase().includes('límite de empleados') || errorMessage.toLowerCase().includes('limite de empleados')) {
+                    Swal.fire({
+                        title: 'Límite de Plan Alcanzado',
+                        text: 'Has alcanzado el límite de empleados de tu plan actual. Comunicate con soporte para hacer un upgrade.',
+                        icon: 'warning',
+                        confirmButtonColor: '#0d6efd'
+                    });
+                } else if (errorMessage.toLowerCase().includes('ya existe') || errorMessage.toLowerCase().includes('duplicate') || errorMessage.toLowerCase().includes('ya pertenece') || errorMessage.toLowerCase().includes('ya se encuentra registrado')) {
+                    Swal.fire({
+                        title: 'Atención',
+                        text: `El correo ${payload.email} ya está registrado en el sistema.`,
+                        icon: 'warning',
+                        confirmButtonColor: '#0d6efd'
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Atención',
+                        text: errorMessage,
+                        icon: 'warning',
+                        confirmButtonColor: '#0d6efd'
+                    });
+                }
             }
 
         } catch (e) {

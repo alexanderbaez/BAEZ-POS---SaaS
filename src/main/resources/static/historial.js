@@ -148,6 +148,7 @@ function renderizarTabla(ventas) {
 
         const descuentoVal = parseFloat(v.discount) || 0;
         const totalVal = parseFloat(v.total) || 0;
+        const vendedorNombre = escapeHtml(v.userName || 'Admin');
 
         tr.innerHTML = `
             <td class="ps-3 align-middle"><span class="fw-bold text-dark">${escapeHtml(numTicketVisual)}</span></td>
@@ -158,12 +159,17 @@ function renderizarTabla(ventas) {
                     ${resumenProductos}
                 </div>
             </td>
+            <td class="align-middle text-nowrap d-none d-lg-table-cell">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                    <i class="bi bi-person me-1"></i> ${vendedorNombre}
+                </span>
+            </td>
             <td class="align-middle text-nowrap d-none d-sm-table-cell">
                 <span class="badge bg-light text-dark border px-2 py-1">
                     <i class="bi ${iconClass} me-1"></i> ${escapeHtml(metodoNombre)}
                 </span>
             </td>
-            <td class="text-end text-danger align-middle text-nowrap amount-num d-none d-lg-table-cell">-$${descuentoVal.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+            <td class="text-end text-danger align-middle text-nowrap amount-num d-none d-xl-table-cell">-$${descuentoVal.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
             <td class="text-end fw-bold align-middle text-dark text-nowrap amount-num">$${totalVal.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
             <td class="text-center align-middle text-nowrap pe-3" style="width: 110px;">
                 <div class="d-flex flex-row justify-content-center align-items-center gap-1">
@@ -296,6 +302,7 @@ function verDetalle(idVenta) {
     };
 
     setSafeText('txtIdVenta', obtenerNumTicketVisual(venta));
+    setSafeText('txtCajeroModal', (venta.userName || 'Admin').toUpperCase());
 
     const container = document.getElementById('contenedorItems');
     if (container) {
@@ -779,6 +786,7 @@ function reimprimirTicket() {
                     <div class="watermark-reprint">DUPLICADO / REIMPRESIÓN</div>
                     <div class="small-info"><strong>${tipoComprobante} N° ${nroComprobante}</strong></div>
                     <div class="small-info">Fecha: ${fechaVentaStr}</div>
+                    <div class="small-info">Cajero: ${escapeHtml(venta.userName || 'Admin').toUpperCase()}</div>
                     <div class="small-info" style="text-align: left; margin-top: 4px;"><strong>A:</strong> ${nombreCliente} ${cuitCliente ? `(CUIT: ${cuitCliente})` : ''}</div>
                 </div>
 
