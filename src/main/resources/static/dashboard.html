@@ -216,13 +216,13 @@
 
             <div class="d-flex flex-column flex-sm-row flex-wrap align-items-stretch align-items-sm-center gap-2">
               <select id="selectPresetFechas" class="form-select form-select-sm fw-semibold shadow-sm" style="width: auto;" onchange="aplicarPresetFecha(this.value)">
-                <option value="ESTE_MES" selected>Este Mes</option>
+                <option value="HOY" selected>Hoy</option>
+                <option value="AYER">Ayer</option>
+                <option value="ESTE_MES">Este Mes</option>
                 <option value="MES_PASADO">Mes Pasado</option>
                 <option value="3_MESES">Últimos 3 Meses</option>
                 <option value="ESTE_ANO">Año Actual</option>
                 <option value="ANO_PASADO">Año Pasado</option>
-                <option value="HOY">Hoy</option>
-                <option value="AYER">Ayer</option>
               </select>
 
               <div class="d-flex align-items-center gap-1 bg-light px-2.5 py-1 rounded-3 border">
@@ -248,7 +248,7 @@
             <div class="card p-3 stat-card border-start border-4 border-dark h-100">
               <span class="text-muted small fw-bold text-uppercase">Recaudación Rango</span>
               <h3 class="fw-bold text-dark mb-1 mt-1 amount-num fs-4" id="txtRecaudacionMes">$0,00</h3>
-              <small class="text-muted d-block">Facturación bruta del período</small>
+              <small class="text-muted d-block">Ingresos Reales (Flujo de Caja)</small>
             </div>
           </div>
 
@@ -256,7 +256,7 @@
             <div class="card p-3 stat-card border-start border-4 border-success h-100">
               <span class="text-muted small fw-bold text-uppercase">Ganancia Neta Est.</span>
               <h3 class="fw-bold text-success mb-1 mt-1 amount-num fs-4" id="txtGananciaMes">$0,00</h3>
-              <small class="text-muted d-block">Margen bruto menos costos</small>
+              <small class="text-muted d-block">Margen sobre ventas cobradas</small>
             </div>
           </div>
 
@@ -296,7 +296,9 @@
                   <i class="bi bi-cash-coin text-success fs-5"></i>
                 </div>
                 <div class="fs-4 fw-bold text-dark amount-num" id="txtEfectivoRango">$0,00</div>
-                <small class="text-muted d-block mt-1" id="countEfectivoRango">0 tickets cobrados</small>
+                <div class="mt-1" id="desgloseEfectivoRango">
+                  <small class="text-muted d-block" id="countEfectivoRango">Ventas: $0,00 | Cobros Cta: $0,00 | Gastos: -$0,00</small>
+                </div>
               </div>
             </div>
 
@@ -308,7 +310,9 @@
                   <i class="bi bi-qr-code-scan text-info fs-5"></i>
                 </div>
                 <div class="fs-4 fw-bold text-dark amount-num" id="txtTransfRango">$0,00</div>
-                <small class="text-muted d-block mt-1" id="countTransfRango">0 transferencias</small>
+                <div class="mt-1" id="desgloseTransfRango">
+                  <small class="text-muted d-block" id="countTransfRango">Ventas: $0,00 | Cobros Cta: $0,00</small>
+                </div>
               </div>
             </div>
 
@@ -320,7 +324,9 @@
                   <i class="bi bi-journal-bookmark-fill text-warning fs-5"></i>
                 </div>
                 <div class="fs-4 fw-bold text-dark amount-num" id="txtFiadoRango">$0,00</div>
-                <small class="text-muted d-block mt-1" id="countFiadoRango">0 a cuenta corriente</small>
+                <div class="mt-1" id="desgloseFiadoRango">
+                  <small class="text-muted d-block" id="countFiadoRango">0 a cuenta corriente</small>
+                </div>
               </div>
             </div>
           </div>

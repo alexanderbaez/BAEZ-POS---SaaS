@@ -38,8 +38,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // 3. Inicializar preset por defecto en Análisis Detallado
-    aplicarPresetFecha('ESTE_MES');
+    // 3. Inicializar preset por defecto en Análisis Detallado (Por defecto: Hoy)
+    aplicarPresetFecha('HOY');
 
     // 4. Carga concurrente inicial
     await Promise.allSettled([
@@ -61,7 +61,8 @@ async function cargarKpisYTablas() {
     const hastaStr = formatInputDate(ultimoDiaMes);
 
     try {
-        const [resVentas, resGastos, resProveedores] = await Promise.allSettled([
+        const [resBoxMes, resVentas, resGastos, resProveedores] = await Promise.allSettled([
+            apiFetch(`/sales/report/box?from=${desdeStr}&to=${hastaStr}`),
             apiFetch(`/sales?desde=${desdeStr}&hasta=${hastaStr}`),
             apiFetch('/expenses'),
             apiFetch('/providers')
@@ -89,7 +90,10 @@ async function cargarKpisYTablas() {
         const ventasActivasMes = listaVentas.filter(v => !v.canceled && v.status !== 'ANULADA');
         let totalVentasMes = 0;
         ventasActivasMes.forEach(v => {
-            totalVentasMes += parseFloat(v.total) || 0;
+            const m = (v.paymentMethod || 'EFECTIVO').toUpperCase();
+            if (m !== 'CUENTA_CORRIENTE') {
+                totalVentasMes += parseFloat(v.total) || 0;
+            }
         });
 
         // --- FILTRAR GASTOS DEL MES ---
@@ -106,8 +110,17 @@ async function cargarKpisYTablas() {
             totalGastosMes += parseFloat(g.amount) || 0;
         });
 
-        // --- GANANCIA NETA ---
-        const gananciaNeta = totalVentasMes - totalGastosMes;
+        let gananciaNeta = totalVentasMes - totalGastosMes;
+
+        if (resBoxMes.status === 'fulfilled' && resBoxMes.value && resBoxMes.value.ok) {
+            const dataBoxMes = await resBoxMes.value.json();
+            if (dataBoxMes.periodSales !== undefined) {
+                totalVentasMes = parseFloat(dataBoxMes.periodSales) || 0;
+            }
+            if (dataBoxMes.periodProfit !== undefined) {
+                gananciaNeta = parseFloat(dataBoxMes.periodProfit) || 0;
+            }
+        }
 
         // --- DEUDA PROVEEDORES ---
         let totalDeudaProveedores = 0;
@@ -455,6 +468,11 @@ function aplicarPresetFecha(preset) {
             break;
     }
 
+    const selectEl = document.getElementById('selectPresetFechas');
+    if (selectEl && selectEl.value !== preset) {
+        selectEl.value = preset;
+    }
+
     if (desde && hasta) {
         const inputDesde = document.getElementById('fechaDesde');
         const inputHasta = document.getElementById('fechaHasta');
@@ -488,7 +506,7 @@ async function consultarPorFechas() {
             apiFetch('/expenses')
         ]);
 
-        // 1. Métricas de Reporte / Box (Fuente de Verdad Financiera con fórmula obligatoria)
+        // 1. Métricas de Reporte / Box (Fuente de Verdad Financiera - Flujo de Caja Puro)
         if (resBox.status === 'fulfilled' && resBox.value && resBox.value.ok) {
             const dataBox = await resBox.value.json();
 
@@ -504,33 +522,43 @@ async function consultarPorFechas() {
             setElementText('txtVentasCountMes', periodOperations);
             setElementText('txtTicketPromedio', fmtARS.format(ticketPromedio));
 
-            // Totales con fórmula financiera:
-            // Total Efectivo = Ventas Directas Efectivo + Pagos Cta. Cte. Efectivo - Gastos Efectivo
-            // Total Transferencia = Ventas Directas Transferencia + Pagos Cta. Cte. Transferencia
-            const netCash = (dataBox.periodNetCash !== undefined && dataBox.periodNetCash !== null)
-                ? parseFloat(dataBox.periodNetCash)
-                : ((parseFloat(dataBox.cashSalesToday) || 0) + (parseFloat(dataBox.customerPaymentsToday) || 0) - (parseFloat(dataBox.expensesToday) || 0));
+            // Trazabilidad Separada y Totales con Flujo de Caja Puro:
+            const cashSales = parseFloat(dataBox.cashSales ?? dataBox.periodCashSales ?? 0);
+            const cashPayments = parseFloat(dataBox.cashPayments ?? dataBox.periodCustomerPaymentsCash ?? 0);
+            const cashExpenses = parseFloat(dataBox.cashExpenses ?? dataBox.periodExpensesCash ?? 0);
+            const transferSales = parseFloat(dataBox.transferSales ?? dataBox.periodTransferSales ?? 0);
+            const transferPayments = parseFloat(dataBox.transferPayments ?? dataBox.periodCustomerPaymentsTransfer ?? 0);
+            const creditSales = parseFloat(dataBox.creditSales ?? dataBox.periodCreditSales ?? 0);
 
-            const netTransfer = (dataBox.periodNetTransfer !== undefined && dataBox.periodNetTransfer !== null)
-                ? parseFloat(dataBox.periodNetTransfer)
-                : (parseFloat(dataBox.transferSalesToday) || 0);
+            const netCash = (dataBox.netCash !== undefined && dataBox.netCash !== null)
+                ? parseFloat(dataBox.netCash)
+                : (cashSales + cashPayments - cashExpenses);
 
-            const creditSales = (dataBox.periodCreditSales !== undefined && dataBox.periodCreditSales !== null)
-                ? parseFloat(dataBox.periodCreditSales)
-                : (parseFloat(dataBox.creditSalesToday) || 0);
-
-            const countCash = dataBox.periodCashCount ?? dataBox.periodOperations ?? 0;
-            const countTransfer = dataBox.periodTransferCount ?? 0;
-            const countCredit = dataBox.periodCreditCount ?? 0;
+            const netTransfer = (dataBox.netTransfer !== undefined && dataBox.netTransfer !== null)
+                ? parseFloat(dataBox.netTransfer)
+                : (transferSales + transferPayments);
 
             setElementText('txtEfectivoRango', fmtARS.format(netCash));
-            setElementText('countEfectivoRango', `${countCash} ventas (+ cobros - gastos)`);
-
             setElementText('txtTransfRango', fmtARS.format(netTransfer));
-            setElementText('countTransfRango', `${countTransfer} transf. (+ cobros QR)`);
-
             setElementText('txtFiadoRango', fmtARS.format(creditSales));
-            setElementText('countFiadoRango', `${countCredit} en libreta`);
+
+            // Inyección del desglose detallado en Efectivo Caja:
+            const elDesgloseEfe = document.getElementById('desgloseEfectivoRango') || document.getElementById('countEfectivoRango');
+            if (elDesgloseEfe) {
+                elDesgloseEfe.innerHTML = `<small class="text-muted d-block" style="font-size: 0.78rem;">Ventas: ${fmtARS.format(cashSales)} | Cobros Cta: ${fmtARS.format(cashPayments)} | Gastos: -${fmtARS.format(cashExpenses)}</small>`;
+            }
+
+            // Inyección del desglose detallado en Transferencias:
+            const elDesgloseTra = document.getElementById('desgloseTransfRango') || document.getElementById('countTransfRango');
+            if (elDesgloseTra) {
+                elDesgloseTra.innerHTML = `<small class="text-muted d-block" style="font-size: 0.78rem;">Ventas: ${fmtARS.format(transferSales)} | Cobros Cta: ${fmtARS.format(transferPayments)}</small>`;
+            }
+
+            const elDesgloseFia = document.getElementById('desgloseFiadoRango') || document.getElementById('countFiadoRango');
+            if (elDesgloseFia) {
+                const countCredit = dataBox.periodCreditCount ?? 0;
+                elDesgloseFia.innerHTML = `<small class="text-muted d-block" style="font-size: 0.78rem;">${countCredit} a cuenta corriente</small>`;
+            }
         }
 
         // 3. Egresos en el Rango Clasificados

@@ -273,16 +273,14 @@ public class SaleServiceImpl implements SaleService {
             }
         }
 
-        // 2. CAPA COMERCIAL CONSOLIDADA DEL DÍA
+        // 2. CAPA COMERCIAL CONSOLIDADA DEL DÍA (Flujo de Caja Puro)
         List<Sale> todaySales = saleRepository.findActiveSalesByCompanyAndDateRange(companyId, startOfToday, endOfToday);
-        BigDecimal totalSalesToday = BigDecimal.ZERO;
         BigDecimal directCashSalesToday = BigDecimal.ZERO;
         BigDecimal directTransferSalesToday = BigDecimal.ZERO;
         BigDecimal creditSalesToday = BigDecimal.ZERO;
 
         for (Sale s : todaySales) {
             if (Boolean.TRUE.equals(s.getCanceled())) continue;
-            totalSalesToday = totalSalesToday.add(s.getTotal());
             String method = normalizePaymentMethod(s.getPaymentMethod());
 
             if ("EFECTIVO".equals(method)) {
@@ -306,20 +304,23 @@ public class SaleServiceImpl implements SaleService {
         BigDecimal transferExpensesToday = expenseRepository.sumDeductibleExpensesByPaymentMethod(companyId, PaymentMethod.TRANSFERENCIA, startOfToday, endOfToday);
         if (transferExpensesToday == null) transferExpensesToday = BigDecimal.ZERO;
 
-        // Totales del día con la fórmula financiera obligatoria:
-        // Total Transferencia Hoy = Ventas Directas Transferencia + Cobros Cta. Cte. Transferencia
+        // Total Ingresos Reales del Día (Ventas Efectivo/Transferencia + Cobros de Deudas)
+        BigDecimal totalSalesToday = directCashSalesToday
+                .add(directTransferSalesToday)
+                .add(cobrosEfeToday)
+                .add(cobrosTraToday);
+
         BigDecimal transferSalesToday = directTransferSalesToday.add(cobrosTraToday);
 
         BigDecimal totalPendingCredit = customerRepository.sumAllBalancesByCompanyId(companyId);
         if (totalPendingCredit == null) totalPendingCredit = BigDecimal.ZERO;
 
-        // 3. CAPA HISTÓRICA / RANGOS AUDITADOS
-        LocalDateTime startRange = (from != null) ? from.atStartOfDay() : LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        // 3. CAPA HISTÓRICA / RANGOS AUDITADOS (FLUJO DE CAJA PURO)
+        LocalDateTime startRange = (from != null) ? from.atStartOfDay() : LocalDate.now().atStartOfDay();
         LocalDateTime endRange = (to != null) ? to.atTime(LocalTime.MAX) : LocalDate.now().atTime(LocalTime.MAX);
 
         List<Sale> rangeSales = saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, startRange, endRange);
-        BigDecimal periodSales = BigDecimal.ZERO;
-        BigDecimal periodReplacementCost = BigDecimal.ZERO;
+        BigDecimal collectedReplacementCost = BigDecimal.ZERO;
         long periodOperations = 0;
 
         BigDecimal periodCashSales = BigDecimal.ZERO;
@@ -331,7 +332,6 @@ public class SaleServiceImpl implements SaleService {
 
         for (Sale s : rangeSales) {
             if (Boolean.TRUE.equals(s.getCanceled())) continue;
-            periodSales = periodSales.add(s.getTotal());
             periodOperations++;
 
             String method = normalizePaymentMethod(s.getPaymentMethod());
@@ -346,15 +346,14 @@ public class SaleServiceImpl implements SaleService {
                 periodCreditCount++;
             }
 
-            if (s.getItems() != null) {
+            // El costo de mercadería y ganancia se calculan solo sobre ventas efectivamente cobradas (Efectivo y Transferencia)
+            if (!"CUENTA_CORRIENTE".equals(method) && s.getItems() != null) {
                 for (SaleItem item : s.getItems()) {
                     BigDecimal costUnit = item.getCost() != null ? item.getCost() : BigDecimal.ZERO;
-                    periodReplacementCost = periodReplacementCost.add(costUnit.multiply(item.getQuantity()));
+                    collectedReplacementCost = collectedReplacementCost.add(costUnit.multiply(item.getQuantity()));
                 }
             }
         }
-
-        BigDecimal periodProfit = periodSales.subtract(periodReplacementCost);
 
         // Cobros de Cuenta Corriente en el período
         BigDecimal periodCustomerPaymentsCash = customerMovementRepository.sumPaymentsByMethodAndCompanyId("EFECTIVO", companyId, startRange, endRange);
@@ -370,7 +369,16 @@ public class SaleServiceImpl implements SaleService {
         BigDecimal periodExpensesTransfer = expenseRepository.sumDeductibleExpensesByPaymentMethod(companyId, PaymentMethod.TRANSFERENCIA, startRange, endRange);
         if (periodExpensesTransfer == null) periodExpensesTransfer = BigDecimal.ZERO;
 
-        // Fórmula financiera obligatoria para el período:
+        // FÓRMULA DE RECAUDACIÓN (FLUJO DE CAJA PURO):
+        // grossRevenue = Ventas (Efectivo + Transferencia) + Cobros de Deudas (Efectivo + Transferencia)
+        BigDecimal grossRevenue = periodCashSales
+                .add(periodTransferSales)
+                .add(periodCustomerPaymentsCash)
+                .add(periodCustomerPaymentsTransfer);
+
+        // netRevenue (Ganancia Neta) sobre ventas efectivamente cobradas menos costo de mercadería
+        BigDecimal netRevenue = grossRevenue.subtract(collectedReplacementCost);
+
         // Total Efectivo = Ventas Directas Efectivo + Pagos Cta. Cte. Efectivo - Gastos Efectivo
         BigDecimal periodNetCash = periodCashSales.add(periodCustomerPaymentsCash).subtract(periodExpensesCash);
 
@@ -388,10 +396,22 @@ public class SaleServiceImpl implements SaleService {
                 transferExpensesToday,
                 creditSalesToday,
                 totalPendingCredit,
-                periodSales,
+                grossRevenue,
                 periodOperations,
-                periodProfit,
-                periodReplacementCost,
+                netRevenue,
+                collectedReplacementCost,
+                periodCashSales,
+                periodCustomerPaymentsCash,
+                periodExpensesCash,
+                periodTransferSales,
+                periodCustomerPaymentsTransfer,
+                periodExpensesTransfer,
+                periodCreditSales,
+                periodNetCash,
+                periodNetTransfer,
+                periodCashCount,
+                periodTransferCount,
+                periodCreditCount,
                 periodCashSales,
                 periodTransferSales,
                 periodCreditSales,
@@ -401,9 +421,6 @@ public class SaleServiceImpl implements SaleService {
                 periodExpensesTransfer,
                 periodNetCash,
                 periodNetTransfer,
-                periodCashCount,
-                periodTransferCount,
-                periodCreditCount,
                 todaySessions
         );
     }

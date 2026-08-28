@@ -18,13 +18,27 @@ public record BoxReportDTO(
         BigDecimal creditSalesToday,
         BigDecimal totalPendingCredit,
 
-        // === CAPA 3: RENDIMIENTO HISTÓRICO Y RANGOS ===
-        BigDecimal periodSales,
+        // === CAPA 3: RENDIMIENTO HISTÓRICO Y RANGOS (FLUJO DE CAJA PURO) ===
+        BigDecimal periodSales,              // grossRevenue = cashSales + transferSales + cashPayments + transferPayments
         Long periodOperations,
-        BigDecimal periodProfit,
+        BigDecimal periodProfit,             // netRevenue sobre ventas efectivamente cobradas
         BigDecimal periodReplacementCost,
 
-        // === CAPA 4: DESGLOSE FINANCIERO POR MEDIO DE PAGO EN EL PERÍODO ===
+        // === CAPA 4: TRAZABILIDAD Y DESGLOSE FINANCIERO EN EL PERÍODO ===
+        BigDecimal cashSales,                // Ventas Efectivo
+        BigDecimal cashPayments,             // Cobros Cta. Cte. Efectivo
+        BigDecimal cashExpenses,             // Gastos Efectivo
+        BigDecimal transferSales,            // Ventas Transferencia
+        BigDecimal transferPayments,         // Cobros Cta. Cte. Transferencia
+        BigDecimal transferExpenses,         // Gastos Transferencia
+        BigDecimal creditSales,              // Fiado / Cta Cte emitido
+        BigDecimal netCash,                  // cashSales + cashPayments - cashExpenses
+        BigDecimal netTransfer,              // transferSales + transferPayments
+        Long periodCashCount,
+        Long periodTransferCount,
+        Long periodCreditCount,
+
+        // Aliases para máxima compatibilidad
         BigDecimal periodCashSales,
         BigDecimal periodTransferSales,
         BigDecimal periodCreditSales,
@@ -32,11 +46,8 @@ public record BoxReportDTO(
         BigDecimal periodCustomerPaymentsTransfer,
         BigDecimal periodExpensesCash,
         BigDecimal periodExpensesTransfer,
-        BigDecimal periodNetCash,        // Ventas Directas Efectivo + Pagos Cta Cte Efectivo - Gastos Efectivo
-        BigDecimal periodNetTransfer,    // Ventas Directas Transferencia + Pagos Cta Cte Transferencia
-        Long periodCashCount,
-        Long periodTransferCount,
-        Long periodCreditCount,
+        BigDecimal periodNetCash,
+        BigDecimal periodNetTransfer,
 
         // === AUDITORÍA DE TURNOS Y MULTI-CAJA DEL DÍA ===
         List<CashSessionResponseDTO> todaySessions
