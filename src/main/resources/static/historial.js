@@ -613,20 +613,58 @@ function exportarExcelPro() {
 // ==========================================
 // 9. REIMPRESIÓN DE TICKET TÉRMICO (58mm POS)
 // ==========================================
+/**
+ * Mecanismo robusto de impresión térmica usando un iframe oculto.
+ * Evita la apertura de pestañas en blanco en móviles y popups bloqueados.
+ */
+function imprimirHTMLConIframe(htmlContent) {
+    const prevIframes = document.querySelectorAll('.print-hidden-iframe');
+    prevIframes.forEach(el => el.remove());
+
+    const iframe = document.createElement('iframe');
+    iframe.className = 'print-hidden-iframe';
+    iframe.style.position = 'fixed';
+    iframe.style.left = '-9999px';
+    iframe.style.top = '-9999px';
+    iframe.style.width = '0px';
+    iframe.style.height = '0px';
+    iframe.style.border = 'none';
+    iframe.style.visibility = 'hidden';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document || iframe.contentDocument;
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+
+    const destruirIframe = () => {
+        setTimeout(() => {
+            if (iframe && iframe.parentNode) {
+                iframe.parentNode.removeChild(iframe);
+            }
+        }, 1500);
+    };
+
+    if (iframe.contentWindow) {
+        iframe.contentWindow.onafterprint = destruirIframe;
+    }
+
+    setTimeout(() => {
+        try {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+        } catch (e) {
+            console.error('Error al imprimir desde iframe:', e);
+        } finally {
+            destruirIframe();
+        }
+    }, 600);
+}
+
 function reimprimirTicket() {
     if (!VENTA_SELECCIONADA) return;
 
     const venta = VENTA_SELECCIONADA;
-    const ventana = window.open('', 'PRINT', 'height=700,width=400');
-
-    if (!ventana) {
-        return Swal.fire({
-            icon: 'warning',
-            title: 'Ventana emergente bloqueada',
-            text: 'Por favor habilita las ventanas emergentes en tu navegador para imprimir.'
-        });
-    }
-
     const infoEmpresa = (typeof DATOS_EMPRESA !== 'undefined' && DATOS_EMPRESA !== null) ? DATOS_EMPRESA : {};
     const fiscalActivo = String(venta.isFiscal !== undefined ? venta.isFiscal : infoEmpresa.hasTaxData) === "true";
 
@@ -648,67 +686,44 @@ function reimprimirTicket() {
     }
 
     const tipoComprobante = fiscalActivo
-        ? (venta.tipoComprobante || infoEmpresa.tipoComprobante || 'FACTURA C').toUpperCase()
-        : (venta.tipoComprobante || 'TICKET INTERNO');
+        ? (venta.invoiceType || infoEmpresa.tipoComprobante || 'FACTURA C').toUpperCase()
+        : 'TICKET NO FISCAL';
 
     const cae = venta.cae || '';
-    const caeVto = venta.caeVto || '';
-    const ptoVta = venta.ptoVta || infoEmpresa.ptoVta || 1;
+    const caeVto = venta.caeExpiration || venta.caeVto || '';
 
-    const nroComprobante = venta.nroComprobante || `${String(ptoVta).padStart(5, '0')}-${String(venta.numeroTicket || venta.id || 1).padStart(8, '0')}`;
+    // Número de Comprobante / Ticket
+    const nroComprobante = venta.invoiceNumber || venta.nroComprobante || `00001-${String(venta.numeroTicket || venta.id || 1).padStart(8, '0')}`;
+    const fechaVenta = venta.saleDate ? new Date(venta.saleDate).toLocaleString('es-AR') : new Date().toLocaleString('es-AR');
+    const cajeroNombre = escapeHtml(venta.userName || 'Admin').toUpperCase();
+    const metodoPago = (venta.paymentMethod || 'EFECTIVO').replace(/_/g, ' ').toUpperCase();
 
-    // Manejo robusto de fechas
-    const fechaObj = venta.saleDate ? new Date(venta.saleDate) : new Date();
-    const fechaVentaStr = fechaObj.toLocaleString('es-AR');
-    const fechaAfipIso = fechaObj.toISOString().split('T')[0]; // Formato YYYY-MM-DD exigido por AFIP
+    const nombreCliente = escapeHtml((venta.clienteNombre || 'CONSUMIDOR FINAL').toUpperCase());
+    const cuitCliente = venta.clienteCuit || '';
 
-    let metodoPago = (venta.paymentMethod || 'EFECTIVO').replace(/_/g, ' ').toUpperCase();
-    if (metodoPago === 'CUENTA CORRIENTE') metodoPago = 'LIBRETA';
-
-    const nombreCliente = escapeHtml(venta.customerName || venta.clienteNombre || 'CONSUMIDOR FINAL').toUpperCase();
-    const cuitCliente = venta.clienteCuit || venta.customerCuit || '';
-
-    // Cálculos de montos deterministas
     const recargoMonto = parseFloat(venta.surcharge) || 0;
     const recargoPorcentaje = parseFloat(venta.surchargeRate) || 0;
     const descuentoMonto = parseFloat(venta.discount) || 0;
     const totalFinal = parseFloat(venta.total) || 0;
+    const subtotalProductos = (totalFinal - recargoMonto) + descuentoMonto;
 
-    // Subtotal calculado sumando explícitamente los renglones (sin asunciones)
-    let subtotalProductos = 0;
-    const itemsHtml = (venta.items || []).map(item => {
-        const cant = parseFloat(item.quantity || item.cantidad || 1);
-        const prec = parseFloat(item.price || item.precio || 0);
-        const subtotalItem = item.subtotal !== undefined ? parseFloat(item.subtotal) : (prec * cant);
-
-        subtotalProductos += subtotalItem;
-        const cantTexto = typeof fmtCantidadGlobal === 'function' ? fmtCantidadGlobal(item) : `${cant} un.`;
-
-        return `
-            <div class="item-row">
-                <span class="item-qty-name">${cantTexto} ${escapeHtml(item.productName || item.nombre || '').toUpperCase()}</span>
-                <span class="item-price">$${subtotalItem.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-            </div>
-        `;
-    }).join('');
-
-    // Determinación del código de comprobante AFIP
-    let tipoCmpAfip = 11; // 11 = Factura C por defecto
-    if (tipoComprobante.includes('A')) tipoCmpAfip = 1;
-    else if (tipoComprobante.includes('B')) tipoCmpAfip = 6;
-
+    // Generar JSON Oficial de AFIP / ARCA para el QR
     let qrText = '';
-    if (fiscalActivo && cae) {
+    if (cae) {
         const cuitLimpio = cuitLocal.replace(/\D/g, '');
         const cuitClienteLimpio = cuitCliente.replace(/\D/g, '');
 
+        const numeroComprobanteEntero = nroComprobante.includes('-')
+            ? parseInt(nroComprobante.split('-')[1], 10)
+            : (venta.numeroTicket || venta.id || 1);
+
         const datosQr = {
             ver: 1,
-            fecha: fechaAfipIso,
+            fecha: fechaVenta.split(' ')[0],
             cuit: Number(cuitLimpio),
-            ptoVta: Number(ptoVta),
-            tipoCmp: tipoCmpAfip,
-            nroCmp: Number(venta.numeroTicket || venta.id || 1),
+            ptoVta: 1,
+            tipoCmp: tipoComprobante.includes('A') ? 1 : 11,
+            nroCmp: numeroComprobanteEntero,
             importe: totalFinal,
             moneda: "ARS",
             ctz: 1,
@@ -717,48 +732,69 @@ function reimprimirTicket() {
             tipoCodAut: "E",
             codAut: Number(cae) || 0
         };
-
         try {
             qrText = `https://www.afip.gob.ar/fe/qr/?p=${btoa(JSON.stringify(datosQr))}`;
         } catch(e) {
-            console.error("Error al construir el QR fiscal:", e);
             qrText = '';
         }
     }
 
-    ventana.document.write(`
+    // Listado de Productos vendidos
+    const itemsHTML = venta.items ? venta.items.map(function mapItemTicketHTML(item) {
+        const subtotalItem = item.subtotal !== undefined
+            ? item.subtotal
+            : ((item.price || item.unitPrice || item.precio || 0) * (item.quantity || item.cantidad || 1));
+        const prefijoCantidad = fmtCantidadTicket(item);
+
+        return `
+            <div class="item-row">
+                <span class="item-qty-name">${prefijoCantidad}${escapeHtml(item.productName || item.nombre || '').toUpperCase()}</span>
+                <span class="item-price">$${formatearMoneda(parseFloat(subtotalItem))}</span>
+            </div>
+        `;
+    }).join('') : '';
+
+    const htmlTicket = `
         <!DOCTYPE html>
         <html>
             <head>
-                <meta charset="utf-8">
-                <title>Ticket #${venta.id || ''}</title>
+                <title>Reimpresión Ticket #${venta.id || ''}</title>
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
                 <style>
                     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-                    @page { margin: 0; }
-                    body { font-family: 'Inter', sans-serif; width: 58mm; padding: 8px; margin: 0; color: #0f172a; background: #fff; line-height: 1.25; }
+                    @page { margin: 0; size: auto; }
+                    body {
+                        font-family: 'Inter', sans-serif;
+                        width: 58mm;
+                        padding: 8px;
+                        margin: 0 auto;
+                        color: #0f172a;
+                        background: #fff;
+                        line-height: 1.25;
+                    }
                     .center { text-align: center; }
                     .ticket-header { border-bottom: 1px dashed #94a3b8; padding-bottom: 8px; margin-bottom: 8px; }
                     .shop-icon-container { display: flex; justify-content: center; align-items: center; margin-bottom: 4px; }
-                    .shop-icon-container svg { width: 28px; height: 28px; fill: #2563eb; }
-                    .business-name { font-weight: 900; font-size: 13px; margin: 2px 0; text-transform: uppercase; letter-spacing: -0.2px; }
-                    .small-info { font-size: 9px; color: #334155; margin: 1.5px 0; }
+                    .shop-icon-container svg { width: 32px; height: 32px; fill: #3b82f6; }
+                    .business-name { font-weight: 900; font-size: 14px; margin: 2px 0; text-transform: uppercase; letter-spacing: -0.2px; }
+                    .small-info { font-size: 9.5px; color: #334155; margin: 1.5px 0; }
                     .fiscal-header { font-size: 8.5px; color: #334155; text-align: left; background: #f1f5f9; padding: 4px 6px; border-radius: 4px; margin-top: 5px; }
-                    .item-row { display: flex; justify-content: space-between; align-items: flex-start; font-size: 9.5px; margin-bottom: 4px; word-break: break-word; }
-                    .item-qty-name { font-weight: 700; text-transform: uppercase; flex: 1; padding-right: 4px; }
+                    .item-row { display: flex; justify-content: space-between; align-items: flex-start; font-size: 10px; margin-bottom: 5px; word-break: break-word; }
+                    .item-qty-name { font-weight: 700; text-transform: uppercase; flex: 1; padding-right: 6px; }
                     .item-price { font-weight: 700; white-space: nowrap; }
-                    .line { border-top: 1px dashed #94a3b8; margin: 6px 0; }
-                    .total-container { border-top: 2px solid #0f172a; margin-top: 6px; padding-top: 6px; display: flex; justify-content: space-between; align-items: center; }
-                    .total-label { font-weight: 900; font-size: 14px; }
-                    .total-amount { font-weight: 900; font-size: 14px; color: #0f172a; }
-                    .arca-container { border-top: 1px solid #0f172a; margin-top: 8px; padding-top: 6px; text-align: center; }
-                    .arca-logo { font-weight: 900; font-size: 10px; letter-spacing: 1.5px; }
+                    .line { border-top: 1px dashed #94a3b8; margin: 8px 0; }
+                    .total-container { border-top: 2px solid #0f172a; margin-top: 8px; padding-top: 6px; display: flex; justify-content: space-between; align-items: center; }
+                    .total-label { font-weight: 900; font-size: 15px; }
+                    .total-amount { font-weight: 900; font-size: 15px; color: #0f172a; }
+                    .arca-container { border-top: 1px solid #0f172a; margin-top: 10px; padding-top: 8px; text-align: center; }
+                    .arca-logo { font-weight: 900; font-size: 11px; letter-spacing: 2px; }
                     .qr-box { display: flex; justify-content: center; margin: 6px 0; }
                     .cae-info { font-size: 8.5px; font-weight: 700; text-align: left; }
-                    .ticket-footer { text-align: center; margin-top: 8px; border-top: 1px dashed #94a3b8; padding-top: 6px; }
-                    .msg-pie { font-style: italic; font-size: 9.5px; color: #475569; margin-bottom: 4px; display: block; }
-                    .payment-method { font-weight: 800; font-size: 9px; border: 1px solid #cbd5e1; padding: 2px 5px; display: inline-block; border-radius: 4px; margin-bottom: 4px; }
-                    .powered { font-size: 7px; font-weight: 700; opacity: 0.5; margin-top: 4px; letter-spacing: 0.5px; }
+                    .ticket-footer { text-align: center; margin-top: 10px; border-top: 1px dashed #94a3b8; padding-top: 8px; }
+                    .msg-pie { font-style: italic; font-size: 10px; color: #475569; margin-bottom: 6px; display: block; }
+                    .payment-method { font-weight: 800; font-size: 9.5px; border: 1px solid #cbd5e1; padding: 3px 6px; display: inline-block; border-radius: 4px; margin-bottom: 6px; }
                     .watermark-reprint { font-size: 8px; font-weight: 800; color: #475569; background: #f1f5f9; padding: 2px 4px; border-radius: 3px; display: inline-block; margin: 3px 0; border: 1px solid #cbd5e1; }
+                    .powered { font-size: 7px; font-weight: 700; opacity: 0.5; margin-top: 6px; letter-spacing: 0.5px; }
                 </style>
             </head>
             <body>
@@ -772,7 +808,6 @@ function reimprimirTicket() {
                     ${direccionLocal ? `<div class="small-info">${direccionLocal}</div>` : ''}
                     ${telefonoLocal ? `<div class="small-info">Tel: ${telefonoLocal}</div>` : ''}
                     ${emailLocal ? `<div class="small-info">${emailLocal}</div>` : ''}
-
                     ${fiscalActivo ? `
                         <div class="fiscal-header">
                             ${cuitLocal ? `<div><strong>CUIT:</strong> ${cuitLocal}</div>` : ''}
@@ -781,51 +816,49 @@ function reimprimirTicket() {
                             ${condicionIva ? `<div><strong>Cond. IVA:</strong> ${condicionIva}</div>` : ''}
                         </div>
                     ` : ''}
-
                     <div class="line"></div>
                     <div class="watermark-reprint">DUPLICADO / REIMPRESIÓN</div>
                     <div class="small-info"><strong>${tipoComprobante} N° ${nroComprobante}</strong></div>
-                    <div class="small-info">Fecha: ${fechaVentaStr}</div>
-                    <div class="small-info">Cajero: ${escapeHtml(venta.userName || 'Admin').toUpperCase()}</div>
+                    <div class="small-info">Fecha: ${fechaVenta}</div>
+                    <div class="small-info">Cajero: ${cajeroNombre}</div>
                     <div class="small-info" style="text-align: left; margin-top: 4px;"><strong>A:</strong> ${nombreCliente} ${cuitCliente ? `(CUIT: ${cuitCliente})` : ''}</div>
                 </div>
 
                 <div class="ticket-body">
-                    ${itemsHtml}
-
+                    ${itemsHTML}
                     ${descuentoMonto > 0 ? `
                         <div class="line"></div>
                         <div class="item-row" style="color: #dc3545;">
                             <span class="item-qty-name">DESCUENTO:</span>
-                            <span class="item-price">-$${descuentoMonto.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                            <span class="item-price">-$${formatearMoneda(descuentoMonto)}</span>
                         </div>
                     ` : ''}
-
                     ${recargoMonto > 0 ? `
                         <div class="line"></div>
                         <div class="item-row" style="color: #64748b; font-size: 8.5px;">
                             <span class="item-qty-name">SUBTOTAL PRODUCTOS:</span>
-                            <span class="item-price">$${subtotalProductos.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                            <span class="item-price">$${formatearMoneda(subtotalProductos)}</span>
                         </div>
                         <div class="item-row" style="color: #d97706; font-weight: bold;">
                             <span class="item-qty-name">RECARGO LIBRETA (${recargoPorcentaje}%):</span>
-                            <span class="item-price">+$${recargoMonto.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                            <span class="item-price">+$${formatearMoneda(recargoMonto)}</span>
                         </div>
                     ` : ''}
-
                     <div class="total-container">
                         <span class="total-label">TOTAL</span>
-                        <span class="total-amount">$${totalFinal.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        <span class="total-amount">$${formatearMoneda(totalFinal)}</span>
                     </div>
                 </div>
 
-                ${(fiscalActivo && cae) ? `
-                    <div class="arca-container">
-                        <div class="arca-logo">ARCA / AFIP</div>
-                        <div class="small-info" style="font-size: 8px;">Comprobante Autorizado Electrónicamente</div>
-                        <div class="qr-box" id="qrcode"></div>
-                        <div class="cae-info">CAE: ${cae}</div>
-                        <div class="cae-info">Vto. CAE: ${caeVto}</div>
+                ${cae ? `
+                    <div class="arca-container" style="border-top: 1px dashed #0f172a; margin-top: 10px; padding-top: 8px; text-align: left;">
+                        <div class="arca-logo" style="text-align: center; font-weight: 900; font-size: 11px; letter-spacing: 2px;">ARCA / AFIP</div>
+                        <div class="small-info center" style="font-size: 8px; margin-bottom: 6px; text-align: center;">Comprobante Autorizado Electrónicamente</div>
+                        ${qrText ? `<div class="qr-box" id="qrcode" style="display: flex; justify-content: center; margin: 6px 0;"></div>` : ''}
+                        <div class="cae-info" style="font-size: 8.5px; font-weight: 700; margin-top: 4px;">CUIT: ${cuitLocal}</div>
+                        <div class="cae-info" style="font-size: 8.5px; font-weight: 700;">Comprobante: ${tipoComprobante} Nro: ${nroComprobante}</div>
+                        <div class="cae-info" style="font-size: 8.5px; font-weight: 700;">CAE: ${cae}</div>
+                        <div class="cae-info" style="font-size: 8.5px; font-weight: 700;">Vto. CAE: ${caeVto}</div>
                     </div>
                 ` : ''}
 
@@ -838,38 +871,30 @@ function reimprimirTicket() {
                 <!-- Carga sincrónica y segura de la librería QRCode -->
                 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
                 <script>
-                    function ejecutarImpresion() {
-                        const qrContainer = document.getElementById("qrcode");
-                        const qrTextVal = "${qrText}";
-
-                        if (qrContainer && qrTextVal && typeof QRCode !== 'undefined') {
-                            try {
-                                new QRCode(qrContainer, {
-                                    text: qrTextVal,
-                                    width: 85,
-                                    height: 85,
-                                    colorDark: "#000000",
-                                    colorLight: "#ffffff",
-                                    correctLevel: QRCode.CorrectLevel.M
-                                });
-                            } catch(e) {
-                                console.error("Error al renderizar código QR:", e);
-                            }
+                    const qrContainer = document.getElementById("qrcode");
+                    const qrTextVal = "${qrText}";
+                    if (qrContainer && qrTextVal && typeof QRCode !== 'undefined') {
+                        try {
+                            new QRCode(qrContainer, {
+                                text: qrTextVal,
+                                width: 85,
+                                height: 85,
+                                colorDark: "#000000",
+                                colorLight: "#ffffff",
+                                correctLevel: QRCode.CorrectLevel.M
+                            });
+                        } catch(e) {
+                            console.error("Error al renderizar código QR:", e);
                         }
-
-                        // Dar tiempo suficiente para el renderizado del QR antes de disparar la impresora
-                        setTimeout(() => {
-                            window.print();
-                            window.close();
-                        }, 300);
                     }
-
-                    // Se ejecuta exactamente cuando la ventana y la librería JS terminan de cargar
-                    window.onload = ejecutarImpresion;
                 </script>
             </body>
         </html>
-    `);
+    `;
 
-    ventana.document.close();
+    imprimirHTMLConIframe(htmlTicket);
 }
+
+// Exposición global
+window.reimprimirTicket = reimprimirTicket;
+window.imprimirHTMLConIframe = imprimirHTMLConIframe;

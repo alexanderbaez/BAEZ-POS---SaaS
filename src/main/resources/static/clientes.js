@@ -119,9 +119,7 @@ function renderizarClientes(clientes) {
         totalDeuda += saldo;
 
         const badgeClass = saldo > 0 ? 'bg-danger bg-opacity-10 text-danger' : 'bg-success bg-opacity-10 text-success';
-        const msgWsCaja = `Hola ${c.name}, te recordamos tu saldo pendiente de ${formatCurrency(saldo)}. Saludos de ${DATOS_EMPRESA?.name || 'BaezPOS'}!`;
         const numTelefono = c.phone ? c.phone.replace(/\D/g, '') : '';
-        const linkWs = numTelefono ? `https://wa.me/${numTelefono}?text=${encodeURIComponent(msgWsCaja)}` : '#';
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -132,9 +130,9 @@ function renderizarClientes(clientes) {
             <td class="text-muted small d-none d-md-table-cell">${c.dniCuit ? sanitizeHTML(c.dniCuit) : '<span class="opacity-25">-</span>'}</td>
             <td class="d-none d-sm-table-cell">
                 ${numTelefono ?
-                    `<a href="${linkWs}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-success border-0 rounded-pill px-3 fw-bold" style="font-size: 0.75rem;">
-                        <i class="bi bi-whatsapp me-1"></i> Recordatorio
-                    </a>` :
+                    `<button type="button" class="btn btn-sm btn-outline-success border-0 rounded-pill px-3 fw-bold d-inline-flex align-items-center gap-1.5" style="font-size: 0.75rem;" title="Enviar recordatorio WhatsApp" data-action="whatsapp" data-id="${c.id}">
+                        <i class="fab fa-whatsapp text-success fs-5"></i> <span class="d-none d-md-inline text-success">Recordatorio</span>
+                    </button>` :
                     '<span class="text-muted small">Sin contacto</span>'
                 }
             </td>
@@ -143,6 +141,9 @@ function renderizarClientes(clientes) {
             </td>
             <td class="text-end pe-3">
                 <div class="d-flex justify-content-end gap-2">
+                    <button class="btn btn-sm btn-light border btn-action" data-action="whatsapp-btn" data-id="${c.id}" title="Recordatorio WhatsApp">
+                        <i class="fab fa-whatsapp text-success"></i>
+                    </button>
                     <button class="btn btn-sm btn-light border btn-action" data-action="editar" data-id="${c.id}" title="Editar">
                         <i class="bi bi-pencil text-warning"></i>
                     </button>
@@ -158,6 +159,16 @@ function renderizarClientes(clientes) {
                 </div>
             </td>
         `;
+
+        const btnWsCol = tr.querySelector('[data-action="whatsapp"]');
+        if (btnWsCol) {
+            btnWsCol.onclick = () => enviarRecordatorioWhatsApp(c.phone, saldo);
+        }
+
+        const btnWsAction = tr.querySelector('[data-action="whatsapp-btn"]');
+        if (btnWsAction) {
+            btnWsAction.onclick = () => enviarRecordatorioWhatsApp(c.phone, saldo);
+        }
 
         tr.querySelector('[data-action="editar"]').onclick = () => abrirModalEditar(c.id);
         tr.querySelector('[data-action="historial"]').onclick = () => verHistorial(c.id, c.name, c.phone);
@@ -514,6 +525,18 @@ function renderizarTablaMovimientos() {
     if (subEl) {
         subEl.textContent = `Deuda Total Actual: ${formatCurrency(saldoAcumulado)}`;
     }
+
+    const btnWsModal = document.getElementById('btnWhatsappModal');
+    if (btnWsModal) {
+        if (CLIENTE_ACTUAL.telefono) {
+            btnWsModal.classList.remove('d-none');
+            btnWsModal.classList.add('d-inline-flex');
+            btnWsModal.onclick = () => enviarRecordatorioWhatsApp(CLIENTE_ACTUAL.telefono, saldoAcumulado);
+        } else {
+            btnWsModal.classList.add('d-none');
+            btnWsModal.classList.remove('d-inline-flex');
+        }
+    }
 }
 
 // ==========================================
@@ -703,6 +726,20 @@ function compartirWhatsApp(nombreCliente, telefono, fecha, total, items = [], de
     window.open(`https://wa.me/${numLimpio}?text=${encodeURIComponent(texto)}`, '_blank');
 }
 
+/**
+ * Envía recordatorio oficial de saldo pendiente por WhatsApp
+ */
+function enviarRecordatorioWhatsApp(telefono, saldo) {
+    if (!telefono || telefono === "null" || telefono === "") {
+        return Swal.fire('Atención', 'El cliente no tiene un número de teléfono registrado.', 'warning');
+    }
+    const numLimpio = String(telefono).replace(/\D/g, '');
+    const saldoFormateado = formatCurrency(saldo);
+    const mensaje = `Hola, te recordamos que tu saldo pendiente es de ${saldoFormateado}. ¡Gracias!`;
+    const url = `https://wa.me/${numLimpio}?text=${encodeURIComponent(mensaje)}`;
+    window.open(url, '_blank');
+}
+
 // Exposición explícita para compatibilidad HTML
 window.abrirModalEditar = abrirModalEditar;
 window.verHistorial = verHistorial;
@@ -715,3 +752,4 @@ window.aplicarFiltroFechas = aplicarFiltroFechas;
 window.limpiarFiltroFechas = limpiarFiltroFechas;
 window.toggleDetalle = toggleDetalle;
 window.compartirWhatsApp = compartirWhatsApp;
+window.enviarRecordatorioWhatsApp = enviarRecordatorioWhatsApp;

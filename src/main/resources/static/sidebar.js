@@ -25,7 +25,7 @@
                 top: 0;
                 left: 0;
                 background: #1e293b !important;
-                z-index: 1000 !important;
+                z-index: 1050 !important;
                 display: flex;
                 flex-direction: column;
                 justify-content: space-between;
@@ -68,7 +68,7 @@
                 width: 100vw;
                 height: 100vh;
                 background: rgba(0, 0, 0, 0.5);
-                z-index: 999;
+                z-index: 1040 !important;
                 display: none;
                 opacity: 0;
                 transition: opacity 0.3s ease;

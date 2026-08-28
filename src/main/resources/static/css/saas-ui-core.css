@@ -401,6 +401,8 @@ label.form-label, .form-label, .form-group label {
 /* ==========================================================================
    COMPONENTE: PUNTO DE VENTA (POS VIEW)
    ========================================================================== */
+.navbar,
+nav.navbar,
 .navbar.sticky-top {
   z-index: 1030 !important;
 }
@@ -626,7 +628,7 @@ body.login-page {
    SIDEBAR Y BACKDROP MOBILE
    ========================================================================== */
 #sidebar {
-  z-index: 1000 !important;
+  z-index: 1050 !important;
 }
 
 .sidebar-backdrop {
@@ -636,7 +638,7 @@ body.login-page {
   width: 100vw;
   height: 100vh;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 999;
+  z-index: 1040 !important;
   display: none;
   opacity: 0;
   transition: opacity 0.3s ease;

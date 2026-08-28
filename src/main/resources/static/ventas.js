@@ -1922,18 +1922,62 @@ function generarPlantillaHTMLTicket(venta) {
     };
 }
 
-function imprimirTicket(venta) {
-    if (!venta) return;
+/**
+ * Mecanismo robusto de impresión térmica usando un iframe oculto.
+ * Evita la apertura de pestañas en blanco en navegadores móviles (iOS/Android) y popups bloqueados.
+ */
+function imprimirHTMLConIframe(htmlContent) {
+    const prevIframes = document.querySelectorAll('.print-hidden-iframe');
+    prevIframes.forEach(el => el.remove());
 
-    const ventana = window.open('', 'PRINT', 'height=700,width=400');
-    if (!ventana) {
-        Swal.fire({ icon: 'warning', title: 'Popup bloqueado', text: 'Permití las ventanas emergentes en tu navegador.' });
-        return;
+    const iframe = document.createElement('iframe');
+    iframe.className = 'print-hidden-iframe';
+    iframe.style.position = 'fixed';
+    iframe.style.left = '-9999px';
+    iframe.style.top = '-9999px';
+    iframe.style.width = '0px';
+    iframe.style.height = '0px';
+    iframe.style.border = 'none';
+    iframe.style.visibility = 'hidden';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document || iframe.contentDocument;
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+
+    const destruirIframe = () => {
+        setTimeout(() => {
+            if (iframe && iframe.parentNode) {
+                iframe.parentNode.removeChild(iframe);
+            }
+        }, 1500);
+    };
+
+    if (iframe.contentWindow) {
+        iframe.contentWindow.onafterprint = destruirIframe;
     }
 
+    setTimeout(() => {
+        try {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+        } catch (e) {
+            console.error('Error al imprimir desde iframe:', e);
+        } finally {
+            destruirIframe();
+        }
+    }, 600);
+}
+
+function imprimirTicket(venta) {
+    if (!venta) return;
     const plantilla = generarPlantillaHTMLTicket(venta);
-    ventana.document.write(plantilla.html);
-    ventana.document.close();
+    imprimirHTMLConIframe(plantilla.html);
+}
+
+function imprimirTicketLocal(venta) {
+    imprimirTicket(venta);
 }
 
 function reimprimirUltimoTicket() {
@@ -2407,25 +2451,6 @@ function imprimirTicketCierreCaja(dto) {
     const declarado = parseFloat(dto.declaredAmount ?? 0);
     const diferencia = parseFloat(dto.difference ?? 0);
 
-    const ticketWindow = window.open('', '_blank', 'width=380,height=600');
-    if (!ticketWindow) {
-        Swal.fire('Atención', 'Permite las ventanas emergentes en tu navegador para imprimir el comprobante de cierre.', 'info');
-        return;
-    }
-
-    let diffText = `$${formatearMonedaSegura(Math.abs(diferencia))}`;
-    let diffLabel = "DIFERENCIA:";
-    if (diferencia < 0) {
-        diffLabel = "FALTANTE:";
-        diffText = `-$${formatearMonedaSegura(Math.abs(diferencia))}`;
-    } else if (diferencia > 0) {
-        diffLabel = "SOBRANTE:";
-        diffText = `+$${formatearMonedaSegura(diferencia)}`;
-    } else {
-        diffLabel = "DIFERENCIA:";
-        diffText = `$0,00 (CUADRADA)`;
-    }
-
     const htmlTicket = `
         <!DOCTYPE html>
         <html lang="es">
@@ -2453,7 +2478,7 @@ function imprimirTicketCierreCaja(dto) {
                 .fs-title { font-size: 15px; font-weight: bold; }
             </style>
         </head>
-        <body onload="window.print();">
+        <body>
             <div class="text-center">
                 <div class="fs-title">${(empresa.name || 'BÁEZ POS').toUpperCase()}</div>
                 <div>${empresa.address || ''}</div>
@@ -2486,6 +2511,12 @@ function imprimirTicketCierreCaja(dto) {
         </html>
     `;
 
-    ticketWindow.document.write(htmlTicket);
-    ticketWindow.document.close();
+    imprimirHTMLConIframe(htmlTicket);
 }
+
+// Exposición global para interoperabilidad
+window.imprimirTicket = imprimirTicket;
+window.imprimirTicketLocal = imprimirTicketLocal;
+window.imprimirTicketCierreCaja = imprimirTicketCierreCaja;
+window.imprimirHTMLConIframe = imprimirHTMLConIframe;
+window.reimprimirUltimoTicket = reimprimirUltimoTicket;

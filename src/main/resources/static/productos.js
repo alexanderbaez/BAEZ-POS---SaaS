@@ -600,6 +600,53 @@ document.addEventListener('keydown', (e) => {
 // ==========================================
 // 6. IMPRESIÓN DE ETIQUETA / TICKET MEJORADA
 // ==========================================
+/**
+ * Mecanismo robusto de impresión térmica/etiquetas usando un iframe oculto.
+ */
+function imprimirHTMLConIframe(htmlContent) {
+    const prevIframes = document.querySelectorAll('.print-hidden-iframe');
+    prevIframes.forEach(el => el.remove());
+
+    const iframe = document.createElement('iframe');
+    iframe.className = 'print-hidden-iframe';
+    iframe.style.position = 'fixed';
+    iframe.style.left = '-9999px';
+    iframe.style.top = '-9999px';
+    iframe.style.width = '0px';
+    iframe.style.height = '0px';
+    iframe.style.border = 'none';
+    iframe.style.visibility = 'hidden';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document || iframe.contentDocument;
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+
+    const destruirIframe = () => {
+        setTimeout(() => {
+            if (iframe && iframe.parentNode) {
+                iframe.parentNode.removeChild(iframe);
+            }
+        }, 1500);
+    };
+
+    if (iframe.contentWindow) {
+        iframe.contentWindow.onafterprint = destruirIframe;
+    }
+
+    setTimeout(() => {
+        try {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+        } catch (e) {
+            console.error('Error al imprimir desde iframe:', e);
+        } finally {
+            destruirIframe();
+        }
+    }, 600);
+}
+
 async function imprimirEtiqueta(id) {
     let p = PRODUCTOS_LOCAL.find(prod => prod.id === id);
     if (!p) return;
@@ -620,63 +667,46 @@ async function imprimirEtiqueta(id) {
         }
     }
 
-    const ventana = window.open('', 'PRINT', 'height=400,width=600');
-    if (!ventana) return Swal.fire('Error', 'Por favor habilita las ventanas emergentes en tu navegador.', 'error');
-
     const nameSeguro = (p.name || '').replace(/"/g, '&quot;');
 
-    ventana.document.write(`
+    const htmlEtiqueta = `
         <!DOCTYPE html>
         <html>
             <head>
                 <title>Etiqueta - ${nameSeguro}</title>
                 <style>
-                    @page { margin: 0; size: auto; }
-                    body {
-                        margin: 0;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        height: 100vh;
-                        background-color: #fff;
-                    }
                     .etiqueta {
                         width: 50mm;
                         height: 25mm;
                         border: 1px dashed #ccc;
                         display: flex;
                         flex-direction: column;
-                        align-items: center;
                         justify-content: center;
-                        gap: 2px;
-                        padding: 4px;
+                        align-items: center;
+                        padding: 2px;
                         box-sizing: border-box;
-                        text-align: center;
                     }
                     .nombre {
-                        font-size: 10px;
                         font-family: Arial, sans-serif;
+                        font-size: 10px;
                         font-weight: bold;
+                        text-align: center;
+                        margin-bottom: 2px;
                         white-space: nowrap;
                         overflow: hidden;
                         text-overflow: ellipsis;
-                        max-width: 100%;
+                        max-width: 48mm;
                     }
-                    .barcode-container {
-                        width: 100%;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
+                    svg {
+                        width: 46mm;
+                        height: 15mm;
                     }
-                    .barcode { width: 95%; max-height: 40px; }
                 </style>
             </head>
             <body>
                 <div class="etiqueta">
                     <div class="nombre">${nameSeguro.toUpperCase()}</div>
-                    <div class="barcode-container">
-                        <svg id="barcode-svg" class="barcode"></svg>
-                    </div>
+                    <svg id="barcode-svg"></svg>
                 </div>
                 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
                 <script>
@@ -690,7 +720,6 @@ async function imprimirEtiqueta(id) {
                                 fontSize: 9,
                                 margin: 0
                             });
-                            setTimeout(() => { window.print(); window.close(); }, 400);
                         } catch(e) {
                             console.error("Error JsBarcode:", e);
                         }
@@ -698,8 +727,8 @@ async function imprimirEtiqueta(id) {
                 </script>
             </body>
         </html>
-    `);
-    ventana.document.close();
+    `;
+    imprimirHTMLConIframe(htmlEtiqueta);
 }
 
 if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
@@ -750,9 +779,6 @@ async function imprimirEtiquetasMultiples(id) {
 
     if (!cantidad || cantidad <= 0) return;
 
-    const ventana = window.open('', 'PRINT_MULTI', 'height=700,width=900');
-    if (!ventana) return Swal.fire('Error', 'Por favor habilita las ventanas emergentes para imprimir.', 'error');
-
     const nameSeguro = (p.name || '').replace(/"/g, '&quot;');
 
     let etiquetasHTML = '';
@@ -767,7 +793,7 @@ async function imprimirEtiquetasMultiples(id) {
         `;
     }
 
-    ventana.document.write(`
+    const htmlHoja = `
         <!DOCTYPE html>
         <html>
             <head>
@@ -851,10 +877,6 @@ async function imprimirEtiquetasMultiples(id) {
                                     margin: 0
                                 });
                             });
-                            setTimeout(() => {
-                                window.print();
-                                window.close();
-                            }, 500);
                         } catch(e) {
                             console.error("Error generando códigos de barras:", e);
                         }
@@ -862,8 +884,8 @@ async function imprimirEtiquetasMultiples(id) {
                 </script>
             </body>
         </html>
-    `);
-    ventana.document.close();
+    `;
+    imprimirHTMLConIframe(htmlHoja);
 }
 
 // ==========================================

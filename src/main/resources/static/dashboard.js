@@ -512,7 +512,6 @@ async function consultarPorFechas() {
 
             let sumEfectivo = 0, countEfe = 0;
             let sumTransf = 0, countTra = 0;
-            let sumTarjeta = 0, countTar = 0;
             let sumFiado = 0, countFia = 0;
 
             activas.forEach(v => {
@@ -525,9 +524,6 @@ async function consultarPorFechas() {
                 } else if (m === 'TRANSFERENCIA') {
                     sumTransf += total;
                     countTra++;
-                } else if (m === 'TARJETA') {
-                    sumTarjeta += total;
-                    countTar++;
                 } else if (m === 'CUENTA_CORRIENTE') {
                     sumFiado += total;
                     countFia++;
@@ -542,9 +538,6 @@ async function consultarPorFechas() {
 
             setElementText('txtTransfRango', fmtARS.format(sumTransf));
             setElementText('countTransfRango', `${countTra} transferencias`);
-
-            setElementText('txtTarjetaRango', fmtARS.format(sumTarjeta));
-            setElementText('countTarjetaRango', `${countTar} cobros POS`);
 
             setElementText('txtFiadoRango', fmtARS.format(sumFiado));
             setElementText('countFiadoRango', `${countFia} en libreta`);
