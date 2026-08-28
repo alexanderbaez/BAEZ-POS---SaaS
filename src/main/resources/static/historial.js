@@ -623,31 +623,12 @@ function imprimirHTMLConIframe(htmlContent) {
 
     const iframe = document.createElement('iframe');
     iframe.className = 'print-hidden-iframe';
-    iframe.style.position = 'fixed';
-    iframe.style.left = '-9999px';
-    iframe.style.top = '-9999px';
-    iframe.style.width = '0px';
-    iframe.style.height = '0px';
-    iframe.style.border = 'none';
-    iframe.style.visibility = 'hidden';
+    iframe.style.display = 'none';
     document.body.appendChild(iframe);
 
-    const doc = iframe.contentWindow.document || iframe.contentDocument;
-    doc.open();
-    doc.write(htmlContent);
-    doc.close();
-
-    const destruirIframe = () => {
-        setTimeout(() => {
-            if (iframe && iframe.parentNode) {
-                iframe.parentNode.removeChild(iframe);
-            }
-        }, 1500);
-    };
-
-    if (iframe.contentWindow) {
-        iframe.contentWindow.onafterprint = destruirIframe;
-    }
+    iframe.contentWindow.document.open();
+    iframe.contentWindow.document.write(htmlContent);
+    iframe.contentWindow.document.close();
 
     setTimeout(() => {
         try {
@@ -656,7 +637,11 @@ function imprimirHTMLConIframe(htmlContent) {
         } catch (e) {
             console.error('Error al imprimir desde iframe:', e);
         } finally {
-            destruirIframe();
+            setTimeout(() => {
+                if (iframe && iframe.parentNode) {
+                    iframe.parentNode.removeChild(iframe);
+                }
+            }, 1000);
         }
     }, 600);
 }

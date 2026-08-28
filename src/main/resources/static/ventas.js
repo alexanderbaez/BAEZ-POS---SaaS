@@ -1932,31 +1932,12 @@ function imprimirHTMLConIframe(htmlContent) {
 
     const iframe = document.createElement('iframe');
     iframe.className = 'print-hidden-iframe';
-    iframe.style.position = 'fixed';
-    iframe.style.left = '-9999px';
-    iframe.style.top = '-9999px';
-    iframe.style.width = '0px';
-    iframe.style.height = '0px';
-    iframe.style.border = 'none';
-    iframe.style.visibility = 'hidden';
+    iframe.style.display = 'none';
     document.body.appendChild(iframe);
 
-    const doc = iframe.contentWindow.document || iframe.contentDocument;
-    doc.open();
-    doc.write(htmlContent);
-    doc.close();
-
-    const destruirIframe = () => {
-        setTimeout(() => {
-            if (iframe && iframe.parentNode) {
-                iframe.parentNode.removeChild(iframe);
-            }
-        }, 1500);
-    };
-
-    if (iframe.contentWindow) {
-        iframe.contentWindow.onafterprint = destruirIframe;
-    }
+    iframe.contentWindow.document.open();
+    iframe.contentWindow.document.write(htmlContent);
+    iframe.contentWindow.document.close();
 
     setTimeout(() => {
         try {
@@ -1965,7 +1946,11 @@ function imprimirHTMLConIframe(htmlContent) {
         } catch (e) {
             console.error('Error al imprimir desde iframe:', e);
         } finally {
-            destruirIframe();
+            setTimeout(() => {
+                if (iframe && iframe.parentNode) {
+                    iframe.parentNode.removeChild(iframe);
+                }
+            }, 1000);
         }
     }, 600);
 }
@@ -2237,37 +2222,37 @@ async function modalCerrarCaja() {
 
     const { value: formValues } = await Swal.fire({
         title: '<span class="fs-5 fw-bold text-dark">🔒 Cierre de Caja & Arqueo Ciego</span>',
-        width: '100%',
+        width: 'min(480px, 94vw)',
         customClass: {
-            container: 'p-1 p-sm-3',
+            container: 'p-2',
             popup: 'rounded-4 shadow-lg border-0 my-2 mx-auto',
             htmlContainer: 'mx-0 my-1 px-2 px-sm-3 text-start'
         },
         html: `
             <div class="text-center mb-3">
-                <div class="p-3 bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex mb-2">
-                    <i class="bi bi-safe fs-1"></i>
+                <div class="p-2.5 bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex mb-2">
+                    <i class="bi bi-safe fs-2"></i>
                 </div>
                 <h6 class="fw-bold text-dark mb-1">Arqueo Físico del Cajón</h6>
                 <p class="text-muted small mb-0">Cuente el efectivo físico disponible en billetes y monedas.</p>
             </div>
 
-            <!-- Input Gigante de Monto Contado (Arqueo Ciego) -->
+            <!-- Input Proporcionado de Monto Contado (Arqueo Ciego) -->
             <div class="mb-3">
-                <label class="form-label fw-bold text-dark fs-6 mb-1">Ingrese el efectivo físico total en la caja *</label>
-                <div class="input-group input-group-lg shadow-sm">
-                    <span class="input-group-text bg-success text-white fw-bold fs-4">$</span>
-                    <input id="swal-monto-declarado" type="number" step="0.01" inputmode="decimal" class="form-control text-center fw-bold text-success fs-3" placeholder="0.00" autocomplete="off">
+                <label class="form-label fw-bold text-dark small text-uppercase mb-2 text-center d-block">Efectivo Físico Contado *</label>
+                <div class="input-group input-group-lg shadow-sm rounded-3 overflow-hidden border mx-auto" style="max-width: 300px;">
+                    <span class="input-group-text bg-white border-0 text-success fw-bold fs-3 ps-3 pe-2">$</span>
+                    <input id="swal-monto-declarado" type="number" step="0.01" inputmode="decimal" class="form-control form-control-lg border-0 fs-2 fw-bold text-dark text-center shadow-none amount-num" placeholder="0.00" autocomplete="off">
                 </div>
                 <div class="form-text text-muted text-center mt-1.5" style="font-size: 0.75rem;">
-                    <i class="bi bi-shield-lock me-1"></i> El sistema auditará la diferencia contra el cálculo teórico tras confirmar.
+                    <i class="bi bi-shield-lock me-1 text-primary"></i> El sistema auditará la diferencia contra el cálculo teórico tras confirmar.
                 </div>
             </div>
 
             <!-- Observaciones -->
             <div class="mb-1">
-                <label class="form-label small fw-bold text-secondary mb-1">Notas / Observaciones del Turno</label>
-                <textarea id="swal-notas-cierre" class="form-control" rows="2" placeholder="Opcional: Aclaraciones del turno, retiros, etc..."></textarea>
+                <label class="form-label small fw-bold text-dark text-uppercase mb-1">Notas / Observaciones del Turno</label>
+                <textarea id="swal-notas-cierre" class="form-control rounded-3 bg-light border p-2" rows="2" placeholder="Opcional: Aclaraciones del turno, retiros, etc..."></textarea>
             </div>
         `,
         focusConfirm: false,
