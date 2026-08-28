@@ -35,5 +35,14 @@ public interface CustomerMovementRepository extends JpaRepository<CustomerMoveme
                                                @Param("start") LocalDateTime start,
                                                @Param("end") LocalDateTime end);
 
+    @Query("SELECT COALESCE(SUM(cm.amount), 0) FROM CustomerMovement cm " +
+            "WHERE cm.customer.company.id = :companyId AND cm.type = 'CREDITO' AND UPPER(cm.paymentMethod) = UPPER(:method) " +
+            "AND ((:sessionId IS NOT NULL AND cm.cashRegisterSession.id = :sessionId) OR (cm.cashRegisterSession IS NULL AND cm.createdAt BETWEEN :start AND :end))")
+    BigDecimal sumPaymentsBySessionAndMethod(@Param("method") String method,
+                                             @Param("companyId") Long companyId,
+                                             @Param("sessionId") Long sessionId,
+                                             @Param("start") LocalDateTime start,
+                                             @Param("end") LocalDateTime end);
+
     Optional<CustomerMovement> findFirstBySaleId(Long saleId);
 }

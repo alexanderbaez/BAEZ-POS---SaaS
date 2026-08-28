@@ -3,6 +3,7 @@ package com.baez.baezpos.customer.service;
 import com.baez.baezpos.customer.dto.CustomerMovementDTO;
 import com.baez.baezpos.customer.dto.CustomerRequestDTO;
 import com.baez.baezpos.customer.dto.CustomerResponseDTO;
+import com.baez.baezpos.sale.entity.CashRegisterSession;
 import com.baez.baezpos.sale.entity.Sale;
 
 import java.math.BigDecimal;
@@ -15,6 +16,7 @@ public interface CustomerService {
     List<CustomerMovementDTO> getHistory(Long customerId);
     CustomerResponseDTO updateCustomer(Long id, CustomerRequestDTO dto); // Retorna DTO
     void updateBalance(Long customerId, BigDecimal amount, String type, String description, Sale sale, String paymentMethod);
+    void updateBalance(Long customerId, BigDecimal amount, String type, String description, Sale sale, String paymentMethod, CashRegisterSession cashRegisterSession);
     void processCustomerPayment(Long id, BigDecimal amount, String method);
     void deleteCustomer(Long id);
 }

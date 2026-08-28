@@ -2413,7 +2413,7 @@ async function mostrarResultadoArqueoModal(dto) {
                     <span class="fw-semibold text-dark">$${formatearMonedaSegura(dto.totalCashSales)}</span>
                 </div>
                 <div class="d-flex justify-content-between align-items-center py-0.5 border-bottom border-light">
-                    <span class="text-muted small">+ Cobros Cta. Cte.:</span>
+                    <span class="text-muted small">+ Cobranza Cta. Cte. (Efectivo):</span>
                     <span class="fw-semibold text-dark">$${formatearMonedaSegura(dto.totalCustomerPayments)}</span>
                 </div>
                 <div class="d-flex justify-content-between align-items-center py-0.5">
@@ -2450,6 +2450,9 @@ function imprimirTicketCierreCaja(dto) {
     const teorico = parseFloat(dto.systemAmount ?? 0);
     const declarado = parseFloat(dto.declaredAmount ?? 0);
     const diferencia = parseFloat(dto.difference ?? 0);
+
+    const diffLabel = diferencia >= 0 ? 'SOBRANTE:' : 'FALTANTE:';
+    const diffText = `${diferencia >= 0 ? '+' : ''}$${formatearMonedaSegura(Math.abs(diferencia))}`;
 
     const htmlTicket = `
         <!DOCTYPE html>
@@ -2494,7 +2497,7 @@ function imprimirTicketCierreCaja(dto) {
             <div class="divider"></div>
             <div class="row"><span>+ Fondo Inicial:</span><span>$${formatearMonedaSegura(inicial)}</span></div>
             <div class="row"><span>+ Ventas Efectivo:</span><span>$${formatearMonedaSegura(ventasEfe)}</span></div>
-            <div class="row"><span>+ Cobros Cta. Cte.:</span><span>$${formatearMonedaSegura(cobrosEfe)}</span></div>
+            <div class="row"><span>+ Cobranza Cta. Cte. (Efectivo):</span><span>$${formatearMonedaSegura(cobrosEfe)}</span></div>
             <div class="row"><span>- Gastos Efectivo:</span><span>-$${formatearMonedaSegura(gastosEfe)}</span></div>
             <div class="divider"></div>
             <div class="row fw-bold"><span>EFECTIVO TEÓRICO:</span><span>$${formatearMonedaSegura(teorico)}</span></div>

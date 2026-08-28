@@ -109,15 +109,16 @@ public class CashRegisterServiceImpl implements CashRegisterService {
             }
         }
 
-        // Cobros de deudas en efectivo
-        BigDecimal cobrosEfe = customerMovementRepository.sumPaymentsByMethodAndCompanyId("EFECTIVO", companyId, session.getOpenedAt(), searchEnd);
+        // Cobros de deudas en efectivo registrados para la sesión o rango
+        BigDecimal cobrosEfe = customerMovementRepository.sumPaymentsBySessionAndMethod("EFECTIVO", companyId, session.getId(), session.getOpenedAt(), searchEnd);
         if (cobrosEfe == null) cobrosEfe = BigDecimal.ZERO;
 
         // Gastos en efectivo
         BigDecimal expensesEfe = expenseRepository.sumDeductibleCashExpenses(companyId, session.getOpenedAt(), searchEnd);
         if (expensesEfe == null) expensesEfe = BigDecimal.ZERO;
 
-        // Ecuación de Arqueo Físico de Cajón
+        // Ecuación de Arqueo Físico de Cajón (Arqueo Ciego exacto)
+        // systemAmount = Fondo Inicial + Ventas Efectivo + Cobranzas Cta Cte Efectivo - Gastos Efectivo
         BigDecimal systemCashCalculated = session.getInitialAmount()
                 .add(cashSales)
                 .add(cobrosEfe)
@@ -197,7 +198,7 @@ public class CashRegisterServiceImpl implements CashRegisterService {
             }
         }
 
-        BigDecimal cobrosEfe = customerMovementRepository.sumPaymentsByMethodAndCompanyId("EFECTIVO", session.getCompany().getId(), start, end);
+        BigDecimal cobrosEfe = customerMovementRepository.sumPaymentsBySessionAndMethod("EFECTIVO", session.getCompany().getId(), session.getId(), start, end);
         if (cobrosEfe == null) cobrosEfe = BigDecimal.ZERO;
 
         BigDecimal expensesEfe = expenseRepository.sumDeductibleCashExpenses(session.getCompany().getId(), start, end);

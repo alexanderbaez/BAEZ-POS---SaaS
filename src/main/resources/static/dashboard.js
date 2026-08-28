@@ -488,7 +488,7 @@ async function consultarPorFechas() {
             apiFetch('/expenses')
         ]);
 
-        // 1. Métricas de Reporte / Box
+        // 1. Métricas de Reporte / Box (Fuente de Verdad Financiera con fórmula obligatoria)
         if (resBox.status === 'fulfilled' && resBox.value && resBox.value.ok) {
             const dataBox = await resBox.value.json();
 
@@ -503,44 +503,34 @@ async function consultarPorFechas() {
             setElementText('txtReposicionMes', fmtARS.format(periodReplacementCost));
             setElementText('txtVentasCountMes', periodOperations);
             setElementText('txtTicketPromedio', fmtARS.format(ticketPromedio));
-        }
 
-        // 2. Desglose de Ventas por Medio de Pago en el Rango
-        if (resVentasRango.status === 'fulfilled' && resVentasRango.value && resVentasRango.value.ok) {
-            const ventasRango = await resVentasRango.value.json();
-            const activas = Array.isArray(ventasRango) ? ventasRango.filter(v => !v.canceled && v.status !== 'ANULADA') : [];
+            // Totales con fórmula financiera:
+            // Total Efectivo = Ventas Directas Efectivo + Pagos Cta. Cte. Efectivo - Gastos Efectivo
+            // Total Transferencia = Ventas Directas Transferencia + Pagos Cta. Cte. Transferencia
+            const netCash = (dataBox.periodNetCash !== undefined && dataBox.periodNetCash !== null)
+                ? parseFloat(dataBox.periodNetCash)
+                : ((parseFloat(dataBox.cashSalesToday) || 0) + (parseFloat(dataBox.customerPaymentsToday) || 0) - (parseFloat(dataBox.expensesToday) || 0));
 
-            let sumEfectivo = 0, countEfe = 0;
-            let sumTransf = 0, countTra = 0;
-            let sumFiado = 0, countFia = 0;
+            const netTransfer = (dataBox.periodNetTransfer !== undefined && dataBox.periodNetTransfer !== null)
+                ? parseFloat(dataBox.periodNetTransfer)
+                : (parseFloat(dataBox.transferSalesToday) || 0);
 
-            activas.forEach(v => {
-                const total = parseFloat(v.total) || 0;
-                const m = (v.paymentMethod || 'EFECTIVO').toUpperCase();
+            const creditSales = (dataBox.periodCreditSales !== undefined && dataBox.periodCreditSales !== null)
+                ? parseFloat(dataBox.periodCreditSales)
+                : (parseFloat(dataBox.creditSalesToday) || 0);
 
-                if (m === 'EFECTIVO') {
-                    sumEfectivo += total;
-                    countEfe++;
-                } else if (m === 'TRANSFERENCIA') {
-                    sumTransf += total;
-                    countTra++;
-                } else if (m === 'CUENTA_CORRIENTE') {
-                    sumFiado += total;
-                    countFia++;
-                } else {
-                    sumEfectivo += total;
-                    countEfe++;
-                }
-            });
+            const countCash = dataBox.periodCashCount ?? dataBox.periodOperations ?? 0;
+            const countTransfer = dataBox.periodTransferCount ?? 0;
+            const countCredit = dataBox.periodCreditCount ?? 0;
 
-            setElementText('txtEfectivoRango', fmtARS.format(sumEfectivo));
-            setElementText('countEfectivoRango', `${countEfe} operaciones`);
+            setElementText('txtEfectivoRango', fmtARS.format(netCash));
+            setElementText('countEfectivoRango', `${countCash} ventas (+ cobros - gastos)`);
 
-            setElementText('txtTransfRango', fmtARS.format(sumTransf));
-            setElementText('countTransfRango', `${countTra} transferencias`);
+            setElementText('txtTransfRango', fmtARS.format(netTransfer));
+            setElementText('countTransfRango', `${countTransfer} transf. (+ cobros QR)`);
 
-            setElementText('txtFiadoRango', fmtARS.format(sumFiado));
-            setElementText('countFiadoRango', `${countFia} en libreta`);
+            setElementText('txtFiadoRango', fmtARS.format(creditSales));
+            setElementText('countFiadoRango', `${countCredit} en libreta`);
         }
 
         // 3. Egresos en el Rango Clasificados

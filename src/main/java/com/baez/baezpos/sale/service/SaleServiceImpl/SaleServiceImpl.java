@@ -273,10 +273,11 @@ public class SaleServiceImpl implements SaleService {
             }
         }
 
-        // 2. CAPA COMERCIAL CONSOLIDADA
+        // 2. CAPA COMERCIAL CONSOLIDADA DEL DÍA
         List<Sale> todaySales = saleRepository.findActiveSalesByCompanyAndDateRange(companyId, startOfToday, endOfToday);
         BigDecimal totalSalesToday = BigDecimal.ZERO;
-        BigDecimal transferSalesToday = BigDecimal.ZERO;
+        BigDecimal directCashSalesToday = BigDecimal.ZERO;
+        BigDecimal directTransferSalesToday = BigDecimal.ZERO;
         BigDecimal creditSalesToday = BigDecimal.ZERO;
 
         for (Sale s : todaySales) {
@@ -284,23 +285,35 @@ public class SaleServiceImpl implements SaleService {
             totalSalesToday = totalSalesToday.add(s.getTotal());
             String method = normalizePaymentMethod(s.getPaymentMethod());
 
-            if ("TRANSFERENCIA".equals(method)) {
-                transferSalesToday = transferSalesToday.add(s.getTotal());
+            if ("EFECTIVO".equals(method)) {
+                directCashSalesToday = directCashSalesToday.add(s.getTotal());
+            } else if ("TRANSFERENCIA".equals(method)) {
+                directTransferSalesToday = directTransferSalesToday.add(s.getTotal());
             } else if ("CUENTA_CORRIENTE".equals(method)) {
                 creditSalesToday = creditSalesToday.add(s.getTotal());
             }
         }
 
+        BigDecimal cobrosEfeToday = customerMovementRepository.sumPaymentsByMethodAndCompanyId("EFECTIVO", companyId, startOfToday, endOfToday);
+        if (cobrosEfeToday == null) cobrosEfeToday = BigDecimal.ZERO;
+
         BigDecimal cobrosTraToday = customerMovementRepository.sumPaymentsByMethodAndCompanyId("TRANSFERENCIA", companyId, startOfToday, endOfToday);
-        if (cobrosTraToday != null) transferSalesToday = transferSalesToday.add(cobrosTraToday);
+        if (cobrosTraToday == null) cobrosTraToday = BigDecimal.ZERO;
+
+        BigDecimal cashExpensesToday = expenseRepository.sumDeductibleCashExpenses(companyId, startOfToday, endOfToday);
+        if (cashExpensesToday == null) cashExpensesToday = BigDecimal.ZERO;
 
         BigDecimal transferExpensesToday = expenseRepository.sumDeductibleExpensesByPaymentMethod(companyId, PaymentMethod.TRANSFERENCIA, startOfToday, endOfToday);
         if (transferExpensesToday == null) transferExpensesToday = BigDecimal.ZERO;
 
+        // Totales del día con la fórmula financiera obligatoria:
+        // Total Transferencia Hoy = Ventas Directas Transferencia + Cobros Cta. Cte. Transferencia
+        BigDecimal transferSalesToday = directTransferSalesToday.add(cobrosTraToday);
+
         BigDecimal totalPendingCredit = customerRepository.sumAllBalancesByCompanyId(companyId);
         if (totalPendingCredit == null) totalPendingCredit = BigDecimal.ZERO;
 
-        // 3. CAPA HISTÓRICA / RANGOS
+        // 3. CAPA HISTÓRICA / RANGOS AUDITADOS
         LocalDateTime startRange = (from != null) ? from.atStartOfDay() : LocalDate.now().withDayOfMonth(1).atStartOfDay();
         LocalDateTime endRange = (to != null) ? to.atTime(LocalTime.MAX) : LocalDate.now().atTime(LocalTime.MAX);
 
@@ -309,23 +322,66 @@ public class SaleServiceImpl implements SaleService {
         BigDecimal periodReplacementCost = BigDecimal.ZERO;
         long periodOperations = 0;
 
+        BigDecimal periodCashSales = BigDecimal.ZERO;
+        BigDecimal periodTransferSales = BigDecimal.ZERO;
+        BigDecimal periodCreditSales = BigDecimal.ZERO;
+        long periodCashCount = 0;
+        long periodTransferCount = 0;
+        long periodCreditCount = 0;
+
         for (Sale s : rangeSales) {
             if (Boolean.TRUE.equals(s.getCanceled())) continue;
             periodSales = periodSales.add(s.getTotal());
             periodOperations++;
-            for (SaleItem item : s.getItems()) {
-                BigDecimal costUnit = item.getCost() != null ? item.getCost() : BigDecimal.ZERO;
-                periodReplacementCost = periodReplacementCost.add(costUnit.multiply(item.getQuantity()));
+
+            String method = normalizePaymentMethod(s.getPaymentMethod());
+            if ("EFECTIVO".equals(method)) {
+                periodCashSales = periodCashSales.add(s.getTotal());
+                periodCashCount++;
+            } else if ("TRANSFERENCIA".equals(method)) {
+                periodTransferSales = periodTransferSales.add(s.getTotal());
+                periodTransferCount++;
+            } else if ("CUENTA_CORRIENTE".equals(method)) {
+                periodCreditSales = periodCreditSales.add(s.getTotal());
+                periodCreditCount++;
+            }
+
+            if (s.getItems() != null) {
+                for (SaleItem item : s.getItems()) {
+                    BigDecimal costUnit = item.getCost() != null ? item.getCost() : BigDecimal.ZERO;
+                    periodReplacementCost = periodReplacementCost.add(costUnit.multiply(item.getQuantity()));
+                }
             }
         }
 
         BigDecimal periodProfit = periodSales.subtract(periodReplacementCost);
 
+        // Cobros de Cuenta Corriente en el período
+        BigDecimal periodCustomerPaymentsCash = customerMovementRepository.sumPaymentsByMethodAndCompanyId("EFECTIVO", companyId, startRange, endRange);
+        if (periodCustomerPaymentsCash == null) periodCustomerPaymentsCash = BigDecimal.ZERO;
+
+        BigDecimal periodCustomerPaymentsTransfer = customerMovementRepository.sumPaymentsByMethodAndCompanyId("TRANSFERENCIA", companyId, startRange, endRange);
+        if (periodCustomerPaymentsTransfer == null) periodCustomerPaymentsTransfer = BigDecimal.ZERO;
+
+        // Gastos en el período
+        BigDecimal periodExpensesCash = expenseRepository.sumDeductibleCashExpenses(companyId, startRange, endRange);
+        if (periodExpensesCash == null) periodExpensesCash = BigDecimal.ZERO;
+
+        BigDecimal periodExpensesTransfer = expenseRepository.sumDeductibleExpensesByPaymentMethod(companyId, PaymentMethod.TRANSFERENCIA, startRange, endRange);
+        if (periodExpensesTransfer == null) periodExpensesTransfer = BigDecimal.ZERO;
+
+        // Fórmula financiera obligatoria para el período:
+        // Total Efectivo = Ventas Directas Efectivo + Pagos Cta. Cte. Efectivo - Gastos Efectivo
+        BigDecimal periodNetCash = periodCashSales.add(periodCustomerPaymentsCash).subtract(periodExpensesCash);
+
+        // Total Transferencia = Ventas Directas Transferencia + Pagos Cta. Cte. Transferencia
+        BigDecimal periodNetTransfer = periodTransferSales.add(periodCustomerPaymentsTransfer);
+
         return new BoxReportDTO(
                 activeInitialAmount,
-                activeCashSales,
-                activeCustomerPayments,
-                activeExpenses,
+                directCashSalesToday,
+                cobrosEfeToday,
+                cashExpensesToday,
                 activeRealBalance,
                 totalSalesToday,
                 transferSalesToday,
@@ -336,6 +392,18 @@ public class SaleServiceImpl implements SaleService {
                 periodOperations,
                 periodProfit,
                 periodReplacementCost,
+                periodCashSales,
+                periodTransferSales,
+                periodCreditSales,
+                periodCustomerPaymentsCash,
+                periodCustomerPaymentsTransfer,
+                periodExpensesCash,
+                periodExpensesTransfer,
+                periodNetCash,
+                periodNetTransfer,
+                periodCashCount,
+                periodTransferCount,
+                periodCreditCount,
                 todaySessions
         );
     }
@@ -360,7 +428,7 @@ public class SaleServiceImpl implements SaleService {
             }
         }
 
-        BigDecimal cobrosEfe = customerMovementRepository.sumPaymentsByMethodAndCompanyId("EFECTIVO", session.getCompany().getId(), start, end);
+        BigDecimal cobrosEfe = customerMovementRepository.sumPaymentsBySessionAndMethod("EFECTIVO", session.getCompany().getId(), session.getId(), start, end);
         if (cobrosEfe == null) cobrosEfe = BigDecimal.ZERO;
 
         BigDecimal expensesEfe = expenseRepository.sumDeductibleCashExpenses(session.getCompany().getId(), start, end);

@@ -1,5 +1,6 @@
 package com.baez.baezpos.customer.entities;
 
+import com.baez.baezpos.sale.entity.CashRegisterSession;
 import com.baez.baezpos.sale.entity.Sale;
 import com.baez.baezpos.shared.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -38,4 +39,8 @@ public class CustomerMovement extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sale_id")
     private Sale sale;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cash_register_session_id")
+    private CashRegisterSession cashRegisterSession;
 }

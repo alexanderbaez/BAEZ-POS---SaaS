@@ -10,8 +10,11 @@ import com.baez.baezpos.customer.entities.CustomerMovement;
 import com.baez.baezpos.customer.repository.CustomerMovementRepository;
 import com.baez.baezpos.customer.repository.CustomerRepository;
 import com.baez.baezpos.log.service.AuditService;
+import com.baez.baezpos.sale.entity.CashRegisterSession;
+import com.baez.baezpos.sale.entity.CashSessionStatus;
 import com.baez.baezpos.sale.entity.Sale;
 import com.baez.baezpos.sale.entity.SaleItem;
+import com.baez.baezpos.sale.repository.CashRegisterSessionRepository;
 import com.baez.baezpos.security.util.SecurityUtils;
 import com.baez.baezpos.shared.exception.BadRequestException;
 import com.baez.baezpos.shared.exception.ResourceNotFoundException;
@@ -30,6 +33,7 @@ public class CustomerServiceImpl implements CustomerService {
     private final CustomerRepository customerRepository;
     private final CustomerMovementRepository customerMovementRepository;
     private final CompanyRepository companyRepository;
+    private final CashRegisterSessionRepository cashRegisterSessionRepository;
     private final AuditService auditService;
 
     @Override
@@ -68,6 +72,21 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     @Transactional
     public void updateBalance(Long customerId, BigDecimal amount, String type, String description, Sale sale, String paymentMethod) {
+        CashRegisterSession session = (sale != null) ? sale.getCashRegisterSession() : null;
+        if (session == null) {
+            Long companyId = SecurityUtils.getCurrentCompanyId();
+            if (companyId != null) {
+                session = cashRegisterSessionRepository
+                        .findFirstByCompanyIdAndStatusOrderByIdDesc(companyId, CashSessionStatus.OPEN)
+                        .orElse(null);
+            }
+        }
+        updateBalance(customerId, amount, type, description, sale, paymentMethod, session);
+    }
+
+    @Override
+    @Transactional
+    public void updateBalance(Long customerId, BigDecimal amount, String type, String description, Sale sale, String paymentMethod, CashRegisterSession cashRegisterSession) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
 
         Customer customer = (companyId != null)
@@ -88,7 +107,7 @@ public class CustomerServiceImpl implements CustomerService {
 
         String methodToSave = (sale != null && sale.getPaymentMethod() != null)
                 ? sale.getPaymentMethod()
-                : (paymentMethod != null ? paymentMethod.toUpperCase() : "EFECTIVO");
+                : (paymentMethod != null && !paymentMethod.trim().isBlank() ? paymentMethod.trim().toUpperCase() : "EFECTIVO");
 
         CustomerMovement movement = CustomerMovement.builder()
                 .customer(customer)
@@ -97,6 +116,7 @@ public class CustomerServiceImpl implements CustomerService {
                 .description(description)
                 .sale(sale)
                 .paymentMethod(methodToSave)
+                .cashRegisterSession(cashRegisterSession)
                 .build();
 
         customerMovementRepository.save(movement);
@@ -200,21 +220,30 @@ public class CustomerServiceImpl implements CustomerService {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BadRequestException("El monto a pagar debe ser mayor a cero.");
         }
+        if (method == null || method.trim().isBlank()) {
+            throw new BadRequestException("El método de pago (EFECTIVO, TRANSFERENCIA, etc.) es obligatorio.");
+        }
 
-        String validMethod = (method != null && !method.isBlank()) ? method.toUpperCase() : "EFECTIVO";
+        Long companyId = requireCompanyContext();
+        String validMethod = method.trim().toUpperCase();
 
-        // Al registrar el movimiento CREDITO con su paymentMethod y timestamp,
-        // CashRegisterServiceImpl lo sumará automáticamente en sumPaymentsByMethodAndCompanyId
+        // Si existe una Sesión de Caja abierta para la empresa / usuario logueado
+        CashRegisterSession activeSession = cashRegisterSessionRepository
+                .findFirstByCompanyIdAndStatusOrderByIdDesc(companyId, CashSessionStatus.OPEN)
+                .orElse(null);
+
         this.updateBalance(
                 id,
                 amount,
                 "CREDITO",
                 "Pago de cuenta corriente - " + validMethod,
                 null,
-                validMethod
+                validMethod,
+                activeSession
         );
 
-        auditService.logAction("PAGO_CLIENTE", "Pago de $" + amount + " recibido para el cliente ID: " + id + " via " + validMethod, "INFO");
+        String cajaLog = (activeSession != null) ? " (Caja Turno #" + activeSession.getSessionNumber() + ")" : " (Sin caja abierta)";
+        auditService.logAction("PAGO_CLIENTE", "Pago de $" + amount + " recibido para el cliente ID: " + id + " via " + validMethod + cajaLog, "INFO");
     }
 
     @Override

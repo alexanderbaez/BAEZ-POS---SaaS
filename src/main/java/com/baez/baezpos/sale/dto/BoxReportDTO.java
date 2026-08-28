@@ -24,6 +24,20 @@ public record BoxReportDTO(
         BigDecimal periodProfit,
         BigDecimal periodReplacementCost,
 
+        // === CAPA 4: DESGLOSE FINANCIERO POR MEDIO DE PAGO EN EL PERÍODO ===
+        BigDecimal periodCashSales,
+        BigDecimal periodTransferSales,
+        BigDecimal periodCreditSales,
+        BigDecimal periodCustomerPaymentsCash,
+        BigDecimal periodCustomerPaymentsTransfer,
+        BigDecimal periodExpensesCash,
+        BigDecimal periodExpensesTransfer,
+        BigDecimal periodNetCash,        // Ventas Directas Efectivo + Pagos Cta Cte Efectivo - Gastos Efectivo
+        BigDecimal periodNetTransfer,    // Ventas Directas Transferencia + Pagos Cta Cte Transferencia
+        Long periodCashCount,
+        Long periodTransferCount,
+        Long periodCreditCount,
+
         // === AUDITORÍA DE TURNOS Y MULTI-CAJA DEL DÍA ===
         List<CashSessionResponseDTO> todaySessions
 ) {}
