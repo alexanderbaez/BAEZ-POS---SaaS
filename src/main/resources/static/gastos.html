@@ -149,61 +149,61 @@
         </div>
     </div>
 
-    <!-- MODAL REGISTRO DE GASTO -->
-    <div class="modal fade" id="modalNuevoGasto" tabindex="-1" data-bs-backdrop="static">
+    <!-- MODAL REGISTRO DE GASTO PREMIUM -->
+    <div class="modal fade" id="modalNuevoGasto" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content border-0 shadow-lg">
-                <div class="modal-header border-bottom p-3 bg-light">
-                    <h5 class="modal-title fw-bold text-dark fs-6"><i class="bi bi-receipt me-2 text-danger"></i>Registrar Nuevo Egreso de Dinero</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form id="formGasto">
-                    <div class="modal-body p-3 p-md-4">
-                        <div class="mb-3">
-                            <label class="form-label small fw-semibold text-secondary">Concepto / Descripción del Gasto *</label>
-                            <input type="text" id="descGasto" class="form-control" placeholder="Ej: Compra de bolsas, Pago servicio de luz, Comida almuerzo..." required autocomplete="off">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <!-- Header -->
+                <div class="modal-header border-0 bg-light p-4 pb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="icon-box bg-danger bg-opacity-10 text-danger p-2.5 rounded-3">
+                            <i class="bi bi-receipt fs-4"></i>
                         </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark m-0">Registrar Nuevo Egreso de Dinero</h5>
+                            <small class="text-muted">Control y auditoría de egresos operativos y compras</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
 
-                        <div class="row">
-                            <div class="col-12 col-md-6 mb-3">
-                                <label class="form-label small fw-semibold text-secondary">Monto ($ ARS) *</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light fw-bold text-muted">$</span>
-                                    <input type="number" inputmode="decimal" id="montoGasto" class="form-control fw-bold text-danger amount-num fs-5" step="0.01" placeholder="0.00" required>
+                <form id="formGasto">
+                    <div class="modal-body p-4">
+                        <!-- FILA 1: Monto (Gigante con $ integrado) y Fecha -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-dark fw-bold small text-uppercase mb-2">Monto ($ ARS) *</label>
+                                <div class="input-group input-group-lg shadow-sm rounded-3 overflow-hidden border">
+                                    <span class="input-group-text bg-white border-0 text-danger fw-bold fs-3 ps-3 pe-2">$</span>
+                                    <input type="number" inputmode="decimal" id="montoGasto" class="form-control form-control-lg border-0 fs-2 fw-bold text-danger text-end pe-3 shadow-none amount-num" step="0.01" min="0.01" placeholder="0.00" required>
                                 </div>
                             </div>
-                            <div class="col-12 col-md-6 mb-3">
-                                <label class="form-label small fw-semibold text-secondary">Categoría del Gasto *</label>
-                                <select id="catGasto" class="form-select" required>
-                                    <option value="CAJA_CHICA">Caja Chica (Limpieza, insumos)</option>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-dark fw-bold small text-uppercase mb-2">Fecha del Egreso *</label>
+                                <div class="input-group input-group-lg shadow-sm rounded-3 overflow-hidden border">
+                                    <span class="input-group-text bg-white border-0 text-muted"><i class="bi bi-calendar3"></i></span>
+                                    <input type="date" id="fechaGasto" class="form-control form-control-lg border-0 fs-6 shadow-none" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FILA 2: Categoría/Tipo de Gasto y Medio de Pago -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-dark fw-bold small text-uppercase mb-2">Categoría / Tipo de Gasto *</label>
+                                <select id="catGasto" class="form-select form-select-lg rounded-3 shadow-sm border" required>
+                                    <option value="CAJA_CHICA">Caja Chica (Limpieza, insumos diarios)</option>
                                     <option value="PROVEEDOR">Pago / Compra a Proveedor</option>
-                                    <option value="SERVICIOS">Servicios (Luz, Agua, Internet)</option>
+                                    <option value="SERVICIOS">Servicios (Luz, Agua, Internet, Gas)</option>
                                     <option value="LOGISTICA">Fletes / Logística / Combustible</option>
                                     <option value="SUELDOS">Sueldos / Adelantos de Personal</option>
                                     <option value="MANTENIMIENTO">Mantenimiento / Reparaciones</option>
                                     <option value="VARIOS_RETIRO">Retiro Personal / Varios (Comida, no operativo)</option>
                                 </select>
                             </div>
-                        </div>
-
-                        <!-- SECCIÓN DINÁMICA DE PROVEEDOR (visible cuando Categoría = PROVEEDOR) -->
-                        <div class="row d-none" id="seccionProveedor">
-                            <div class="col-12 col-md-6 mb-3">
-                                <label class="form-label small fw-semibold text-primary"><i class="bi bi-truck me-1"></i>Proveedor Asignado *</label>
-                                <select id="provGasto" class="form-select border-primary bg-primary bg-opacity-10">
-                                    <option value="">-- Seleccionar Proveedor --</option>
-                                </select>
-                            </div>
-                            <div class="col-12 col-md-6 mb-3">
-                                <label class="form-label small fw-semibold text-secondary"><i class="bi bi-file-earmark-text me-1"></i>N° Factura / Remito Proveedor</label>
-                                <input type="text" id="nroFacturaGasto" class="form-control" placeholder="Ej: FC-A-0001-00045678">
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-12 col-md-6 mb-3">
-                                <label class="form-label small fw-semibold text-secondary">Origen del Dinero / Medio de Pago *</label>
-                                <select id="metodoPagoGasto" class="form-select" required>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-dark fw-bold small text-uppercase mb-2">Origen / Medio de Pago *</label>
+                                <select id="metodoPagoGasto" class="form-select form-select-lg rounded-3 shadow-sm border" required>
                                     <option value="EFECTIVO_CAJA">Efectivo (Sale del cajón diario)</option>
                                     <option value="EFECTIVO_CAJA_FUERTE">Efectivo (Caja Fuerte / Dueño)</option>
                                     <option value="TRANSFERENCIA">Transferencia Bancaria / QR Digital</option>
@@ -211,17 +211,39 @@
                                     <option value="CUENTA_CORRIENTE">Cuenta Corriente (Suma a Deuda Proveedor)</option>
                                 </select>
                             </div>
-                            <div class="col-12 col-md-6 mb-3">
-                                <label class="form-label small fw-semibold text-secondary">N° Comprobante / Referencia (Opcional)</label>
-                                <input type="text" id="refComprobante" class="form-control" placeholder="Ej: Recibo o Comprobante #12345">
+                        </div>
+
+                        <!-- SECCIÓN DINÁMICA DE PROVEEDOR (visible cuando Categoría = PROVEEDOR) -->
+                        <div class="row g-3 mb-4 d-none" id="seccionProveedor">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-primary fw-bold small text-uppercase mb-2"><i class="bi bi-truck me-1"></i>Proveedor Asignado *</label>
+                                <select id="provGasto" class="form-select form-select-lg border-primary bg-primary bg-opacity-10 rounded-3">
+                                    <option value="">-- Seleccionar Proveedor --</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-dark fw-bold small text-uppercase mb-2"><i class="bi bi-file-earmark-text me-1"></i>N° Factura / Remito Proveedor</label>
+                                <input type="text" id="nroFacturaGasto" class="form-control form-control-lg rounded-3 border" placeholder="Ej: FC-A-0001-00045678">
                             </div>
                         </div>
 
+                        <!-- FILA 3: Concepto / Descripción ampliada (textarea limpio) -->
+                        <div class="mb-4">
+                            <label class="form-label text-dark fw-bold small text-uppercase mb-2">Concepto / Descripción Ampliada *</label>
+                            <textarea id="descGasto" class="form-control rounded-3 p-3 shadow-sm border" rows="3" placeholder="Detalla el motivo del egreso (ej: Compra de bolsas para mostrador, pago mensual de servicio eléctrico...)" required autocomplete="off"></textarea>
+                        </div>
+
+                        <!-- Referencia Adicional -->
+                        <div class="mb-4">
+                            <label class="form-label text-dark fw-bold small text-uppercase mb-1">N° Comprobante / Referencia Adicional (Opcional)</label>
+                            <input type="text" id="refComprobante" class="form-control p-2.5 rounded-3 bg-light border" placeholder="Ej: Recibo N° 98124, Ticket fiscal...">
+                        </div>
+
                         <!-- TOGGLE CAJA CHICA DINÁMICO -->
-                        <div class="p-3 bg-light rounded-3 border mt-1" id="boxToggleCaja">
-                            <div class="form-check form-switch m-0">
-                                <input class="form-check-input" type="checkbox" role="switch" id="deductFromBox" checked>
-                                <label class="form-check-label fw-semibold text-dark ms-2" for="deductFromBox">
+                        <div class="p-3 bg-light rounded-3 border" id="boxToggleCaja">
+                            <div class="form-check form-switch m-0 d-flex align-items-center">
+                                <input class="form-check-input fs-5 me-2" type="checkbox" role="switch" id="deductFromBox" checked>
+                                <label class="form-check-label fw-bold text-dark small text-uppercase" for="deductFromBox">
                                     Descontar del Arqueo / Cierre de Caja Chica del Turno
                                 </label>
                             </div>
@@ -231,9 +253,12 @@
                         </div>
                     </div>
 
-                    <div class="modal-footer bg-light border-top p-3 d-flex flex-column-reverse flex-md-row gap-2 justify-content-md-end">
-                        <button type="button" class="btn btn-outline-secondary px-4 fw-semibold w-100 w-md-auto" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-danger px-4 fw-bold w-100 w-md-auto">REGISTRAR GASTO</button>
+                    <!-- Footer con Botones Premium -->
+                    <div class="modal-footer border-0 bg-light p-4 pt-3 d-flex flex-column-reverse flex-sm-row gap-2 justify-content-sm-end">
+                        <button type="button" class="btn btn-light btn-lg px-4 w-100 w-sm-auto rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-danger btn-lg px-4 fw-bold w-100 flex-grow-1 rounded-3 shadow-sm" id="btnGuardarGasto">
+                            <i class="bi bi-check-circle-fill me-2"></i> Guardar Gasto
+                        </button>
                     </div>
                 </form>
             </div>

@@ -18,6 +18,11 @@ document.addEventListener('DOMContentLoaded', () => {
     cargarGastos();
     cargarProveedoresParaSelect();
 
+    const inputFecha = document.getElementById('fechaGasto');
+    if (inputFecha && !inputFecha.value) {
+        inputFecha.value = new Date().toISOString().split('T')[0];
+    }
+
     const formGasto = document.getElementById('formGasto');
     if (formGasto) {
         formGasto.addEventListener('submit', guardarGasto);
@@ -388,15 +393,27 @@ async function guardarGasto(e) {
     const elementDeduct = document.getElementById('deductFromBox');
     const deductFromBoxValue = (metodo === 'EFECTIVO_CAJA') && (elementDeduct ? elementDeduct.checked : true);
 
+    const fechaVal = document.getElementById('fechaGasto')?.value;
+    let expenseDateTime = null;
+    if (fechaVal) {
+        const now = new Date();
+        const hora = String(now.getHours()).padStart(2, '0');
+        const min = String(now.getMinutes()).padStart(2, '0');
+        const sec = String(now.getSeconds()).padStart(2, '0');
+        expenseDateTime = `${fechaVal}T${hora}:${min}:${sec}`;
+    }
+
     const nuevoGasto = {
         description: document.getElementById('descGasto').value.trim(),
         amount: monto,
         category: categoria,
         paymentMethod: metodo,
-        reference: document.getElementById('refComprobante').value.trim() || null,
+        reference: document.getElementById('refComprobante')?.value.trim() || null,
         providerId: providerId,
         invoiceNumber: invoiceNumber,
-        deductFromBox: deductFromBoxValue
+        deductFromBox: deductFromBoxValue,
+        expenseDate: expenseDateTime,
+        date: expenseDateTime
     };
 
     try {
@@ -413,6 +430,9 @@ async function guardarGasto(e) {
             });
 
             document.getElementById('formGasto').reset();
+
+            const inputFecha = document.getElementById('fechaGasto');
+            if (inputFecha) inputFecha.value = new Date().toISOString().split('T')[0];
 
             if (metodoPagoGasto && elementDeduct) {
                 actualizarEstadoDeductFromBox(metodoPagoGasto.value, elementDeduct);

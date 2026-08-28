@@ -100,40 +100,129 @@
   </div>
 
   <!-- Modal Nuevo / Editar Cliente -->
-  <div class="modal fade" id="modalNuevoCliente" tabindex="-1">
+  <div class="modal fade" id="modalNuevoCliente" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content border-0 shadow-lg">
-        <div class="modal-header border-0 p-3 p-md-4">
-          <h5 class="fw-bold m-0" id="modalClienteTitulo">Nuevo Cliente</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+        <div class="modal-header border-0 bg-light p-4 pb-3">
+          <div class="d-flex align-items-center gap-2">
+            <div class="icon-box bg-primary bg-opacity-10 text-primary p-2.5 rounded-3">
+              <i class="bi bi-person-badge fs-4"></i>
+            </div>
+            <div>
+              <h5 class="fw-bold text-dark m-0" id="modalClienteTitulo">Nuevo Cliente</h5>
+              <small class="text-muted">Ficha del cliente y límite de cuenta corriente</small>
+            </div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
         </div>
-        <div class="modal-body p-3 p-md-4 pt-0">
+        <div class="modal-body p-4">
           <form id="formNuevoCliente" onsubmit="event.preventDefault(); guardarCliente();">
             <input type="hidden" id="custId">
             <div class="mb-3">
-              <label class="small fw-bold text-muted mb-1">Nombre Completo *</label>
-              <input type="text" id="custNombre" class="form-control bg-light border-0 p-2" required>
+              <label class="form-label text-dark fw-bold small text-uppercase mb-1">Nombre Completo *</label>
+              <input type="text" id="custNombre" class="form-control form-control-lg bg-light border p-2.5 rounded-3" placeholder="Ej: Juan Pérez" required>
             </div>
-            <div class="row">
+            <div class="row g-3">
               <div class="col-12 col-md-6 mb-3">
-                <label class="small fw-bold text-muted mb-1">DNI/CUIT</label>
-                <input type="text" inputmode="numeric" id="custDni" class="form-control bg-light border-0 p-2">
+                <label class="form-label text-dark fw-bold small text-uppercase mb-1">DNI / CUIT</label>
+                <input type="text" inputmode="numeric" id="custDni" class="form-control bg-light border p-2.5 rounded-3" placeholder="Sin puntos">
               </div>
               <div class="col-12 col-md-6 mb-3">
-                <label class="small fw-bold text-muted mb-1">Teléfono</label>
-                <input type="tel" inputmode="tel" id="custTel" class="form-control bg-light border-0 p-2" placeholder="Ej: 2641234567">
+                <label class="form-label text-dark fw-bold small text-uppercase mb-1">WhatsApp / Teléfono</label>
+                <input type="tel" inputmode="tel" id="custTel" class="form-control bg-light border p-2.5 rounded-3" placeholder="Ej: 2641234567">
               </div>
             </div>
             <div class="mb-2">
-              <label class="small fw-bold text-muted mb-1">Límite de Crédito ($)</label>
-              <input type="number" inputmode="decimal" id="custLimite" class="form-control bg-light border-0 p-2 fw-bold text-primary amount-num" value="10000">
+              <label class="form-label text-dark fw-bold small text-uppercase mb-1">Límite de Crédito ($)</label>
+              <div class="input-group rounded-3 border overflow-hidden">
+                <span class="input-group-text bg-white border-0 text-muted fw-bold">$</span>
+                <input type="number" inputmode="decimal" id="custLimite" class="form-control border-0 p-2.5 fw-bold text-primary amount-num fs-5" value="10000">
+              </div>
             </div>
           </form>
         </div>
-        <div class="modal-footer border-0 p-3 p-md-4 pt-0 d-flex flex-column-reverse flex-md-row gap-2 justify-content-md-end">
-          <button type="button" class="btn btn-light px-4 w-100 w-md-auto" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="btn btn-primary px-4 fw-bold w-100 w-md-auto" onclick="guardarCliente()">Guardar</button>
+        <div class="modal-footer border-0 bg-light p-4 pt-3 d-flex flex-column-reverse flex-sm-row gap-2 justify-content-sm-end">
+          <button type="button" class="btn btn-light btn-lg px-4 w-100 w-sm-auto rounded-3" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary btn-lg px-4 fw-bold w-100 w-sm-auto rounded-3 shadow-sm" onclick="guardarCliente()">Guardar Cliente</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Registrar Cobro de Deuda / Pago de Cliente (Premium) -->
+  <div class="modal fade" id="modalCobroCliente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+        <div class="modal-header border-0 bg-light p-4 pb-3">
+          <div class="d-flex align-items-center gap-2">
+            <div class="icon-box bg-success bg-opacity-10 text-success p-2.5 rounded-3">
+              <i class="bi bi-cash-coin fs-4"></i>
+            </div>
+            <div>
+              <h5 class="fw-bold text-dark m-0" id="modalCobroTitulo">Registrar Cobro de Deuda</h5>
+              <small class="text-muted" id="modalCobroSubtitulo">Cliente: ...</small>
+            </div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+
+        <form id="formCobroCliente" onsubmit="event.preventDefault(); procesarFormularioCobro();">
+          <div class="modal-body p-4">
+            <input type="hidden" id="cobroClienteId">
+
+            <!-- Saldo actual badge -->
+            <div class="d-flex justify-content-between align-items-center bg-light p-3 rounded-3 mb-4 border">
+              <span class="small text-muted fw-bold text-uppercase">Deuda Pendiente Actual:</span>
+              <span class="fs-5 fw-bold text-danger amount-num" id="cobroSaldoActual">$0,00</span>
+            </div>
+
+            <!-- Monto a Cobrar Gigante -->
+            <div class="mb-4">
+              <label class="form-label text-dark fw-bold small text-uppercase mb-2">Monto que entrega el cliente ($) *</label>
+              <div class="input-group input-group-lg shadow-sm rounded-3 overflow-hidden border">
+                <span class="input-group-text bg-white border-0 text-success fw-bold fs-3 ps-3 pe-2">$</span>
+                <input type="number" step="0.01" min="0.01" id="cobroMontoInput" class="form-control form-control-lg border-0 fs-2 fw-bold text-dark text-end pe-3 shadow-none amount-num" placeholder="0.00" required>
+              </div>
+              <small class="text-muted d-block mt-1">Ingresá el importe a cancelar o abonar parcialmente.</small>
+            </div>
+
+            <!-- Selector de Método de Pago con botones tipo radio btn-check -->
+            <div class="mb-4">
+              <label class="form-label text-dark fw-bold small text-uppercase mb-2">Método de Ingreso *</label>
+              <div class="row g-2">
+                <div class="col-6">
+                  <input type="radio" class="btn-check" name="cobroMetodoPago" id="metodoEfectivo" value="EFECTIVO" checked>
+                  <label class="btn btn-outline-success w-100 p-3 rounded-3 fw-bold d-flex flex-column align-items-center gap-1 shadow-sm h-100 justify-content-center" for="metodoEfectivo">
+                    <i class="bi bi-cash-stack fs-3"></i>
+                    <span>Efectivo</span>
+                    <small class="fw-normal text-muted" style="font-size: 0.72rem;">Ingresa a Caja</small>
+                  </label>
+                </div>
+                <div class="col-6">
+                  <input type="radio" class="btn-check" name="cobroMetodoPago" id="metodoTransferencia" value="TRANSFERENCIA">
+                  <label class="btn btn-outline-primary w-100 p-3 rounded-3 fw-bold d-flex flex-column align-items-center gap-1 shadow-sm h-100 justify-content-center" for="metodoTransferencia">
+                    <i class="bi bi-qr-code-scan fs-3"></i>
+                    <span>Transferencia / QR</span>
+                    <small class="fw-normal text-muted" style="font-size: 0.72rem;">Mercado Pago / Banco</small>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Referencia / Observación -->
+            <div class="mb-2">
+              <label class="form-label text-dark fw-bold small text-uppercase mb-1">Referencia / Observación (Opcional)</label>
+              <input type="text" id="cobroRefInput" class="form-control p-2.5 rounded-3 bg-light border" placeholder="Ej: Pago parcial, comprobante MP...">
+            </div>
+          </div>
+
+          <div class="modal-footer border-0 bg-light p-4 pt-3 d-flex flex-column-reverse flex-sm-row gap-2 justify-content-sm-end">
+            <button type="button" class="btn btn-light btn-lg px-4 w-100 w-sm-auto rounded-3" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-success btn-lg px-4 fw-bold w-100 flex-grow-1 rounded-3 shadow-sm" id="btnConfirmarCobro">
+              <i class="bi bi-check-circle-fill me-2"></i> Confirmar Pago
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>

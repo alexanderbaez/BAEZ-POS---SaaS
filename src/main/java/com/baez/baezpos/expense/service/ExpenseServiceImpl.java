@@ -66,6 +66,8 @@ public class ExpenseServiceImpl implements ExpenseService {
                 ? dto.category()
                 : (dto.providerId() != null ? ExpenseCategory.PROVEEDOR : ExpenseCategory.CAJA_CHICA);
 
+        LocalDateTime dateToSave = (dto.expenseDate() != null) ? dto.expenseDate() : LocalDateTime.now();
+
         Expense expense = Expense.builder()
                 .description(dto.description().trim())
                 .amount(dto.amount())
@@ -75,7 +77,7 @@ public class ExpenseServiceImpl implements ExpenseService {
                 .reference(dto.reference() != null ? dto.reference().trim() : null)
                 .providerId(dto.providerId())
                 .invoiceNumber(dto.invoiceNumber() != null ? dto.invoiceNumber().trim() : null)
-                .expenseDate(LocalDateTime.now())
+                .expenseDate(dateToSave)
                 .build();
 
         expense.setCompany(company);

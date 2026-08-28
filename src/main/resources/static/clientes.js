@@ -540,114 +540,138 @@ function renderizarTablaMovimientos() {
 }
 
 // ==========================================
-// 5. REGISTRO DE PAGOS / COBROS (API Sincronizada)
+// 5. REGISTRO DE PAGOS / COBROS (Modal Premium)
 // ==========================================
-async function registrarPago(id) {
+let modalCobroClienteInstance = null;
+
+function abrirModalCobro(id) {
     const cliente = CLIENTES_CACHE.find(c => c.id === id) || CLIENTE_ACTUAL;
+    if (!cliente) return;
+
     const saldoActual = parseFloat(cliente.currentBalance) || 0;
+    const elId = document.getElementById('cobroClienteId');
+    if (elId) elId.value = cliente.id;
 
-    const { value: formValues } = await Swal.fire({
-        title: 'Registrar Cobro de Libreta',
-        html:
-            `<div class="text-start mb-2"><label class="small fw-bold text-muted">Monto que entrega el cliente ($):</label></div>` +
-            `<input id="swal-input1" class="form-control form-control-lg border mb-3 text-primary fw-bold" type="number" step="0.01" placeholder="0.00" value="${saldoActual > 0 ? saldoActual.toFixed(2) : ''}">` +
-            `<div class="text-start mb-2"><label class="small fw-bold text-muted">Método de Ingreso:</label></div>` +
-            `<select id="swal-input2" class="form-select form-select-lg border mb-3">
-                <option value="EFECTIVO">Efectivo (Ingresa a Caja)</option>
-                <option value="TRANSFERENCIA">Transferencia / Mercado Pago</option>
-            </select>` +
-            `<div class="text-start mb-2"><label class="small fw-bold text-muted">Referencia / Observación (Opcional):</label></div>` +
-            `<input id="swal-input3" class="form-control border" type="text" placeholder="Ej: Pago parcial, comprobante MP...">`,
-        focusConfirm: false,
-        showCancelButton: true,
-        confirmButtonText: '<i class="bi bi-check-lg me-1"></i> Confirmar Ingreso',
-        cancelButtonText: 'Cancelar',
-        customClass: {
-            confirmButton: 'btn btn-success px-4 py-2 me-2 fw-bold',
-            cancelButton: 'btn btn-secondary px-4 py-2'
-        },
-        buttonsStyling: false,
-        preConfirm: () => {
-            const montoVal = document.getElementById('swal-input1').value;
-            const metodoVal = document.getElementById('swal-input2').value;
-            const refVal = document.getElementById('swal-input3').value;
+    const elSub = document.getElementById('modalCobroSubtitulo');
+    if (elSub) elSub.innerText = `Cliente: ${cliente.nombre || cliente.name || 'Sin nombre'}`;
 
-            if (!montoVal || parseFloat(montoVal) <= 0) {
-                Swal.showValidationMessage('Ingresá un monto válido mayor a $0');
-                return false;
+    const elSaldo = document.getElementById('cobroSaldoActual');
+    if (elSaldo) elSaldo.innerText = formatCurrency(saldoActual);
+
+    const inputMonto = document.getElementById('cobroMontoInput');
+    if (inputMonto) {
+        inputMonto.value = saldoActual > 0 ? saldoActual.toFixed(2) : '';
+    }
+
+    const radioEfe = document.getElementById('metodoEfectivo');
+    if (radioEfe) radioEfe.checked = true;
+
+    const inputRef = document.getElementById('cobroRefInput');
+    if (inputRef) inputRef.value = '';
+
+    const modalEl = document.getElementById('modalCobroCliente');
+    if (modalEl) {
+        modalCobroClienteInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modalCobroClienteInstance.show();
+        setTimeout(() => {
+            if (inputMonto) {
+                inputMonto.focus();
+                inputMonto.select();
             }
-            return {
-                monto: parseFloat(montoVal),
-                metodo: metodoVal,
-                referencia: refVal ? refVal.trim() : ''
-            };
-        }
-    });
+        }, 300);
+    }
+}
 
-    if (formValues) {
-        try {
-            const textoRef = formValues.referencia && formValues.referencia.length > 0
-                ? formValues.referencia
-                : `Cobro de Libreta (${formValues.metodo})`;
+async function procesarFormularioCobro() {
+    const idVal = document.getElementById('cobroClienteId')?.value;
+    const montoVal = document.getElementById('cobroMontoInput')?.value;
+    const metodoVal = document.querySelector('input[name="cobroMetodoPago"]:checked')?.value || 'EFECTIVO';
+    const refVal = document.getElementById('cobroRefInput')?.value?.trim() || '';
 
-            const ahora = new Date().toISOString();
+    const monto = parseFloat(montoVal);
+    if (isNaN(monto) || monto <= 0) {
+        return Swal.fire('Atención', 'Por favor ingresá un monto válido mayor a $0', 'warning');
+    }
 
-            // Mapeo exhaustivo para satisfacer cualquier DTO de pagos en Spring Boot
-            const payload = {
-                customerId: Number(id),
-                amount: Number(formValues.monto),
-                monto: Number(formValues.monto),
-                paymentMethod: formValues.metodo,
-                method: formValues.metodo,
-                type: formValues.metodo,
-                reference: textoRef,
-                description: textoRef,
-                observacion: textoRef,
-                details: textoRef,
-                movementDate: ahora,
-                paymentDate: ahora
-            };
+    const btnConfirmar = document.getElementById('btnConfirmarCobro');
+    const originalText = btnConfirmar ? btnConfirmar.innerHTML : '';
+    if (btnConfirmar) {
+        btnConfirmar.disabled = true;
+        btnConfirmar.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Procesando...';
+    }
 
-            console.log("Enviando Payload a /payments:", payload);
+    try {
+        const textoRef = refVal && refVal.length > 0
+            ? refVal
+            : `Cobro de Libreta (${metodoVal})`;
 
-            const resp = await apiFetch(`${API_CUSTOMERS}/${id}/payments`, {
-                method: 'POST',
-                body: JSON.stringify(payload)
+        const ahora = new Date().toISOString();
+
+        // Mapeo exhaustivo para satisfacer el DTO de pagos en backend
+        const payload = {
+            customerId: Number(idVal),
+            amount: monto,
+            monto: monto,
+            paymentMethod: metodoVal,
+            method: metodoVal,
+            type: metodoVal,
+            reference: textoRef,
+            description: textoRef,
+            observacion: textoRef,
+            details: textoRef,
+            movementDate: ahora,
+            paymentDate: ahora
+        };
+
+        const resp = await apiFetch(`${API_CUSTOMERS}/${idVal}/payments`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+
+        if (resp && resp.ok) {
+            if (modalCobroClienteInstance) modalCobroClienteInstance.hide();
+
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: `Pago de ${formatCurrency(monto)} registrado`,
+                showConfirmButton: false,
+                timer: 2500,
+                timerProgressBar: true
             });
 
-            if (resp && resp.ok) {
-                Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: 'success',
-                    title: `Pago de ${formatCurrency(formValues.monto)} registrado`,
-                    showConfirmButton: false,
-                    timer: 2500,
-                    timerProgressBar: true
-                });
+            await cargarClientes();
 
-                await cargarClientes();
-
-                if (CLIENTE_ACTUAL.id === id && modalHistorialInstance) {
-                    await verHistorial(id, CLIENTE_ACTUAL.nombre, CLIENTE_ACTUAL.telefono);
-                }
-
-                if (typeof cargarDatosDashboard === "function") cargarDatosDashboard();
-                if (typeof cargarReporteCajaHoy === "function") cargarReporteCajaHoy();
-
-            } else if (resp) {
-                const errData = await resp.json().catch(() => ({}));
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error en Backend',
-                    html: `<b>Servidor dice:</b> ${errData.message || 'Datos incompletos'}`
-                });
+            if (CLIENTE_ACTUAL && Number(CLIENTE_ACTUAL.id) === Number(idVal) && modalHistorialInstance) {
+                await verHistorial(idVal, CLIENTE_ACTUAL.nombre, CLIENTE_ACTUAL.telefono);
             }
-        } catch (err) {
-            console.error("Error en cobro de libreta:", err);
-            Swal.fire('Error de red', 'Ocurrió un fallo de conexión al registrar el cobro.', 'error');
+
+            if (typeof cargarDatosDashboard === "function") cargarDatosDashboard();
+            if (typeof cargarReporteCajaHoy === "function") cargarReporteCajaHoy();
+
+        } else if (resp) {
+            const errData = await resp.json().catch(() => ({}));
+            Swal.fire({
+                icon: 'error',
+                title: 'Error en Backend',
+                html: `<b>Servidor dice:</b> ${errData.message || 'No se pudo procesar el cobro.'}`
+            });
+        }
+    } catch (err) {
+        console.error("Error en cobro de libreta:", err);
+        Swal.fire('Error de red', 'Ocurrió un fallo de conexión al registrar el cobro.', 'error');
+    } finally {
+        if (btnConfirmar) {
+            btnConfirmar.disabled = false;
+            btnConfirmar.innerHTML = originalText;
         }
     }
+}
+
+// Alias para compatibilidad de llamadas en tabla y vistas
+function registrarPago(id) {
+    abrirModalCobro(id);
 }
 
 // ==========================================

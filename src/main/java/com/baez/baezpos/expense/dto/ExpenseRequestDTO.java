@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 public record ExpenseRequestDTO(
         @NotBlank(message = "La descripción del gasto es obligatoria.")
@@ -32,5 +33,7 @@ public record ExpenseRequestDTO(
         Long providerId,
 
         @Size(max = 50, message = "El número de comprobante/factura no puede superar los 50 caracteres.")
-        String invoiceNumber
+        String invoiceNumber,
+
+        LocalDateTime expenseDate
 ) {}
