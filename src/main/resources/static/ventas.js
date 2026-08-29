@@ -1760,40 +1760,47 @@ function generarPlantillaHTMLTicket(venta) {
         `;
     }).join('') : '';
 
-    return {
-        html: `
+    const htmlTicket = `
         <!DOCTYPE html>
         <html>
             <head>
                 <title>Ticket #${venta.id || ''}</title>
                 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
                 <style>
                     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-                    @page { margin: 0; }
-                    body { font-family: 'Inter', sans-serif; width: 58mm; padding: 8px; margin: 0; color: #0f172a; background: #fff; line-height: 1.25; }
+                    @page { margin: 0; size: auto; }
+                    body {
+                        font-family: 'Inter', sans-serif;
+                        width: 100%;
+                        max-width: 80mm;
+                        padding: 4px;
+                        margin: 0 auto;
+                        color: #000000;
+                        background: #ffffff;
+                        line-height: 1.25;
+                        font-size: 9pt;
+                    }
                     .center { text-align: center; }
-                    .ticket-header { border-bottom: 1px dashed #94a3b8; padding-bottom: 8px; margin-bottom: 8px; }
+                    .ticket-header { border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; }
                     .shop-icon-container { display: flex; justify-content: center; align-items: center; margin-bottom: 4px; }
-                    .shop-icon-container svg { width: 32px; height: 32px; fill: #3b82f6; }
-                    .business-name { font-weight: 900; font-size: 14px; margin: 2px 0; text-transform: uppercase; letter-spacing: -0.2px; }
-                    .small-info { font-size: 9.5px; color: #334155; margin: 1.5px 0; }
-                    .fiscal-header { font-size: 8.5px; color: #334155; text-align: left; background: #f1f5f9; padding: 4px 6px; border-radius: 4px; margin-top: 5px; }
-                    .item-row { display: flex; justify-content: space-between; align-items: flex-start; font-size: 10px; margin-bottom: 5px; word-break: break-word; }
+                    .shop-icon-container svg { width: 28px; height: 28px; fill: #000; }
+                    .business-name { font-weight: 900; font-size: 12pt; margin: 2px 0; text-transform: uppercase; letter-spacing: -0.2px; }
+                    .small-info { font-size: 8.5pt; color: #000; margin: 1.5px 0; }
+                    .fiscal-header { font-size: 8pt; color: #000; text-align: left; background: #f8fafc; padding: 4px 6px; border-radius: 4px; margin-top: 4px; border: 1px solid #e2e8f0; }
+                    .item-row { display: flex; justify-content: space-between; align-items: flex-start; font-size: 8.5pt; margin-bottom: 4px; word-break: break-word; }
                     .item-qty-name { font-weight: 700; text-transform: uppercase; flex: 1; padding-right: 6px; }
                     .item-price { font-weight: 700; white-space: nowrap; }
-                    .line { border-top: 1px dashed #94a3b8; margin: 8px 0; }
-                    .total-container { border-top: 2px solid #0f172a; margin-top: 8px; padding-top: 6px; display: flex; justify-content: space-between; align-items: center; }
-                    .total-label { font-weight: 900; font-size: 15px; }
-                    .total-amount { font-weight: 900; font-size: 15px; color: #0f172a; }
-                    .arca-container { border-top: 1px solid #0f172a; margin-top: 10px; padding-top: 8px; text-align: center; }
-                    .arca-logo { font-weight: 900; font-size: 11px; letter-spacing: 2px; }
-                    .qr-box { display: flex; justify-content: center; margin: 6px 0; }
-                    .cae-info { font-size: 8.5px; font-weight: 700; text-align: left; }
-                    .ticket-footer { text-align: center; margin-top: 10px; border-top: 1px dashed #94a3b8; padding-top: 8px; }
-                    .msg-pie { font-style: italic; font-size: 10px; color: #475569; margin-bottom: 6px; display: block; }
-                    .payment-method { font-weight: 800; font-size: 9.5px; border: 1px solid #cbd5e1; padding: 3px 6px; display: inline-block; border-radius: 4px; margin-bottom: 6px; }
-                    .powered { font-size: 7px; font-weight: 700; opacity: 0.5; margin-top: 6px; letter-spacing: 0.5px; }
+                    .line { border-top: 1px dashed #000; margin: 6px 0; }
+                    .total-container { border-top: 2px solid #000; margin-top: 6px; padding-top: 6px; display: flex; justify-content: space-between; align-items: center; }
+                    .total-label { font-weight: 900; font-size: 12pt; }
+                    .total-amount { font-weight: 900; font-size: 12pt; color: #000; }
+                    .arca-container { border-top: 1px solid #000; margin-top: 8px; padding-top: 6px; text-align: center; }
+                    .arca-logo { font-weight: 900; font-size: 10pt; letter-spacing: 2px; }
+                    .cae-info { font-size: 8pt; font-weight: 700; text-align: left; }
+                    .ticket-footer { text-align: center; margin-top: 8px; border-top: 1px dashed #000; padding-top: 6px; }
+                    .msg-pie { font-style: italic; font-size: 8.5pt; color: #000; margin-bottom: 4px; display: block; }
+                    .payment-method { font-weight: 800; font-size: 8.5pt; border: 1px solid #000; padding: 2px 6px; display: inline-block; border-radius: 4px; margin-bottom: 4px; }
+                    .powered { font-size: 7pt; font-weight: 700; opacity: 0.6; margin-top: 6px; letter-spacing: 0.5px; }
                 </style>
             </head>
             <body>
@@ -1817,7 +1824,7 @@ function generarPlantillaHTMLTicket(venta) {
                     ` : ''}
                     <div class="line"></div>
                     ${(venta.isOffline || (typeof venta.numeroTicket === 'string' && venta.numeroTicket.startsWith('OFF-')) || (typeof venta.nroComprobante === 'string' && venta.nroComprobante.startsWith('OFF-'))) ? `
-                        <div style="background: #fef2f2; color: #b91c1c; border: 1.5px dashed #dc2626; padding: 4px; border-radius: 4px; font-weight: 900; font-size: 8.5px; text-align: center; margin: 4px 0;">
+                        <div style="background: #fef2f2; color: #b91c1c; border: 1.5px dashed #dc2626; padding: 4px; border-radius: 4px; font-weight: 900; font-size: 8pt; text-align: center; margin: 4px 0;">
                             ⚠️ TICKET PENDIENTE DE SINCRONIZACIÓN
                         </div>
                     ` : ''}
@@ -1837,7 +1844,7 @@ function generarPlantillaHTMLTicket(venta) {
                     ` : ''}
                     ${recargoMonto > 0 ? `
                         <div class="line"></div>
-                        <div class="item-row" style="color: #64748b; font-size: 8.5px;">
+                        <div class="item-row" style="color: #64748b; font-size: 8pt;">
                             <span class="item-qty-name">SUBTOTAL PRODUCTOS:</span>
                             <span class="item-price">$${utilFormatearMoneda(subtotalProductos)}</span>
                         </div>
@@ -1852,14 +1859,16 @@ function generarPlantillaHTMLTicket(venta) {
                     </div>
                 </div>
                 ${cae ? `
-                    <div class="arca-container" style="border-top: 1px dashed #0f172a; margin-top: 10px; padding-top: 8px; text-align: left;">
-                        <div class="arca-logo" style="text-align: center; font-weight: 900; font-size: 11px; letter-spacing: 2px;">ARCA / AFIP</div>
-                        <div class="small-info center" style="font-size: 8px; margin-bottom: 6px; text-align: center;">Comprobante Autorizado Electrónicamente</div>
-                        ${qrText ? `<div class="qr-box" id="qrcode" style="display: flex; justify-content: center; margin: 6px 0;"></div>` : ''}
-                        <div class="cae-info" style="font-size: 8.5px; font-weight: 700; margin-top: 4px;">CUIT: ${cuitLocal}</div>
-                        <div class="cae-info" style="font-size: 8.5px; font-weight: 700;">Comprobante: ${tipoComprobante} Nro: ${nroComprobante}</div>
-                        <div class="cae-info" style="font-size: 8.5px; font-weight: 700;">CAE: ${cae}</div>
-                        <div class="cae-info" style="font-size: 8.5px; font-weight: 700;">Vto. CAE: ${caeVto}</div>
+                    <div class="arca-container" style="border-top: 1px dashed #000; margin-top: 8px; padding-top: 6px; text-align: center;">
+                        <div class="arca-logo" style="text-align: center; font-weight: 900; font-size: 10pt; letter-spacing: 2px;">ARCA / AFIP</div>
+                        <div class="small-info center" style="font-size: 7.5pt; margin-bottom: 4px; text-align: center;">Comprobante Autorizado Electrónicamente</div>
+                        <div style="text-align: center; margin: 6px 0;">
+                            <img src="https://quickchart.io/qr?text=${encodeURIComponent(qrText || `https://www.afip.gob.ar/fe/qr/?p=${btoa(JSON.stringify({ fecha: fechaVenta.split(' ')[0], cuit: Number(cuitLocal.replace(/\\D/g, '') || 301234559), ptoVta: 1, tipoCmp: tipoComprobante.includes('A') ? 1 : 11, nroCmp: 1, importe: totalFinal, tipoDocRec: 99, nroDocRec: 0, tipoCodAut: 'E', codAut: Number(cae) || 0 }))}`)}&size=120" style="width: 120px; height: 120px; display: inline-block;" alt="QR AFIP" />
+                        </div>
+                        <div class="cae-info" style="font-size: 8pt; font-weight: 700; text-align: left; margin-top: 4px;">CUIT: ${cuitLocal}</div>
+                        <div class="cae-info" style="font-size: 8pt; font-weight: 700; text-align: left;">Comprobante: ${tipoComprobante} Nro: ${nroComprobante}</div>
+                        <div class="cae-info" style="font-size: 8pt; font-weight: 700; text-align: left;">CAE: ${cae}</div>
+                        <div class="cae-info" style="font-size: 8pt; font-weight: 700; text-align: left;">Vto. CAE: ${caeVto}</div>
                     </div>
                 ` : ''}
                 <div class="ticket-footer">
@@ -1867,27 +1876,12 @@ function generarPlantillaHTMLTicket(venta) {
                     <span class="msg-pie">${mensajePie}</span>
                     <div class="powered">BAEZPOS v3.5 - POWERED BY BAEZ ALEXANDER</div>
                 </div>
-                <script>
-                    if (${Boolean(cae && qrText)}) {
-                        try {
-                            new QRCode(document.getElementById("qrcode"), {
-                                text: "${qrText}",
-                                width: 85,
-                                height: 85,
-                                colorDark : "#000000",
-                                colorLight : "#ffffff",
-                                correctLevel : QRCode.CorrectLevel.M
-                            });
-                        } catch(e) {}
-                    }
-                    setTimeout(function ejecutarImpresionScript() {
-                        window.print();
-                        window.close();
-                    }, 500);
-                </script>
             </body>
         </html>
-    `,
+    `;
+
+    return {
+        html: htmlTicket,
         qrText: qrText
     };
 }

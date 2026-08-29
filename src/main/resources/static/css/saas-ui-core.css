@@ -934,7 +934,7 @@ body.login-page {
 }
 
 /* ==========================================================================
-   ARQUITECTURA DE IMPRESIÓN NATIVA (CSS PRINT MEDIA QUERY)
+   ARQUITECTURA DE IMPRESIÓN NATIVA (CSS PRINT MEDIA QUERY - POS80 LIMIT)
    ========================================================================== */
 #print-section {
   display: none;
@@ -942,7 +942,16 @@ body.login-page {
 
 @media print {
   body > *:not(#print-section) { display: none !important; }
-  #print-section { display: block !important; position: absolute; top: 0; left: 0; width: 100%; margin: 0; padding: 0; background: white; }
+  #print-section { 
+    display: block !important; 
+    position: relative !important; 
+    width: 100% !important; 
+    max-width: 80mm !important; 
+    margin: 0 auto !important; 
+    padding: 5mm !important; 
+    background: white !important; 
+    font-size: 10pt;
+  }
   #print-section * { color: black !important; }
-  @page { margin: 0; }
+  @page { margin: 0; size: auto; }
 }
