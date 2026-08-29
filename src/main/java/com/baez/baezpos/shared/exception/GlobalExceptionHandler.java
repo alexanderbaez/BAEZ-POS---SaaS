@@ -2,11 +2,15 @@ package com.baez.baezpos.shared.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.persistence.OptimisticLockException;
 import jakarta.persistence.PessimisticLockException;
+import org.hibernate.StaleObjectStateException;
 import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
@@ -28,14 +32,18 @@ public class GlobalExceptionHandler {
             CannotAcquireLockException.class,
             PessimisticLockException.class,
             PessimisticLockingFailureException.class,
-            org.hibernate.PessimisticLockException.class
+            org.hibernate.PessimisticLockException.class,
+            ObjectOptimisticLockingFailureException.class,
+            StaleObjectStateException.class,
+            DataIntegrityViolationException.class,
+            OptimisticLockException.class
     })
     public ResponseEntity<ApiErrorResponse> handleConcurrencyLockException(Exception ex, HttpServletRequest request) {
-        log.warn("Bloqueo de concurrencia detectado [{}]: {}", request.getRequestURI(), ex.getMessage());
+        log.warn("Bloqueo o colisión de concurrencia detectado [{}]: {}", request.getRequestURI(), ex.getMessage());
         return buildResponse(
                 HttpStatus.CONFLICT,
                 "Conflict",
-                "Transacción en curso por otro usuario. Por favor, reintente en un segundo.",
+                "Transacción en curso por otro usuario. Reintente.",
                 request.getRequestURI(),
                 null
         );

@@ -3,16 +3,22 @@ package com.baez.baezpos.sale.repository;
 import com.baez.baezpos.sale.entity.CashRegisterSession;
 import com.baez.baezpos.sale.entity.CashSessionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface CashRegisterSessionRepository extends JpaRepository<CashRegisterSession, Long> {
+
+    @Modifying
+    @Query("UPDATE CashRegisterSession c SET c.systemAmount = COALESCE(c.systemAmount, 0) + :amount WHERE c.id = :id")
+    void addBalance(@Param("id") Long id, @Param("amount") BigDecimal amount);
 
     Optional<CashRegisterSession> findFirstByCompanyIdAndStatusOrderByIdDesc(Long companyId, CashSessionStatus status);
     boolean existsByCompanyIdAndStatus(Long companyId, CashSessionStatus status);

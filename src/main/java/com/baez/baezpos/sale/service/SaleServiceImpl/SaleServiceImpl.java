@@ -157,8 +157,8 @@ public class SaleServiceImpl implements SaleService {
         if (saleDTO.shouldEmitInvoice()) {
             afipBillingService.processFiscalSale(sale, company);
         } else {
+            companyRepository.incrementLastTicketNumber(companyId);
             Long siguienteNumeroTicket = (company.getLastTicketNumber() != null ? company.getLastTicketNumber() : 0L) + 1L;
-            company.setLastTicketNumber(siguienteNumeroTicket);
             String nroComprobanteFormateado = String.format("00001-%08d", siguienteNumeroTicket);
 
             sale.setInvoiceType("TICKET INTERNO");
@@ -168,6 +168,11 @@ public class SaleServiceImpl implements SaleService {
         }
 
         Sale savedSale = saleRepository.save(sale);
+
+        // Actualización Atómica de Caja Registradora
+        if (!"CUENTA_CORRIENTE".equals(paymentMethodClean)) {
+            cashRegisterSessionRepository.addBalance(activeSession.getId(), savedSale.getTotal());
+        }
 
         for (SaleItem item : savedSale.getItems()) {
             InventoryMovement movement = InventoryMovement.builder()
