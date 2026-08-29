@@ -242,15 +242,22 @@ public class UserServiceImpl implements UserService {
             }
         }
 
-        List<User> supervisors = userRepository.findValidSupervisorsByCompanyId(companyId);
+        List<User> companyUsers = (companyId != null)
+                ? userRepository.findByCompanyId(companyId)
+                : userRepository.findAll();
 
-        return supervisors.stream().anyMatch(admin -> {
-            if (admin.getSecurityPin() == null) return false;
-            String storedPin = admin.getSecurityPin().trim();
-            if (storedPin.isEmpty()) return false;
-
-            return storedPin.equals(rawPin) || (storedPin.startsWith("$2") && passwordEncoder.matches(rawPin, storedPin));
-        });
+        return companyUsers.stream()
+                .filter(u -> Boolean.TRUE.equals(u.getActive()) && u.getRole() != null &&
+                        (u.getRole().name().toUpperCase().contains("ADMIN") || u.getRole().name().toUpperCase().contains("SUPER")))
+                .anyMatch(admin -> {
+                    if (admin.getSecurityPin() == null || admin.getSecurityPin().trim().isEmpty()) return false;
+                    String storedPin = admin.getSecurityPin().trim();
+                    try {
+                        return storedPin.equals(rawPin) || passwordEncoder.matches(rawPin, storedPin);
+                    } catch (Exception e) {
+                        return storedPin.equals(rawPin);
+                    }
+                });
     }
 
     private Role validateRoleAssignment(Role requestedRole) {

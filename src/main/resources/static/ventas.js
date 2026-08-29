@@ -493,6 +493,11 @@ async function solicitarPinSupervisorSiEsVendedor(motivo = "realizar esta acció
         return false;
     }
 
+    const pinIngresado = String(pin || (document.getElementById('swal-input-pin') ? document.getElementById('swal-input-pin').value : '')).trim();
+    if (!pinIngresado) {
+        return false;
+    }
+
     try {
         Swal.fire({
             title: 'Verificando autorización...',
@@ -503,7 +508,7 @@ async function solicitarPinSupervisorSiEsVendedor(motivo = "realizar esta acció
         const res = await apiFetch('/users/validate-pin', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pin: String(pin).trim() })
+            body: JSON.stringify({ pin: pinIngresado })
         });
 
         if (!res.ok) {
