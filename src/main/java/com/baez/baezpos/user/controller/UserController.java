@@ -73,7 +73,7 @@ public class UserController {
         if (pin == null || pin.trim().isEmpty()) {
             return ResponseEntity.ok(Map.of("valid", false));
         }
-        boolean isValid = userService.validatePin(pin.trim());
+        boolean isValid = userService.validateSupervisorPin(pin.trim());
         return ResponseEntity.ok(Map.of("valid", isValid));
     }
 }

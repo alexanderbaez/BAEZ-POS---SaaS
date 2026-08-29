@@ -39,7 +39,4 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByCompanyId(Long companyId);
 
     Optional<User> findByIdAndCompanyId(Long id, Long companyId);
-
-    @Query("SELECT u FROM User u WHERE u.active = true AND u.role IN (com.baez.baezpos.user.entity.Role.ADMIN, com.baez.baezpos.user.entity.Role.SUPERVISOR, com.baez.baezpos.user.entity.Role.SUPER_ADMIN) AND (:companyId IS NULL OR u.company.id = :companyId)")
-    List<User> findValidSupervisorsByCompanyId(@Param("companyId") Long companyId);
 }

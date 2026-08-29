@@ -508,7 +508,7 @@ async function solicitarPinSupervisorSiEsVendedor(motivo = "realizar esta acció
         const res = await apiFetch('/users/validate-pin', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pin: pinIngresado })
+            body: JSON.stringify({ pin: String(pinIngresado).trim() })
         });
 
         if (!res.ok) {

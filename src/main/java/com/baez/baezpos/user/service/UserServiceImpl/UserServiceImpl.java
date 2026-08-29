@@ -222,15 +222,13 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public boolean validatePin(String pin) {
-        if (pin == null) {
-            return false;
-        }
-        String rawPin = String.valueOf(pin).trim();
-        if (rawPin.isEmpty()) {
+    public boolean validateSupervisorPin(String requestPin) {
+        if (requestPin == null || requestPin.trim().isEmpty()) {
+            System.out.println("AUDIT: PIN recibido vacío o nulo.");
             return false;
         }
 
+        // 1. Obtener la empresa del empleado logueado
         Long companyId = SecurityUtils.getCurrentCompanyId();
         if (companyId == null) {
             String currentEmail = SecurityUtils.getCurrentUserEmail();
@@ -242,22 +240,46 @@ public class UserServiceImpl implements UserService {
             }
         }
 
+        // 2. Traer TODOS los usuarios de esa empresa
         List<User> companyUsers = (companyId != null)
                 ? userRepository.findByCompanyId(companyId)
                 : userRepository.findAll();
 
-        return companyUsers.stream()
-                .filter(u -> Boolean.TRUE.equals(u.getActive()) && u.getRole() != null &&
-                        (u.getRole().name().toUpperCase().contains("ADMIN") || u.getRole().name().toUpperCase().contains("SUPER")))
-                .anyMatch(admin -> {
-                    if (admin.getSecurityPin() == null || admin.getSecurityPin().trim().isEmpty()) return false;
-                    String storedPin = admin.getSecurityPin().trim();
-                    try {
-                        return storedPin.equals(rawPin) || passwordEncoder.matches(rawPin, storedPin);
-                    } catch (Exception e) {
-                        return storedPin.equals(rawPin);
+        // 3. Filtrar administradores en memoria y comparar
+        for (User user : companyUsers) {
+            if (user.getRole() != null) {
+                String roleName = user.getRole().name().toUpperCase();
+                // Detecta cualquier variación de Admin o Supervisor
+                if (roleName.contains("ADMIN") || roleName.contains("SUPER")) {
+                    String storedPin = user.getSecurityPin();
+                    if (storedPin != null && !storedPin.trim().isEmpty()) {
+                        String rawPin = requestPin.trim();
+                        // Validar texto plano o hash BCrypt
+                        boolean matches = false;
+                        if (storedPin.trim().equals(rawPin)) {
+                            matches = true;
+                        } else {
+                            try {
+                                matches = passwordEncoder.matches(rawPin, storedPin);
+                            } catch (Exception ignored) {
+                                matches = false;
+                            }
+                        }
+                        if (matches) {
+                            return true;
+                        }
                     }
-                });
+                }
+            }
+        }
+        System.out.println("AUDIT: Validación de PIN fallida para la empresa ID: " + companyId + ". No hubo coincidencia de PIN o no se encontraron Admins.");
+        return false;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean validatePin(String pin) {
+        return validateSupervisorPin(pin);
     }
 
     private Role validateRoleAssignment(Role requestedRole) {
