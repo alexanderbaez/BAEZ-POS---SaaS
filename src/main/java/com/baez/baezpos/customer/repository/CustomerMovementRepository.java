@@ -44,5 +44,10 @@ public interface CustomerMovementRepository extends JpaRepository<CustomerMoveme
                                              @Param("start") LocalDateTime start,
                                              @Param("end") LocalDateTime end);
 
-    Optional<CustomerMovement> findFirstBySaleId(Long saleId);
+    /**
+     * MED-04: Versión con tenant-scope obligatorio.
+     * Navega Customer.company.id para garantizar que el movimiento pertenece
+     * a la misma empresa del usuario autenticado — defense in depth en anulación de ventas.
+     */
+    Optional<CustomerMovement> findFirstBySaleIdAndCustomerCompanyId(Long saleId, Long companyId);
 }

@@ -17,10 +17,12 @@ import com.baez.baezpos.sale.service.SaleService.CashRegisterService;
 import com.baez.baezpos.security.util.SecurityUtils;
 import com.baez.baezpos.shared.exception.BadRequestException;
 import com.baez.baezpos.shared.exception.ResourceNotFoundException;
+import com.baez.baezpos.user.entity.Role;
 import com.baez.baezpos.user.entity.User;
 import com.baez.baezpos.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -93,13 +95,26 @@ public class CashRegisterServiceImpl implements CashRegisterService {
                 .findFirstByCompanyIdAndStatusOrderByIdDesc(companyId, CashSessionStatus.OPEN)
                 .orElseThrow(() -> new BadRequestException("No hay ninguna caja abierta para cerrar."));
 
+        // MED-01: Un VENDEDOR solo puede cerrar la sesión que él mismo abrió.
+        // El ADMIN puede cerrar cualquier caja de su empresa.
+        Role currentRole = SecurityUtils.getCurrentUserRole();
+        if (Role.VENDEDOR.equals(currentRole)) {
+            Long currentUserId = SecurityUtils.getCurrentUserId();
+            if (session.getUser() == null || !session.getUser().getId().equals(currentUserId)) {
+                throw new AccessDeniedException(
+                    "Un Vendedor solo puede cerrar la sesión de caja que él mismo abrió."
+                );
+            }
+        }
+
         LocalDateTime closedAt = LocalDateTime.now();
         session.setClosedAt(closedAt);
 
         // Ventana de auditoría con margen de 2 segundos para eventos concurrentes
         LocalDateTime searchEnd = closedAt.plusSeconds(2);
 
-        List<Sale> sales = saleRepository.findActiveSalesBySessionId(session.getId());
+        // CRIT-02: Usar query con companyId obligatorio (defensa de segunda línea)
+        List<Sale> sales = saleRepository.findActiveSalesBySessionIdAndCompanyId(session.getId(), companyId);
 
         BigDecimal cashSales = BigDecimal.ZERO;
 
@@ -182,7 +197,8 @@ public class CashRegisterServiceImpl implements CashRegisterService {
         LocalDateTime start = session.getOpenedAt();
         LocalDateTime end = session.getClosedAt() != null ? session.getClosedAt().plusSeconds(2) : LocalDateTime.now().plusSeconds(2);
 
-        List<Sale> sales = saleRepository.findActiveSalesBySessionId(session.getId());
+        // CRIT-02: Usar query con companyId para defensa de segunda línea.
+        List<Sale> sales = saleRepository.findActiveSalesBySessionIdAndCompanyId(session.getId(), session.getCompany().getId());
 
         BigDecimal cashSales = BigDecimal.ZERO;
         BigDecimal transferSales = BigDecimal.ZERO;

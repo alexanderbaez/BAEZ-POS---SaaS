@@ -170,11 +170,6 @@ public class SaleServiceImpl implements SaleService {
         sale.setUser(user);
         Sale savedSale = saleRepository.save(sale);
 
-        // Actualización Atómica de Caja Registradora
-        if (!"CUENTA_CORRIENTE".equals(paymentMethodClean)) {
-            cashRegisterSessionRepository.addBalance(activeSession.getId(), savedSale.getTotal());
-        }
-
         for (SaleItem item : savedSale.getItems()) {
             InventoryMovement movement = InventoryMovement.builder()
                     .movementType(MovementType.SALE)
@@ -197,7 +192,13 @@ public class SaleServiceImpl implements SaleService {
                     "INFO"
             );
         } catch (Exception e) {
-            log.error("Error al registrar auditoría de la venta #{}: {}", savedSale.getNroComprobante(), e.getMessage());
+            log.error("Error al registrar auditoria de la venta #{}: {}", savedSale.getNroComprobante(), e.getMessage());
+        }
+
+        // MED-03: write-last — addBalance se ejecuta al final, garantizando que la venta,
+        // el inventario y la cuenta corriente ya estén confirmados antes de actualizar el saldo de caja.
+        if (!"CUENTA_CORRIENTE".equals(paymentMethodClean)) {
+            cashRegisterSessionRepository.addBalance(activeSession.getId(), savedSale.getTotal());
         }
 
         return mapToResponseDTO(savedSale);
@@ -254,9 +255,30 @@ public class SaleServiceImpl implements SaleService {
         LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
         LocalDateTime endOfToday = LocalDate.now().atTime(LocalTime.MAX);
 
-        // 1. OBTENER CAJAS DE LA JORNADA COMERCIAL (Incluye abiertas de trasnoche pasadas las 00:00 hs)
+        // 1. OBTENER CAJAS DE LA JORNADA COMERCIAL
+        // CRIT-03: Pasamos cutoff de 48h para acotar cajas OPEN huerfanas anteriores.
+        LocalDateTime cutoff48h = LocalDateTime.now().minusHours(48);
         List<CashRegisterSession> todaySessionsEntities = cashRegisterSessionRepository
-                .findCommercialDaySessions(companyId, startOfToday, endOfToday);
+                .findCommercialDaySessions(companyId, startOfToday, endOfToday, cutoff48h);
+
+        // CRIT-01: Pre-carga batch de ventas por sesion (sustituye el N+1 loop de mapToSessionResponseDTO).
+        // En lugar de 1 SELECT * por cada sesion, un solo viaje a BD con GROUP BY devuelve
+        // (sessionId, paymentMethod, SUM(total)) para todas las sesiones del dia.
+        List<Long> sessionIds = todaySessionsEntities.stream()
+                .map(CashRegisterSession::getId)
+                .toList();
+
+        // salesBySession: Map<sessionId, Map<paymentMethod, totalAmount>>
+        Map<Long, Map<String, BigDecimal>> salesBySession = new HashMap<>();
+        if (!sessionIds.isEmpty()) {
+            List<SessionSalesProjection> projections = saleRepository.aggregateSalesBySessionIds(sessionIds);
+            for (SessionSalesProjection p : projections) {
+                String method = normalizePaymentMethod(p.getPaymentMethod());
+                salesBySession
+                        .computeIfAbsent(p.getSessionId(), k -> new HashMap<>())
+                        .merge(method, p.getTotal() != null ? p.getTotal() : BigDecimal.ZERO, BigDecimal::add);
+            }
+        }
 
         List<CashSessionResponseDTO> todaySessions = new ArrayList<>();
 
@@ -264,10 +286,48 @@ public class SaleServiceImpl implements SaleService {
         BigDecimal activeCashSales = BigDecimal.ZERO;
         BigDecimal activeCustomerPayments = BigDecimal.ZERO;
         BigDecimal activeExpenses = BigDecimal.ZERO;
+        BigDecimal activeTransferExpenses = BigDecimal.ZERO;
         BigDecimal activeRealBalance = BigDecimal.ZERO;
 
         for (CashRegisterSession session : todaySessionsEntities) {
-            CashSessionResponseDTO sessionDTO = mapToSessionResponseDTO(session);
+            // CRIT-01: Construir DTO desde datos pre-cargados, sin queries adicionales por iteracion.
+            Map<String, BigDecimal> sessionSales = salesBySession.getOrDefault(session.getId(), Collections.emptyMap());
+            BigDecimal cashSales = sessionSales.getOrDefault("EFECTIVO", BigDecimal.ZERO);
+            BigDecimal transferSales = sessionSales.getOrDefault("TRANSFERENCIA", BigDecimal.ZERO);
+            BigDecimal creditSales = sessionSales.getOrDefault("CUENTA_CORRIENTE", BigDecimal.ZERO);
+
+            LocalDateTime sStart = session.getOpenedAt();
+            LocalDateTime sEnd = session.getClosedAt() != null
+                    ? session.getClosedAt().plusSeconds(2)
+                    : LocalDateTime.now().plusSeconds(2);
+
+            BigDecimal cobrosEfe = customerMovementRepository.sumPaymentsBySessionAndMethod(
+                    "EFECTIVO", companyId, session.getId(), sStart, sEnd);
+            if (cobrosEfe == null) cobrosEfe = BigDecimal.ZERO;
+
+            BigDecimal expensesEfe = expenseRepository.sumDeductibleCashExpenses(companyId, sStart, sEnd);
+            if (expensesEfe == null) expensesEfe = BigDecimal.ZERO;
+
+            String uName = session.getUser() != null ? session.getUser().getName() : "Usuario Desconocido";
+
+            CashSessionResponseDTO sessionDTO = new CashSessionResponseDTO(
+                    session.getId(),
+                    session.getSessionNumber() != null ? session.getSessionNumber() : 1,
+                    uName,
+                    session.getOpenedAt(),
+                    session.getClosedAt(),
+                    session.getInitialAmount(),
+                    session.getDeclaredAmount(),
+                    session.getSystemAmount(),
+                    session.getDifference(),
+                    session.getStatus(),
+                    session.getNotes(),
+                    cashSales,
+                    transferSales,
+                    creditSales,
+                    cobrosEfe,
+                    expensesEfe
+            );
             todaySessions.add(sessionDTO);
 
             if (session.getStatus() == CashSessionStatus.OPEN || activeRealBalance.equals(BigDecimal.ZERO)) {
@@ -283,7 +343,7 @@ public class SaleServiceImpl implements SaleService {
             }
         }
 
-        // 2. CAPA COMERCIAL CONSOLIDADA DEL DÍA (Flujo de Caja Puro)
+        // 2. CAPA COMERCIAL CONSOLIDADA DEL DIA (Flujo de Caja Puro)
         List<Sale> todaySales = saleRepository.findActiveSalesByCompanyAndDateRange(companyId, startOfToday, endOfToday);
         BigDecimal directCashSalesToday = BigDecimal.ZERO;
         BigDecimal directTransferSalesToday = BigDecimal.ZERO;
@@ -313,6 +373,12 @@ public class SaleServiceImpl implements SaleService {
 
         BigDecimal transferExpensesToday = expenseRepository.sumDeductibleExpensesByPaymentMethod(companyId, PaymentMethod.TRANSFERENCIA, startOfToday, endOfToday);
         if (transferExpensesToday == null) transferExpensesToday = BigDecimal.ZERO;
+
+        // MED-02: Restar tambien los gastos de Transferencia del balance diario para no inflar los numeros del Dashboard.
+        // activeRealBalance ya cubre los gastos de efectivo; aqui compensamos los de transferencia.
+        if (!activeRealBalance.equals(BigDecimal.ZERO)) {
+            activeRealBalance = activeRealBalance.subtract(transferExpensesToday);
+        }
 
         // Total Ingresos Reales del Día (Ventas Efectivo/Transferencia + Cobros de Deudas)
         BigDecimal totalSalesToday = directCashSalesToday
@@ -439,7 +505,8 @@ public class SaleServiceImpl implements SaleService {
         LocalDateTime start = session.getOpenedAt();
         LocalDateTime end = session.getClosedAt() != null ? session.getClosedAt().plusSeconds(2) : LocalDateTime.now().plusSeconds(2);
 
-        List<Sale> sales = saleRepository.findActiveSalesBySessionId(session.getId());
+        // CRIT-02: Usar query con companyId para defensa de segunda línea.
+        List<Sale> sales = saleRepository.findActiveSalesBySessionIdAndCompanyId(session.getId(), session.getCompany().getId());
 
         BigDecimal cashSales = BigDecimal.ZERO;
         BigDecimal transferSales = BigDecimal.ZERO;
@@ -555,7 +622,9 @@ public class SaleServiceImpl implements SaleService {
 
         // Compensación contable en cuenta corriente si el pago fue fiado / cuenta corriente
         if ("CUENTA_CORRIENTE".equalsIgnoreCase(sale.getPaymentMethod())) {
-            Optional<CustomerMovement> movementOpt = customerMovementRepository.findFirstBySaleId(sale.getId());
+            // MED-04: Usar companyId para garantizar que el movimiento pertenece al mismo tenant.
+            Optional<CustomerMovement> movementOpt = customerMovementRepository
+                    .findFirstBySaleIdAndCustomerCompanyId(sale.getId(), companyId);
             if (movementOpt.isPresent()) {
                 Customer customer = movementOpt.get().getCustomer();
                 customerService.updateBalance(
