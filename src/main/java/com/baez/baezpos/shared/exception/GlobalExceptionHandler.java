@@ -80,9 +80,9 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, "Bad Request", msg, request.getRequestURI(), null);
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex, HttpServletRequest request) {
-        log.warn("Argumento inválido [{}]: {}", request.getRequestURI(), ex.getMessage());
+    @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
+    public ResponseEntity<ApiErrorResponse> handleIllegalArgumentAndStateException(RuntimeException ex, HttpServletRequest request) {
+        log.warn("Error de estado o argumento [{}]: {}", request.getRequestURI(), ex.getMessage());
         return buildResponse(HttpStatus.BAD_REQUEST, "Bad Request", ex.getMessage(), request.getRequestURI(), null);
     }
 

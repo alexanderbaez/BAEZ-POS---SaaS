@@ -245,7 +245,7 @@ function actualizarVisibilidadPin() {
 
     const rolSeleccionado = (selectRol.value || '').toUpperCase().trim();
 
-    if (rolSeleccionado === 'ADMIN') {
+    if (rolSeleccionado === 'ADMIN' || rolSeleccionado === 'SUPER_ADMIN') {
         // Si el rol es ADMIN, el campo de PIN se muestra siempre y el Switch se oculta
         if (switchPinContainer) {
             switchPinContainer.classList.add('d-none');
@@ -271,28 +271,38 @@ function actualizarVisibilidadPin() {
     }
 }
 
-function ajustarOpcionesDeRolSegunPermisos() {
+function ajustarOpcionesDeRolSegunPermisos(targetUserRole = null) {
     const userRole = (localStorage.getItem('baezpos_user_role') || '').toUpperCase().trim();
     const isSuperAdmin = userRole.includes('SUPER_ADMIN');
     const selectRol = document.getElementById('empRol');
     if (!selectRol) return;
 
+    const isEditingAdmin = targetUserRole && (targetUserRole === 'ADMIN' || targetUserRole === 'SUPER_ADMIN');
+
     Array.from(selectRol.options).forEach(opt => {
         const val = opt.value.toUpperCase();
         if (val === 'SUPERVISOR') {
             opt.remove();
-        } else if (val === 'ADMIN' || val === 'SUPER_ADMIN') {
-            if (!isSuperAdmin) {
-                opt.style.display = 'none';
-                opt.disabled = true;
-            } else {
+        } else if (val === 'ADMIN') {
+            if (isSuperAdmin || isEditingAdmin) {
                 opt.style.display = '';
                 opt.disabled = false;
+            } else {
+                opt.style.display = 'none';
+                opt.disabled = true;
+            }
+        } else if (val === 'SUPER_ADMIN') {
+            if (isSuperAdmin) {
+                opt.style.display = '';
+                opt.disabled = false;
+            } else {
+                opt.style.display = 'none';
+                opt.disabled = true;
             }
         }
     });
 
-    if (!isSuperAdmin && (selectRol.value === 'ADMIN' || selectRol.value === 'SUPER_ADMIN' || selectRol.value === 'SUPERVISOR')) {
+    if (!isSuperAdmin && !isEditingAdmin && (selectRol.value === 'ADMIN' || selectRol.value === 'SUPER_ADMIN' || selectRol.value === 'SUPERVISOR')) {
         selectRol.value = 'VENDEDOR';
     }
 }
@@ -302,9 +312,22 @@ function abrirEdicion(user) {
     document.getElementById('empNombre').value = user.name || '';
     document.getElementById('empEmail').value = user.email || '';
     
+    const userRole = (user.role || 'VENDEDOR').toUpperCase().trim();
     const selectRol = document.getElementById('empRol');
+
+    // 1. Asegurar visibilidad de opciones antes de asignar el valor
+    ajustarOpcionesDeRolSegunPermisos(userRole);
+
+    // 2. Asignar correctamente el rol actual al select y aplicar regla de protección
     if (selectRol) {
-        selectRol.value = user.role || 'VENDEDOR';
+        selectRol.value = userRole;
+
+        // Regla de Protección Admin: Bloquear degradación accidental
+        if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') {
+            selectRol.disabled = true;
+        } else {
+            selectRol.disabled = false;
+        }
     }
     
     document.getElementById('empPassword').value = '';
@@ -318,7 +341,7 @@ function abrirEdicion(user) {
         switchAsignarPin.checked = hasPin;
     }
 
-    ajustarOpcionesDeRolSegunPermisos();
+    // 3. Ejecutar lógica visual correspondiente
     actualizarVisibilidadPin();
 
     const smallHint = document.querySelector('#passwordContainer small');
@@ -331,18 +354,38 @@ function abrirEdicion(user) {
     }
 }
 
-// Limpiar modal al cerrarlo para altas nuevas
+// Limpiar y resetear modal
 const modalElement = document.getElementById('modalEmpleado');
 if (modalElement) {
     modalElement.addEventListener('hidden.bs.modal', () => {
         if (formEmpleado) formEmpleado.reset();
         document.getElementById('empleadoId').value = '';
+        const selectRol = document.getElementById('empRol');
+        if (selectRol) {
+            selectRol.disabled = false;
+            selectRol.value = 'VENDEDOR';
+        }
         const switchAsignarPin = document.getElementById('switchAsignarPin');
         if (switchAsignarPin) switchAsignarPin.checked = false;
         ajustarOpcionesDeRolSegunPermisos();
         actualizarVisibilidadPin();
         const smallHint = document.querySelector('#passwordContainer small');
         if (smallHint) smallHint.classList.add('d-none');
+    });
+
+    modalElement.addEventListener('show.bs.modal', () => {
+        const id = document.getElementById('empleadoId').value;
+        if (!id) {
+            const selectRol = document.getElementById('empRol');
+            if (selectRol) {
+                selectRol.disabled = false;
+                selectRol.value = 'VENDEDOR';
+            }
+            const switchAsignarPin = document.getElementById('switchAsignarPin');
+            if (switchAsignarPin) switchAsignarPin.checked = false;
+            ajustarOpcionesDeRolSegunPermisos();
+            actualizarVisibilidadPin();
+        }
     });
 }
 

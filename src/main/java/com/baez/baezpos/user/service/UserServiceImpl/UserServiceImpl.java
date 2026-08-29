@@ -176,6 +176,14 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponseDTO updateUser(Long id, UserRequestDTO dto) {
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        User existing = (companyId != null) ?
+                userRepository.findByIdAndCompanyIdAndActiveTrue(id, companyId)
+                        .orElseThrow(() -> new IllegalArgumentException("No autorizado o usuario inactivo")) :
+                userRepository.findById(id)
+                        .filter(u -> Boolean.TRUE.equals(u.getActive()))
+                        .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado o inactivo"));
+
         Role currentUserRole = SecurityUtils.getCurrentUserRole();
         if (currentUserRole == null) {
             String currentEmail = SecurityUtils.getCurrentUserEmail();
@@ -185,19 +193,17 @@ public class UserServiceImpl implements UserService {
             }
         }
 
-        // Un ADMIN no puede crear/actualizar otro ADMIN ni un SUPER_ADMIN
-        if (currentUserRole == Role.ADMIN && 
-           (dto.getRole() == Role.ADMIN || dto.getRole() == Role.SUPER_ADMIN)) {
-            throw new AccessDeniedException("Violación de seguridad: No puedes crear usuarios con privilegios iguales o superiores.");
+        // Control de degradación de Admin a Vendedor (Anti Self-Lockout)
+        if (existing.getRole() == Role.ADMIN && dto.getRole() == Role.VENDEDOR) {
+            throw new IllegalStateException("Protección del sistema: No puedes degradar la cuenta del Administrador a Vendedor.");
         }
 
-        Long companyId = SecurityUtils.getCurrentCompanyId();
-        User existing = (companyId != null) ?
-                userRepository.findByIdAndCompanyIdAndActiveTrue(id, companyId)
-                        .orElseThrow(() -> new IllegalArgumentException("No autorizado o usuario inactivo")) :
-                userRepository.findById(id)
-                        .filter(u -> Boolean.TRUE.equals(u.getActive()))
-                        .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado o inactivo"));
+        // Control de escalada de privilegios de Vendedor a Admin por un Admin regular
+        if (existing.getRole() == Role.VENDEDOR && 
+           (dto.getRole() == Role.ADMIN || dto.getRole() == Role.SUPER_ADMIN) && 
+           currentUserRole != Role.SUPER_ADMIN) {
+            throw new AccessDeniedException("Violación de seguridad: No puedes crear o actualizar usuarios con privilegios iguales o superiores.");
+        }
 
         String cleanEmail = dto.getEmail().trim().toLowerCase();
         // Validar si intenta cambiar el email por uno que ya existe en el sistema
@@ -210,8 +216,12 @@ public class UserServiceImpl implements UserService {
 
         existing.setName(dto.getName());
         if (dto.getRole() != null) {
-            Role targetRole = validateRoleAssignment(dto.getRole());
-            existing.setRole(targetRole);
+            if (existing.getRole() == dto.getRole()) {
+                existing.setRole(dto.getRole());
+            } else {
+                Role targetRole = validateRoleAssignment(dto.getRole());
+                existing.setRole(targetRole);
+            }
         }
 
         if (dto.getPassword() != null && !dto.getPassword().trim().isEmpty()) {
