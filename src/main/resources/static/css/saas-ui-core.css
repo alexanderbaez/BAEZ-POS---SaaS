@@ -933,6 +933,13 @@ body.login-page {
   color: #ffffff !important;
 }
 
+.btn-outline-success:hover,
+.btn-outline-success:hover *,
+.btn-outline-success:focus,
+.btn-outline-success:focus * {
+  color: #ffffff !important;
+}
+
 /* ==========================================================================
    ARQUITECTURA DE IMPRESIÓN NATIVA DUAL (POS80 / A4)
    ========================================================================== */

@@ -130,8 +130,8 @@ function renderizarClientes(clientes) {
             <td class="text-muted small d-none d-md-table-cell">${c.dniCuit ? sanitizeHTML(c.dniCuit) : '<span class="opacity-25">-</span>'}</td>
             <td class="d-none d-sm-table-cell">
                 ${numTelefono ?
-                    `<button type="button" class="btn btn-sm btn-outline-success border-0 rounded-pill px-3 fw-bold d-inline-flex align-items-center gap-1.5" style="font-size: 0.75rem;" title="Enviar recordatorio WhatsApp" data-action="whatsapp" data-id="${c.id}">
-                        <i class="fab fa-whatsapp text-success fs-5"></i> <span class="d-none d-md-inline text-success">Recordatorio</span>
+                    `<button type="button" class="btn btn-sm btn-outline-success fw-bold d-inline-flex align-items-center gap-1.5" title="Enviar recordatorio WhatsApp" data-action="whatsapp" data-id="${c.id}">
+                        <i class="fab fa-whatsapp"></i> <span class="d-none d-md-inline">Recordatorio</span>
                     </button>` :
                     '<span class="text-muted small">Sin contacto</span>'
                 }
@@ -141,9 +141,6 @@ function renderizarClientes(clientes) {
             </td>
             <td class="text-end pe-3">
                 <div class="d-flex justify-content-end gap-2">
-                    <button class="btn btn-sm btn-light border btn-action" data-action="whatsapp-btn" data-id="${c.id}" title="Recordatorio WhatsApp">
-                        <i class="fab fa-whatsapp text-success"></i>
-                    </button>
                     <button class="btn btn-sm btn-light border btn-action" data-action="editar" data-id="${c.id}" title="Editar">
                         <i class="bi bi-pencil text-warning"></i>
                     </button>
@@ -162,12 +159,7 @@ function renderizarClientes(clientes) {
 
         const btnWsCol = tr.querySelector('[data-action="whatsapp"]');
         if (btnWsCol) {
-            btnWsCol.onclick = () => enviarRecordatorioWhatsApp(c.phone, saldo);
-        }
-
-        const btnWsAction = tr.querySelector('[data-action="whatsapp-btn"]');
-        if (btnWsAction) {
-            btnWsAction.onclick = () => enviarRecordatorioWhatsApp(c.phone, saldo);
+            btnWsCol.onclick = () => enviarRecordatorioWhatsApp(c.phone, saldo, c.name);
         }
 
         tr.querySelector('[data-action="editar"]').onclick = () => abrirModalEditar(c.id);
@@ -531,7 +523,7 @@ function renderizarTablaMovimientos() {
         if (CLIENTE_ACTUAL.telefono) {
             btnWsModal.classList.remove('d-none');
             btnWsModal.classList.add('d-inline-flex');
-            btnWsModal.onclick = () => enviarRecordatorioWhatsApp(CLIENTE_ACTUAL.telefono, saldoAcumulado);
+            btnWsModal.onclick = () => enviarRecordatorioWhatsApp(CLIENTE_ACTUAL.telefono, saldoAcumulado, CLIENTE_ACTUAL.name || CLIENTE_ACTUAL.nombre);
         } else {
             btnWsModal.classList.add('d-none');
             btnWsModal.classList.remove('d-inline-flex');
@@ -753,13 +745,14 @@ function compartirWhatsApp(nombreCliente, telefono, fecha, total, items = [], de
 /**
  * Envía recordatorio oficial de saldo pendiente por WhatsApp
  */
-function enviarRecordatorioWhatsApp(telefono, saldo) {
+function enviarRecordatorioWhatsApp(telefono, saldo, nombre) {
     if (!telefono || telefono === "null" || telefono === "") {
         return Swal.fire('Atención', 'El cliente no tiene un número de teléfono registrado.', 'warning');
     }
     const numLimpio = String(telefono).replace(/\D/g, '');
-    const saldoFormateado = formatCurrency(saldo);
-    const mensaje = `Hola, te recordamos que tu saldo pendiente es de ${saldoFormateado}. ¡Gracias!`;
+    const saldoFormateado = (typeof formatCurrency === 'function' ? formatCurrency(saldo).replace('$', '').trim() : String(saldo).replace('$', '').trim());
+    const nombreCliente = nombre ? String(nombre).trim() : 'estimado/a cliente';
+    const mensaje = "Hola " + nombreCliente + ", nos comunicamos para recordarte que tu saldo de cuenta corriente es de $" + saldoFormateado + ". ¡Cualquier consulta estamos a tu disposición, muchas gracias!";
     const url = `https://wa.me/${numLimpio}?text=${encodeURIComponent(mensaje)}`;
     window.open(url, '_blank');
 }
