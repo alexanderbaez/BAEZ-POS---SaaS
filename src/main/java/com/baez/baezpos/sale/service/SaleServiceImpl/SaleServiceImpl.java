@@ -8,7 +8,9 @@ import com.baez.baezpos.customer.repository.CustomerMovementRepository;
 import com.baez.baezpos.customer.repository.CustomerRepository;
 import com.baez.baezpos.customer.service.CustomerService;
 import com.baez.baezpos.expense.repository.ExpenseRepository;
+import com.baez.baezpos.inventory.entity.InventoryMovement;
 import com.baez.baezpos.inventory.entity.MovementType;
+import com.baez.baezpos.inventory.repository.InventoryRepository;
 import com.baez.baezpos.inventory.service.InventoryService.InventoryService;
 import com.baez.baezpos.log.service.AuditService;
 import com.baez.baezpos.product.entity.Product;
@@ -48,6 +50,7 @@ public class SaleServiceImpl implements SaleService {
     private final SaleRepository saleRepository;
     private final ProductRepository productRepository;
     private final InventoryService inventoryService;
+    private final InventoryRepository inventoryRepository;
     private final UserRepository userRepository;
     private final CustomerService customerService;
     private final CustomerRepository customerRepository;
@@ -111,32 +114,33 @@ public class SaleServiceImpl implements SaleService {
                 .total(BigDecimal.ZERO)
                 .build();
 
-        List<Long> productIds = saleDTO.items().stream().map(SaleItemRequestDTO::productId).toList();
-        List<Product> products = productRepository.findAllById(productIds);
-
-        Map<Long, Product> productMap = products.stream()
-                .collect(Collectors.toMap(Product::getId, Function.identity()));
-
         BigDecimal subtotalAcumulado = BigDecimal.ZERO;
 
         for (SaleItemRequestDTO itemDTO : saleDTO.items()) {
-            Product product = productMap.get(itemDTO.productId());
-            if (product == null || !product.getCompany().getId().equals(companyId)) {
+            Product product = productRepository.findByIdForUpdate(itemDTO.productId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Producto ID " + itemDTO.productId() + " no encontrado."));
+
+            if (product.getCompany() == null || !product.getCompany().getId().equals(companyId)) {
                 throw new ResourceNotFoundException("Producto ID " + itemDTO.productId() + " no encontrado en su empresa.");
             }
 
             BigDecimal stockActual = product.getStock() != null ? product.getStock() : BigDecimal.ZERO;
-            if (stockActual.compareTo(itemDTO.quantity()) < 0) {
+            BigDecimal cantidadVendida = itemDTO.quantity() != null ? itemDTO.quantity() : BigDecimal.ONE;
+
+            if (stockActual.compareTo(cantidadVendida) < 0) {
                 throw new BadRequestException("Stock insuficiente para: " + product.getName() + " (Disponible: " + stockActual + ")");
             }
 
+            product.setStock(stockActual.subtract(cantidadVendida));
+            productRepository.save(product);
+
             BigDecimal precioVenta = (itemDTO.price() != null) ? itemDTO.price() : product.getPrice();
-            BigDecimal subtotalItem = precioVenta.multiply(itemDTO.quantity());
+            BigDecimal subtotalItem = precioVenta.multiply(cantidadVendida);
 
             SaleItem item = SaleItem.builder()
                     .sale(sale)
                     .product(product)
-                    .quantity(itemDTO.quantity())
+                    .quantity(cantidadVendida)
                     .price(precioVenta)
                     .cost(product.getCost() != null ? product.getCost() : BigDecimal.ZERO)
                     .subtotal(subtotalItem)
@@ -168,12 +172,14 @@ public class SaleServiceImpl implements SaleService {
         Sale savedSale = saleRepository.save(sale);
 
         for (SaleItem item : savedSale.getItems()) {
-            inventoryService.registerMovement(
-                    item.getProduct().getId(),
-                    item.getQuantity(),
-                    MovementType.SALE,
-                    "Venta Ticket #" + savedSale.getNroComprobante()
-            );
+            InventoryMovement movement = InventoryMovement.builder()
+                    .movementType(MovementType.SALE)
+                    .quantity(item.getQuantity())
+                    .reason("Venta Ticket #" + savedSale.getNroComprobante())
+                    .product(item.getProduct())
+                    .build();
+            movement.setCompany(company);
+            inventoryRepository.save(movement);
         }
 
         if ("CUENTA_CORRIENTE".equals(paymentMethodClean)) {
