@@ -118,38 +118,19 @@ function toggleSeccionProveedor(categoria) {
  */
 function actualizarEstadoDeductFromBox(metodoSeleccionado, elementSwitch) {
     const esEfectivoCaja = (metodoSeleccionado === 'EFECTIVO_CAJA' || metodoSeleccionado === 'EFECTIVO');
-    const esCtaCte = (metodoSeleccionado === 'CUENTA_CORRIENTE');
-    const esCajaFuerte = (metodoSeleccionado === 'EFECTIVO_CAJA_FUERTE');
     const lblAyuda = document.getElementById('lblAyudaDeduct');
 
-    if (esCtaCte) {
-        elementSwitch.checked = false;
-        elementSwitch.disabled = true;
+    if (esEfectivoCaja) {
+        elementSwitch.disabled = false;
         if (lblAyuda) {
-            lblAyuda.innerHTML = `<i class="bi bi-clock-history text-warning me-1"></i> <strong>Cuenta Corriente:</strong> No descuenta dinero de caja física. Se acumula automáticamente en el saldo deudor del proveedor.`;
-            lblAyuda.className = "text-warning d-block mt-1 style-subtext";
-        }
-        return;
-    }
-
-    if (esCajaFuerte) {
-        elementSwitch.checked = false;
-        elementSwitch.disabled = true;
-        if (lblAyuda) {
-            lblAyuda.innerHTML = `<i class="bi bi-safe text-secondary me-1"></i> <strong>Caja Fuerte / Dueño:</strong> No descuenta de la caja diaria física. Se registra el gasto sin alterar el arqueo del turno.`;
-            lblAyuda.className = "text-secondary d-block mt-1 style-subtext";
-        }
-        return;
-    }
-
-    elementSwitch.disabled = false;
-
-    if (lblAyuda) {
-        if (esEfectivoCaja) {
             lblAyuda.innerHTML = `Si está activo, se restará del <strong>Efectivo Físico en Caja</strong>. Desactivalo únicamente si fue abonado con fondos personales por fuera del negocio.`;
             lblAyuda.className = "text-muted d-block mt-1 style-subtext";
-        } else {
-            lblAyuda.innerHTML = `<i class="bi bi-info-circle-fill text-primary me-1"></i> Si está activo, se descontará del acumulado <strong>Digital (Transferencia/QR)</strong> del Dashboard. Desactivalo si el pago salió de una cuenta personal.`;
+        }
+    } else {
+        elementSwitch.checked = false;
+        elementSwitch.disabled = true;
+        if (lblAyuda) {
+            lblAyuda.innerHTML = `<i class="bi bi-info-circle-fill text-primary me-1"></i> Al pagar por <strong>Transferencia / QR</strong> no impacta el efectivo físico del cajón diario.`;
             lblAyuda.className = "text-primary d-block mt-1 style-subtext";
         }
     }
@@ -280,7 +261,7 @@ function renderizarGastos(gastos) {
             iconoMetodo = 'bi-journal-text text-danger';
         }
 
-        // LÓGICA DE BADGES SEPARADOS (EFECTIVO VS DIGITAL VS CTA CTE VS CAJA FUERTE)
+        // LÓGICA DE BADGES SEPARADOS (EFECTIVO VS DIGITAL VS CTA CTE)
         const esEfectivoCaja = (g.paymentMethod === 'EFECTIVO_CAJA' || g.paymentMethod === 'EFECTIVO');
         const esCtaCte = (g.paymentMethod === 'CUENTA_CORRIENTE');
         const esCajaFuerte = (g.paymentMethod === 'EFECTIVO_CAJA_FUERTE');
@@ -290,12 +271,12 @@ function renderizarGastos(gastos) {
             badgeCaja = '<span class="badge bg-warning-subtle text-dark border border-warning ms-1" style="font-size: 10px;" title="Deuda con Proveedor"><i class="bi bi-clock-history me-1"></i>Deuda Cta. Cte</span>';
         } else if (esCajaFuerte) {
             badgeCaja = '<span class="badge bg-secondary-subtle text-secondary border border-secondary ms-1" style="font-size: 10px;" title="Fondos de Caja Fuerte / Fuera de caja física"><i class="bi bi-safe me-1"></i>Caja Fuerte</span>';
-        } else if (g.deductFromBox) {
-            if (esEfectivoCaja) {
-                badgeCaja = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size: 10px;" title="Restado del efectivo físico en caja">Descuenta Caja (Efectivo)</span>';
-            } else {
-                badgeCaja = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1" style="font-size: 10px;" title="Descontado del acumulado digital del Dashboard">Descuenta Digital</span>';
-            }
+        } else if (g.deductFromBox && esEfectivoCaja) {
+            badgeCaja = '<span class="badge bg-danger text-white border border-danger ms-1" style="font-size: 10px;" title="Restado del efectivo físico en caja"><i class="bi bi-cash me-1"></i>Descuenta Caja</span>';
+        } else if (g.paymentMethod === 'TRANSFERENCIA') {
+            badgeCaja = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1" style="font-size: 10px;" title="Pago por Transferencia Bancaria / QR"><i class="bi bi-bank me-1"></i>Digital / Banco</span>';
+        } else if (!g.deductFromBox) {
+            badgeCaja = '<span class="badge bg-secondary-subtle text-secondary border border-secondary ms-1" style="font-size: 10px;" title="No descuenta caja física">Sin Descuento Caja</span>';
         }
 
         const tr = document.createElement('tr');

@@ -120,6 +120,9 @@ async function cargarKpisYTablas() {
             if (dataBoxMes.periodProfit !== undefined) {
                 gananciaNeta = parseFloat(dataBoxMes.periodProfit) || 0;
             }
+            if (dataBoxMes.todaySessions) {
+                renderizarCajasAbiertas(dataBoxMes.todaySessions);
+            }
         }
 
         // --- DEUDA PROVEEDORES ---
@@ -228,6 +231,113 @@ function renderizarTopProductos(ventas) {
     tbody.appendChild(fragment);
 }
 
+function renderizarCajasAbiertas(sessions) {
+    const container = document.getElementById('cajasAbiertasContainer');
+    const badgeCount = document.getElementById('badgeCajasAbiertasCount');
+    if (!container) return;
+
+    const lista = Array.isArray(sessions) ? sessions : [];
+    const abiertas = lista.filter(s => s.status === 'OPEN');
+
+    if (badgeCount) {
+        badgeCount.innerText = `${abiertas.length} activa${abiertas.length === 1 ? '' : 's'}`;
+        if (abiertas.length > 0) {
+            badgeCount.className = 'badge bg-success rounded-pill px-2.5 py-1';
+        } else {
+            badgeCount.className = 'badge bg-secondary rounded-pill px-2.5 py-1';
+        }
+    }
+
+    if (abiertas.length === 0) {
+        container.innerHTML = `
+            <div class="col-12">
+                <div class="p-4 text-center bg-light rounded-3 text-muted border">
+                    <i class="bi bi-inbox fs-3 text-secondary d-block mb-2"></i>
+                    <span class="fw-semibold d-block">No hay cajas abiertas en este momento.</span>
+                    <small class="text-muted">Al iniciar un turno de venta desde el Punto de Venta (POS), su arqueo en vivo se monitoreará aquí.</small>
+                </div>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = abiertas.map(s => {
+        const numSesion = s.sessionNumber || s.id || 1;
+        const usuario = escapeHTML(s.userName || 'Admin');
+        const fondoInicial = parseFloat(s.initialAmount ?? 0);
+        const ventasEfectivo = parseFloat(s.totalCashSales ?? 0);
+        const cobrosEfectivo = parseFloat(s.totalCustomerPayments ?? 0);
+        const gastosEfectivo = parseFloat(s.totalExpenses ?? 0);
+
+        // Total Físico Esperado del Turno: Fondo + Ventas Efectivo + Cobros Efectivo - Gastos Efectivo
+        const esperadoFisico = (s.systemAmount !== undefined && s.systemAmount !== null)
+            ? parseFloat(s.systemAmount)
+            : (fondoInicial + ventasEfectivo + cobrosEfectivo - gastosEfectivo);
+
+        const fechaApertura = s.openedAt ? new Date(s.openedAt) : new Date();
+        const horaApertura = !isNaN(fechaApertura.getTime())
+            ? fechaApertura.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+            : '--:--';
+
+        return `
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="card h-100 border border-success-subtle shadow-sm rounded-4 bg-white overflow-hidden">
+                    <div class="card-header bg-success bg-opacity-10 border-0 p-3 d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-success text-white px-2.5 py-1 fw-bold fs-6">
+                                Caja #${numSesion}
+                            </span>
+                            <span class="fw-bold text-dark text-truncate" style="max-width: 150px;">
+                                <i class="bi bi-person-fill text-secondary me-1"></i>${usuario}
+                            </span>
+                        </div>
+                        <span class="badge bg-white text-success border border-success px-2 py-1 small fw-semibold">
+                            <i class="bi bi-clock-history me-1"></i>${horaApertura} hs
+                        </span>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <div class="p-2 bg-light rounded-3">
+                                    <small class="text-muted d-block" style="font-size: 0.72rem; text-transform: uppercase;">Fondo Inicial</small>
+                                    <span class="fw-bold text-dark amount-num">${fmtARS.format(fondoInicial)}</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-2 bg-light rounded-3">
+                                    <small class="text-muted d-block" style="font-size: 0.72rem; text-transform: uppercase;">Ventas Efectivo</small>
+                                    <span class="fw-bold text-success amount-num">+${fmtARS.format(ventasEfectivo)}</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-2 bg-light rounded-3">
+                                    <small class="text-muted d-block" style="font-size: 0.72rem; text-transform: uppercase;">Cobros Cta. Cte.</small>
+                                    <span class="fw-bold text-success amount-num">+${fmtARS.format(cobrosEfectivo)}</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-2 bg-light rounded-3">
+                                    <small class="text-muted d-block" style="font-size: 0.72rem; text-transform: uppercase;">Salidas (Gastos)</small>
+                                    <span class="fw-bold text-danger amount-num">-${fmtARS.format(gastosEfectivo)}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TOTAL FÍSICO ESPERADO EN CAJÓN -->
+                        <div class="p-2.5 rounded-3 bg-dark text-white d-flex justify-content-between align-items-center">
+                            <div>
+                                <small class="text-white-50 d-block" style="font-size: 0.7rem; text-transform: uppercase;">Total Físico Esperado</small>
+                                <span class="fw-bold fs-5 text-white amount-num">${fmtARS.format(esperadoFisico)}</span>
+                            </div>
+                            <span class="badge bg-success text-white px-2 py-1 small">
+                                <i class="bi bi-unlock-fill me-1"></i>En Curso
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+    }).join('');
+}
+
 function renderizarUltimosMovimientos(ventas, gastos) {
     const tbody = document.getElementById('tablaUltimosMovimientos');
     if (!tbody) return;
@@ -244,7 +354,8 @@ function renderizarUltimosMovimientos(ventas, gastos) {
             concepto: v.nroComprobante || (v.numeroTicket ? `Ticket #${v.numeroTicket}` : `Venta #${v.id}`),
             fecha: isNaN(fechaObj.getTime()) ? new Date() : fechaObj,
             metodo: (v.paymentMethod || 'EFECTIVO').replace(/_/g, ' '),
-            monto: parseFloat(v.total) || 0
+            monto: parseFloat(v.total) || 0,
+            deductFromBox: false
         });
     });
 
@@ -252,13 +363,15 @@ function renderizarUltimosMovimientos(ventas, gastos) {
     (gastos || []).forEach(g => {
         const fechaRaw = g.date || new Date();
         const fechaObj = new Date(fechaRaw);
+        const esDeducible = Boolean(g.deductFromBox) && (g.paymentMethod === 'EFECTIVO_CAJA' || g.paymentMethod === 'EFECTIVO');
         movimientos.push({
             tipo: 'GASTO',
             id: g.id,
             concepto: g.description || 'Egreso operativo',
             fecha: isNaN(fechaObj.getTime()) ? new Date() : fechaObj,
             metodo: (g.paymentMethod || 'EFECTIVO_CAJA').replace(/_/g, ' '),
-            monto: parseFloat(g.amount) || 0
+            monto: parseFloat(g.amount) || 0,
+            deductFromBox: esDeducible
         });
     });
 
@@ -282,11 +395,17 @@ function renderizarUltimosMovimientos(ventas, gastos) {
         const esVenta = m.tipo === 'VENTA';
         const icono = esVenta ? 'bi-cart-check-fill text-success' : 'bi-wallet2 text-danger';
         const badgeBg = esVenta ? 'bg-success bg-opacity-10' : 'bg-danger bg-opacity-10';
+
+        // Código de colores financiero: Gasto con deducción de caja en rojo fuerte
         const montoTexto = esVenta ? `+${fmtARS.format(m.monto)}` : `-${fmtARS.format(m.monto)}`;
-        const montoClase = esVenta ? 'text-success' : 'text-danger';
+        const montoClase = esVenta ? 'text-success fw-bold' : (m.deductFromBox ? 'text-danger fw-bold' : 'text-danger');
 
         const horaFormateada = m.fecha.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
         const diaFormateado = m.fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+
+        const badgeBoxDeduct = (!esVenta && m.deductFromBox)
+            ? '<span class="badge bg-danger text-white ms-1" style="font-size: 0.65rem;">Caja</span>'
+            : '';
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -305,8 +424,9 @@ function renderizarUltimosMovimientos(ventas, gastos) {
                 <span class="badge bg-light text-dark border px-2 py-1" style="font-size: 0.75rem;">
                     ${escapeHTML(m.metodo)}
                 </span>
+                ${badgeBoxDeduct}
             </td>
-            <td class="text-end pe-3 fw-bold ${montoClase} amount-num">
+            <td class="text-end pe-3 ${montoClase} amount-num">
                 ${montoTexto}
             </td>
         `;
@@ -509,6 +629,10 @@ async function consultarPorFechas() {
         // 1. Métricas de Reporte / Box (Fuente de Verdad Financiera - Flujo de Caja Puro)
         if (resBox.status === 'fulfilled' && resBox.value && resBox.value.ok) {
             const dataBox = await resBox.value.json();
+
+            if (dataBox.todaySessions) {
+                renderizarCajasAbiertas(dataBox.todaySessions);
+            }
 
             const periodSales = parseFloat(dataBox.periodSales) || 0;
             const periodProfit = parseFloat(dataBox.periodProfit) || 0;
