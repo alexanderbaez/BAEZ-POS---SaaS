@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 public record ProductResponseDTO(
         Long id,
         String name,
+        String description,
         String categoryName,    // Para la tabla
         Long categoryId,        // PARA EL SELECT EN EDICIÓN
         BigDecimal price,

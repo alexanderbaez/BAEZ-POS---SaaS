@@ -74,6 +74,20 @@ document.addEventListener('DOMContentLoaded', async function inicializarModuloVe
     await serviceCargarInfoEmpresa();
     await serviceCargarProductos();
 
+    // Recuperar estado persistido del carrito en localStorage
+    const savedCart = localStorage.getItem('baezpos_cart');
+    if (savedCart) {
+        try {
+            const parsed = JSON.parse(savedCart);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                CARRITO = parsed;
+                renderizarCarrito();
+            }
+        } catch (e) {
+            console.error("Error al restaurar carrito desde localStorage:", e);
+        }
+    }
+
     inicializarBuscadorProductos();
     inicializarBuscadorClientes();
     inicializarListenersInterfaz();
@@ -119,6 +133,7 @@ function inicializarBuscadorProductos() {
 
         const filtrados = PRODUCTOS_DB.filter(function filtrarProductos(p) {
             return (p.name && p.name.toLowerCase().includes(term)) ||
+                   (p.description && p.description.toLowerCase().includes(term)) ||
                    (p.barcode && p.barcode.includes(term));
         }).slice(0, 8);
 
@@ -326,24 +341,27 @@ function uiRenderizarSugerenciasProductos(productos) {
     div.innerHTML = productos.map(function mapProductoItem(p) {
         const badgeColor = p.stock > 5 ? 'bg-light text-dark' : 'bg-danger';
         const categoriaHtml = p.categoryName ? ` | <i class="bi bi-tag small"></i> ${p.categoryName}` : '';
+        const descTexto = p.description || p.descripcion || 'Sin descripción';
+        const precioFormateado = (p.price || 0).toFixed(2);
 
         return `
             <button type="button"
-                    class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 border-bottom shadow-sm"
+                    class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2.5 border-bottom shadow-sm"
                     onclick='seleccionarProducto(${JSON.stringify(p)})'
                     style="cursor: pointer;">
-                <div class="text-start">
+                <div class="text-start item-busqueda me-2">
                     <div class="fw-bold text-primary mb-0">
-                        <i class="bi bi-box-seam me-2"></i>${p.name.toUpperCase()}
+                        <i class="bi bi-box-seam me-2"></i>${p.name.toUpperCase()} - $${precioFormateado}
                     </div>
-                    <small class="text-muted">
+                    <div class="text-muted small" style="font-style: italic; font-size: 0.8rem;">${descTexto}</div>
+                    <small class="text-muted" style="font-size: 0.75rem;">
                         Stock: <span class="badge ${badgeColor}">${p.stock}</span>
                         | Cód: ${p.barcode || 'S/C'}
                         ${categoriaHtml}
                     </small>
                 </div>
-                <div class="text-end">
-                    <span class="h6 mb-0 fw-bold text-dark">$${(p.price || 0).toFixed(2)}</span>
+                <div class="text-end text-nowrap">
+                    <span class="h6 mb-0 fw-bold text-dark">$${precioFormateado}</span>
                 </div>
             </button>
         `;
@@ -361,6 +379,13 @@ function renderizarCarrito() {
     if (!body) return;
     body.innerHTML = '';
     SUBTOTAL_VENTA = 0;
+
+    // Persistencia continua en localStorage
+    if (CARRITO && CARRITO.length > 0) {
+        localStorage.setItem('baezpos_cart', JSON.stringify(CARRITO));
+    } else {
+        localStorage.removeItem('baezpos_cart');
+    }
 
     CARRITO.forEach(function procesarItemCarrito(item, index) {
         const subtotal = item.price * item.cantidad;
@@ -636,6 +661,7 @@ async function cancelarVenta() {
     if (!autorizado) return;
 
     CARRITO = [];
+    localStorage.removeItem('baezpos_cart');
     const pagaConEl = document.getElementById('pagaCon');
     if (pagaConEl) pagaConEl.value = '';
     const inputDesc = document.getElementById('inputDescuento');
@@ -1431,6 +1457,7 @@ async function finalizarVenta() {
 
             // Limpieza de estado del carrito
             CARRITO = [];
+            localStorage.removeItem('baezpos_cart');
             clienteSeleccionado = null;
             const infoCli = document.getElementById('infoClienteSeleccionado');
             if (infoCli) infoCli.classList.add('d-none');
@@ -1532,6 +1559,7 @@ async function finalizarVenta() {
 
         // Limpieza de estado del carrito
         CARRITO = [];
+        localStorage.removeItem('baezpos_cart');
         clienteSeleccionado = null;
         const infoCli = document.getElementById('infoClienteSeleccionado');
         if (infoCli) infoCli.classList.add('d-none');

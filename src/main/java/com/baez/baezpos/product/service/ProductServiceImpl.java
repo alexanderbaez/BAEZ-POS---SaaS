@@ -217,6 +217,7 @@ public class ProductServiceImpl implements ProductService {
         return new ProductResponseDTO(
                 p.getId(),
                 p.getName(),
+                p.getDescription(),
                 catName,
                 catId,
                 p.getPrice(),
