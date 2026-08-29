@@ -644,6 +644,37 @@ function imprimirHTMLConIframe(htmlContent) {
     }
 }
 
+/**
+ * Renderiza un código de barras CODE128 en un canvas en memoria y devuelve su DataURL (image/png).
+ * Cumple con el estándar industrial retail para admitir cadenas alfanuméricas sin fallos.
+ */
+function generarBarcodeDataURL(codigo, options = {}) {
+    if (!codigo) return null;
+    try {
+        const canvas = document.createElement('canvas');
+        if (typeof JsBarcode === 'undefined') {
+            console.error("JsBarcode no se encuentra cargado en el entorno.");
+            return null;
+        }
+        JsBarcode(canvas, String(codigo).trim(), {
+            format: "CODE128",
+            width: options.width || 1.8,
+            height: options.height || 42,
+            displayValue: options.displayValue !== undefined ? options.displayValue : true,
+            fontSize: options.fontSize || 11,
+            fontOptions: "bold",
+            textMargin: 2,
+            margin: options.margin !== undefined ? options.margin : 2,
+            background: "#ffffff",
+            lineColor: "#000000"
+        });
+        return canvas.toDataURL("image/png");
+    } catch (e) {
+        console.error("Error generando código de barras CODE128:", e);
+        return null;
+    }
+}
+
 async function imprimirEtiqueta(id) {
     let p = PRODUCTOS_LOCAL.find(prod => prod.id === id);
     if (!p) return;
@@ -664,6 +695,21 @@ async function imprimirEtiqueta(id) {
         }
     }
 
+    const barcodeImgData = generarBarcodeDataURL(barcodeParaImprimir, {
+        width: 1.8,
+        height: 40,
+        displayValue: true,
+        fontSize: 10,
+        margin: 1
+    });
+
+    if (!barcodeImgData) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire('Error', 'No se pudo generar el código de barras gráfico.', 'error');
+        }
+        return;
+    }
+
     const nameSeguro = (p.name || '').replace(/"/g, '&quot;');
 
     const htmlEtiqueta = `
@@ -672,56 +718,76 @@ async function imprimirEtiqueta(id) {
             <head>
                 <title>Etiqueta - ${nameSeguro}</title>
                 <style>
+                    @page {
+                        size: 50mm 25mm;
+                        margin: 0;
+                    }
+                    * {
+                        box-sizing: border-box;
+                    }
+                    body {
+                        margin: 0;
+                        padding: 0;
+                        background-color: #fff;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                    }
                     .etiqueta {
                         width: 50mm;
                         height: 25mm;
-                        border: 1px dashed #ccc;
+                        border: 1px dashed #999;
+                        border-radius: 3px;
                         display: flex;
                         flex-direction: column;
                         justify-content: center;
                         align-items: center;
-                        padding: 2px;
+                        padding: 1.5mm;
                         box-sizing: border-box;
+                        overflow: hidden;
+                        text-align: center;
+                        background: #fff;
                     }
                     .nombre {
-                        font-family: Arial, sans-serif;
-                        font-size: 10px;
+                        font-family: Arial, Helvetica, sans-serif;
+                        font-size: 9px;
                         font-weight: bold;
                         text-align: center;
-                        margin-bottom: 2px;
+                        margin-bottom: 1.5px;
                         white-space: nowrap;
                         overflow: hidden;
                         text-overflow: ellipsis;
-                        max-width: 48mm;
+                        max-width: 47mm;
+                        color: #000;
+                        line-height: 1.1;
                     }
-                    svg {
-                        width: 46mm;
-                        height: 15mm;
+                    .barcode-container {
+                        width: 100%;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                    }
+                    .barcode-img {
+                        max-width: 47mm;
+                        max-height: 16mm;
+                        height: auto;
+                        object-fit: contain;
+                        display: block;
+                        margin: 0 auto;
+                    }
+                    @media print {
+                        body { margin: 0; }
+                        .etiqueta { border: 1px dashed #aaa; }
                     }
                 </style>
             </head>
             <body>
                 <div class="etiqueta">
                     <div class="nombre">${nameSeguro.toUpperCase()}</div>
-                    <svg id="barcode-svg"></svg>
+                    <div class="barcode-container">
+                        <img class="barcode-img" src="${barcodeImgData}" alt="${barcodeParaImprimir}" />
+                    </div>
                 </div>
-                <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-                <script>
-                    window.onload = function() {
-                        try {
-                            JsBarcode("#barcode-svg", "${barcodeParaImprimir}", {
-                                format: "CODE128",
-                                width: 1.5,
-                                height: 38,
-                                displayValue: true,
-                                fontSize: 9,
-                                margin: 0
-                            });
-                        } catch(e) {
-                            console.error("Error JsBarcode:", e);
-                        }
-                    };
-                </script>
             </body>
         </html>
     `;
@@ -776,6 +842,21 @@ async function imprimirEtiquetasMultiples(id) {
 
     if (!cantidad || cantidad <= 0) return;
 
+    const barcodeImgData = generarBarcodeDataURL(barcodeParaImprimir, {
+        width: 1.8,
+        height: 38,
+        displayValue: true,
+        fontSize: 10,
+        margin: 1
+    });
+
+    if (!barcodeImgData) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire('Error', 'No se pudo generar el código de barras gráfico.', 'error');
+        }
+        return;
+    }
+
     const nameSeguro = (p.name || '').replace(/"/g, '&quot;');
 
     let etiquetasHTML = '';
@@ -784,7 +865,7 @@ async function imprimirEtiquetasMultiples(id) {
             <div class="etiqueta">
                 <div class="nombre">${nameSeguro.toUpperCase()}</div>
                 <div class="barcode-container">
-                    <svg class="barcode-svg" data-code="${barcodeParaImprimir}"></svg>
+                    <img class="barcode-img" src="${barcodeImgData}" alt="${barcodeParaImprimir}" />
                 </div>
             </div>
         `;
@@ -804,7 +885,7 @@ async function imprimirEtiquetasMultiples(id) {
                         box-sizing: border-box;
                     }
                     body {
-                        font-family: Arial, sans-serif;
+                        font-family: Arial, Helvetica, sans-serif;
                         margin: 0;
                         padding: 0;
                         background-color: #fff;
@@ -825,9 +906,11 @@ async function imprimirEtiquetasMultiples(id) {
                         align-items: center;
                         justify-content: center;
                         gap: 2px;
-                        padding: 4px;
+                        padding: 3mm 2mm;
                         text-align: center;
                         page-break-inside: avoid;
+                        overflow: hidden;
+                        background: #fff;
                     }
                     .nombre {
                         font-size: 10px;
@@ -836,6 +919,7 @@ async function imprimirEtiquetasMultiples(id) {
                         overflow: hidden;
                         text-overflow: ellipsis;
                         max-width: 100%;
+                        color: #000;
                     }
                     .barcode-container {
                         width: 100%;
@@ -843,9 +927,13 @@ async function imprimirEtiquetasMultiples(id) {
                         justify-content: center;
                         align-items: center;
                     }
-                    .barcode-svg {
-                        width: 95%;
-                        max-height: 38px;
+                    .barcode-img {
+                        max-width: 95%;
+                        max-height: 18mm;
+                        height: auto;
+                        object-fit: contain;
+                        display: block;
+                        margin: 0 auto;
                     }
 
                     @media print {
@@ -858,27 +946,6 @@ async function imprimirEtiquetasMultiples(id) {
                 <div class="grid-container">
                     ${etiquetasHTML}
                 </div>
-                <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-                <script>
-                    window.onload = function() {
-                        try {
-                            const svgs = document.querySelectorAll('.barcode-svg');
-                            svgs.forEach(el => {
-                                const code = el.getAttribute('data-code');
-                                JsBarcode(el, code, {
-                                    format: "CODE128",
-                                    width: 1.4,
-                                    height: 34,
-                                    displayValue: true,
-                                    fontSize: 9,
-                                    margin: 0
-                                });
-                            });
-                        } catch(e) {
-                            console.error("Error generando códigos de barras:", e);
-                        }
-                    };
-                </script>
             </body>
         </html>
     `;
