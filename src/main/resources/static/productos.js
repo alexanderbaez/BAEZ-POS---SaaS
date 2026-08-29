@@ -601,35 +601,19 @@ document.addEventListener('keydown', (e) => {
 // 6. IMPRESIÓN DE ETIQUETA / TICKET MEJORADA
 // ==========================================
 /**
- * Mecanismo robusto de impresión térmica/etiquetas usando un iframe oculto.
+ * Motor de impresión nativo mediante CSS @media print y #print-section.
+ * Inyección sincrónica directa en el DOM para evitar bloqueos en navegadores móviles.
  */
 function imprimirHTMLConIframe(htmlContent) {
-    const prevIframes = document.querySelectorAll('.print-hidden-iframe');
-    prevIframes.forEach(el => el.remove());
-
-    const iframe = document.createElement('iframe');
-    iframe.className = 'print-hidden-iframe';
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-
-    iframe.contentWindow.document.open();
-    iframe.contentWindow.document.write(htmlContent);
-    iframe.contentWindow.document.close();
-
-    setTimeout(() => {
-        try {
-            iframe.contentWindow.focus();
-            iframe.contentWindow.print();
-        } catch (e) {
-            console.error('Error al imprimir desde iframe:', e);
-        } finally {
-            setTimeout(() => {
-                if (iframe && iframe.parentNode) {
-                    iframe.parentNode.removeChild(iframe);
-                }
-            }, 1000);
-        }
-    }, 600);
+    let printSection = document.getElementById('print-section');
+    if (!printSection) {
+        printSection = document.createElement('div');
+        printSection.id = 'print-section';
+        document.body.appendChild(printSection);
+    }
+    printSection.innerHTML = htmlContent;
+    window.print(); // Se ejecuta instantáneamente, sin setTimeout, respetando el gesto del usuario
+    setTimeout(() => { printSection.innerHTML = ''; }, 1000); // Limpieza post-impresión
 }
 
 async function imprimirEtiqueta(id) {

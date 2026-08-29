@@ -932,3 +932,17 @@ body.login-page {
 .btn-check:checked + .btn-outline-primary * {
   color: #ffffff !important;
 }
+
+/* ==========================================================================
+   ARQUITECTURA DE IMPRESIÓN NATIVA (CSS PRINT MEDIA QUERY)
+   ========================================================================== */
+#print-section {
+  display: none;
+}
+
+@media print {
+  body > *:not(#print-section) { display: none !important; }
+  #print-section { display: block !important; position: absolute; top: 0; left: 0; width: 100%; margin: 0; padding: 0; background: white; }
+  #print-section * { color: black !important; }
+  @page { margin: 0; }
+}
