@@ -109,3 +109,57 @@ window.setButtonLoading = setButtonLoading;
 window.renderEmptyState = renderEmptyState;
 window.formatMoneyARS = formatMoneyARS;
 window.showSaasToast = showSaasToast;
+
+/**
+ * Formateador de cantidad para tickets térmicos POS.
+ * Limpia decimales irrelevantes (ej. 1.000 -> 1, 1.500 -> 1.5).
+ */
+window.fmtCantidadTicket = function(cantidad) {
+    let valor = cantidad;
+    if (typeof cantidad === 'object' && cantidad !== null) {
+        valor = cantidad.quantity !== undefined ? cantidad.quantity : (cantidad.cantidad !== undefined ? cantidad.cantidad : (cantidad.weight || cantidad.peso || 1));
+    }
+    if (!valor && valor !== 0) return "1";
+    const num = parseFloat(valor);
+    if (isNaN(num)) return "1";
+    return Number.isInteger(num) ? parseInt(num).toString() : num.toFixed(3).replace(/\.?0+$/, '');
+};
+
+/**
+ * Formateador de importes monetarios para tickets térmicos POS.
+ */
+window.fmtPrecioTicket = function(monto) {
+    const num = parseFloat(monto || 0);
+    return isNaN(num) ? '0,00' : num.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+/**
+ * Funciones de compatibilidad global para formateo de moneda estándar
+ */
+if (typeof window.formatearMoneda !== 'function') {
+    window.formatearMoneda = function(monto) {
+        const num = parseFloat(monto || 0);
+        return isNaN(num) ? '0,00' : num.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+}
+if (typeof window.utilFormatearMoneda !== 'function') {
+    window.utilFormatearMoneda = window.formatearMoneda;
+}
+if (typeof window.formatearMonedaSegura !== 'function') {
+    window.formatearMonedaSegura = window.formatearMoneda;
+}
+
+if (typeof window.escapeHtml !== 'function') {
+    window.escapeHtml = function(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    };
+}
+if (typeof window.escapeHTML !== 'function') {
+    window.escapeHTML = window.escapeHtml;
+}

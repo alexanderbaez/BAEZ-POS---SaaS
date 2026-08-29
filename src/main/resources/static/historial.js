@@ -712,12 +712,15 @@ function reimprimirTicket() {
         const subtotalItem = item.subtotal !== undefined
             ? item.subtotal
             : ((item.price || item.unitPrice || item.precio || 0) * (item.quantity || item.cantidad || 1));
-        const prefijoCantidad = fmtCantidadTicket(item);
+        const cantFormatted = (typeof window.fmtCantidadTicket === 'function')
+            ? window.fmtCantidadTicket(item)
+            : (item.quantity || item.cantidad || 1);
+        const prefijoCantidad = cantFormatted ? `${cantFormatted} ` : '';
 
         return `
             <div class="item-row">
                 <span class="item-qty-name">${prefijoCantidad}${escapeHtml(item.productName || item.nombre || '').toUpperCase()}</span>
-                <span class="item-price">$${formatearMoneda(parseFloat(subtotalItem))}</span>
+                <span class="item-price">$${window.fmtPrecioTicket ? window.fmtPrecioTicket(subtotalItem) : (typeof formatearMoneda === 'function' ? formatearMoneda(parseFloat(subtotalItem)) : window.formatearMoneda(parseFloat(subtotalItem)))}</span>
             </div>
         `;
     }).join('') : '';

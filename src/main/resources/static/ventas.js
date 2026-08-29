@@ -1669,39 +1669,6 @@ window.actualizarIndicadorVentasPendientes = actualizarIndicadorVentasPendientes
 // ==========================================
 // 11. IMPRESIÓN DE TICKETS Y TICKETERA
 // ==========================================
-function fmtCantidadTicket(item) {
-    const qty = parseFloat(item.quantity || item.cantidad || 1);
-    const nombreProd = (item.productName || item.nombre || '').toUpperCase();
-
-    const palabrasPesables = ['PAN', 'QUESO', 'CARNE', 'POLLO', 'ASADO', 'FIAMBRE', 'PALETA', 'JAMON', 'MILANESA', 'FRUTA', 'VERDURA', 'VERDURAS', 'FRUTAS', 'KG', 'KILO'];
-    const coincideNombre = palabrasPesables.some(function verificarPalabraPesable(p) {
-        return nombreProd.includes(p);
-    });
-
-    const esFraccionado = Boolean(
-        item.isFractional ||
-        item.unitOfMeasure === 'KG' ||
-        item.unitOfMeasure === 'GRAM' ||
-        item.unitType === 'KG' ||
-        coincideNombre ||
-        (qty % 1 !== 0)
-    );
-
-    if (esFraccionado) {
-        if (qty < 1 && qty > 0) {
-            const gramos = Math.round(qty * 1000);
-            return `${gramos} gr `;
-        }
-        const qtyFormatted = qty.toLocaleString('es-AR', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 3
-        });
-        return `${qtyFormatted} Kg `;
-    }
-
-    return `${qty} `;
-}
-
 function generarPlantillaHTMLTicket(venta) {
     const infoEmpresa = (typeof DATOS_EMPRESA !== 'undefined' && DATOS_EMPRESA !== null) ? DATOS_EMPRESA : {};
     const fiscalActivo = String(venta.isFiscal !== undefined ? venta.isFiscal : infoEmpresa.hasTaxData) === "true";
@@ -1780,12 +1747,15 @@ function generarPlantillaHTMLTicket(venta) {
         const subtotalItem = item.subtotal !== undefined
             ? item.subtotal
             : ((item.price || item.unitPrice || item.precio || 0) * (item.quantity || item.cantidad || 1));
-        const prefijoCantidad = fmtCantidadTicket(item);
+        const cantFormatted = (typeof window.fmtCantidadTicket === 'function')
+            ? window.fmtCantidadTicket(item)
+            : (item.quantity || item.cantidad || 1);
+        const prefijoCantidad = cantFormatted ? `${cantFormatted} ` : '';
 
         return `
             <div class="item-row">
                 <span class="item-qty-name">${prefijoCantidad}${(item.productName || item.nombre || '').toUpperCase()}</span>
-                <span class="item-price">$${utilFormatearMoneda(parseFloat(subtotalItem))}</span>
+                <span class="item-price">$${window.fmtPrecioTicket ? window.fmtPrecioTicket(subtotalItem) : utilFormatearMoneda(parseFloat(subtotalItem))}</span>
             </div>
         `;
     }).join('') : '';
