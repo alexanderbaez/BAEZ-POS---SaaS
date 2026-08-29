@@ -223,11 +223,24 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public boolean validatePin(String pin) {
-        if (pin == null || pin.trim().isEmpty()) {
+        if (pin == null) {
             return false;
         }
+        String rawPin = String.valueOf(pin).trim();
+        if (rawPin.isEmpty()) {
+            return false;
+        }
+
         Long companyId = SecurityUtils.getCurrentCompanyId();
-        return userRepository.existsValidSupervisorPin(pin.trim(), companyId);
+        List<User> supervisors = userRepository.findValidSupervisorsByCompanyId(companyId);
+
+        return supervisors.stream().anyMatch(admin -> {
+            if (admin.getSecurityPin() == null) return false;
+            String storedPin = admin.getSecurityPin().trim();
+            if (storedPin.isEmpty()) return false;
+
+            return storedPin.equals(rawPin) || (storedPin.startsWith("$2") && passwordEncoder.matches(rawPin, storedPin));
+        });
     }
 
     private Role validateRoleAssignment(Role requestedRole) {

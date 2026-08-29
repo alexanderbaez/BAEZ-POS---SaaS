@@ -68,8 +68,9 @@ public class UserController {
 
     @PostMapping("/validate-pin")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Boolean> validatePin(@RequestBody Map<String, Object> request) {
+    public ResponseEntity<Map<String, Boolean>> validatePin(@RequestBody Map<String, Object> request) {
         String pin = (request != null && request.get("pin") != null) ? String.valueOf(request.get("pin")).trim() : null;
-        return ResponseEntity.ok(userService.validatePin(pin));
+        boolean isValid = userService.validatePin(pin);
+        return ResponseEntity.ok(Map.of("valid", isValid));
     }
 }
