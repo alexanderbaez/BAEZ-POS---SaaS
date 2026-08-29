@@ -30,6 +30,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (smallHint) smallHint.classList.add('d-none');
     }
 
+    ajustarOpcionesDeRolSegunPermisos();
+    actualizarVisibilidadPin();
+
+    const selectRol = document.getElementById('empRol');
+    if (selectRol) {
+        selectRol.addEventListener('change', actualizarVisibilidadPin);
+    }
+
     cargarEmpleados();
 });
 
@@ -125,10 +133,11 @@ if (formEmpleado) {
         const id = document.getElementById('empleadoId').value;
         const isEditing = id !== "";
 
+        const role = document.getElementById('empRol').value;
         const payload = {
             name: document.getElementById('empNombre').value.trim(),
             email: document.getElementById('empEmail').value.trim(),
-            role: document.getElementById('empRol').value
+            role: role
         };
 
         const password = document.getElementById('empPassword').value.trim();
@@ -139,9 +148,11 @@ if (formEmpleado) {
             return;
         }
 
-        const pin = document.getElementById('empPin') ? document.getElementById('empPin').value.trim() : '';
-        if (pin) {
-            payload.securityPin = pin;
+        if (role !== 'VENDEDOR') {
+            const pin = document.getElementById('empPin') ? document.getElementById('empPin').value.trim() : '';
+            if (pin) {
+                payload.securityPin = pin;
+            }
         }
 
         try {
@@ -209,15 +220,65 @@ if (formEmpleado) {
     });
 }
 
+function actualizarVisibilidadPin() {
+    const selectRol = document.getElementById('empRol');
+    const pinContainer = document.getElementById('pinContainer');
+    const pinInput = document.getElementById('empPin');
+    if (!selectRol || !pinContainer) return;
+
+    const rolSeleccionado = (selectRol.value || '').toUpperCase().trim();
+    if (rolSeleccionado === 'VENDEDOR') {
+        pinContainer.classList.add('d-none');
+        pinContainer.style.display = 'none';
+        if (pinInput) pinInput.value = '';
+    } else {
+        pinContainer.classList.remove('d-none');
+        pinContainer.style.display = 'block';
+    }
+}
+
+function ajustarOpcionesDeRolSegunPermisos() {
+    const userRole = (localStorage.getItem('baezpos_user_role') || '').toUpperCase().trim();
+    const isSuperAdmin = userRole.includes('SUPER_ADMIN');
+    const selectRol = document.getElementById('empRol');
+    if (!selectRol) return;
+
+    // Un ADMIN solo puede crear SUPERVISOR o VENDEDOR (ocultar ADMIN y SUPER_ADMIN)
+    Array.from(selectRol.options).forEach(opt => {
+        const val = opt.value.toUpperCase();
+        if (val === 'ADMIN' || val === 'SUPER_ADMIN') {
+            if (!isSuperAdmin) {
+                opt.style.display = 'none';
+                opt.disabled = true;
+            } else {
+                opt.style.display = '';
+                opt.disabled = false;
+            }
+        }
+    });
+
+    if (!isSuperAdmin && (selectRol.value === 'ADMIN' || selectRol.value === 'SUPER_ADMIN')) {
+        selectRol.value = 'VENDEDOR';
+    }
+}
+
 function abrirEdicion(user) {
     document.getElementById('empleadoId').value = user.id;
     document.getElementById('empNombre').value = user.name || '';
     document.getElementById('empEmail').value = user.email || '';
-    document.getElementById('empRol').value = user.role || 'VENDEDOR';
+    
+    const selectRol = document.getElementById('empRol');
+    if (selectRol) {
+        selectRol.value = user.role || 'VENDEDOR';
+    }
+    
     document.getElementById('empPassword').value = '';
     if (document.getElementById('empPin')) {
         document.getElementById('empPin').value = '';
     }
+
+    ajustarOpcionesDeRolSegunPermisos();
+    actualizarVisibilidadPin();
 
     const smallHint = document.querySelector('#passwordContainer small');
     if (smallHint) smallHint.classList.remove('d-none');
@@ -235,6 +296,8 @@ if (modalElement) {
     modalElement.addEventListener('hidden.bs.modal', () => {
         if (formEmpleado) formEmpleado.reset();
         document.getElementById('empleadoId').value = '';
+        ajustarOpcionesDeRolSegunPermisos();
+        actualizarVisibilidadPin();
         const smallHint = document.querySelector('#passwordContainer small');
         if (smallHint) smallHint.classList.add('d-none');
     });

@@ -80,10 +80,17 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, "Bad Request", msg, request.getRequestURI(), null);
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex, HttpServletRequest request) {
+        log.warn("Argumento inválido [{}]: {}", request.getRequestURI(), ex.getMessage());
+        return buildResponse(HttpStatus.BAD_REQUEST, "Bad Request", ex.getMessage(), request.getRequestURI(), null);
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiErrorResponse> handleAccessDeniedException(AccessDeniedException ex, HttpServletRequest request) {
         log.warn("Acceso denegado [{}]: {}", request.getRequestURI(), ex.getMessage());
-        return buildResponse(HttpStatus.FORBIDDEN, "Forbidden", "Acceso denegado. No tienes permisos suficientes para realizar esta acción.", request.getRequestURI(), null);
+        String msg = (ex.getMessage() != null && !ex.getMessage().isBlank()) ? ex.getMessage() : "Acceso denegado. No tienes permisos suficientes para realizar esta acción.";
+        return buildResponse(HttpStatus.FORBIDDEN, "Forbidden", msg, request.getRequestURI(), null);
     }
 
     @ExceptionHandler(BadCredentialsException.class)

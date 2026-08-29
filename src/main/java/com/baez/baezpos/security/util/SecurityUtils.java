@@ -30,4 +30,12 @@ public class SecurityUtils {
         }
         return null;
     }
+
+    public static com.baez.baezpos.user.entity.Role getCurrentUserRole() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof UserPrincipal principal) {
+            return principal.getRole();
+        }
+        return null;
+    }
 }

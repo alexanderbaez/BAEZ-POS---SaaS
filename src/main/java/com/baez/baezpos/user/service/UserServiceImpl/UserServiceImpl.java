@@ -13,6 +13,7 @@ import com.baez.baezpos.shared.exception.ResourceNotFoundException;
 import com.baez.baezpos.security.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -37,6 +38,21 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponseDTO createUser(UserRequestDTO dto) {
+        Role currentUserRole = SecurityUtils.getCurrentUserRole();
+        if (currentUserRole == null) {
+            String currentEmail = SecurityUtils.getCurrentUserEmail();
+            if (currentEmail != null) {
+                User current = userRepository.findByEmail(currentEmail).orElse(null);
+                if (current != null) currentUserRole = current.getRole();
+            }
+        }
+
+        // Un ADMIN no puede crear otro ADMIN ni un SUPER_ADMIN
+        if (currentUserRole == Role.ADMIN && 
+           (dto.getRole() == Role.ADMIN || dto.getRole() == Role.SUPER_ADMIN)) {
+            throw new AccessDeniedException("Violación de seguridad: No puedes crear usuarios con privilegios iguales o superiores.");
+        }
+
         Long companyId = SecurityUtils.getCurrentCompanyId();
         String cleanEmail = dto.getEmail().trim().toLowerCase();
         Role targetRole = validateRoleAssignment(dto.getRole());
@@ -78,7 +94,9 @@ public class UserServiceImpl implements UserService {
                 existingUser.setPassword(passwordEncoder.encode(dto.getPassword()));
             }
 
-            if (dto.getSecurityPin() != null && !dto.getSecurityPin().trim().isEmpty()) {
+            if (targetRole == Role.VENDEDOR) {
+                existingUser.setSecurityPin(null);
+            } else if (dto.getSecurityPin() != null && !dto.getSecurityPin().trim().isEmpty()) {
                 existingUser.setSecurityPin(passwordEncoder.encode(dto.getSecurityPin().trim()));
             }
 
@@ -107,7 +125,9 @@ public class UserServiceImpl implements UserService {
         user.setRole(targetRole);
         user.setActive(true);
 
-        if (dto.getSecurityPin() != null && !dto.getSecurityPin().trim().isEmpty()) {
+        if (targetRole == Role.VENDEDOR) {
+            user.setSecurityPin(null);
+        } else if (dto.getSecurityPin() != null && !dto.getSecurityPin().trim().isEmpty()) {
             user.setSecurityPin(passwordEncoder.encode(dto.getSecurityPin().trim()));
         }
 
@@ -156,6 +176,21 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponseDTO updateUser(Long id, UserRequestDTO dto) {
+        Role currentUserRole = SecurityUtils.getCurrentUserRole();
+        if (currentUserRole == null) {
+            String currentEmail = SecurityUtils.getCurrentUserEmail();
+            if (currentEmail != null) {
+                User current = userRepository.findByEmail(currentEmail).orElse(null);
+                if (current != null) currentUserRole = current.getRole();
+            }
+        }
+
+        // Un ADMIN no puede crear/actualizar otro ADMIN ni un SUPER_ADMIN
+        if (currentUserRole == Role.ADMIN && 
+           (dto.getRole() == Role.ADMIN || dto.getRole() == Role.SUPER_ADMIN)) {
+            throw new AccessDeniedException("Violación de seguridad: No puedes crear usuarios con privilegios iguales o superiores.");
+        }
+
         Long companyId = SecurityUtils.getCurrentCompanyId();
         User existing = (companyId != null) ?
                 userRepository.findByIdAndCompanyIdAndActiveTrue(id, companyId)
@@ -186,7 +221,9 @@ public class UserServiceImpl implements UserService {
             existing.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
 
-        if (dto.getSecurityPin() != null && !dto.getSecurityPin().trim().isEmpty()) {
+        if (existing.getRole() == Role.VENDEDOR) {
+            existing.setSecurityPin(null);
+        } else if (dto.getSecurityPin() != null && !dto.getSecurityPin().trim().isEmpty()) {
             existing.setSecurityPin(passwordEncoder.encode(dto.getSecurityPin().trim()));
         }
 
@@ -311,17 +348,29 @@ public class UserServiceImpl implements UserService {
     }
 
     private Role validateRoleAssignment(Role requestedRole) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        boolean isSuperAdmin = auth != null && auth.getAuthorities().stream()
-                .anyMatch(a -> "ROLE_SUPER_ADMIN".equals(a.getAuthority()));
+        Role currentUserRole = SecurityUtils.getCurrentUserRole();
+        if (currentUserRole == null) {
+            String currentEmail = SecurityUtils.getCurrentUserEmail();
+            if (currentEmail != null) {
+                User current = userRepository.findByEmail(currentEmail).orElse(null);
+                if (current != null) currentUserRole = current.getRole();
+            }
+        }
+
+        boolean isSuperAdmin = currentUserRole == Role.SUPER_ADMIN;
+
+        if (currentUserRole == Role.ADMIN && 
+           (requestedRole == Role.ADMIN || requestedRole == Role.SUPER_ADMIN)) {
+            throw new AccessDeniedException("Violación de seguridad: No puedes crear usuarios con privilegios iguales o superiores.");
+        }
 
         if (requestedRole == Role.SUPER_ADMIN && !isSuperAdmin) {
-            throw new IllegalArgumentException("Acceso denegado: No está autorizado para asignar el rol SUPER_ADMIN.");
+            throw new AccessDeniedException("Violación de seguridad: No puedes crear usuarios con privilegios iguales o superiores.");
         }
 
         if (!isSuperAdmin) {
             if (requestedRole != null && requestedRole != Role.VENDEDOR && requestedRole != Role.SUPERVISOR) {
-                throw new IllegalArgumentException("Los administradores de empresa únicamente pueden crear o asignar usuarios con rol VENDEDOR o SUPERVISOR.");
+                throw new AccessDeniedException("Violación de seguridad: No puedes crear usuarios con privilegios iguales o superiores.");
             }
             return requestedRole != null ? requestedRole : Role.VENDEDOR;
         }
