@@ -506,11 +506,12 @@ async function solicitarPinSupervisorSiEsVendedor(motivo = "realizar esta acció
             body: JSON.stringify({ pin: String(pin).trim() })
         });
 
-        let esValido = false;
-        if (res && res.ok) {
-            const data = await res.json();
-            esValido = (data === true || data === 'true' || data?.valid === true);
+        if (!res.ok) {
+            throw new Error(`Error de red (${res.status}) al verificar el PIN`);
         }
+
+        const data = await res.json();
+        const esValido = (data && data.valid === true) || data === true || data === 'true';
 
         if (esValido) {
             Swal.close();

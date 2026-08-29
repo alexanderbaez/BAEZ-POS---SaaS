@@ -232,6 +232,16 @@ public class UserServiceImpl implements UserService {
         }
 
         Long companyId = SecurityUtils.getCurrentCompanyId();
+        if (companyId == null) {
+            String currentEmail = SecurityUtils.getCurrentUserEmail();
+            if (currentEmail != null) {
+                User currentUser = userRepository.findByEmail(currentEmail).orElse(null);
+                if (currentUser != null && currentUser.getCompany() != null) {
+                    companyId = currentUser.getCompany().getId();
+                }
+            }
+        }
+
         List<User> supervisors = userRepository.findValidSupervisorsByCompanyId(companyId);
 
         return supervisors.stream().anyMatch(admin -> {
