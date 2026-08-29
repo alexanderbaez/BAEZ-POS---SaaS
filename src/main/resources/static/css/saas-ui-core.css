@@ -934,24 +934,55 @@ body.login-page {
 }
 
 /* ==========================================================================
-   ARQUITECTURA DE IMPRESIÓN NATIVA (CSS PRINT MEDIA QUERY - POS80 LIMIT)
+   ARQUITECTURA DE IMPRESIÓN NATIVA DUAL (POS80 / A4)
    ========================================================================== */
 #print-section {
   display: none;
 }
 
 @media print {
-  body > *:not(#print-section) { display: none !important; }
-  #print-section { 
-    display: block !important; 
-    position: relative !important; 
-    width: 100% !important; 
-    max-width: 80mm !important; 
-    margin: 0 auto !important; 
-    padding: 5mm !important; 
-    background: white !important; 
+  body > *:not(#print-section) {
+    display: none !important;
+  }
+
+  #print-section {
+    display: block !important;
+    position: relative !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-sizing: border-box !important;
+    margin: 0 auto !important;
+  }
+
+  /* Plantilla A4 Tabular */
+  #print-section.layout-a4,
+  #print-section .layout-a4,
+  #print-section:has(.layout-a4) {
+    width: 100% !important;
+    max-width: 210mm !important;
+    padding: 8mm !important;
     font-size: 10pt;
   }
-  #print-section * { color: black !important; }
-  @page { margin: 0; size: auto; }
+
+  /* Plantilla Ticket Térmico POS80 */
+  #print-section.layout-ticket,
+  #print-section .layout-ticket,
+  #print-section:has(.layout-ticket),
+  #print-section:not(.layout-a4):not(:has(.layout-a4)) {
+    width: 100% !important;
+    max-width: 80mm !important;
+    padding: 4mm !important;
+    font-size: 9pt;
+  }
+
+  #print-section * {
+    color: #000000 !important;
+    box-sizing: border-box !important;
+  }
+
+  @page {
+    margin: 0;
+    size: auto;
+  }
 }
+

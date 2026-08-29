@@ -602,7 +602,7 @@ document.addEventListener('keydown', (e) => {
 // ==========================================
 /**
  * Motor de impresión nativo mediante CSS @media print y #print-section.
- * Inyección sincrónica directa en el DOM para evitar bloqueos en navegadores móviles.
+ * Sincroniza la carga de imágenes antes de invocar window.print().
  */
 function imprimirHTMLConIframe(htmlContent) {
     let printSection = document.getElementById('print-section');
@@ -612,8 +612,36 @@ function imprimirHTMLConIframe(htmlContent) {
         document.body.appendChild(printSection);
     }
     printSection.innerHTML = htmlContent;
-    window.print(); // Se ejecuta instantáneamente, sin setTimeout, respetando el gesto del usuario
-    setTimeout(() => { printSection.innerHTML = ''; }, 1000); // Limpieza post-impresión
+
+    const images = Array.from(printSection.querySelectorAll('img'));
+    const pendingImages = images.filter(img => !img.complete);
+
+    const ejecutarImpresion = () => {
+        try {
+            window.print();
+        } finally {
+            setTimeout(() => {
+                if (printSection) printSection.innerHTML = '';
+            }, 1000);
+        }
+    };
+
+    if (pendingImages.length === 0) {
+        ejecutarImpresion();
+    } else {
+        const imagePromises = pendingImages.map(img => {
+            return new Promise(resolve => {
+                img.onload = () => resolve();
+                img.onerror = () => resolve();
+            });
+        });
+
+        const timeoutPromise = new Promise(resolve => setTimeout(resolve, 1500));
+
+        Promise.race([Promise.all(imagePromises), timeoutPromise]).then(() => {
+            ejecutarImpresion();
+        });
+    }
 }
 
 async function imprimirEtiqueta(id) {

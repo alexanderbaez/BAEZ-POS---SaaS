@@ -1385,19 +1385,37 @@ async function finalizarVenta() {
                         <div class="badge bg-warning text-dark fs-6 px-3 py-1.5 mb-2 rounded-pill shadow-sm">
                             <i class="bi bi-wifi-off me-1"></i> Pendiente de Sincronización
                         </div>
-                        <p class="text-secondary small mb-1">La venta ha sido registrada de forma segura en la memoria del dispositivo.</p>
-                        <p class="text-muted small mb-0" style="font-size: 0.78rem;">Se sincronizará con el servidor tan pronto como regrese la conexión.</p>
+                        <p class="text-secondary small mb-3">La venta ha sido registrada de forma segura en la memoria del dispositivo.</p>
+                        <div class="d-flex flex-column gap-2 mt-2">
+                            <button type="button" id="btnOffPrintTicket" class="btn btn-dark fw-bold py-2 rounded-3 w-100 shadow-sm">
+                                <i class="bi bi-receipt me-1"></i> Imprimir Ticket (80mm)
+                            </button>
+                            <button type="button" id="btnOffPrintA4" class="btn btn-outline-primary fw-bold py-2 rounded-3 w-100 shadow-sm">
+                                <i class="bi bi-file-earmark-pdf me-1"></i> Exportar Factura A4 / PDF
+                            </button>
+                        </div>
                     </div>
                 `,
+                showConfirmButton: false,
                 showCancelButton: true,
-                confirmButtonText: '<i class="bi bi-printer me-1"></i> Imprimir Ticket Offline',
-                cancelButtonText: 'Listo',
-                confirmButtonColor: '#2563eb',
+                cancelButtonText: 'Cerrar',
                 cancelButtonColor: '#6c757d',
-                reverseButtons: true
-            }).then((result) => {
-                if (result.isConfirmed && typeof imprimirTicket === 'function') {
-                    imprimirTicket(offlineSaleData);
+                customClass: { popup: 'rounded-4' },
+                didOpen: () => {
+                    const bTicket = document.getElementById('btnOffPrintTicket');
+                    const bA4 = document.getElementById('btnOffPrintA4');
+                    if (bTicket) {
+                        bTicket.addEventListener('click', () => {
+                            imprimirTicket(offlineSaleData);
+                            Swal.close();
+                        });
+                    }
+                    if (bA4) {
+                        bA4.addEventListener('click', () => {
+                            imprimirFacturaA4(offlineSaleData);
+                            Swal.close();
+                        });
+                    }
                 }
             });
 
@@ -1458,18 +1476,40 @@ async function finalizarVenta() {
         Swal.fire({
             icon: 'success',
             title: '¡Venta Realizada!',
-            text: METODO_PAGO === 'CUENTA_CORRIENTE'
-                ? `Cargado $${utilFormatearMoneda(totalFinal)} a ${clienteSeleccionado.name} (${numTicketVisual})`
-                : `Comprobante ${numTicketVisual}`,
+            html: `
+                <div class="text-center mb-3">
+                    <p class="fs-5 fw-bold text-primary mb-1">${numTicketVisual}</p>
+                    <p class="text-muted small mb-0">${METODO_PAGO === 'CUENTA_CORRIENTE' ? `Cargado a ${clienteSeleccionado.name}` : `Total: $${utilFormatearMoneda(totalFinal)}`}</p>
+                </div>
+                <div class="d-flex flex-column gap-2 mt-3">
+                    <button type="button" id="btnSalePrintTicket" class="btn btn-dark fw-bold py-2.5 rounded-3 w-100 shadow-sm">
+                        <i class="bi bi-receipt me-1"></i> Imprimir Ticket (80mm)
+                    </button>
+                    <button type="button" id="btnSalePrintA4" class="btn btn-outline-primary fw-bold py-2.5 rounded-3 w-100 shadow-sm">
+                        <i class="bi bi-file-earmark-pdf me-1"></i> Exportar Factura A4 / PDF
+                    </button>
+                </div>
+            `,
+            showConfirmButton: false,
             showCancelButton: true,
-            confirmButtonText: '<i class="bi bi-printer"></i> Imprimir Ticket',
-            cancelButtonText: 'No imprimir',
-            confirmButtonColor: '#28a745',
+            cancelButtonText: 'Cerrar sin imprimir',
             cancelButtonColor: '#6c757d',
-            reverseButtons: true
-        }).then((result) => {
-            if (result.isConfirmed && typeof imprimirTicket === 'function') {
-                imprimirTicket(data);
+            customClass: { popup: 'rounded-4' },
+            didOpen: () => {
+                const bTicket = document.getElementById('btnSalePrintTicket');
+                const bA4 = document.getElementById('btnSalePrintA4');
+                if (bTicket) {
+                    bTicket.addEventListener('click', () => {
+                        imprimirTicket(data);
+                        Swal.close();
+                    });
+                }
+                if (bA4) {
+                    bA4.addEventListener('click', () => {
+                        imprimirFacturaA4(data);
+                        Swal.close();
+                    });
+                }
             }
         });
 
@@ -1514,15 +1554,36 @@ async function finalizarVenta() {
                     title: 'Sin Conexión: Guardada Offline',
                     html: `
                         <p class="small text-secondary mb-1">Se interrumpió la conexión al servidor. La venta se almacenó localmente con éxito.</p>
-                        <div class="badge bg-warning text-dark fs-7">Se sincronizará automáticamente</div>
+                        <div class="badge bg-warning text-dark fs-7 mb-3">Se sincronizará automáticamente</div>
+                        <div class="d-flex flex-column gap-2 mt-2">
+                            <button type="button" id="btnFallbackPrintTicket" class="btn btn-dark fw-bold py-2 rounded-3 w-100 shadow-sm">
+                                <i class="bi bi-receipt me-1"></i> Imprimir Ticket (80mm)
+                            </button>
+                            <button type="button" id="btnFallbackPrintA4" class="btn btn-outline-primary fw-bold py-2 rounded-3 w-100 shadow-sm">
+                                <i class="bi bi-file-earmark-pdf me-1"></i> Exportar Factura A4 / PDF
+                            </button>
+                        </div>
                     `,
+                    showConfirmButton: false,
                     showCancelButton: true,
-                    confirmButtonText: '<i class="bi bi-printer"></i> Imprimir Ticket Offline',
                     cancelButtonText: 'Continuar',
-                    confirmButtonColor: '#2563eb'
-                }).then((result) => {
-                    if (result.isConfirmed && typeof imprimirTicket === 'function') {
-                        imprimirTicket(offlineSaleData);
+                    cancelButtonColor: '#6c757d',
+                    customClass: { popup: 'rounded-4' },
+                    didOpen: () => {
+                        const bTicket = document.getElementById('btnFallbackPrintTicket');
+                        const bA4 = document.getElementById('btnFallbackPrintA4');
+                        if (bTicket) {
+                            bTicket.addEventListener('click', () => {
+                                imprimirTicket(offlineSaleData);
+                                Swal.close();
+                            });
+                        }
+                        if (bA4) {
+                            bA4.addEventListener('click', () => {
+                                imprimirFacturaA4(offlineSaleData);
+                                Swal.close();
+                            });
+                        }
                     }
                 });
 
@@ -1802,79 +1863,80 @@ function generarPlantillaHTMLTicket(venta) {
                     .payment-method { font-weight: 800; font-size: 8.5pt; border: 1px solid #000; padding: 2px 6px; display: inline-block; border-radius: 4px; margin-bottom: 4px; }
                     .powered { font-size: 7pt; font-weight: 700; opacity: 0.6; margin-top: 6px; letter-spacing: 0.5px; }
                 </style>
-            </head>
-            <body>
-                <div class="ticket-header center">
-                    <div class="shop-icon-container">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
-                            <path d="M2.97 1.35A1 1 0 0 1 3.73 1h8.54a1 1 0 0 1 .76.35l2.609 3.044A1.5 1.5 0 0 1 16 5.37v.255a2.375 2.375 0 0 1-4.25 1.458A2.37 2.37 0 0 1 9.875 8 2.37 2.37 0 0 1 8 7.083 2.37 2.37 0 0 1 6.125 8a2.37 2.37 0 0 1-1.875-.917A2.375 2.375 0 0 1 0 5.625V5.37a1.5 1.5 0 0 1 .361-.976zm1.78 4.275a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 1 0 2.75 0V5.37a.5.5 0 0 0-.12-.325L12.27 2H3.73L1.12 5.045A.5.5 0 0 0 1 5.37v.255a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0M1.5 8.5A.5.5 0 0 1 2 9v6h12V9a.5.5 0 0 1 1 0v6.5a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5V9a.5.5 0 0 1 .5-.5M5 11a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 .5.5v4H5z"/>
-                        </svg>
-                    </div>
-                    <div class="business-name">${nombreLocal}</div>
-                    ${direccionLocal ? `<div class="small-info">${direccionLocal}</div>` : ''}
-                    ${telefonoLocal ? `<div class="small-info">Tel: ${telefonoLocal}</div>` : ''}
-                    ${emailLocal ? `<div class="small-info">${emailLocal}</div>` : ''}
-                    ${fiscalActivo ? `
-                        <div class="fiscal-header">
-                            ${cuitLocal ? `<div><strong>CUIT:</strong> ${cuitLocal}</div>` : ''}
-                            ${iibbLocal ? `<div><strong>Ing. Brutos:</strong> ${iibbLocal}</div>` : ''}
-                            ${inicioActividades ? `<div><strong>Inic. Act.:</strong> ${inicioActividades}</div>` : ''}
-                            ${condicionIva ? `<div><strong>Cond. IVA:</strong> ${condicionIva}</div>` : ''}
+            <body class="layout-ticket">
+                <div class="layout-ticket">
+                    <div class="ticket-header center">
+                        <div class="shop-icon-container">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+                                <path d="M2.97 1.35A1 1 0 0 1 3.73 1h8.54a1 1 0 0 1 .76.35l2.609 3.044A1.5 1.5 0 0 1 16 5.37v.255a2.375 2.375 0 0 1-4.25 1.458A2.37 2.37 0 0 1 9.875 8 2.37 2.37 0 0 1 8 7.083 2.37 2.37 0 0 1 6.125 8a2.37 2.37 0 0 1-1.875-.917A2.375 2.375 0 0 1 0 5.625V5.37a1.5 1.5 0 0 1 .361-.976zm1.78 4.275a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 1 0 2.75 0V5.37a.5.5 0 0 0-.12-.325L12.27 2H3.73L1.12 5.045A.5.5 0 0 0 1 5.37v.255a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0M1.5 8.5A.5.5 0 0 1 2 9v6h12V9a.5.5 0 0 1 1 0v6.5a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5V9a.5.5 0 0 1 .5-.5M5 11a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 .5.5v4H5z"/>
+                            </svg>
                         </div>
-                    ` : ''}
-                    <div class="line"></div>
-                    ${(venta.isOffline || (typeof venta.numeroTicket === 'string' && venta.numeroTicket.startsWith('OFF-')) || (typeof venta.nroComprobante === 'string' && venta.nroComprobante.startsWith('OFF-'))) ? `
-                        <div style="background: #fef2f2; color: #b91c1c; border: 1.5px dashed #dc2626; padding: 4px; border-radius: 4px; font-weight: 900; font-size: 8pt; text-align: center; margin: 4px 0;">
-                            ⚠️ TICKET PENDIENTE DE SINCRONIZACIÓN
-                        </div>
-                    ` : ''}
-                    <div class="small-info"><strong>${tipoComprobante} N° ${nroComprobante}</strong></div>
-                    <div class="small-info">Fecha: ${fechaVenta}</div>
-                    <div class="small-info">Cajero: ${cajeroNombre}</div>
-                    <div class="small-info" style="text-align: left; margin-top: 4px;"><strong>A:</strong> ${nombreCliente} ${cuitCliente ? `(CUIT: ${cuitCliente})` : ''}</div>
-                </div>
-                <div class="ticket-body">
-                    ${itemsHTML}
-                    ${descuentoMonto > 0 ? `
+                        <div class="business-name">${nombreLocal}</div>
+                        ${direccionLocal ? `<div class="small-info">${direccionLocal}</div>` : ''}
+                        ${telefonoLocal ? `<div class="small-info">Tel: ${telefonoLocal}</div>` : ''}
+                        ${emailLocal ? `<div class="small-info">${emailLocal}</div>` : ''}
+                        ${fiscalActivo ? `
+                            <div class="fiscal-header">
+                                ${cuitLocal ? `<div><strong>CUIT:</strong> ${cuitLocal}</div>` : ''}
+                                ${iibbLocal ? `<div><strong>Ing. Brutos:</strong> ${iibbLocal}</div>` : ''}
+                                ${inicioActividades ? `<div><strong>Inic. Act.:</strong> ${inicioActividades}</div>` : ''}
+                                ${condicionIva ? `<div><strong>Cond. IVA:</strong> ${condicionIva}</div>` : ''}
+                            </div>
+                        ` : ''}
                         <div class="line"></div>
-                        <div class="item-row" style="color: #dc3545;">
-                            <span class="item-qty-name">DESCUENTO:</span>
-                            <span class="item-price">-$${utilFormatearMoneda(descuentoMonto)}</span>
+                        ${(venta.isOffline || (typeof venta.numeroTicket === 'string' && venta.numeroTicket.startsWith('OFF-')) || (typeof venta.nroComprobante === 'string' && venta.nroComprobante.startsWith('OFF-'))) ? `
+                            <div style="background: #fef2f2; color: #b91c1c; border: 1.5px dashed #dc2626; padding: 4px; border-radius: 4px; font-weight: 900; font-size: 8pt; text-align: center; margin: 4px 0;">
+                                ⚠️ TICKET PENDIENTE DE SINCRONIZACIÓN
+                            </div>
+                        ` : ''}
+                        <div class="small-info"><strong>${tipoComprobante} N° ${nroComprobante}</strong></div>
+                        <div class="small-info">Fecha: ${fechaVenta}</div>
+                        <div class="small-info">Cajero: ${cajeroNombre}</div>
+                        <div class="small-info" style="text-align: left; margin-top: 4px;"><strong>A:</strong> ${nombreCliente} ${cuitCliente ? `(CUIT: ${cuitCliente})` : ''}</div>
+                    </div>
+                    <div class="ticket-body">
+                        ${itemsHTML}
+                        ${descuentoMonto > 0 ? `
+                            <div class="line"></div>
+                            <div class="item-row" style="color: #dc3545;">
+                                <span class="item-qty-name">DESCUENTO:</span>
+                                <span class="item-price">-$${utilFormatearMoneda(descuentoMonto)}</span>
+                            </div>
+                        ` : ''}
+                        ${recargoMonto > 0 ? `
+                            <div class="line"></div>
+                            <div class="item-row" style="color: #64748b; font-size: 8pt;">
+                                <span class="item-qty-name">SUBTOTAL PRODUCTOS:</span>
+                                <span class="item-price">$${utilFormatearMoneda(subtotalProductos)}</span>
+                            </div>
+                            <div class="item-row" style="color: #d97706; font-weight: bold;">
+                                <span class="item-qty-name">RECARGO LIBRETA (${recargoPorcentaje}%):</span>
+                                <span class="item-price">+$${utilFormatearMoneda(recargoMonto)}</span>
+                            </div>
+                        ` : ''}
+                        <div class="total-container">
+                            <span class="total-label">TOTAL</span>
+                            <span class="total-amount">$${utilFormatearMoneda(totalFinal)}</span>
+                        </div>
+                    </div>
+                    ${cae ? `
+                        <div class="arca-container" style="border-top: 1px dashed #000; margin-top: 8px; padding-top: 6px; text-align: center;">
+                            <div class="arca-logo" style="text-align: center; font-weight: 900; font-size: 10pt; letter-spacing: 2px;">ARCA / AFIP</div>
+                            <div class="small-info center" style="font-size: 7.5pt; margin-bottom: 4px; text-align: center;">Comprobante Autorizado Electrónicamente</div>
+                            <div style="text-align: center; margin: 6px 0;">
+                                <img src="https://quickchart.io/qr?text=${encodeURIComponent(qrText || `https://www.afip.gob.ar/fe/qr/?p=${btoa(JSON.stringify({ fecha: fechaVenta.split(' ')[0], cuit: Number(cuitLocal.replace(/\\D/g, '') || 301234559), ptoVta: 1, tipoCmp: tipoComprobante.includes('A') ? 1 : 11, nroCmp: 1, importe: totalFinal, tipoDocRec: 99, nroDocRec: 0, tipoCodAut: 'E', codAut: Number(cae) || 0 }))}`)}&size=120" style="width: 120px; height: 120px; display: inline-block;" alt="QR AFIP" />
+                            </div>
+                            <div class="cae-info" style="font-size: 8pt; font-weight: 700; text-align: left; margin-top: 4px;">CUIT: ${cuitLocal}</div>
+                            <div class="cae-info" style="font-size: 8pt; font-weight: 700; text-align: left;">Comprobante: ${tipoComprobante} Nro: ${nroComprobante}</div>
+                            <div class="cae-info" style="font-size: 8pt; font-weight: 700; text-align: left;">CAE: ${cae}</div>
+                            <div class="cae-info" style="font-size: 8pt; font-weight: 700; text-align: left;">Vto. CAE: ${caeVto}</div>
                         </div>
                     ` : ''}
-                    ${recargoMonto > 0 ? `
-                        <div class="line"></div>
-                        <div class="item-row" style="color: #64748b; font-size: 8pt;">
-                            <span class="item-qty-name">SUBTOTAL PRODUCTOS:</span>
-                            <span class="item-price">$${utilFormatearMoneda(subtotalProductos)}</span>
-                        </div>
-                        <div class="item-row" style="color: #d97706; font-weight: bold;">
-                            <span class="item-qty-name">RECARGO LIBRETA (${recargoPorcentaje}%):</span>
-                            <span class="item-price">+$${utilFormatearMoneda(recargoMonto)}</span>
-                        </div>
-                    ` : ''}
-                    <div class="total-container">
-                        <span class="total-label">TOTAL</span>
-                        <span class="total-amount">$${utilFormatearMoneda(totalFinal)}</span>
+                    <div class="ticket-footer">
+                        <div class="payment-method">FORMA DE PAGO: ${metodoPago}</div>
+                        <span class="msg-pie">${mensajePie}</span>
+                        <div class="powered">BAEZPOS v3.5 - POWERED BY BAEZ ALEXANDER</div>
                     </div>
-                </div>
-                ${cae ? `
-                    <div class="arca-container" style="border-top: 1px dashed #000; margin-top: 8px; padding-top: 6px; text-align: center;">
-                        <div class="arca-logo" style="text-align: center; font-weight: 900; font-size: 10pt; letter-spacing: 2px;">ARCA / AFIP</div>
-                        <div class="small-info center" style="font-size: 7.5pt; margin-bottom: 4px; text-align: center;">Comprobante Autorizado Electrónicamente</div>
-                        <div style="text-align: center; margin: 6px 0;">
-                            <img src="https://quickchart.io/qr?text=${encodeURIComponent(qrText || `https://www.afip.gob.ar/fe/qr/?p=${btoa(JSON.stringify({ fecha: fechaVenta.split(' ')[0], cuit: Number(cuitLocal.replace(/\\D/g, '') || 301234559), ptoVta: 1, tipoCmp: tipoComprobante.includes('A') ? 1 : 11, nroCmp: 1, importe: totalFinal, tipoDocRec: 99, nroDocRec: 0, tipoCodAut: 'E', codAut: Number(cae) || 0 }))}`)}&size=120" style="width: 120px; height: 120px; display: inline-block;" alt="QR AFIP" />
-                        </div>
-                        <div class="cae-info" style="font-size: 8pt; font-weight: 700; text-align: left; margin-top: 4px;">CUIT: ${cuitLocal}</div>
-                        <div class="cae-info" style="font-size: 8pt; font-weight: 700; text-align: left;">Comprobante: ${tipoComprobante} Nro: ${nroComprobante}</div>
-                        <div class="cae-info" style="font-size: 8pt; font-weight: 700; text-align: left;">CAE: ${cae}</div>
-                        <div class="cae-info" style="font-size: 8pt; font-weight: 700; text-align: left;">Vto. CAE: ${caeVto}</div>
-                    </div>
-                ` : ''}
-                <div class="ticket-footer">
-                    <div class="payment-method">FORMA DE PAGO: ${metodoPago}</div>
-                    <span class="msg-pie">${mensajePie}</span>
-                    <div class="powered">BAEZPOS v3.5 - POWERED BY BAEZ ALEXANDER</div>
                 </div>
             </body>
         </html>
@@ -1887,8 +1949,422 @@ function generarPlantillaHTMLTicket(venta) {
 }
 
 /**
+ * Generador formal de Factura / Documento Fiscal A4 Tabular.
+ */
+function generarFacturaA4HTML(venta) {
+    if (!venta) return { html: '', qrText: '' };
+
+    const infoEmpresa = (typeof DATOS_EMPRESA !== 'undefined' && DATOS_EMPRESA !== null) ? DATOS_EMPRESA : {};
+    const fiscalActivo = String(venta.isFiscal !== undefined ? venta.isFiscal : infoEmpresa.hasTaxData) === "true";
+
+    const nombreLocal = escapeHtml(venta.companyName || infoEmpresa.name || 'MI NEGOCIO').toUpperCase();
+    const direccionLocal = escapeHtml(venta.companyAddress || infoEmpresa.address || '');
+    const telefonoLocal = escapeHtml(venta.companyPhone || infoEmpresa.phone || '');
+    const emailLocal = escapeHtml(venta.companyEmail || infoEmpresa.email || '');
+    const mensajePie = escapeHtml(venta.ticketMessage || infoEmpresa.ticketMessage || '¡Gracias por su compra!');
+
+    const cuitLocal = venta.companyCuit || infoEmpresa.taxId || infoEmpresa.cuit || '';
+    const iibbLocal = venta.companyIibb || infoEmpresa.iibb || '';
+    const condicionIva = (venta.condicionIva || infoEmpresa.condicionIva || 'RESPONSABLE MONOTRIBUTO').toUpperCase();
+
+    let inicioActividades = venta.inicioActividades || infoEmpresa.inicioActividades || infoEmpresa.inicioAct || '';
+    if (inicioActividades && inicioActividades.includes('-')) {
+        const parts = inicioActividades.split('-');
+        if (parts.length === 3) inicioActividades = `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+
+    const tipoComprobante = (venta.invoiceType || venta.tipoComprobante || infoEmpresa.tipoComprobante || (fiscalActivo ? 'FACTURA C' : 'DOCUMENTO NO FISCAL')).toUpperCase();
+
+    let letra = 'C';
+    let codigoComprobante = 'COD. 011';
+    if (tipoComprobante.includes('FACTURA A') || tipoComprobante.includes('NOTA DE DÉBITO A') || tipoComprobante.includes('NOTA DE CRÉDITO A')) {
+        letra = 'A';
+        codigoComprobante = 'COD. 001';
+    } else if (tipoComprobante.includes('FACTURA B') || tipoComprobante.includes('NOTA DE DÉBITO B') || tipoComprobante.includes('NOTA DE CRÉDITO B')) {
+        letra = 'B';
+        codigoComprobante = 'COD. 006';
+    } else if (tipoComprobante.includes('FACTURA C') || tipoComprobante.includes('NOTA DE DÉBITO C') || tipoComprobante.includes('NOTA DE CRÉDITO C')) {
+        letra = 'C';
+        codigoComprobante = 'COD. 011';
+    } else {
+        letra = 'X';
+        codigoComprobante = 'DOC. NO FISCAL';
+    }
+
+    const cae = venta.cae || '';
+    const caeVto = venta.caeExpiration || venta.caeVto || '';
+
+    const nroComprobante = venta.invoiceNumber || venta.nroComprobante || `00001-${String(venta.numeroTicket || venta.id || 1).padStart(8, '0')}`;
+    const fechaVenta = venta.saleDate ? new Date(venta.saleDate).toLocaleString('es-AR') : new Date().toLocaleString('es-AR');
+    const cajeroNombre = escapeHtml(venta.userName || (typeof localStorage !== 'undefined' ? localStorage.getItem('baezpos_user_name') : '') || 'Admin').toUpperCase();
+    const metodoPago = (venta.paymentMethod || 'EFECTIVO').replace(/_/g, ' ').toUpperCase();
+
+    const nombreCliente = escapeHtml((venta.clienteNombre || (typeof clienteSeleccionado !== 'undefined' && clienteSeleccionado ? clienteSeleccionado.name : 'CONSUMIDOR FINAL')).toUpperCase());
+    const cuitCliente = venta.clienteCuit || (typeof clienteSeleccionado !== 'undefined' && clienteSeleccionado ? clienteSeleccionado.cuit : '') || '';
+
+    const recargoMonto = parseFloat(venta.surcharge) || 0;
+    const recargoPorcentaje = parseFloat(venta.surchargeRate) || 0;
+    const descuentoMonto = parseFloat(venta.discount) || 0;
+    const totalFinal = parseFloat(venta.total) || 0;
+    const subtotalProductos = (totalFinal - recargoMonto) + descuentoMonto;
+
+    let qrText = '';
+    if (cae) {
+        const cuitLimpio = cuitLocal.replace(/\D/g, '');
+        const cuitClienteLimpio = cuitCliente.replace(/\D/g, '');
+        const numeroComprobanteEntero = nroComprobante.includes('-')
+            ? parseInt(nroComprobante.split('-')[1], 10)
+            : (venta.numeroTicket || venta.id || 1);
+
+        const datosQr = {
+            ver: 1,
+            fecha: fechaVenta.split(' ')[0],
+            cuit: Number(cuitLimpio || 301234559),
+            ptoVta: 1,
+            tipoCmp: tipoComprobante.includes('A') ? 1 : 11,
+            nroCmp: numeroComprobanteEntero,
+            importe: totalFinal,
+            moneda: "ARS",
+            ctz: 1,
+            tipoDocRec: cuitClienteLimpio ? 80 : 99,
+            nroDocRec: cuitClienteLimpio ? Number(cuitClienteLimpio) : 0,
+            tipoCodAut: "E",
+            codAut: Number(cae) || 0
+        };
+        try {
+            qrText = `https://www.afip.gob.ar/fe/qr/?p=${btoa(JSON.stringify(datosQr))}`;
+        } catch(e) {
+            qrText = '';
+        }
+    }
+
+    const itemsHTML = venta.items ? venta.items.map(function mapItemA4(item) {
+        const subtotalItem = item.subtotal !== undefined
+            ? item.subtotal
+            : ((item.price || item.unitPrice || item.precio || 0) * (item.quantity || item.cantidad || 1));
+        const unitPrice = (item.price || item.unitPrice || item.precio || 0);
+        const cantFormatted = (typeof window.fmtCantidadTicket === 'function')
+            ? window.fmtCantidadTicket(item)
+            : (item.quantity || item.cantidad || 1);
+
+        return `
+            <tr>
+                <td style="text-align: center; font-weight: 700; border: 1px solid #cbd5e1; padding: 6px 8px;">${cantFormatted}</td>
+                <td style="border: 1px solid #cbd5e1; padding: 6px 8px;"><strong>${escapeHtml(item.productName || item.nombre || '').toUpperCase()}</strong></td>
+                <td style="text-align: right; border: 1px solid #cbd5e1; padding: 6px 8px;">$${window.fmtPrecioTicket ? window.fmtPrecioTicket(unitPrice) : unitPrice.toFixed(2)}</td>
+                <td style="text-align: right; font-weight: 700; border: 1px solid #cbd5e1; padding: 6px 8px;">$${window.fmtPrecioTicket ? window.fmtPrecioTicket(subtotalItem) : subtotalItem.toFixed(2)}</td>
+            </tr>
+        `;
+    }).join('') : '<tr><td colspan="4" style="text-align: center; color: #64748b; padding: 12px;">Sin productos detallados</td></tr>';
+
+    const htmlA4 = `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <title>Factura ${nroComprobante}</title>
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+                @page {
+                    size: A4 portrait;
+                    margin: 8mm;
+                }
+                * { box-sizing: border-box; }
+                body {
+                    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+                    color: #0f172a;
+                    background: #ffffff;
+                    margin: 0;
+                    padding: 0;
+                    font-size: 9pt;
+                    line-height: 1.35;
+                }
+                .layout-a4 {
+                    width: 100%;
+                    max-width: 194mm;
+                    margin: 0 auto;
+                    padding: 0;
+                }
+                .a4-header {
+                    display: flex;
+                    border: 1.5px solid #0f172a;
+                    border-radius: 6px;
+                    position: relative;
+                    margin-bottom: 8px;
+                    background: #ffffff;
+                }
+                .a4-col-empresa {
+                    flex: 1;
+                    padding: 10px 14px;
+                    border-right: 1px solid #cbd5e1;
+                }
+                .a4-empresa-nombre {
+                    font-size: 13pt;
+                    font-weight: 800;
+                    color: #0f172a;
+                    margin: 0 0 4px 0;
+                    text-transform: uppercase;
+                    letter-spacing: -0.2px;
+                }
+                .a4-line {
+                    font-size: 8.5pt;
+                    color: #334155;
+                    margin-bottom: 2px;
+                }
+                .a4-box-letra {
+                    position: absolute;
+                    top: 0;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: 44px;
+                    height: 48px;
+                    background: #ffffff;
+                    border: 1.5px solid #0f172a;
+                    border-top: none;
+                    border-radius: 0 0 6px 6px;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10;
+                }
+                .a4-letra {
+                    font-size: 18pt;
+                    font-weight: 900;
+                    color: #0f172a;
+                    line-height: 1;
+                }
+                .a4-letra-cod {
+                    font-size: 6pt;
+                    font-weight: 700;
+                    color: #475569;
+                }
+                .a4-col-comprobante {
+                    flex: 1;
+                    padding: 10px 14px 10px 28px;
+                    text-align: right;
+                }
+                .a4-comp-titulo {
+                    font-size: 12pt;
+                    font-weight: 800;
+                    color: #0f172a;
+                    margin: 0 0 3px 0;
+                    text-transform: uppercase;
+                }
+                .a4-comp-numero {
+                    font-size: 11pt;
+                    font-weight: 800;
+                    color: #2563eb;
+                    margin-bottom: 4px;
+                }
+                .a4-cliente-box {
+                    border: 1.5px solid #0f172a;
+                    border-radius: 6px;
+                    padding: 8px 12px;
+                    margin-bottom: 8px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 3px;
+                    background: #f8fafc;
+                }
+                .a4-row-split {
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 8.5pt;
+                }
+                .a4-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 8px;
+                    font-size: 8.5pt;
+                }
+                .a4-table th {
+                    background: #0f172a;
+                    color: #ffffff !important;
+                    font-weight: 700;
+                    padding: 6px 8px;
+                    text-align: left;
+                    border: 1px solid #0f172a;
+                }
+                .a4-table td {
+                    padding: 6px 8px;
+                    border: 1px solid #cbd5e1;
+                    vertical-align: middle;
+                }
+                .a4-table tbody tr:nth-child(even) {
+                    background: #f8fafc;
+                }
+                .a4-totales-container {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    gap: 16px;
+                    margin-bottom: 8px;
+                }
+                .a4-obs-box {
+                    flex: 1;
+                    border: 1px dashed #94a3b8;
+                    border-radius: 6px;
+                    padding: 8px 10px;
+                    font-size: 8pt;
+                    color: #475569;
+                }
+                .a4-totales-box {
+                    width: 260px;
+                    border: 1.5px solid #0f172a;
+                    border-radius: 6px;
+                    overflow: hidden;
+                }
+                .a4-tot-row {
+                    display: flex;
+                    justify-content: space-between;
+                    padding: 4px 10px;
+                    font-size: 8.5pt;
+                    border-bottom: 1px solid #e2e8f0;
+                }
+                .a4-tot-row.final {
+                    background: #0f172a;
+                    color: #ffffff !important;
+                    font-weight: 800;
+                    font-size: 11pt;
+                    border-bottom: none;
+                    padding: 6px 10px;
+                }
+                .a4-tot-row.final * {
+                    color: #ffffff !important;
+                }
+                .a4-fiscal-footer {
+                    border: 1.5px solid #0f172a;
+                    border-radius: 6px;
+                    padding: 8px 12px;
+                    display: flex;
+                    align-items: center;
+                    gap: 14px;
+                    margin-top: 6px;
+                    background: #ffffff;
+                }
+                .a4-qr-img {
+                    width: 100px;
+                    height: 100px;
+                    display: block;
+                }
+                .a4-cae-data {
+                    flex: 1;
+                    font-size: 8.5pt;
+                }
+                .a4-cae-title {
+                    font-weight: 800;
+                    font-size: 9.5pt;
+                    letter-spacing: 0.5px;
+                    margin-bottom: 3px;
+                }
+            </style>
+        </head>
+        <body class="layout-a4">
+            <div class="layout-a4">
+                <div class="a4-header">
+                    <div class="a4-col-empresa">
+                        <div class="a4-empresa-nombre">${nombreLocal}</div>
+                        ${direccionLocal ? `<div class="a4-line">${direccionLocal}</div>` : ''}
+                        ${telefonoLocal ? `<div class="a4-line">Tel: ${telefonoLocal}</div>` : ''}
+                        ${emailLocal ? `<div class="a4-line">Email: ${emailLocal}</div>` : ''}
+                        <div class="a4-line" style="font-weight: 700; margin-top: 3px;">IVA: ${condicionIva}</div>
+                    </div>
+
+                    <div class="a4-box-letra">
+                        <div class="a4-letra">${letra}</div>
+                        <div class="a4-letra-cod">${codigoComprobante}</div>
+                    </div>
+
+                    <div class="a4-col-comprobante">
+                        <div class="a4-comp-titulo">${tipoComprobante}</div>
+                        <div class="a4-comp-numero">N° ${nroComprobante}</div>
+                        <div class="a4-line">Fecha de Emisión: <strong>${fechaVenta}</strong></div>
+                        <div class="a4-line">CUIT: <strong>${cuitLocal || 'S/C'}</strong></div>
+                        <div class="a4-line">Ingresos Brutos: <strong>${iibbLocal || 'Exento / S/C'}</strong></div>
+                        <div class="a4-line">Inicio de Actividades: <strong>${inicioActividades || '-'}</strong></div>
+                    </div>
+                </div>
+
+                <div class="a4-cliente-box">
+                    <div class="a4-row-split">
+                        <div><strong>Razón Social / Cliente:</strong> ${nombreCliente}</div>
+                        <div><strong>CUIT / DNI:</strong> ${cuitCliente || 'Consumidor Final'}</div>
+                    </div>
+                    <div class="a4-row-split">
+                        <div><strong>Condición IVA:</strong> ${cuitCliente ? 'IVA Responsable Inscripto / Monotributo' : 'Consumidor Final'}</div>
+                        <div><strong>Condición de Venta:</strong> ${metodoPago}</div>
+                        <div><strong>Cajero/a:</strong> ${cajeroNombre}</div>
+                    </div>
+                </div>
+
+                <table class="a4-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 12%; text-align: center;">CANT.</th>
+                            <th style="width: 53%;">DESCRIPCIÓN</th>
+                            <th style="width: 17%; text-align: right;">P. UNITARIO</th>
+                            <th style="width: 18%; text-align: right;">SUBTOTAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemsHTML}
+                    </tbody>
+                </table>
+
+                <div class="a4-totales-container">
+                    <div class="a4-obs-box">
+                        <strong>Observaciones / Leyenda:</strong><br>
+                        ${mensajePie}<br>
+                        <span style="opacity: 0.7; font-size: 7.5pt; display: block; margin-top: 6px;">Documento generado a través de BÁEZ POS SaaS Platform.</span>
+                    </div>
+                    <div class="a4-totales-box">
+                        ${descuentoMonto > 0 ? `
+                            <div class="a4-tot-row" style="color: #dc2626;">
+                                <span>Descuento:</span>
+                                <span>-$${window.fmtPrecioTicket ? window.fmtPrecioTicket(descuentoMonto) : descuentoMonto.toFixed(2)}</span>
+                            </div>
+                        ` : ''}
+                        ${recargoMonto > 0 ? `
+                            <div class="a4-tot-row" style="color: #d97706;">
+                                <span>Recargo (${recargoPorcentaje}%):</span>
+                                <span>+$${window.fmtPrecioTicket ? window.fmtPrecioTicket(recargoMonto) : recargoMonto.toFixed(2)}</span>
+                            </div>
+                        ` : ''}
+                        <div class="a4-tot-row final">
+                            <span>TOTAL FINAL:</span>
+                            <span>$${window.fmtPrecioTicket ? window.fmtPrecioTicket(totalFinal) : totalFinal.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                ${cae ? `
+                    <div class="a4-fiscal-footer">
+                        <div>
+                            <img class="a4-qr-img" src="https://quickchart.io/qr?text=${encodeURIComponent(qrText || `https://www.afip.gob.ar/fe/qr/?p=${btoa(JSON.stringify({ fecha: fechaVenta.split(' ')[0], cuit: Number(cuitLocal.replace(/\\D/g, '') || 301234559), ptoVta: 1, tipoCmp: tipoComprobante.includes('A') ? 1 : 11, nroCmp: 1, importe: totalFinal, tipoDocRec: 99, nroDocRec: 0, tipoCodAut: 'E', codAut: Number(cae) || 0 }))}`)}&size=140" alt="QR AFIP" />
+                        </div>
+                        <div class="a4-cae-data">
+                            <div class="a4-cae-title">ARCA / AFIP - Comprobante Autorizado Electrónicamente</div>
+                            <div><strong>CAE N°:</strong> ${cae}</div>
+                            <div><strong>Fecha de Vto. de CAE:</strong> ${caeVto}</div>
+                            <div style="font-size: 7.5pt; color: #475569; margin-top: 3px;">Comprobante oficial válido como factura comercial. Verifique su autenticidad escaneando el código QR.</div>
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        </body>
+        </html>
+    `;
+
+    return {
+        html: htmlA4,
+        qrText: qrText
+    };
+}
+
+/**
  * Motor de impresión nativo mediante CSS @media print y #print-section.
- * Inyección sincrónica directa en el DOM para evitar bloqueos en navegadores móviles.
+ * Sincroniza la carga de imágenes (ej. códigos QR) antes de llamar a window.print().
  */
 function imprimirHTMLConIframe(htmlContent) {
     let printSection = document.getElementById('print-section');
@@ -1898,13 +2374,47 @@ function imprimirHTMLConIframe(htmlContent) {
         document.body.appendChild(printSection);
     }
     printSection.innerHTML = htmlContent;
-    window.print(); // Se ejecuta instantáneamente, sin setTimeout, respetando el gesto del usuario
-    setTimeout(() => { printSection.innerHTML = ''; }, 1000); // Limpieza post-impresión
+
+    const images = Array.from(printSection.querySelectorAll('img'));
+    const pendingImages = images.filter(img => !img.complete);
+
+    const ejecutarImpresion = () => {
+        try {
+            window.print();
+        } finally {
+            setTimeout(() => {
+                if (printSection) printSection.innerHTML = '';
+            }, 1000);
+        }
+    };
+
+    if (pendingImages.length === 0) {
+        ejecutarImpresion();
+    } else {
+        const imagePromises = pendingImages.map(img => {
+            return new Promise(resolve => {
+                img.onload = () => resolve();
+                img.onerror = () => resolve();
+            });
+        });
+
+        const timeoutPromise = new Promise(resolve => setTimeout(resolve, 1500));
+
+        Promise.race([Promise.all(imagePromises), timeoutPromise]).then(() => {
+            ejecutarImpresion();
+        });
+    }
 }
 
 function imprimirTicket(venta) {
     if (!venta) return;
     const plantilla = generarPlantillaHTMLTicket(venta);
+    imprimirHTMLConIframe(plantilla.html);
+}
+
+function imprimirFacturaA4(venta) {
+    if (!venta) return;
+    const plantilla = generarFacturaA4HTML(venta);
     imprimirHTMLConIframe(plantilla.html);
 }
 
@@ -1919,6 +2429,16 @@ function reimprimirUltimoTicket() {
     }
     if (typeof imprimirTicket === 'function') {
         imprimirTicket(ULTIMA_VENTA_EXITOSA);
+    }
+}
+
+function reimprimirUltimaFacturaA4() {
+    if (typeof ULTIMA_VENTA_EXITOSA === 'undefined' || !ULTIMA_VENTA_EXITOSA) {
+        Swal.fire('Atención', 'No hay ninguna venta reciente en esta sesión para reimprimir.', 'info');
+        return;
+    }
+    if (typeof imprimirFacturaA4 === 'function') {
+        imprimirFacturaA4(ULTIMA_VENTA_EXITOSA);
     }
 }
 
@@ -2451,7 +2971,11 @@ function imprimirTicketCierreCaja(dto) {
 
 // Exposición global para interoperabilidad
 window.imprimirTicket = imprimirTicket;
+window.imprimirFacturaA4 = imprimirFacturaA4;
+window.generarPlantillaHTMLTicket = generarPlantillaHTMLTicket;
+window.generarFacturaA4HTML = generarFacturaA4HTML;
 window.imprimirTicketLocal = imprimirTicketLocal;
 window.imprimirTicketCierreCaja = imprimirTicketCierreCaja;
 window.imprimirHTMLConIframe = imprimirHTMLConIframe;
 window.reimprimirUltimoTicket = reimprimirUltimoTicket;
+window.reimprimirUltimaFacturaA4 = reimprimirUltimaFacturaA4;

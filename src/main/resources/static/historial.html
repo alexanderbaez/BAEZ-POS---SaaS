@@ -158,9 +158,12 @@
             <span class="badge bg-light text-dark border w-100 py-2" id="txtMetodoModal"></span>
           </div>
         </div>
-        <div class="modal-footer bg-light p-3 border-0">
-          <button class="btn btn-dark w-100 fw-bold py-2" onclick="reimprimirTicket()">
-            <i class="bi bi-printer me-2"></i> Reimprimir Ticket
+        <div class="modal-footer bg-light p-3 border-0 d-flex flex-column flex-sm-row gap-2">
+          <button class="btn btn-dark fw-bold py-2 flex-grow-1 shadow-sm" onclick="reimprimirTicket()">
+            <i class="bi bi-receipt me-1"></i> Imprimir Ticket (80mm)
+          </button>
+          <button class="btn btn-outline-primary fw-bold py-2 flex-grow-1 shadow-sm" onclick="reimprimirFacturaA4()">
+            <i class="bi bi-file-earmark-pdf me-1"></i> Exportar A4 / PDF
           </button>
         </div>
       </div>

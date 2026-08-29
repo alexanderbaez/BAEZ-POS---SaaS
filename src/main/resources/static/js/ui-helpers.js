@@ -163,3 +163,48 @@ if (typeof window.escapeHtml !== 'function') {
 if (typeof window.escapeHTML !== 'function') {
     window.escapeHTML = window.escapeHtml;
 }
+
+/**
+ * Motor de impresión nativo global mediante CSS @media print y #print-section.
+ * Sincroniza la carga de imágenes antes de invocar window.print().
+ */
+window.imprimirHTMLConIframe = function(htmlContent) {
+    let printSection = document.getElementById('print-section');
+    if (!printSection) {
+        printSection = document.createElement('div');
+        printSection.id = 'print-section';
+        document.body.appendChild(printSection);
+    }
+    printSection.innerHTML = htmlContent;
+
+    const images = Array.from(printSection.querySelectorAll('img'));
+    const pendingImages = images.filter(img => !img.complete);
+
+    const ejecutarImpresion = () => {
+        try {
+            window.print();
+        } finally {
+            setTimeout(() => {
+                if (printSection) printSection.innerHTML = '';
+            }, 1000);
+        }
+    };
+
+    if (pendingImages.length === 0) {
+        ejecutarImpresion();
+    } else {
+        const imagePromises = pendingImages.map(img => {
+            return new Promise(resolve => {
+                img.onload = () => resolve();
+                img.onerror = () => resolve();
+            });
+        });
+
+        const timeoutPromise = new Promise(resolve => setTimeout(resolve, 1500));
+
+        Promise.race([Promise.all(imagePromises), timeoutPromise]).then(() => {
+            ejecutarImpresion();
+        });
+    }
+};
+
