@@ -3,6 +3,7 @@
  * Alexander Baez - 2026
  */
 
+let chartSemanalInstance = null;
 const TIMEZONE_AR = 'America/Argentina/Buenos_Aires';
 
 const fmtARS = new Intl.NumberFormat('es-AR', {
@@ -526,7 +527,7 @@ async function cargarGraficoSemanal() {
         if (data.length > 0) {
             labels = data.map(d => {
                 const dateObj = new Date(d.date + 'T00:00:00');
-                return dateObj.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' });
+                return dateObj.toLocaleDateString('es-AR', { timeZone: TIMEZONE_AR, weekday: 'short', day: 'numeric', month: 'short' });
             });
             valores = data.map(d => parseFloat(d.total) || 0);
         } else {
@@ -534,7 +535,7 @@ async function cargarGraficoSemanal() {
             for (let i = 6; i >= 0; i--) {
                 const d = new Date(hoy);
                 d.setDate(hoy.getDate() - i);
-                labels.push(d.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' }));
+                labels.push(d.toLocaleDateString('es-AR', { timeZone: TIMEZONE_AR, weekday: 'short', day: 'numeric', month: 'short' }));
                 valores.push(0);
             }
         }
@@ -734,20 +735,27 @@ async function consultarPorFechas() {
                 ? parseFloat(dataBox.netTransfer)
                 : (transferSales + transferPayments);
 
-            setElementText('txtEfectivoRango', fmtARS.format(netCash));
-            setElementText('txtTransfRango', fmtARS.format(netTransfer));
+            setElementText('txtEfectivoRango', fmtARS.format(cashSales));
+            setElementText('txtTransfRango', fmtARS.format(transferSales + transferPayments));
+            setElementText('txtFiadosCobradosRango', `+${fmtARS.format(cashPayments)}`);
             setElementText('txtFiadoRango', fmtARS.format(creditSales));
 
             // Inyección del desglose detallado en Efectivo Caja:
             const elDesgloseEfe = document.getElementById('desgloseEfectivoRango') || document.getElementById('countEfectivoRango');
             if (elDesgloseEfe) {
-                elDesgloseEfe.innerHTML = `<small class="text-muted d-block" style="font-size: 0.78rem;">Ventas: ${fmtARS.format(cashSales)} | Cobros Cta: ${fmtARS.format(cashPayments)} | Gastos: -${fmtARS.format(cashExpenses)}</small>`;
+                elDesgloseEfe.innerHTML = `<small class="text-muted d-block" style="font-size: 0.78rem;">Ventas: ${fmtARS.format(cashSales)}</small>`;
             }
 
             // Inyección del desglose detallado en Transferencias:
             const elDesgloseTra = document.getElementById('desgloseTransfRango') || document.getElementById('countTransfRango');
             if (elDesgloseTra) {
                 elDesgloseTra.innerHTML = `<small class="text-muted d-block" style="font-size: 0.78rem;">Ventas: ${fmtARS.format(transferSales)} | Cobros Cta: ${fmtARS.format(transferPayments)}</small>`;
+            }
+
+            // Inyección del desglose detallado en Fiados Cobrados:
+            const elDesgloseFiados = document.getElementById('desgloseFiadosCobradosRango') || document.getElementById('countFiadosCobradosRango');
+            if (elDesgloseFiados) {
+                elDesgloseFiados.innerHTML = `<small class="text-success-emphasis d-block fw-semibold" style="font-size: 0.78rem;"><i class="bi bi-check2-circle me-1"></i>Cobros Cta. Cte. ingresados</small>`;
             }
 
             const elDesgloseFia = document.getElementById('desgloseFiadoRango') || document.getElementById('countFiadoRango');
