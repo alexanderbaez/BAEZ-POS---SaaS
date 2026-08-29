@@ -696,6 +696,28 @@ async function imprimirEtiquetaPos80(productoId) {
         return;
     }
 
+    // 1. Solicitud de cantidad dinámica
+    let cantidad = 1;
+    if (typeof Swal !== 'undefined') {
+        const { value: cantInput } = await Swal.fire({
+            title: 'Impresión de Etiquetas POS80',
+            text: `¿Cuántas etiquetas de "${p.name}" deseas imprimir?`,
+            input: 'number',
+            inputValue: 1,
+            inputAttributes: { min: 1, max: 100, step: 1 },
+            showCancelButton: true,
+            confirmButtonText: '<i class="bi bi-printer"></i> Imprimir',
+            cancelButtonText: 'Cancelar',
+            customClass: { popup: 'rounded-4' }
+        });
+        if (!cantInput || cantInput <= 0) return;
+        cantidad = parseInt(cantInput, 10) || 1;
+    } else {
+        const raw = prompt("Cantidad de etiquetas:", "1");
+        if (!raw) return;
+        cantidad = parseInt(raw, 10) || 1;
+    }
+
     let barcodeParaImprimir = p.barcode;
     if (!barcodeParaImprimir) {
         barcodeParaImprimir = generarCodigoInterno();
@@ -712,14 +734,14 @@ async function imprimirEtiquetaPos80(productoId) {
         }
     }
 
-    // 1. Generar imagen del código de barras rotado 90° para renderizado vertical a lo largo del ticket
+    // 2. Generar imagen del código de barras horizontal (sin rotar)
     const barcodeImgData = generarBarcodeDataURL(barcodeParaImprimir, {
-        width: 2.2,
-        height: 60,
+        width: 2.0,
+        height: 48,
         displayValue: true,
-        fontSize: 12,
+        fontSize: 11,
         margin: 2,
-        rotar90: true
+        rotar90: false
     });
 
     if (!barcodeImgData) {
@@ -729,7 +751,12 @@ async function imprimirEtiquetaPos80(productoId) {
         return;
     }
 
-    // 2. Instanciar jsPDF para formato ticket POS80 (80mm x 100mm)
+    const altoEtiqueta = 45;
+    const precioNum = parseFloat(p.price || p.precio) || 0;
+    const precioFormateado = "$" + precioNum.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const nombreProd = (p.name || 'PRODUCTO').toUpperCase();
+
+    // 3. Instanciar jsPDF con dimensionamiento dinámico [80, altoEtiqueta * cantidad]
     let JsPdfClass = null;
     if (window.jspdf && window.jspdf.jsPDF) {
         JsPdfClass = window.jspdf.jsPDF;
@@ -741,27 +768,27 @@ async function imprimirEtiquetaPos80(productoId) {
         const pdf = new JsPdfClass({
             orientation: 'portrait',
             unit: 'mm',
-            format: [80, 100]
+            format: [80, altoEtiqueta * cantidad]
         });
 
         pdf.setTextColor(0, 0, 0);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(11);
 
-        const nombreProd = (p.name || 'PRODUCTO').toUpperCase();
-        pdf.text(nombreProd, 40, 10, { align: 'center', maxWidth: 70 });
+        for (let i = 0; i < cantidad; i++) {
+            let yOffset = i * altoEtiqueta;
 
-        const precioNum = parseFloat(p.price || p.precio) || 0;
-        if (p.price !== undefined && p.price !== null || p.precio !== undefined) {
-            pdf.setFontSize(13);
-            const precioFormateado = "$" + precioNum.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            pdf.text(precioFormateado, 40, 17, { align: 'center' });
+            // Textos centrados (Nombre y Precio)
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(10);
+            pdf.text(nombreProd, 40, yOffset + 10, { align: 'center', maxWidth: 70 });
+
+            pdf.setFontSize(12);
+            pdf.text(precioFormateado, 40, yOffset + 17, { align: 'center' });
+
+            // Código de barras horizontal (X: 5mm, Y: ajustado al offset, Ancho: 70mm, Alto: 18mm)
+            pdf.addImage(barcodeImgData, 'PNG', 5, yOffset + 20, 70, 18);
         }
 
-        // Inyectar código de barras vertical centrado a lo largo de la etiqueta térmica
-        pdf.addImage(barcodeImgData, 'PNG', 16, 21, 48, 72);
-
-        // 3. Apertura Forzada en el navegador
+        // 4. Apertura Forzada en el navegador
         const blobUrl = pdf.output('bloburl');
         const win = window.open(blobUrl, '_blank');
         if (!win || win.closed || typeof win.closed === 'undefined') {
@@ -773,38 +800,34 @@ async function imprimirEtiquetaPos80(productoId) {
     } else {
         console.warn("jsPDF no disponible, usando iframe print de respaldo...");
         const nameSeguro = (p.name || '').replace(/"/g, '&quot;');
-        const precioNumFallback = parseFloat(p.price || p.precio) || 0;
-        const precioSeguro = (p.price !== undefined && p.price !== null || p.precio !== undefined)
-            ? "$" + precioNumFallback.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-            : '';
+        let etiquetasHTML = '';
+        for (let i = 0; i < cantidad; i++) {
+            etiquetasHTML += `
+                <div class="etiqueta-pos80" style="width: 72mm; height: 43mm; border: 1px dashed #888; border-radius: 4px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2mm; box-sizing: border-box; text-align: center; margin-bottom: 2mm; background: #fff;">
+                    <div style="font-size: 10pt; font-weight: bold; margin-bottom: 1mm; max-width: 68mm; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${nameSeguro.toUpperCase()}</div>
+                    <div style="font-size: 12pt; font-weight: bold; margin-bottom: 1mm;">${precioFormateado}</div>
+                    <div style="width: 70mm; display: flex; justify-content: center;">
+                        <img src="${barcodeImgData}" style="max-width: 70mm; max-height: 18mm; display: block;" alt="${barcodeParaImprimir}" />
+                    </div>
+                </div>
+            `;
+        }
 
         const htmlEtiqueta = `
             <!DOCTYPE html>
             <html>
                 <head>
-                    <title>Etiqueta POS80 - ${nameSeguro}</title>
+                    <title>Etiquetas POS80 - ${nameSeguro}</title>
                     <style>
-                        @page { size: 80mm 100mm; margin: 0; }
+                        @page { size: 80mm ${altoEtiqueta * cantidad}mm; margin: 0; }
                         * { box-sizing: border-box; }
-                        body { margin: 0; padding: 0; background-color: #fff; font-family: Arial, Helvetica, sans-serif; display: flex; justify-content: center; align-items: center; }
-                        .etiqueta-pos80 { width: 72mm; min-height: 85mm; max-height: 98mm; border: 1px dashed #888; border-radius: 4px; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; padding: 4mm 3mm; box-sizing: border-box; overflow: hidden; text-align: center; background: #fff; margin: 2mm auto; }
-                        .header-info { width: 100%; text-align: center; margin-bottom: 2mm; }
-                        .nombre { font-size: 11pt; font-weight: bold; text-align: center; white-space: normal; word-wrap: break-word; line-height: 1.2; color: #000; margin-bottom: 1.5mm; }
-                        .precio { font-size: 13pt; font-weight: bold; color: #000; }
-                        .barcode-vertical-container { width: 100%; flex: 1; display: flex; justify-content: center; align-items: center; margin-top: 2mm; }
-                        .barcode-vertical-img { max-width: 52mm; max-height: 65mm; height: auto; object-fit: contain; display: block; margin: 0 auto; }
-                        @media print { body { margin: 0; } .etiqueta-pos80 { border: 1px dashed #666; } }
+                        body { margin: 0; padding: 0; background-color: #fff; font-family: Arial, Helvetica, sans-serif; display: flex; flex-direction: column; align-items: center; }
+                        @media print { body { margin: 0; } }
                     </style>
                 </head>
                 <body>
-                    <div class="etiqueta-pos80 layout-ticket">
-                        <div class="header-info">
-                            <div class="nombre">${nameSeguro.toUpperCase()}</div>
-                            ${precioSeguro ? `<div class="precio">${precioSeguro}</div>` : ''}
-                        </div>
-                        <div class="barcode-vertical-container">
-                            <img class="barcode-vertical-img" src="${barcodeImgData}" alt="${barcodeParaImprimir}" />
-                        </div>
+                    <div class="layout-ticket">
+                        ${etiquetasHTML}
                     </div>
                 </body>
             </html>
