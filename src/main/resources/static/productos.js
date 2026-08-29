@@ -315,7 +315,7 @@ function renderizarTabla(lista) {
             <td><span class="badge ${stockClase} p-2 px-3 rounded-pill">${stockFormateado}</span></td>
             <td class="text-end pe-3">
                 <div class="btn-group shadow-sm rounded-3">
-                    <button class="btn btn-white btn-sm border-end" title="Imprimir 1 Etiqueta" onclick="imprimirEtiqueta(${p.id})"><i class="bi bi-printer text-primary"></i></button>
+                    <button class="btn btn-white btn-sm border-end" title="Imprimir Etiqueta POS80" onclick="imprimirEtiquetaPos80(${p.id})"><i class="bi bi-printer text-primary"></i></button>
                     <button class="btn btn-white btn-sm border-end" title="Imprimir Hoja Masiva A4" onclick="imprimirEtiquetasMultiples(${p.id})"><i class="bi bi-grid-3x3-gap text-success"></i></button>
                     <button class="btn btn-white btn-sm border-end" title="Editar" onclick="editarProducto(${p.id})"><i class="bi bi-pencil-square text-primary"></i></button>
                     <button class="btn btn-white btn-sm" title="Eliminar" onclick="eliminarProducto(${p.id})"><i class="bi bi-trash3 text-danger"></i></button>
@@ -687,9 +687,14 @@ function generarBarcodeDataURL(codigo, options = {}) {
     }
 }
 
-async function imprimirEtiqueta(id) {
-    let p = PRODUCTOS_LOCAL.find(prod => prod.id === id);
-    if (!p) return;
+async function imprimirEtiquetaPos80(productoId) {
+    console.log("Generando etiqueta POS80 para ID: ", productoId);
+
+    let p = PRODUCTOS_LOCAL.find(prod => prod.id === productoId);
+    if (!p) {
+        console.error("Producto no encontrado localmente con ID:", productoId);
+        return;
+    }
 
     let barcodeParaImprimir = p.barcode;
     if (!barcodeParaImprimir) {
@@ -707,7 +712,7 @@ async function imprimirEtiqueta(id) {
         }
     }
 
-    // Código de barras rotado 90° para renderizado vertical a lo largo del ticket térmico POS80
+    // 1. Generar imagen del código de barras rotado 90° para renderizado vertical a lo largo del ticket
     const barcodeImgData = generarBarcodeDataURL(barcodeParaImprimir, {
         width: 2.2,
         height: 60,
@@ -724,107 +729,90 @@ async function imprimirEtiqueta(id) {
         return;
     }
 
-    const nameSeguro = (p.name || '').replace(/"/g, '&quot;');
-    const precioSeguro = p.price !== undefined && p.price !== null
-        ? '$ ' + parsearMonto(p.price).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-        : '';
+    // 2. Instanciar jsPDF para formato ticket POS80 (80mm x 100mm)
+    let JsPdfClass = null;
+    if (window.jspdf && window.jspdf.jsPDF) {
+        JsPdfClass = window.jspdf.jsPDF;
+    } else if (typeof jsPDF === 'function') {
+        JsPdfClass = jsPDF;
+    }
 
-    const htmlEtiqueta = `
-        <!DOCTYPE html>
-        <html>
-            <head>
-                <title>Etiqueta POS80 - ${nameSeguro}</title>
-                <style>
-                    @page {
-                        size: 80mm 100mm;
-                        margin: 0;
-                    }
-                    * {
-                        box-sizing: border-box;
-                    }
-                    body {
-                        margin: 0;
-                        padding: 0;
-                        background-color: #fff;
-                        font-family: Arial, Helvetica, sans-serif;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                    }
-                    .etiqueta-pos80 {
-                        width: 72mm;
-                        min-height: 85mm;
-                        max-height: 98mm;
-                        border: 1px dashed #888;
-                        border-radius: 4px;
-                        display: flex;
-                        flex-direction: column;
-                        justify-content: flex-start;
-                        align-items: center;
-                        padding: 4mm 3mm;
-                        box-sizing: border-box;
-                        overflow: hidden;
-                        text-align: center;
-                        background: #fff;
-                        margin: 2mm auto;
-                    }
-                    .header-info {
-                        width: 100%;
-                        text-align: center;
-                        margin-bottom: 2mm;
-                    }
-                    .nombre {
-                        font-size: 11pt;
-                        font-weight: bold;
-                        text-align: center;
-                        white-space: normal;
-                        word-wrap: break-word;
-                        line-height: 1.2;
-                        color: #000;
-                        margin-bottom: 1.5mm;
-                    }
-                    .precio {
-                        font-size: 13pt;
-                        font-weight: bold;
-                        color: #000;
-                    }
-                    .barcode-vertical-container {
-                        width: 100%;
-                        flex: 1;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        margin-top: 2mm;
-                    }
-                    .barcode-vertical-img {
-                        max-width: 52mm;
-                        max-height: 65mm;
-                        height: auto;
-                        object-fit: contain;
-                        display: block;
-                        margin: 0 auto;
-                    }
-                    @media print {
-                        body { margin: 0; }
-                        .etiqueta-pos80 { border: 1px dashed #666; }
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="etiqueta-pos80 layout-ticket">
-                    <div class="header-info">
-                        <div class="nombre">${nameSeguro.toUpperCase()}</div>
-                        ${precioSeguro ? `<div class="precio">${precioSeguro}</div>` : ''}
+    if (JsPdfClass) {
+        const pdf = new JsPdfClass({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: [80, 100]
+        });
+
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(11);
+
+        const nombreProd = (p.name || 'PRODUCTO').toUpperCase();
+        pdf.text(nombreProd, 40, 10, { align: 'center', maxWidth: 70 });
+
+        if (p.price !== undefined && p.price !== null) {
+            pdf.setFontSize(13);
+            const precioFmt = '$ ' + parsearMonto(p.price).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            pdf.text(precioFmt, 40, 17, { align: 'center' });
+        }
+
+        // Inyectar código de barras vertical centrado a lo largo de la etiqueta térmica
+        pdf.addImage(barcodeImgData, 'PNG', 16, 21, 48, 72);
+
+        // 3. Apertura Forzada en el navegador
+        const blobUrl = pdf.output('bloburl');
+        const win = window.open(blobUrl, '_blank');
+        if (!win || win.closed || typeof win.closed === 'undefined') {
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.target = '_blank';
+            a.click();
+        }
+    } else {
+        console.warn("jsPDF no disponible, usando iframe print de respaldo...");
+        const nameSeguro = (p.name || '').replace(/"/g, '&quot;');
+        const precioSeguro = p.price !== undefined && p.price !== null
+            ? '$ ' + parsearMonto(p.price).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            : '';
+
+        const htmlEtiqueta = `
+            <!DOCTYPE html>
+            <html>
+                <head>
+                    <title>Etiqueta POS80 - ${nameSeguro}</title>
+                    <style>
+                        @page { size: 80mm 100mm; margin: 0; }
+                        * { box-sizing: border-box; }
+                        body { margin: 0; padding: 0; background-color: #fff; font-family: Arial, Helvetica, sans-serif; display: flex; justify-content: center; align-items: center; }
+                        .etiqueta-pos80 { width: 72mm; min-height: 85mm; max-height: 98mm; border: 1px dashed #888; border-radius: 4px; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; padding: 4mm 3mm; box-sizing: border-box; overflow: hidden; text-align: center; background: #fff; margin: 2mm auto; }
+                        .header-info { width: 100%; text-align: center; margin-bottom: 2mm; }
+                        .nombre { font-size: 11pt; font-weight: bold; text-align: center; white-space: normal; word-wrap: break-word; line-height: 1.2; color: #000; margin-bottom: 1.5mm; }
+                        .precio { font-size: 13pt; font-weight: bold; color: #000; }
+                        .barcode-vertical-container { width: 100%; flex: 1; display: flex; justify-content: center; align-items: center; margin-top: 2mm; }
+                        .barcode-vertical-img { max-width: 52mm; max-height: 65mm; height: auto; object-fit: contain; display: block; margin: 0 auto; }
+                        @media print { body { margin: 0; } .etiqueta-pos80 { border: 1px dashed #666; } }
+                    </style>
+                </head>
+                <body>
+                    <div class="etiqueta-pos80 layout-ticket">
+                        <div class="header-info">
+                            <div class="nombre">${nameSeguro.toUpperCase()}</div>
+                            ${precioSeguro ? `<div class="precio">${precioSeguro}</div>` : ''}
+                        </div>
+                        <div class="barcode-vertical-container">
+                            <img class="barcode-vertical-img" src="${barcodeImgData}" alt="${barcodeParaImprimir}" />
+                        </div>
                     </div>
-                    <div class="barcode-vertical-container">
-                        <img class="barcode-vertical-img" src="${barcodeImgData}" alt="${barcodeParaImprimir}" />
-                    </div>
-                </div>
-            </body>
-        </html>
-    `;
-    imprimirHTMLConIframe(htmlEtiqueta);
+                </body>
+            </html>
+        `;
+        imprimirHTMLConIframe(htmlEtiqueta);
+    }
 }
+
+// Alias para compatibilidad
+const imprimirEtiqueta = imprimirEtiquetaPos80;
 
 if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
     bootstrap.Modal.prototype._enforceFocus = function() {};
@@ -1004,7 +992,8 @@ window.editarProducto = editarProducto;
 window.eliminarProducto = eliminarProducto;
 window.abrirPapelera = abrirPapelera;
 window.restaurarProducto = restaurarProducto;
-window.imprimirEtiqueta = imprimirEtiqueta;
+window.imprimirEtiqueta = imprimirEtiquetaPos80;
+window.imprimirEtiquetaPos80 = imprimirEtiquetaPos80;
 window.imprimirEtiquetasMultiples = imprimirEtiquetasMultiples;
 window.filtrarProductos = filtrarProductos;
 window.autogenerarCodigoInput = autogenerarCodigoInput;
