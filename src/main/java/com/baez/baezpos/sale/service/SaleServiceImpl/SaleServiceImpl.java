@@ -591,6 +591,7 @@ public class SaleServiceImpl implements SaleService {
     private SaleResponseDTO mapToResponseDTO(Sale sale) {
         List<SaleItemResponseDTO> itemDTOs = sale.getItems().stream()
                 .map(item -> {
+                    Product p = item.getProduct();
                     boolean isFrac = (p != null && Boolean.TRUE.equals(p.getIsFractional()));
                     String unit = isFrac ? "KG" : "UN";
 
