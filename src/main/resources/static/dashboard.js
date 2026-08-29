@@ -3,7 +3,7 @@
  * Alexander Baez - 2026
  */
 
-let chartSemanalInstance = null;
+const TIMEZONE_AR = 'America/Argentina/Buenos_Aires';
 
 const fmtARS = new Intl.NumberFormat('es-AR', {
     style: 'currency',
@@ -11,21 +11,64 @@ const fmtARS = new Intl.NumberFormat('es-AR', {
     minimumFractionDigits: 2
 });
 
+const dtFormatFechaCompleta = new Intl.DateTimeFormat('es-AR', {
+    timeZone: TIMEZONE_AR,
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+});
+
+const dtFormatFechaCorta = new Intl.DateTimeFormat('es-AR', {
+    timeZone: TIMEZONE_AR,
+    day: '2-digit',
+    month: '2-digit'
+});
+
+const dtFormatFechaEstandar = new Intl.DateTimeFormat('es-AR', {
+    timeZone: TIMEZONE_AR,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+});
+
+const dtFormatHora = new Intl.DateTimeFormat('es-AR', {
+    timeZone: TIMEZONE_AR,
+    hour: '2-digit',
+    minute: '2-digit'
+});
+
+function parsearFechaLocal(val) {
+    if (!val) return null;
+    if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : d;
+}
+
+function formatHoraAR(val) {
+    const d = parsearFechaLocal(val);
+    return d ? dtFormatHora.format(d) : '--:--';
+}
+
+function formatFechaCortaAR(val) {
+    const d = parsearFechaLocal(val);
+    return d ? dtFormatFechaCorta.format(d) : '--/--';
+}
+
+function formatFechaEstandarAR(val) {
+    const d = parsearFechaLocal(val);
+    return d ? dtFormatFechaEstandar.format(d) : '--/--/----';
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Nombre de usuario y Fecha actual
+    // 1. Nombre de usuario y Fecha actual con Zona Horaria de Argentina
     const userName = (localStorage.getItem('baezpos_user_name') || 'Usuario').toUpperCase();
     const userEl = document.getElementById('userNameLabel');
     if (userEl) userEl.innerText = userName;
 
     const fechaEl = document.getElementById('fechaActual');
     if (fechaEl) {
-        const hoy = new Date();
-        fechaEl.innerText = hoy.toLocaleDateString('es-AR', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
+        fechaEl.innerText = dtFormatFechaCompleta.format(new Date());
     }
 
     // 2. Configurar listener para resize de Chart.js al cambiar de pestañas
@@ -258,8 +301,8 @@ function renderizarTurnosCajaPeriodo(sessions, rangoTexto) {
 
     // Ordenar turnos: los más recientes arriba
     const turnosOrdenados = [...lista].sort((a, b) => {
-        const fa = a.openedAt ? new Date(a.openedAt) : 0;
-        const fb = b.openedAt ? new Date(b.openedAt) : 0;
+        const fa = parsearFechaLocal(a.openedAt)?.getTime() || 0;
+        const fb = parsearFechaLocal(b.openedAt)?.getTime() || 0;
         return fb - fa;
     });
 
@@ -267,44 +310,42 @@ function renderizarTurnosCajaPeriodo(sessions, rangoTexto) {
     const fragment = document.createDocumentFragment();
 
     turnosOrdenados.forEach(s => {
+        // --- AISLAMIENTO ESTRICTO DE VARIABLES POR TURNO ---
         const numSesion = s.sessionNumber || s.id || 1;
         const usuario = escapeHTML(s.userName || 'Admin');
         const esAbierta = (s.status === 'OPEN');
 
-        const fechaApertura = s.openedAt ? new Date(s.openedAt) : null;
-        const fechaCierre = s.closedAt ? new Date(s.closedAt) : null;
+        const strFecha = formatFechaCortaAR(s.openedAt);
+        const strHoraOpen = formatHoraAR(s.openedAt);
+        const strHoraClose = s.closedAt ? formatHoraAR(s.closedAt) : (esAbierta ? 'En Curso' : '--:--');
 
-        const strFecha = fechaApertura
-            ? fechaApertura.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })
-            : '--/--';
-        const strHoraOpen = fechaApertura
-            ? fechaApertura.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
-            : '--:--';
-        const strHoraClose = fechaCierre
-            ? fechaCierre.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
-            : (esAbierta ? 'En Curso' : '--:--');
+        const fondoInicial = parseFloat(s.initialAmount || 0);
+        const ventasEfe = parseFloat(s.totalCashSales || 0);
+        const cobrosEfe = parseFloat(s.totalCustomerPayments || 0);
+        const gastosEfe = Math.abs(parseFloat(s.totalExpenses || 0));
 
-        const fondoInicial = parseFloat(s.initialAmount ?? 0);
-        const ventasEfe = parseFloat(s.totalCashSales ?? 0);
-        const cobrosEfe = parseFloat(s.totalCustomerPayments ?? 0);
-        const gastosEfe = parseFloat(s.totalExpenses ?? 0);
+        // Fórmula aislada estricta: Total Físico Esperado = Fondo + Ventas + Cobros - Gastos
+        const totalFisicoEsperado = fondoInicial + ventasEfe + cobrosEfe - gastosEfe;
 
-        // Estado y Valores de Cierre / Arqueo
-        const sistemaCalculado = (s.systemAmount !== undefined && s.systemAmount !== null)
-            ? parseFloat(s.systemAmount)
-            : (fondoInicial + ventasEfe + cobrosEfe - gastosEfe);
-
-        const declarado = parseFloat(s.declaredAmount ?? 0);
-        const diferencia = parseFloat(s.difference ?? (declarado - sistemaCalculado));
+        const declarado = parseFloat(s.declaredAmount || 0);
+        const diferencia = (s.difference !== undefined && s.difference !== null)
+            ? parseFloat(s.difference)
+            : (declarado - totalFisicoEsperado);
 
         let estadoBadge = '';
         let totalCierreHtml = '';
 
+        // Renderizado de Saldos Negativos con alerta en rojo (text-danger)
+        const claseEsperado = totalFisicoEsperado < 0 ? 'text-danger fw-bold' : 'text-dark fw-bold';
+        const claseDeclarado = declarado < 0 ? 'text-danger fw-bold' : 'text-dark fw-bold';
+
         if (esAbierta) {
             estadoBadge = '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-unlock-fill me-1"></i>Abierta</span>';
             totalCierreHtml = `
-                <div class="fw-bold text-dark amount-num">${fmtARS.format(sistemaCalculado)}</div>
-                <small class="text-success" style="font-size: 0.72rem;"><i class="bi bi-lightning-charge me-1"></i>Esperado en cajón</small>
+                <div class="${claseEsperado} amount-num fs-6">${fmtARS.format(totalFisicoEsperado)}</div>
+                <small class="${totalFisicoEsperado < 0 ? 'text-danger fw-semibold' : 'text-success'}" style="font-size: 0.72rem;">
+                    <i class="bi bi-lightning-charge me-1"></i>${totalFisicoEsperado < 0 ? 'Desfase Negativo' : 'Esperado en cajón'}
+                </small>
             `;
         } else {
             estadoBadge = '<span class="badge bg-secondary-subtle text-secondary border border-secondary px-2 py-1"><i class="bi bi-lock-fill me-1"></i>Cerrada</span>';
@@ -313,13 +354,13 @@ function renderizarTurnosCajaPeriodo(sessions, rangoTexto) {
             if (Math.abs(diferencia) > 0.01) {
                 const diffColor = diferencia > 0 ? 'text-success' : 'text-danger';
                 const diffSign = diferencia > 0 ? '+' : '';
-                diffHtml = `<small class="${diffColor} d-block" style="font-size: 0.72rem;">Dif: ${diffSign}${fmtARS.format(diferencia)}</small>`;
+                diffHtml = `<small class="${diffColor} fw-semibold d-block" style="font-size: 0.72rem;">Dif: ${diffSign}${fmtARS.format(diferencia)}</small>`;
             } else {
                 diffHtml = `<small class="text-muted d-block" style="font-size: 0.72rem;">Cuadrada (Exacto)</small>`;
             }
 
             totalCierreHtml = `
-                <div class="fw-bold text-dark amount-num">${fmtARS.format(declarado)}</div>
+                <div class="${claseDeclarado} amount-num fs-6">${fmtARS.format(declarado)}</div>
                 ${diffHtml}
             `;
         }
@@ -374,12 +415,12 @@ function renderizarUltimosMovimientos(ventas, gastos) {
     // Normalizar ventas
     (ventas || []).forEach(v => {
         const fechaRaw = v.saleDate || v.created_at || v.createdAt || new Date();
-        const fechaObj = new Date(fechaRaw);
+        const fechaObj = parsearFechaLocal(fechaRaw) || new Date();
         movimientos.push({
             tipo: 'VENTA',
             id: v.id,
             concepto: v.nroComprobante || (v.numeroTicket ? `Ticket #${v.numeroTicket}` : `Venta #${v.id}`),
-            fecha: isNaN(fechaObj.getTime()) ? new Date() : fechaObj,
+            fecha: fechaObj,
             metodo: (v.paymentMethod || 'EFECTIVO').replace(/_/g, ' '),
             monto: parseFloat(v.total) || 0,
             deductFromBox: false
@@ -389,13 +430,13 @@ function renderizarUltimosMovimientos(ventas, gastos) {
     // Normalizar gastos
     (gastos || []).forEach(g => {
         const fechaRaw = g.date || new Date();
-        const fechaObj = new Date(fechaRaw);
+        const fechaObj = parsearFechaLocal(fechaRaw) || new Date();
         const esDeducible = Boolean(g.deductFromBox) && (g.paymentMethod === 'EFECTIVO_CAJA' || g.paymentMethod === 'EFECTIVO');
         movimientos.push({
             tipo: 'GASTO',
             id: g.id,
             concepto: g.description || 'Egreso operativo',
-            fecha: isNaN(fechaObj.getTime()) ? new Date() : fechaObj,
+            fecha: fechaObj,
             metodo: (g.paymentMethod || 'EFECTIVO_CAJA').replace(/_/g, ' '),
             monto: parseFloat(g.amount) || 0,
             deductFromBox: esDeducible
@@ -427,8 +468,8 @@ function renderizarUltimosMovimientos(ventas, gastos) {
         const montoTexto = esVenta ? `+${fmtARS.format(m.monto)}` : `-${fmtARS.format(m.monto)}`;
         const montoClase = esVenta ? 'text-success fw-bold' : (m.deductFromBox ? 'text-danger fw-bold' : 'text-danger');
 
-        const horaFormateada = m.fecha.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-        const diaFormateado = m.fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+        const horaFormateada = formatHoraAR(m.fecha);
+        const diaFormateado = formatFechaCortaAR(m.fecha);
 
         const badgeBoxDeduct = (!esVenta && m.deductFromBox)
             ? '<span class="badge bg-danger text-white ms-1" style="font-size: 0.65rem;">Caja</span>'
