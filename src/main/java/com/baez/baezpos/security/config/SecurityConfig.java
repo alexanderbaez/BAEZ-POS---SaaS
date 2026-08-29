@@ -59,6 +59,7 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/super-admin/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/users/validate-pin").hasAnyRole("ADMIN", "VENDEDOR", "SUPER_ADMIN", "SUPERVISOR")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/users/update-password").authenticated()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/admin/my-company/status",
