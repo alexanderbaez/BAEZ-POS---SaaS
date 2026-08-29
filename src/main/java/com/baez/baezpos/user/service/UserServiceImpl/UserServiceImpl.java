@@ -94,10 +94,12 @@ public class UserServiceImpl implements UserService {
                 existingUser.setPassword(passwordEncoder.encode(dto.getPassword()));
             }
 
-            if (targetRole == Role.VENDEDOR) {
-                existingUser.setSecurityPin(null);
-            } else if (dto.getSecurityPin() != null && !dto.getSecurityPin().trim().isEmpty()) {
-                existingUser.setSecurityPin(passwordEncoder.encode(dto.getSecurityPin().trim()));
+            if (dto.getSecurityPin() != null) {
+                if (dto.getSecurityPin().trim().isEmpty()) {
+                    existingUser.setSecurityPin(null);
+                } else {
+                    existingUser.setSecurityPin(passwordEncoder.encode(dto.getSecurityPin().trim()));
+                }
             }
 
             existingUser.setActive(true);
@@ -125,9 +127,7 @@ public class UserServiceImpl implements UserService {
         user.setRole(targetRole);
         user.setActive(true);
 
-        if (targetRole == Role.VENDEDOR) {
-            user.setSecurityPin(null);
-        } else if (dto.getSecurityPin() != null && !dto.getSecurityPin().trim().isEmpty()) {
+        if (dto.getSecurityPin() != null && !dto.getSecurityPin().trim().isEmpty()) {
             user.setSecurityPin(passwordEncoder.encode(dto.getSecurityPin().trim()));
         }
 
@@ -221,10 +221,12 @@ public class UserServiceImpl implements UserService {
             existing.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
 
-        if (existing.getRole() == Role.VENDEDOR) {
-            existing.setSecurityPin(null);
-        } else if (dto.getSecurityPin() != null && !dto.getSecurityPin().trim().isEmpty()) {
-            existing.setSecurityPin(passwordEncoder.encode(dto.getSecurityPin().trim()));
+        if (dto.getSecurityPin() != null) {
+            if (dto.getSecurityPin().trim().isEmpty()) {
+                existing.setSecurityPin(null);
+            } else {
+                existing.setSecurityPin(passwordEncoder.encode(dto.getSecurityPin().trim()));
+            }
         }
 
         return convertToDTO(userRepository.save(existing));
@@ -266,59 +268,45 @@ public class UserServiceImpl implements UserService {
             return "AUDIT_ERROR: PIN recibido vacío o nulo.";
         }
 
-        // 1. Obtener la empresa del empleado logueado
-        Long companyId = SecurityUtils.getCurrentCompanyId();
-        if (companyId == null) {
-            String currentEmail = SecurityUtils.getCurrentUserEmail();
-            if (currentEmail != null) {
-                User currentUser = userRepository.findByEmail(currentEmail).orElse(null);
-                if (currentUser != null && currentUser.getCompany() != null) {
-                    companyId = currentUser.getCompany().getId();
+        String rawPin = requestPin.trim();
+        String currentEmail = SecurityUtils.getCurrentUserEmail();
+        User currentUser = null;
+        if (currentEmail != null) {
+            currentUser = userRepository.findByEmail(currentEmail).orElse(null);
+        }
+
+        // 1. ¿El vendedor (o usuario actual) tiene su propio PIN asignado y coincide?
+        if (currentUser != null && currentUser.getSecurityPin() != null && !currentUser.getSecurityPin().trim().isEmpty()) {
+            String userStoredPin = currentUser.getSecurityPin().trim();
+            boolean matches = false;
+            if (userStoredPin.equals(rawPin)) {
+                matches = true;
+            } else {
+                try {
+                    matches = passwordEncoder.matches(rawPin, userStoredPin);
+                } catch (Exception ignored) {
+                    matches = false;
                 }
+            }
+            if (matches) {
+                return "OK";
             }
         }
 
-        // 2. Traer TODOS los usuarios de esa empresa
+        // 2. Si no es el del vendedor, buscar si es el PIN Maestro del ADMIN del local
+        Long companyId = (currentUser != null && currentUser.getCompany() != null)
+                ? currentUser.getCompany().getId()
+                : SecurityUtils.getCurrentCompanyId();
+
         List<User> companyUsers = (companyId != null)
                 ? userRepository.findByCompanyId(companyId)
                 : userRepository.findAll();
 
-        if (companyUsers == null || companyUsers.isEmpty()) {
-            String errorMsg = "AUDIT_ERROR: No se encontraron usuarios para la empresa ID " + companyId;
-            System.out.println(errorMsg);
-            return errorMsg;
-        }
-
-        List<String> rolesFound = companyUsers.stream()
-                .map(u -> u.getRole() != null ? u.getRole().name() : "NULL")
-                .toList();
-
-        // 3. Filtrar administradores en memoria y comparar
-        List<User> adminUsers = new ArrayList<>();
         for (User user : companyUsers) {
-            if (user.getRole() != null) {
-                String roleName = user.getRole().name().toUpperCase();
-                // Detecta cualquier variación de Admin o Supervisor
-                if (roleName.contains("ADMIN") || roleName.contains("SUPER")) {
-                    adminUsers.add(user);
-                }
-            }
-        }
-
-        if (adminUsers.isEmpty()) {
-            String errorMsg = "AUDIT_ERROR: Ningún admin detectado. Roles encontrados: " + rolesFound;
-            System.out.println(errorMsg);
-            return errorMsg;
-        }
-
-        String lastAdminPinDebug = null;
-        for (User admin : adminUsers) {
-            String storedPin = admin.getSecurityPin();
-            if (storedPin != null && !storedPin.trim().isEmpty()) {
-                String rawPin = requestPin.trim();
-                // Validar texto plano o hash BCrypt
+            if (user.getRole() == Role.ADMIN && user.getSecurityPin() != null && !user.getSecurityPin().trim().isEmpty()) {
+                String storedPin = user.getSecurityPin().trim();
                 boolean matches = false;
-                if (storedPin.trim().equals(rawPin)) {
+                if (storedPin.equals(rawPin)) {
                     matches = true;
                 } else {
                     try {
@@ -331,14 +319,11 @@ public class UserServiceImpl implements UserService {
                     return "OK";
                 }
             }
-            lastAdminPinDebug = "AUDIT_ERROR: PIN no coincide. BD tiene PIN nulo? " + (storedPin == null) + ". Longitud PIN bd: " + (storedPin != null ? storedPin.length() : 0);
         }
 
-        String finalError = (lastAdminPinDebug != null)
-                ? lastAdminPinDebug
-                : "AUDIT_ERROR: Admins encontrados pero ninguno tiene un PIN configurado.";
-        System.out.println("AUDIT: " + finalError);
-        return finalError;
+        String errorMsg = "AUDIT_ERROR: El PIN ingresado no coincide con el del Vendedor ni con el del Administrador.";
+        System.out.println("AUDIT: " + errorMsg);
+        return errorMsg;
     }
 
     @Override
@@ -369,7 +354,7 @@ public class UserServiceImpl implements UserService {
         }
 
         if (!isSuperAdmin) {
-            if (requestedRole != null && requestedRole != Role.VENDEDOR && requestedRole != Role.SUPERVISOR) {
+            if (requestedRole != null && requestedRole != Role.VENDEDOR) {
                 throw new AccessDeniedException("Violación de seguridad: No puedes crear usuarios con privilegios iguales o superiores.");
             }
             return requestedRole != null ? requestedRole : Role.VENDEDOR;

@@ -37,6 +37,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (selectRol) {
         selectRol.addEventListener('change', actualizarVisibilidadPin);
     }
+    const switchAsignarPin = document.getElementById('switchAsignarPin');
+    if (switchAsignarPin) {
+        switchAsignarPin.addEventListener('change', actualizarVisibilidadPin);
+    }
 
     cargarEmpleados();
 });
@@ -75,8 +79,6 @@ async function cargarEmpleados() {
             let badgeClass = 'vendedor';
             if (rol === 'ADMIN' || rol.includes('SUPER_ADMIN')) {
                 badgeClass = 'admin';
-            } else if (rol === 'SUPERVISOR') {
-                badgeClass = 'supervisor';
             }
 
             const userJsonSeguro = JSON.stringify(user).replace(/"/g, '&quot;');
@@ -148,10 +150,22 @@ if (formEmpleado) {
             return;
         }
 
-        if (role !== 'VENDEDOR') {
-            const pin = document.getElementById('empPin') ? document.getElementById('empPin').value.trim() : '';
-            if (pin) {
-                payload.securityPin = pin;
+        const switchAsignarPin = document.getElementById('switchAsignarPin');
+        const pinInput = document.getElementById('empPin');
+        const pinVal = pinInput ? pinInput.value.trim() : '';
+
+        if (role === 'ADMIN') {
+            if (pinVal) {
+                payload.securityPin = pinVal;
+            }
+        } else {
+            // VENDEDOR
+            if (switchAsignarPin && switchAsignarPin.checked) {
+                if (pinVal) {
+                    payload.securityPin = pinVal;
+                }
+            } else if (isEditing) {
+                payload.securityPin = '';
             }
         }
 
@@ -222,18 +236,38 @@ if (formEmpleado) {
 
 function actualizarVisibilidadPin() {
     const selectRol = document.getElementById('empRol');
+    const switchPinContainer = document.getElementById('switchPinContainer');
+    const switchAsignarPin = document.getElementById('switchAsignarPin');
     const pinContainer = document.getElementById('pinContainer');
     const pinInput = document.getElementById('empPin');
+
     if (!selectRol || !pinContainer) return;
 
     const rolSeleccionado = (selectRol.value || '').toUpperCase().trim();
-    if (rolSeleccionado === 'VENDEDOR') {
-        pinContainer.classList.add('d-none');
-        pinContainer.style.display = 'none';
-        if (pinInput) pinInput.value = '';
-    } else {
+
+    if (rolSeleccionado === 'ADMIN') {
+        // Si el rol es ADMIN, el campo de PIN se muestra siempre y el Switch se oculta
+        if (switchPinContainer) {
+            switchPinContainer.classList.add('d-none');
+            switchPinContainer.style.display = 'none';
+        }
         pinContainer.classList.remove('d-none');
         pinContainer.style.display = 'block';
+    } else {
+        // Si el rol es VENDEDOR, el Switch se muestra
+        if (switchPinContainer) {
+            switchPinContainer.classList.remove('d-none');
+            switchPinContainer.style.display = 'block';
+        }
+        // El campo de PIN permanece oculto hasta que el Admin active el Switch. Si lo desactiva, el campo se oculta y su valor se limpia ('')
+        if (switchAsignarPin && switchAsignarPin.checked) {
+            pinContainer.classList.remove('d-none');
+            pinContainer.style.display = 'block';
+        } else {
+            pinContainer.classList.add('d-none');
+            pinContainer.style.display = 'none';
+            if (pinInput) pinInput.value = '';
+        }
     }
 }
 
@@ -243,10 +277,11 @@ function ajustarOpcionesDeRolSegunPermisos() {
     const selectRol = document.getElementById('empRol');
     if (!selectRol) return;
 
-    // Un ADMIN solo puede crear SUPERVISOR o VENDEDOR (ocultar ADMIN y SUPER_ADMIN)
     Array.from(selectRol.options).forEach(opt => {
         const val = opt.value.toUpperCase();
-        if (val === 'ADMIN' || val === 'SUPER_ADMIN') {
+        if (val === 'SUPERVISOR') {
+            opt.remove();
+        } else if (val === 'ADMIN' || val === 'SUPER_ADMIN') {
             if (!isSuperAdmin) {
                 opt.style.display = 'none';
                 opt.disabled = true;
@@ -257,7 +292,7 @@ function ajustarOpcionesDeRolSegunPermisos() {
         }
     });
 
-    if (!isSuperAdmin && (selectRol.value === 'ADMIN' || selectRol.value === 'SUPER_ADMIN')) {
+    if (!isSuperAdmin && (selectRol.value === 'ADMIN' || selectRol.value === 'SUPER_ADMIN' || selectRol.value === 'SUPERVISOR')) {
         selectRol.value = 'VENDEDOR';
     }
 }
@@ -275,6 +310,12 @@ function abrirEdicion(user) {
     document.getElementById('empPassword').value = '';
     if (document.getElementById('empPin')) {
         document.getElementById('empPin').value = '';
+    }
+
+    const switchAsignarPin = document.getElementById('switchAsignarPin');
+    const hasPin = Boolean(user.securityPin && user.securityPin.trim().length > 0);
+    if (switchAsignarPin) {
+        switchAsignarPin.checked = hasPin;
     }
 
     ajustarOpcionesDeRolSegunPermisos();
@@ -296,6 +337,8 @@ if (modalElement) {
     modalElement.addEventListener('hidden.bs.modal', () => {
         if (formEmpleado) formEmpleado.reset();
         document.getElementById('empleadoId').value = '';
+        const switchAsignarPin = document.getElementById('switchAsignarPin');
+        if (switchAsignarPin) switchAsignarPin.checked = false;
         ajustarOpcionesDeRolSegunPermisos();
         actualizarVisibilidadPin();
         const smallHint = document.querySelector('#passwordContainer small');
