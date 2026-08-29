@@ -68,12 +68,13 @@ public class UserController {
 
     @PostMapping("/validate-pin")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Map<String, Boolean>> validatePin(@RequestBody Map<String, String> payload) {
+    public ResponseEntity<Map<String, Object>> validatePin(@RequestBody Map<String, String> payload) {
         String pin = payload != null ? payload.get("pin") : null;
         if (pin == null || pin.trim().isEmpty()) {
-            return ResponseEntity.ok(Map.of("valid", false));
+            return ResponseEntity.ok(Map.of("valid", false, "debug_message", "AUDIT_ERROR: PIN recibido vacío o nulo."));
         }
-        boolean isValid = userService.validateSupervisorPin(pin.trim());
-        return ResponseEntity.ok(Map.of("valid", isValid));
+        String auditResult = userService.validateSupervisorPin(pin.trim());
+        boolean isValid = "OK".equals(auditResult);
+        return ResponseEntity.ok(Map.of("valid", isValid, "debug_message", auditResult));
     }
 }

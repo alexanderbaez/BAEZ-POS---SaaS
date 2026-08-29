@@ -12,5 +12,5 @@ public interface UserService {
     void deleteUser(Long id);
     void updatePasswordOnly(String email, String newPassword);
     boolean validatePin(String pin);
-    boolean validateSupervisorPin(String requestPin);
+    String validateSupervisorPin(String requestPin);
 }

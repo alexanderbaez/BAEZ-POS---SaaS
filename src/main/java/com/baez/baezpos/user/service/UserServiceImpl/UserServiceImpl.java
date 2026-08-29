@@ -19,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -222,10 +223,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public boolean validateSupervisorPin(String requestPin) {
+    public String validateSupervisorPin(String requestPin) {
         if (requestPin == null || requestPin.trim().isEmpty()) {
             System.out.println("AUDIT: PIN recibido vacío o nulo.");
-            return false;
+            return "AUDIT_ERROR: PIN recibido vacío o nulo.";
         }
 
         // 1. Obtener la empresa del empleado logueado
@@ -245,41 +246,68 @@ public class UserServiceImpl implements UserService {
                 ? userRepository.findByCompanyId(companyId)
                 : userRepository.findAll();
 
+        if (companyUsers == null || companyUsers.isEmpty()) {
+            String errorMsg = "AUDIT_ERROR: No se encontraron usuarios para la empresa ID " + companyId;
+            System.out.println(errorMsg);
+            return errorMsg;
+        }
+
+        List<String> rolesFound = companyUsers.stream()
+                .map(u -> u.getRole() != null ? u.getRole().name() : "NULL")
+                .toList();
+
         // 3. Filtrar administradores en memoria y comparar
+        List<User> adminUsers = new ArrayList<>();
         for (User user : companyUsers) {
             if (user.getRole() != null) {
                 String roleName = user.getRole().name().toUpperCase();
                 // Detecta cualquier variación de Admin o Supervisor
                 if (roleName.contains("ADMIN") || roleName.contains("SUPER")) {
-                    String storedPin = user.getSecurityPin();
-                    if (storedPin != null && !storedPin.trim().isEmpty()) {
-                        String rawPin = requestPin.trim();
-                        // Validar texto plano o hash BCrypt
-                        boolean matches = false;
-                        if (storedPin.trim().equals(rawPin)) {
-                            matches = true;
-                        } else {
-                            try {
-                                matches = passwordEncoder.matches(rawPin, storedPin);
-                            } catch (Exception ignored) {
-                                matches = false;
-                            }
-                        }
-                        if (matches) {
-                            return true;
-                        }
-                    }
+                    adminUsers.add(user);
                 }
             }
         }
-        System.out.println("AUDIT: Validación de PIN fallida para la empresa ID: " + companyId + ". No hubo coincidencia de PIN o no se encontraron Admins.");
-        return false;
+
+        if (adminUsers.isEmpty()) {
+            String errorMsg = "AUDIT_ERROR: Ningún admin detectado. Roles encontrados: " + rolesFound;
+            System.out.println(errorMsg);
+            return errorMsg;
+        }
+
+        String lastAdminPinDebug = null;
+        for (User admin : adminUsers) {
+            String storedPin = admin.getSecurityPin();
+            if (storedPin != null && !storedPin.trim().isEmpty()) {
+                String rawPin = requestPin.trim();
+                // Validar texto plano o hash BCrypt
+                boolean matches = false;
+                if (storedPin.trim().equals(rawPin)) {
+                    matches = true;
+                } else {
+                    try {
+                        matches = passwordEncoder.matches(rawPin, storedPin);
+                    } catch (Exception ignored) {
+                        matches = false;
+                    }
+                }
+                if (matches) {
+                    return "OK";
+                }
+            }
+            lastAdminPinDebug = "AUDIT_ERROR: PIN no coincide. BD tiene PIN nulo? " + (storedPin == null) + ". Longitud PIN bd: " + (storedPin != null ? storedPin.length() : 0);
+        }
+
+        String finalError = (lastAdminPinDebug != null)
+                ? lastAdminPinDebug
+                : "AUDIT_ERROR: Admins encontrados pero ninguno tiene un PIN configurado.";
+        System.out.println("AUDIT: " + finalError);
+        return finalError;
     }
 
     @Override
     @Transactional(readOnly = true)
     public boolean validatePin(String pin) {
-        return validateSupervisorPin(pin);
+        return "OK".equals(validateSupervisorPin(pin));
     }
 
     private Role validateRoleAssignment(Role requestedRole) {

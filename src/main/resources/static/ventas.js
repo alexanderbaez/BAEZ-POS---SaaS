@@ -522,13 +522,9 @@ async function solicitarPinSupervisorSiEsVendedor(motivo = "realizar esta acció
             Swal.close();
             return true;
         } else {
+            console.error("Fallo de PIN:", data ? data.debug_message : "Respuesta inválida");
             if (sndError) sndError.play().catch(() => {});
-            await Swal.fire({
-                icon: 'error',
-                title: 'PIN Inválido',
-                text: 'El PIN ingresado no pertenece a un Supervisor o Administrador de este comercio.',
-                confirmButtonColor: '#ef4444'
-            });
+            await Swal.fire('Auditoría de PIN', 'Error interno: ' + (data && data.debug_message ? data.debug_message : 'PIN no autorizado'), 'error');
             return false;
         }
     } catch (error) {
