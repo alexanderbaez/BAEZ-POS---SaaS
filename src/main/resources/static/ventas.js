@@ -1781,7 +1781,7 @@ function generarPlantillaHTMLTicket(venta) {
     // Si nroComprobante/invoiceNumber viene del backend, lo respeta.
     const nroComprobante = venta.invoiceNumber || venta.nroComprobante || `00001-${String(venta.numeroTicket || venta.id || 1).padStart(8, '0')}`;
     const fechaVenta = venta.saleDate ? new Date(venta.saleDate).toLocaleString('es-AR') : new Date().toLocaleString('es-AR');
-    const cajeroNombre = escapeHtml(venta.userName || (typeof localStorage !== 'undefined' ? localStorage.getItem('baezpos_user_name') : '') || 'Admin').toUpperCase();
+    const cajeroNombre = escapeHtml(venta.sellerName || venta.userName || venta.cashierName || (typeof localStorage !== 'undefined' ? localStorage.getItem('baezpos_user_name') : '') || 'Admin').toUpperCase();
     const metodoPago = (venta.paymentMethod || 'EFECTIVO').replace(/_/g, ' ').toUpperCase();
 
     const nombreCliente = (venta.clienteNombre || (typeof clienteSeleccionado !== 'undefined' && clienteSeleccionado ? clienteSeleccionado.name : 'CONSUMIDOR FINAL')).toUpperCase();
@@ -2027,7 +2027,7 @@ function generarFacturaA4HTML(venta) {
 
     const nroComprobante = venta.invoiceNumber || venta.nroComprobante || `00001-${String(venta.numeroTicket || venta.id || 1).padStart(8, '0')}`;
     const fechaVenta = venta.saleDate ? new Date(venta.saleDate).toLocaleString('es-AR') : new Date().toLocaleString('es-AR');
-    const cajeroNombre = escapeHtml(venta.userName || (typeof localStorage !== 'undefined' ? localStorage.getItem('baezpos_user_name') : '') || 'Admin').toUpperCase();
+    const cajeroNombre = escapeHtml(venta.sellerName || venta.userName || venta.cashierName || (typeof localStorage !== 'undefined' ? localStorage.getItem('baezpos_user_name') : '') || 'Admin').toUpperCase();
     const metodoPago = (venta.paymentMethod || 'EFECTIVO').replace(/_/g, ' ').toUpperCase();
 
     const nombreCliente = escapeHtml((venta.clienteNombre || (typeof clienteSeleccionado !== 'undefined' && clienteSeleccionado ? clienteSeleccionado.name : 'CONSUMIDOR FINAL')).toUpperCase());

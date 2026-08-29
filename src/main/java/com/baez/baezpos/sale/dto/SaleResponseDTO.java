@@ -1,5 +1,7 @@
 package com.baez.baezpos.sale.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -26,4 +28,14 @@ public record SaleResponseDTO(
         String invoiceType,
         String invoiceNumber,
         LocalDate caeExpiration
-) {}
+) {
+    @JsonProperty("sellerName")
+    public String sellerName() {
+        return userName != null ? userName : "Desconocido";
+    }
+
+    @JsonProperty("cashierName")
+    public String cashierName() {
+        return userName != null ? userName : "Desconocido";
+    }
+}

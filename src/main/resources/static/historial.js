@@ -148,7 +148,7 @@ function renderizarTabla(ventas) {
 
         const descuentoVal = parseFloat(v.discount) || 0;
         const totalVal = parseFloat(v.total) || 0;
-        const vendedorNombre = escapeHtml(v.userName || 'Admin');
+        const vendedorNombre = escapeHtml(v.sellerName || v.userName || v.cashierName || 'Admin');
 
         tr.innerHTML = `
             <td class="ps-3 align-middle"><span class="fw-bold text-dark">${escapeHtml(numTicketVisual)}</span></td>
@@ -298,7 +298,7 @@ function verDetalle(idVenta) {
     };
 
     setSafeText('txtIdVenta', obtenerNumTicketVisual(venta));
-    setSafeText('txtCajeroModal', (venta.userName || 'Admin').toUpperCase());
+    setSafeText('txtCajeroModal', (venta.sellerName || venta.userName || venta.cashierName || 'Admin').toUpperCase());
 
     const container = document.getElementById('contenedorItems');
     if (container) {
@@ -687,7 +687,7 @@ function reimprimirTicket() {
     // Número de Comprobante / Ticket
     const nroComprobante = venta.invoiceNumber || venta.nroComprobante || `00001-${String(venta.numeroTicket || venta.id || 1).padStart(8, '0')}`;
     const fechaVenta = venta.saleDate ? new Date(venta.saleDate).toLocaleString('es-AR') : new Date().toLocaleString('es-AR');
-    const cajeroNombre = escapeHtml(venta.userName || 'Admin').toUpperCase();
+    const cajeroNombre = escapeHtml(venta.sellerName || venta.userName || venta.cashierName || 'Admin').toUpperCase();
     const metodoPago = (venta.paymentMethod || 'EFECTIVO').replace(/_/g, ' ').toUpperCase();
 
     const nombreCliente = escapeHtml((venta.clienteNombre || 'CONSUMIDOR FINAL').toUpperCase());
@@ -932,7 +932,7 @@ function generarFacturaA4HTML(venta) {
 
     const nroComprobante = venta.invoiceNumber || venta.nroComprobante || `00001-${String(venta.numeroTicket || venta.id || 1).padStart(8, '0')}`;
     const fechaVenta = venta.saleDate ? new Date(venta.saleDate).toLocaleString('es-AR') : new Date().toLocaleString('es-AR');
-    const cajeroNombre = escapeHtml(venta.userName || 'Admin').toUpperCase();
+    const cajeroNombre = escapeHtml(venta.sellerName || venta.userName || venta.cashierName || 'Admin').toUpperCase();
     const metodoPago = (venta.paymentMethod || 'EFECTIVO').replace(/_/g, ' ').toUpperCase();
 
     const nombreCliente = escapeHtml((venta.clienteNombre || 'CONSUMIDOR FINAL').toUpperCase());

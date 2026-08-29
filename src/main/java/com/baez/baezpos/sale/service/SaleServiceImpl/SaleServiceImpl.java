@@ -167,6 +167,7 @@ public class SaleServiceImpl implements SaleService {
             sale.setNroComprobante(nroComprobanteFormateado);
         }
 
+        sale.setUser(user);
         Sale savedSale = saleRepository.save(sale);
 
         // Actualización Atómica de Caja Registradora
