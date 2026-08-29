@@ -41,7 +41,7 @@ public class DataInitializer implements CommandLineRunner {
         if (superAdminOpt.isPresent()) {
             User existing = superAdminOpt.get();
             if (existing.getSecurityPin() == null) {
-                existing.setSecurityPin("1234");
+                existing.setSecurityPin(passwordEncoder.encode("1234"));
                 userRepository.save(existing);
             }
             log.info("SUPER_ADMIN verificado en el sistema: {}", superAdminEmail);
@@ -55,7 +55,7 @@ public class DataInitializer implements CommandLineRunner {
                 .role(Role.SUPER_ADMIN)
                 .active(true)
                 .company(null)
-                .securityPin("1234")
+                .securityPin(passwordEncoder.encode("1234"))
                 .version(0L)
                 .build();
 
@@ -77,6 +77,13 @@ public class DataInitializer implements CommandLineRunner {
                 log.debug("No se pudo ejecutar sanitización sobre tabla {}: {}", table, e.getMessage());
             }
         }
+
+        try {
+            jdbcTemplate.execute("ALTER TABLE users MODIFY COLUMN security_pin VARCHAR(255) NULL");
+        } catch (Exception e) {
+            log.debug("No se pudo alterar la longitud de columna security_pin: {}", e.getMessage());
+        }
+
         log.info("Sanitización preventiva de versiones JPA completada exitosamente.");
     }
 }

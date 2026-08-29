@@ -78,8 +78,8 @@ public class UserServiceImpl implements UserService {
                 existingUser.setPassword(passwordEncoder.encode(dto.getPassword()));
             }
 
-            if (dto.getSecurityPin() != null) {
-                existingUser.setSecurityPin(dto.getSecurityPin().trim().isEmpty() ? null : dto.getSecurityPin().trim());
+            if (dto.getSecurityPin() != null && !dto.getSecurityPin().trim().isEmpty()) {
+                existingUser.setSecurityPin(passwordEncoder.encode(dto.getSecurityPin().trim()));
             }
 
             existingUser.setActive(true);
@@ -108,7 +108,7 @@ public class UserServiceImpl implements UserService {
         user.setActive(true);
 
         if (dto.getSecurityPin() != null && !dto.getSecurityPin().trim().isEmpty()) {
-            user.setSecurityPin(dto.getSecurityPin().trim());
+            user.setSecurityPin(passwordEncoder.encode(dto.getSecurityPin().trim()));
         }
 
         if (companyId != null) {
@@ -186,8 +186,8 @@ public class UserServiceImpl implements UserService {
             existing.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
 
-        if (dto.getSecurityPin() != null) {
-            existing.setSecurityPin(dto.getSecurityPin().trim().isEmpty() ? null : dto.getSecurityPin().trim());
+        if (dto.getSecurityPin() != null && !dto.getSecurityPin().trim().isEmpty()) {
+            existing.setSecurityPin(passwordEncoder.encode(dto.getSecurityPin().trim()));
         }
 
         return convertToDTO(userRepository.save(existing));

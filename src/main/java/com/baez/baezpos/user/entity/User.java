@@ -39,7 +39,7 @@ public class User extends BaseEntity {
     @Column(name = "password_reset_at")
     private LocalDateTime passwordResetAt;
 
-    @Column(name = "security_pin", length = 10, nullable = true)
+    @Column(name = "security_pin", length = 255, nullable = true)
     private String securityPin;
 
     // RELACIÓN MULTI-TENANT (SaaS)

@@ -142,8 +142,6 @@ if (formEmpleado) {
         const pin = document.getElementById('empPin') ? document.getElementById('empPin').value.trim() : '';
         if (pin) {
             payload.securityPin = pin;
-        } else if (isEditing) {
-            payload.securityPin = "";
         }
 
         try {
@@ -218,7 +216,7 @@ function abrirEdicion(user) {
     document.getElementById('empRol').value = user.role || 'VENDEDOR';
     document.getElementById('empPassword').value = '';
     if (document.getElementById('empPin')) {
-        document.getElementById('empPin').value = user.securityPin || '';
+        document.getElementById('empPin').value = '';
     }
 
     const smallHint = document.querySelector('#passwordContainer small');
