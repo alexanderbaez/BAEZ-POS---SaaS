@@ -1,22 +1,22 @@
 package com.baez.baezpos.product.repository;
 
 import com.baez.baezpos.product.entity.Product;
-import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT p FROM Product p WHERE p.id = :id")
-    Optional<Product> findByIdForUpdate(@Param("id") Long id);
+    @Modifying
+    @Query("UPDATE Product p SET p.stock = p.stock - :quantity WHERE p.id = :id AND (p.stock >= :quantity OR p.stock < 0)")
+    int decrementStock(@Param("id") Long id, @Param("quantity") BigDecimal quantity);
 
     Optional<Product> findByIdAndCompanyId(Long id, Long companyId);
 

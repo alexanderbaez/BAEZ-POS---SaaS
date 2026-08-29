@@ -117,22 +117,20 @@ public class SaleServiceImpl implements SaleService {
         BigDecimal subtotalAcumulado = BigDecimal.ZERO;
 
         for (SaleItemRequestDTO itemDTO : saleDTO.items()) {
-            Product product = productRepository.findByIdForUpdate(itemDTO.productId())
+            Product product = productRepository.findById(itemDTO.productId())
                     .orElseThrow(() -> new ResourceNotFoundException("Producto ID " + itemDTO.productId() + " no encontrado."));
 
             if (product.getCompany() == null || !product.getCompany().getId().equals(companyId)) {
                 throw new ResourceNotFoundException("Producto ID " + itemDTO.productId() + " no encontrado en su empresa.");
             }
 
-            BigDecimal stockActual = product.getStock() != null ? product.getStock() : BigDecimal.ZERO;
             BigDecimal cantidadVendida = itemDTO.quantity() != null ? itemDTO.quantity() : BigDecimal.ONE;
 
-            if (stockActual.compareTo(cantidadVendida) < 0) {
+            int updated = productRepository.decrementStock(itemDTO.productId(), cantidadVendida);
+            if (updated == 0) {
+                BigDecimal stockActual = product.getStock() != null ? product.getStock() : BigDecimal.ZERO;
                 throw new BadRequestException("Stock insuficiente para: " + product.getName() + " (Disponible: " + stockActual + ")");
             }
-
-            product.setStock(stockActual.subtract(cantidadVendida));
-            productRepository.save(product);
 
             BigDecimal precioVenta = (itemDTO.price() != null) ? itemDTO.price() : product.getPrice();
             BigDecimal subtotalItem = precioVenta.multiply(cantidadVendida);

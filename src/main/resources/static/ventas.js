@@ -500,12 +500,17 @@ async function solicitarPinSupervisorSiEsVendedor(motivo = "realizar esta acció
             didOpen: () => Swal.showLoading()
         });
 
-        const respuesta = await apiFetch('/users/validate-pin', {
+        const res = await apiFetch('/users/validate-pin', {
             method: 'POST',
-            body: JSON.stringify({ pin: pin })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pin: String(pin).trim() })
         });
 
-        const esValido = (respuesta === true || respuesta?.valid === true);
+        let esValido = false;
+        if (res && res.ok) {
+            const data = await res.json();
+            esValido = (data === true || data === 'true' || data?.valid === true);
+        }
 
         if (esValido) {
             Swal.close();

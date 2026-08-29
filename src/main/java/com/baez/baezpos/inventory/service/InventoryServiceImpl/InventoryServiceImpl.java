@@ -41,12 +41,8 @@ public class InventoryServiceImpl implements InventoryService {
             throw new UnauthorizedException("No hay un contexto de empresa activo para registrar el movimiento.");
         }
 
-        Product product = productRepository.findByIdForUpdate(productId)
-                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado. ID: " + productId));
-
-        if (product.getCompany() == null || !product.getCompany().getId().equals(companyId)) {
-            throw new ResourceNotFoundException("Producto no encontrado en su empresa. ID: " + productId);
-        }
+        Product product = productRepository.findByIdAndCompanyId(productId, companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado en su empresa. ID: " + productId));
 
         Company company = companyRepository.getReferenceById(companyId);
 
