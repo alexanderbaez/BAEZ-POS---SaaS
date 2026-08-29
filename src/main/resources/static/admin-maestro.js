@@ -163,7 +163,10 @@ function renderizarTabla(empresas) {
                     </div>
                 </div>
             </td>
-            <td><span class="text-white-50 small">${escapeHTML(empresa.email)}</span></td>
+            <td>
+                <div class="fw-bold text-white small">${escapeHTML(empresa.adminName || empresa.ownerName || 'Sin Nombre')}</div>
+                <div class="text-white-50" style="font-size: 0.75rem;">${escapeHTML(empresa.email || '-')}</div>
+            </td>
             <td><span class="text-white small fw-bold">${abonoFormateado}</span></td>
             <td><div class="fw-bold small text-white">${escapeHTML(empresa.expirationDate) || 'Sin Fecha'}</div></td>
             <td>${badge}</td>
@@ -635,6 +638,8 @@ function filtrarEmpresas(termino) {
     }
     const filtradas = todasLasEmpresas.filter(empresa =>
         (empresa.name && empresa.name.toLowerCase().includes(t)) ||
+        (empresa.adminName && empresa.adminName.toLowerCase().includes(t)) ||
+        (empresa.ownerName && empresa.ownerName.toLowerCase().includes(t)) ||
         (empresa.email && empresa.email.toLowerCase().includes(t)) ||
         (empresa.taxId && empresa.taxId.toLowerCase().includes(t))
     );
