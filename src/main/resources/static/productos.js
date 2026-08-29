@@ -646,7 +646,7 @@ function imprimirHTMLConIframe(htmlContent) {
 
 /**
  * Renderiza un código de barras CODE128 en un canvas en memoria y devuelve su DataURL (image/png).
- * Cumple con el estándar industrial retail para admitir cadenas alfanuméricas sin fallos.
+ * Soporta rotación de 90° para impresión térmica vertical POS80 sin deformación de barras.
  */
 function generarBarcodeDataURL(codigo, options = {}) {
     if (!codigo) return null;
@@ -658,16 +658,28 @@ function generarBarcodeDataURL(codigo, options = {}) {
         }
         JsBarcode(canvas, String(codigo).trim(), {
             format: "CODE128",
-            width: options.width || 1.8,
-            height: options.height || 42,
+            width: options.width || 2,
+            height: options.height || 48,
             displayValue: options.displayValue !== undefined ? options.displayValue : true,
-            fontSize: options.fontSize || 11,
+            fontSize: options.fontSize || 12,
             fontOptions: "bold",
             textMargin: 2,
             margin: options.margin !== undefined ? options.margin : 2,
             background: "#ffffff",
             lineColor: "#000000"
         });
+
+        if (options.rotar90) {
+            const rotCanvas = document.createElement('canvas');
+            rotCanvas.width = canvas.height;
+            rotCanvas.height = canvas.width;
+            const ctx = rotCanvas.getContext('2d');
+            ctx.translate(rotCanvas.width / 2, rotCanvas.height / 2);
+            ctx.rotate(90 * Math.PI / 180);
+            ctx.drawImage(canvas, -canvas.width / 2, -canvas.height / 2);
+            return rotCanvas.toDataURL("image/png");
+        }
+
         return canvas.toDataURL("image/png");
     } catch (e) {
         console.error("Error generando código de barras CODE128:", e);
@@ -695,12 +707,14 @@ async function imprimirEtiqueta(id) {
         }
     }
 
+    // Código de barras rotado 90° para renderizado vertical a lo largo del ticket térmico POS80
     const barcodeImgData = generarBarcodeDataURL(barcodeParaImprimir, {
-        width: 1.8,
-        height: 40,
+        width: 2.2,
+        height: 60,
         displayValue: true,
-        fontSize: 10,
-        margin: 1
+        fontSize: 12,
+        margin: 2,
+        rotar90: true
     });
 
     if (!barcodeImgData) {
@@ -711,15 +725,18 @@ async function imprimirEtiqueta(id) {
     }
 
     const nameSeguro = (p.name || '').replace(/"/g, '&quot;');
+    const precioSeguro = p.price !== undefined && p.price !== null
+        ? '$ ' + parsearMonto(p.price).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : '';
 
     const htmlEtiqueta = `
         <!DOCTYPE html>
         <html>
             <head>
-                <title>Etiqueta - ${nameSeguro}</title>
+                <title>Etiqueta POS80 - ${nameSeguro}</title>
                 <style>
                     @page {
-                        size: 50mm 25mm;
+                        size: 80mm 100mm;
                         margin: 0;
                     }
                     * {
@@ -729,47 +746,59 @@ async function imprimirEtiqueta(id) {
                         margin: 0;
                         padding: 0;
                         background-color: #fff;
+                        font-family: Arial, Helvetica, sans-serif;
                         display: flex;
                         justify-content: center;
                         align-items: center;
                     }
-                    .etiqueta {
-                        width: 50mm;
-                        height: 25mm;
-                        border: 1px dashed #999;
-                        border-radius: 3px;
+                    .etiqueta-pos80 {
+                        width: 72mm;
+                        min-height: 85mm;
+                        max-height: 98mm;
+                        border: 1px dashed #888;
+                        border-radius: 4px;
                         display: flex;
                         flex-direction: column;
-                        justify-content: center;
+                        justify-content: flex-start;
                         align-items: center;
-                        padding: 1.5mm;
+                        padding: 4mm 3mm;
                         box-sizing: border-box;
                         overflow: hidden;
                         text-align: center;
                         background: #fff;
+                        margin: 2mm auto;
+                    }
+                    .header-info {
+                        width: 100%;
+                        text-align: center;
+                        margin-bottom: 2mm;
                     }
                     .nombre {
-                        font-family: Arial, Helvetica, sans-serif;
-                        font-size: 9px;
+                        font-size: 11pt;
                         font-weight: bold;
                         text-align: center;
-                        margin-bottom: 1.5px;
-                        white-space: nowrap;
-                        overflow: hidden;
-                        text-overflow: ellipsis;
-                        max-width: 47mm;
+                        white-space: normal;
+                        word-wrap: break-word;
+                        line-height: 1.2;
                         color: #000;
-                        line-height: 1.1;
+                        margin-bottom: 1.5mm;
                     }
-                    .barcode-container {
+                    .precio {
+                        font-size: 13pt;
+                        font-weight: bold;
+                        color: #000;
+                    }
+                    .barcode-vertical-container {
                         width: 100%;
+                        flex: 1;
                         display: flex;
                         justify-content: center;
                         align-items: center;
+                        margin-top: 2mm;
                     }
-                    .barcode-img {
-                        max-width: 47mm;
-                        max-height: 16mm;
+                    .barcode-vertical-img {
+                        max-width: 52mm;
+                        max-height: 65mm;
                         height: auto;
                         object-fit: contain;
                         display: block;
@@ -777,15 +806,18 @@ async function imprimirEtiqueta(id) {
                     }
                     @media print {
                         body { margin: 0; }
-                        .etiqueta { border: 1px dashed #aaa; }
+                        .etiqueta-pos80 { border: 1px dashed #666; }
                     }
                 </style>
             </head>
             <body>
-                <div class="etiqueta">
-                    <div class="nombre">${nameSeguro.toUpperCase()}</div>
-                    <div class="barcode-container">
-                        <img class="barcode-img" src="${barcodeImgData}" alt="${barcodeParaImprimir}" />
+                <div class="etiqueta-pos80 layout-ticket">
+                    <div class="header-info">
+                        <div class="nombre">${nameSeguro.toUpperCase()}</div>
+                        ${precioSeguro ? `<div class="precio">${precioSeguro}</div>` : ''}
+                    </div>
+                    <div class="barcode-vertical-container">
+                        <img class="barcode-vertical-img" src="${barcodeImgData}" alt="${barcodeParaImprimir}" />
                     </div>
                 </div>
             </body>
@@ -826,28 +858,30 @@ async function imprimirEtiquetasMultiples(id) {
 
     const { value: cantidad } = await Swal.fire({
         title: 'Impresión Masiva de Etiquetas',
-        text: `¿Cuántas etiquetas de "${p.name}" querés generar?`,
+        text: `¿Cuántas etiquetas de "${p.name}" querés generar? (Página A4 completa = 24 etiquetas)`,
         input: 'number',
-        inputValue: 21,
+        inputValue: 24,
         inputAttributes: {
             min: 1,
-            max: 200,
+            max: 240,
             step: 1
         },
         showCancelButton: true,
-        confirmButtonText: '<i class="bi bi-printer"></i> Generar Hoja',
+        confirmButtonText: '<i class="bi bi-printer"></i> Generar Hoja A4',
         cancelButtonText: 'Cancelar',
         customClass: { popup: 'rounded-4' }
     });
 
     if (!cantidad || cantidad <= 0) return;
 
+    // Código de barras horizontal estándar optimizado para celdas A4 de 62x33.5mm
     const barcodeImgData = generarBarcodeDataURL(barcodeParaImprimir, {
-        width: 1.8,
-        height: 38,
+        width: 2.0,
+        height: 48,
         displayValue: true,
-        fontSize: 10,
-        margin: 1
+        fontSize: 11,
+        margin: 1,
+        rotar90: false
     });
 
     if (!barcodeImgData) {
@@ -875,11 +909,11 @@ async function imprimirEtiquetasMultiples(id) {
         <!DOCTYPE html>
         <html>
             <head>
-                <title>Hoja Etiquetas - ${nameSeguro}</title>
+                <title>Hoja Etiquetas A4 - ${nameSeguro}</title>
                 <style>
                     @page {
-                        size: A4;
-                        margin: 8mm;
+                        size: 210mm 297mm;
+                        margin: 10mm;
                     }
                     * {
                         box-sizing: border-box;
@@ -892,34 +926,39 @@ async function imprimirEtiquetasMultiples(id) {
                     }
                     .grid-container {
                         display: grid;
-                        grid-template-columns: repeat(3, 1fr);
-                        gap: 4mm;
-                        width: 100%;
+                        grid-template-columns: repeat(3, 62mm);
+                        grid-auto-rows: 33.5mm;
+                        gap: 1.5mm 2mm;
+                        width: 190mm;
+                        margin: 0 auto;
+                        justify-content: center;
                     }
                     .etiqueta {
-                        width: 100%;
-                        height: 28mm;
-                        border: 1px dashed #bbb;
+                        width: 62mm;
+                        height: 33.5mm;
+                        border: 1px dashed #999;
                         border-radius: 4px;
                         display: flex;
                         flex-direction: column;
                         align-items: center;
                         justify-content: center;
-                        gap: 2px;
-                        padding: 3mm 2mm;
+                        padding: 2mm 1.5mm;
                         text-align: center;
                         page-break-inside: avoid;
                         overflow: hidden;
                         background: #fff;
+                        box-sizing: border-box;
                     }
                     .nombre {
-                        font-size: 10px;
+                        font-size: 10pt;
                         font-weight: bold;
                         white-space: nowrap;
                         overflow: hidden;
                         text-overflow: ellipsis;
-                        max-width: 100%;
+                        max-width: 58mm;
                         color: #000;
+                        line-height: 1.2;
+                        margin-bottom: 1.5mm;
                     }
                     .barcode-container {
                         width: 100%;
@@ -928,8 +967,9 @@ async function imprimirEtiquetasMultiples(id) {
                         align-items: center;
                     }
                     .barcode-img {
-                        max-width: 95%;
-                        max-height: 18mm;
+                        width: 88%;
+                        max-width: 56mm;
+                        max-height: 20mm;
                         height: auto;
                         object-fit: contain;
                         display: block;
@@ -938,12 +978,12 @@ async function imprimirEtiquetasMultiples(id) {
 
                     @media print {
                         body { margin: 0; }
-                        .etiqueta { border: 1px dashed #aaa; }
+                        .etiqueta { border: 1px dashed #777; }
                     }
                 </style>
             </head>
             <body>
-                <div class="grid-container">
+                <div class="grid-container layout-a4">
                     ${etiquetasHTML}
                 </div>
             </body>
