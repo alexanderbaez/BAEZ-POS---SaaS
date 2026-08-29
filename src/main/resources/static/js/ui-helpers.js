@@ -111,18 +111,39 @@ window.formatMoneyARS = formatMoneyARS;
 window.showSaasToast = showSaasToast;
 
 /**
- * Formateador de cantidad para tickets térmicos POS.
- * Limpia decimales irrelevantes (ej. 1.000 -> 1, 1.500 -> 1.5).
+ * Formateador inteligente de cantidades para tickets y facturas (Kg, gr, un).
  */
-window.fmtCantidadTicket = function(cantidad) {
-    let valor = cantidad;
+window.fmtCantidadTicket = function(cantidad, isFractional) {
+    let num = cantidad;
+    let esFraccionario = isFractional;
+
     if (typeof cantidad === 'object' && cantidad !== null) {
-        valor = cantidad.quantity !== undefined ? cantidad.quantity : (cantidad.cantidad !== undefined ? cantidad.cantidad : (cantidad.weight || cantidad.peso || 1));
+        num = cantidad.quantity !== undefined ? cantidad.quantity : (cantidad.cantidad !== undefined ? cantidad.cantidad : (cantidad.weight || cantidad.peso || 1));
+        if (esFraccionario === undefined) {
+            esFraccionario = Boolean(
+                cantidad.isFractional ||
+                cantidad.fraccionable ||
+                cantidad.unitType === 'KG' ||
+                cantidad.unit === 'KG' ||
+                (cantidad.product && (cantidad.product.isFractional || cantidad.product.fraccionable)) ||
+                (cantidad.producto && (cantidad.producto.isFractional || cantidad.producto.fraccionable))
+            );
+        }
     }
-    if (!valor && valor !== 0) return "1";
-    const num = parseFloat(valor);
+
+    num = parseFloat(num);
     if (isNaN(num)) return "1";
-    return Number.isInteger(num) ? parseInt(num).toString() : num.toFixed(3).replace(/\.?0+$/, '');
+
+    if (esFraccionario) {
+        if (num > 0 && num < 1) {
+            return (num * 1000) + " gr";
+        } else {
+            let formatted = Number.isInteger(num) ? num.toString() : num.toFixed(3).replace(/\.?0+$/, '');
+            return formatted + " Kg";
+        }
+    } else {
+        return parseInt(num).toString() + " un";
+    }
 };
 
 /**

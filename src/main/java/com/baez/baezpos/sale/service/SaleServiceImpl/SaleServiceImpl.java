@@ -591,8 +591,8 @@ public class SaleServiceImpl implements SaleService {
     private SaleResponseDTO mapToResponseDTO(Sale sale) {
         List<SaleItemResponseDTO> itemDTOs = sale.getItems().stream()
                 .map(item -> {
-                    Product p = item.getProduct();
-                    String unit = (p != null && Boolean.TRUE.equals(p.getIsFractional())) ? "KG" : "UN";
+                    boolean isFrac = (p != null && Boolean.TRUE.equals(p.getIsFractional()));
+                    String unit = isFrac ? "KG" : "UN";
 
                     return new SaleItemResponseDTO(
                             p != null ? p.getId() : null,
@@ -600,7 +600,8 @@ public class SaleServiceImpl implements SaleService {
                             item.getQuantity(),
                             item.getPrice(),
                             item.getSubtotal(),
-                            unit
+                            unit,
+                            isFrac
                     );
                 }).toList();
 

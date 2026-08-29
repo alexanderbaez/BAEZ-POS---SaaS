@@ -1808,14 +1808,24 @@ function generarPlantillaHTMLTicket(venta) {
         const subtotalItem = item.subtotal !== undefined
             ? item.subtotal
             : ((item.price || item.unitPrice || item.precio || 0) * (item.quantity || item.cantidad || 1));
+        const cantidadVal = item.quantity !== undefined ? item.quantity : (item.cantidad !== undefined ? item.cantidad : 1);
+        const isFractionalVal = Boolean(
+            item.isFractional ||
+            item.fraccionable ||
+            item.unitType === 'KG' ||
+            item.unit === 'KG' ||
+            (item.producto && (item.producto.isFractional || item.producto.fraccionable)) ||
+            (item.product && (item.product.isFractional || item.product.fraccionable)) ||
+            (!Number.isInteger(parseFloat(cantidadVal)))
+        );
         const cantFormatted = (typeof window.fmtCantidadTicket === 'function')
-            ? window.fmtCantidadTicket(item)
-            : (item.quantity || item.cantidad || 1);
+            ? window.fmtCantidadTicket(cantidadVal, isFractionalVal)
+            : (cantidadVal + (isFractionalVal ? ' Kg' : ' un'));
         const prefijoCantidad = cantFormatted ? `${cantFormatted} ` : '';
 
         return `
             <div class="item-row">
-                <span class="item-qty-name">${prefijoCantidad}${(item.productName || item.nombre || '').toUpperCase()}</span>
+                <span class="item-qty-name">${prefijoCantidad}${escapeHtml(item.productName || item.nombre || item.name || '').toUpperCase()}</span>
                 <span class="item-price">$${window.fmtPrecioTicket ? window.fmtPrecioTicket(subtotalItem) : utilFormatearMoneda(parseFloat(subtotalItem))}</span>
             </div>
         `;
@@ -2043,14 +2053,24 @@ function generarFacturaA4HTML(venta) {
             ? item.subtotal
             : ((item.price || item.unitPrice || item.precio || 0) * (item.quantity || item.cantidad || 1));
         const unitPrice = (item.price || item.unitPrice || item.precio || 0);
+        const cantidadVal = item.quantity !== undefined ? item.quantity : (item.cantidad !== undefined ? item.cantidad : 1);
+        const isFractionalVal = Boolean(
+            item.isFractional ||
+            item.fraccionable ||
+            item.unitType === 'KG' ||
+            item.unit === 'KG' ||
+            (item.producto && (item.producto.isFractional || item.producto.fraccionable)) ||
+            (item.product && (item.product.isFractional || item.product.fraccionable)) ||
+            (!Number.isInteger(parseFloat(cantidadVal)))
+        );
         const cantFormatted = (typeof window.fmtCantidadTicket === 'function')
-            ? window.fmtCantidadTicket(item)
-            : (item.quantity || item.cantidad || 1);
+            ? window.fmtCantidadTicket(cantidadVal, isFractionalVal)
+            : (cantidadVal + (isFractionalVal ? ' Kg' : ' un'));
 
         return `
             <tr>
                 <td style="text-align: center; font-weight: 700; border: 1px solid #cbd5e1; padding: 6px 8px;">${cantFormatted}</td>
-                <td style="border: 1px solid #cbd5e1; padding: 6px 8px;"><strong>${escapeHtml(item.productName || item.nombre || '').toUpperCase()}</strong></td>
+                <td style="border: 1px solid #cbd5e1; padding: 6px 8px;"><strong>${escapeHtml(item.productName || item.nombre || item.name || '').toUpperCase()}</strong></td>
                 <td style="text-align: right; border: 1px solid #cbd5e1; padding: 6px 8px;">$${window.fmtPrecioTicket ? window.fmtPrecioTicket(unitPrice) : unitPrice.toFixed(2)}</td>
                 <td style="text-align: right; font-weight: 700; border: 1px solid #cbd5e1; padding: 6px 8px;">$${window.fmtPrecioTicket ? window.fmtPrecioTicket(subtotalItem) : subtotalItem.toFixed(2)}</td>
             </tr>

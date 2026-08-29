@@ -8,5 +8,6 @@ public record SaleItemResponseDTO(
         BigDecimal quantity,
         BigDecimal price,
         BigDecimal subtotal,
-        String unitType
+        String unitType,
+        Boolean isFractional
 ) {}
