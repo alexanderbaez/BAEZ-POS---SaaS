@@ -255,11 +255,14 @@ public class SaleServiceImpl implements SaleService {
         LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
         LocalDateTime endOfToday = LocalDate.now().atTime(LocalTime.MAX);
 
-        // 1. OBTENER CAJAS DE LA JORNADA COMERCIAL
+        LocalDateTime startRange = (from != null) ? from.atStartOfDay() : startOfToday;
+        LocalDateTime endRange = (to != null) ? to.atTime(LocalTime.MAX) : endOfToday;
+
+        // 1. OBTENER TURNOS/CAJAS DEL PERIODO SOLICITADO
         // CRIT-03: Pasamos cutoff de 48h para acotar cajas OPEN huerfanas anteriores.
         LocalDateTime cutoff48h = LocalDateTime.now().minusHours(48);
         List<CashRegisterSession> todaySessionsEntities = cashRegisterSessionRepository
-                .findCommercialDaySessions(companyId, startOfToday, endOfToday, cutoff48h);
+                .findCommercialDaySessions(companyId, startRange, endRange, cutoff48h);
 
         // CRIT-01: Pre-carga batch de ventas por sesion (sustituye el N+1 loop de mapToSessionResponseDTO).
         // En lugar de 1 SELECT * por cada sesion, un solo viaje a BD con GROUP BY devuelve
@@ -392,9 +395,6 @@ public class SaleServiceImpl implements SaleService {
         if (totalPendingCredit == null) totalPendingCredit = BigDecimal.ZERO;
 
         // 3. CAPA HISTÓRICA / RANGOS AUDITADOS (FLUJO DE CAJA PURO)
-        LocalDateTime startRange = (from != null) ? from.atStartOfDay() : LocalDate.now().atStartOfDay();
-        LocalDateTime endRange = (to != null) ? to.atTime(LocalTime.MAX) : LocalDate.now().atTime(LocalTime.MAX);
-
         List<Sale> rangeSales = saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, startRange, endRange);
         BigDecimal collectedReplacementCost = BigDecimal.ZERO;
         long periodOperations = 0;

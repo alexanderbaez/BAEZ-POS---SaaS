@@ -120,9 +120,6 @@ async function cargarKpisYTablas() {
             if (dataBoxMes.periodProfit !== undefined) {
                 gananciaNeta = parseFloat(dataBoxMes.periodProfit) || 0;
             }
-            if (dataBoxMes.todaySessions) {
-                renderizarCajasAbiertas(dataBoxMes.todaySessions);
-            }
         }
 
         // --- DEUDA PROVEEDORES ---
@@ -231,111 +228,141 @@ function renderizarTopProductos(ventas) {
     tbody.appendChild(fragment);
 }
 
-function renderizarCajasAbiertas(sessions) {
-    const container = document.getElementById('cajasAbiertasContainer');
-    const badgeCount = document.getElementById('badgeCajasAbiertasCount');
-    if (!container) return;
+function renderizarTurnosCajaPeriodo(sessions, rangoTexto) {
+    const tbody = document.getElementById('tablaTurnosCajaPeriodo');
+    const badgeCount = document.getElementById('badgeTurnosCajaCount');
+    const lblInfo = document.getElementById('lblTurnosPeriodoInfo');
+    if (!tbody) return;
 
     const lista = Array.isArray(sessions) ? sessions : [];
-    const abiertas = lista.filter(s => s.status === 'OPEN');
 
     if (badgeCount) {
-        badgeCount.innerText = `${abiertas.length} activa${abiertas.length === 1 ? '' : 's'}`;
-        if (abiertas.length > 0) {
-            badgeCount.className = 'badge bg-success rounded-pill px-2.5 py-1';
-        } else {
-            badgeCount.className = 'badge bg-secondary rounded-pill px-2.5 py-1';
-        }
+        badgeCount.innerText = `${lista.length} turno${lista.length === 1 ? '' : 's'}`;
+        badgeCount.className = lista.length > 0 ? 'badge bg-primary rounded-pill px-2.5 py-1' : 'badge bg-secondary rounded-pill px-2.5 py-1';
     }
 
-    if (abiertas.length === 0) {
-        container.innerHTML = `
-            <div class="col-12">
-                <div class="p-4 text-center bg-light rounded-3 text-muted border">
-                    <i class="bi bi-inbox fs-3 text-secondary d-block mb-2"></i>
-                    <span class="fw-semibold d-block">No hay cajas abiertas en este momento.</span>
-                    <small class="text-muted">Al iniciar un turno de venta desde el Punto de Venta (POS), su arqueo en vivo se monitoreará aquí.</small>
-                </div>
-            </div>`;
+    if (lblInfo && rangoTexto) {
+        lblInfo.innerText = rangoTexto;
+    }
+
+    if (lista.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center p-4 text-muted">
+                    <i class="bi bi-inbox fs-4 d-block mb-1 text-secondary"></i>
+                    No se registraron turnos de caja en el período seleccionado.
+                </td>
+            </tr>`;
         return;
     }
 
-    container.innerHTML = abiertas.map(s => {
+    // Ordenar turnos: los más recientes arriba
+    const turnosOrdenados = [...lista].sort((a, b) => {
+        const fa = a.openedAt ? new Date(a.openedAt) : 0;
+        const fb = b.openedAt ? new Date(b.openedAt) : 0;
+        return fb - fa;
+    });
+
+    tbody.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+
+    turnosOrdenados.forEach(s => {
         const numSesion = s.sessionNumber || s.id || 1;
         const usuario = escapeHTML(s.userName || 'Admin');
-        const fondoInicial = parseFloat(s.initialAmount ?? 0);
-        const ventasEfectivo = parseFloat(s.totalCashSales ?? 0);
-        const cobrosEfectivo = parseFloat(s.totalCustomerPayments ?? 0);
-        const gastosEfectivo = parseFloat(s.totalExpenses ?? 0);
+        const esAbierta = (s.status === 'OPEN');
 
-        // Total Físico Esperado del Turno: Fondo + Ventas Efectivo + Cobros Efectivo - Gastos Efectivo
-        const esperadoFisico = (s.systemAmount !== undefined && s.systemAmount !== null)
-            ? parseFloat(s.systemAmount)
-            : (fondoInicial + ventasEfectivo + cobrosEfectivo - gastosEfectivo);
+        const fechaApertura = s.openedAt ? new Date(s.openedAt) : null;
+        const fechaCierre = s.closedAt ? new Date(s.closedAt) : null;
 
-        const fechaApertura = s.openedAt ? new Date(s.openedAt) : new Date();
-        const horaApertura = !isNaN(fechaApertura.getTime())
+        const strFecha = fechaApertura
+            ? fechaApertura.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })
+            : '--/--';
+        const strHoraOpen = fechaApertura
             ? fechaApertura.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
             : '--:--';
+        const strHoraClose = fechaCierre
+            ? fechaCierre.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+            : (esAbierta ? 'En Curso' : '--:--');
 
-        return `
-            <div class="col-12 col-md-6 col-xl-4">
-                <div class="card h-100 border border-success-subtle shadow-sm rounded-4 bg-white overflow-hidden">
-                    <div class="card-header bg-success bg-opacity-10 border-0 p-3 d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-success text-white px-2.5 py-1 fw-bold fs-6">
-                                Caja #${numSesion}
-                            </span>
-                            <span class="fw-bold text-dark text-truncate" style="max-width: 150px;">
-                                <i class="bi bi-person-fill text-secondary me-1"></i>${usuario}
-                            </span>
-                        </div>
-                        <span class="badge bg-white text-success border border-success px-2 py-1 small fw-semibold">
-                            <i class="bi bi-clock-history me-1"></i>${horaApertura} hs
-                        </span>
-                    </div>
-                    <div class="card-body p-3">
-                        <div class="row g-2 mb-3">
-                            <div class="col-6">
-                                <div class="p-2 bg-light rounded-3">
-                                    <small class="text-muted d-block" style="font-size: 0.72rem; text-transform: uppercase;">Fondo Inicial</small>
-                                    <span class="fw-bold text-dark amount-num">${fmtARS.format(fondoInicial)}</span>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="p-2 bg-light rounded-3">
-                                    <small class="text-muted d-block" style="font-size: 0.72rem; text-transform: uppercase;">Ventas Efectivo</small>
-                                    <span class="fw-bold text-success amount-num">+${fmtARS.format(ventasEfectivo)}</span>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="p-2 bg-light rounded-3">
-                                    <small class="text-muted d-block" style="font-size: 0.72rem; text-transform: uppercase;">Cobros Cta. Cte.</small>
-                                    <span class="fw-bold text-success amount-num">+${fmtARS.format(cobrosEfectivo)}</span>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="p-2 bg-light rounded-3">
-                                    <small class="text-muted d-block" style="font-size: 0.72rem; text-transform: uppercase;">Salidas (Gastos)</small>
-                                    <span class="fw-bold text-danger amount-num">-${fmtARS.format(gastosEfectivo)}</span>
-                                </div>
-                            </div>
-                        </div>
+        const fondoInicial = parseFloat(s.initialAmount ?? 0);
+        const ventasEfe = parseFloat(s.totalCashSales ?? 0);
+        const cobrosEfe = parseFloat(s.totalCustomerPayments ?? 0);
+        const gastosEfe = parseFloat(s.totalExpenses ?? 0);
 
-                        <!-- TOTAL FÍSICO ESPERADO EN CAJÓN -->
-                        <div class="p-2.5 rounded-3 bg-dark text-white d-flex justify-content-between align-items-center">
-                            <div>
-                                <small class="text-white-50 d-block" style="font-size: 0.7rem; text-transform: uppercase;">Total Físico Esperado</small>
-                                <span class="fw-bold fs-5 text-white amount-num">${fmtARS.format(esperadoFisico)}</span>
-                            </div>
-                            <span class="badge bg-success text-white px-2 py-1 small">
-                                <i class="bi bi-unlock-fill me-1"></i>En Curso
-                            </span>
-                        </div>
+        // Estado y Valores de Cierre / Arqueo
+        const sistemaCalculado = (s.systemAmount !== undefined && s.systemAmount !== null)
+            ? parseFloat(s.systemAmount)
+            : (fondoInicial + ventasEfe + cobrosEfe - gastosEfe);
+
+        const declarado = parseFloat(s.declaredAmount ?? 0);
+        const diferencia = parseFloat(s.difference ?? (declarado - sistemaCalculado));
+
+        let estadoBadge = '';
+        let totalCierreHtml = '';
+
+        if (esAbierta) {
+            estadoBadge = '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-unlock-fill me-1"></i>Abierta</span>';
+            totalCierreHtml = `
+                <div class="fw-bold text-dark amount-num">${fmtARS.format(sistemaCalculado)}</div>
+                <small class="text-success" style="font-size: 0.72rem;"><i class="bi bi-lightning-charge me-1"></i>Esperado en cajón</small>
+            `;
+        } else {
+            estadoBadge = '<span class="badge bg-secondary-subtle text-secondary border border-secondary px-2 py-1"><i class="bi bi-lock-fill me-1"></i>Cerrada</span>';
+
+            let diffHtml = '';
+            if (Math.abs(diferencia) > 0.01) {
+                const diffColor = diferencia > 0 ? 'text-success' : 'text-danger';
+                const diffSign = diferencia > 0 ? '+' : '';
+                diffHtml = `<small class="${diffColor} d-block" style="font-size: 0.72rem;">Dif: ${diffSign}${fmtARS.format(diferencia)}</small>`;
+            } else {
+                diffHtml = `<small class="text-muted d-block" style="font-size: 0.72rem;">Cuadrada (Exacto)</small>`;
+            }
+
+            totalCierreHtml = `
+                <div class="fw-bold text-dark amount-num">${fmtARS.format(declarado)}</div>
+                ${diffHtml}
+            `;
+        }
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="ps-3">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-light text-dark border fw-bold" style="font-size: 0.75rem;">
+                        #${numSesion}
+                    </span>
+                    <div>
+                        <strong class="text-dark d-block text-truncate" style="max-width: 160px;">${usuario}</strong>
+                        <small class="text-muted" style="font-size: 0.72rem;">${strFecha}</small>
                     </div>
                 </div>
-            </div>`;
-    }).join('');
+            </td>
+            <td>
+                <span class="fw-semibold text-dark small">${strHoraOpen} a ${strHoraClose} hs</span>
+            </td>
+            <td class="text-center">
+                ${estadoBadge}
+            </td>
+            <td class="text-end fw-semibold text-dark amount-num">
+                ${fmtARS.format(fondoInicial)}
+            </td>
+            <td class="text-end fw-semibold text-success amount-num">
+                +${fmtARS.format(ventasEfe)}
+            </td>
+            <td class="text-end fw-semibold text-success amount-num">
+                +${fmtARS.format(cobrosEfe)}
+            </td>
+            <td class="text-end fw-semibold text-danger amount-num">
+                -${fmtARS.format(gastosEfe)}
+            </td>
+            <td class="text-end pe-3">
+                ${totalCierreHtml}
+            </td>
+        `;
+        fragment.appendChild(tr);
+    });
+
+    tbody.appendChild(fragment);
 }
 
 function renderizarUltimosMovimientos(ventas, gastos) {
@@ -630,8 +657,12 @@ async function consultarPorFechas() {
         if (resBox.status === 'fulfilled' && resBox.value && resBox.value.ok) {
             const dataBox = await resBox.value.json();
 
+            const f1 = desdeVal.split('-').reverse().join('/');
+            const f2 = hastaVal.split('-').reverse().join('/');
+            const textoPeriodo = (f1 === f2) ? `Jornada del ${f1}` : `Período del ${f1} al ${f2}`;
+
             if (dataBox.todaySessions) {
-                renderizarCajasAbiertas(dataBox.todaySessions);
+                renderizarTurnosCajaPeriodo(dataBox.todaySessions, textoPeriodo);
             }
 
             const periodSales = parseFloat(dataBox.periodSales) || 0;
