@@ -124,6 +124,18 @@ public class MasterAdminService implements MasterAdmin {
             resetOwnerPassword(id, dto.getOwnerPassword().trim());
         }
 
+        String newAdminName = dto.getAdminName() != null && !dto.getAdminName().isBlank()
+                ? dto.getAdminName().trim()
+                : (dto.getOwnerName() != null && !dto.getOwnerName().isBlank() ? dto.getOwnerName().trim() : null);
+
+        if (newAdminName != null) {
+            List<User> admins = userRepository.findByCompanyIdAndRole(id, Role.ADMIN);
+            for (User admin : admins) {
+                admin.setName(newAdminName);
+                userRepository.save(admin);
+            }
+        }
+
         if (company.getVersion() == null) {
             company.setVersion(0L);
         }
@@ -196,9 +208,19 @@ public class MasterAdminService implements MasterAdmin {
     }
 
     private CompanyDTO convertToDTOMaster(Company c) {
+        String adminName = null;
+        try {
+            List<User> admins = userRepository.findByCompanyIdAndRole(c.getId(), Role.ADMIN);
+            if (!admins.isEmpty()) {
+                adminName = admins.get(0).getName();
+            }
+        } catch (Exception ignored) {}
+
         return CompanyDTO.builder()
                 .id(c.getId())
                 .name(c.getName())
+                .adminName(adminName)
+                .ownerName(adminName)
                 .taxId(c.getTaxId())
                 .address(c.getAddress())
                 .phone(c.getPhone())

@@ -359,6 +359,7 @@ function prepararEdicion(id) {
 
     setVal('editId', empresa.id);
     setVal('editNombre', empresa.name);
+    setVal('editAdminName', empresa.adminName || empresa.ownerName || '');
     setVal('editTaxId', empresa.taxId);
     setVal('editEmail', empresa.email);
     setVal('editPhone', empresa.phone);
@@ -379,6 +380,7 @@ if (formEdit) {
         e.preventDefault();
         const id = document.getElementById('editId').value;
         const editEmail = document.getElementById('editEmail').value.trim();
+        const editAdminName = document.getElementById('editAdminName')?.value.trim();
 
         if (!esEmailValido(editEmail)) {
             if (typeof Swal !== 'undefined') Swal.fire('Email Inválido', 'Por favor, ingrese un correo válido.', 'warning');
@@ -388,6 +390,8 @@ if (formEdit) {
         const payload = {
             id: Number(id),
             name: document.getElementById('editNombre').value.trim(),
+            adminName: editAdminName || null,
+            ownerName: editAdminName || null,
             taxId: document.getElementById('editTaxId').value.trim(),
             email: editEmail,
             phone: document.getElementById('editPhone').value.trim(),

@@ -36,6 +36,8 @@ public class CompanyDTO {
     private Integer maxEmployees;
     private BigDecimal monthlyFee;
     private String ticketMessage;
+    private String adminName;
+    private String ownerName;
     private String ownerPassword; // Se utiliza únicamente si el SuperAdmin la envía para resetear
 
     // CAMPOS FISCALES (ARCA / AFIP)
