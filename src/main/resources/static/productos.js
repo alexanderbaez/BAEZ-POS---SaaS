@@ -751,10 +751,11 @@ async function imprimirEtiquetaPos80(productoId) {
         const nombreProd = (p.name || 'PRODUCTO').toUpperCase();
         pdf.text(nombreProd, 40, 10, { align: 'center', maxWidth: 70 });
 
-        if (p.price !== undefined && p.price !== null) {
+        const precioNum = parseFloat(p.price || p.precio) || 0;
+        if (p.price !== undefined && p.price !== null || p.precio !== undefined) {
             pdf.setFontSize(13);
-            const precioFmt = '$ ' + parsearMonto(p.price).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            pdf.text(precioFmt, 40, 17, { align: 'center' });
+            const precioFormateado = "$" + precioNum.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            pdf.text(precioFormateado, 40, 17, { align: 'center' });
         }
 
         // Inyectar código de barras vertical centrado a lo largo de la etiqueta térmica
@@ -772,8 +773,9 @@ async function imprimirEtiquetaPos80(productoId) {
     } else {
         console.warn("jsPDF no disponible, usando iframe print de respaldo...");
         const nameSeguro = (p.name || '').replace(/"/g, '&quot;');
-        const precioSeguro = p.price !== undefined && p.price !== null
-            ? '$ ' + parsearMonto(p.price).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        const precioNumFallback = parseFloat(p.price || p.precio) || 0;
+        const precioSeguro = (p.price !== undefined && p.price !== null || p.precio !== undefined)
+            ? "$" + precioNumFallback.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
             : '';
 
         const htmlEtiqueta = `
