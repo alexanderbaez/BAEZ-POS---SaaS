@@ -313,12 +313,14 @@ if (formNueva) {
         if (btnSubmit) btnSubmit.disabled = true;
 
         const companyName = getVal('masterNombre');
+        const adminName = getVal('masterAdminName') || getVal('masterNombreOwner') || companyName;
         const nuevaEmpresaRequest = {
             companyName: companyName,
             taxId: getVal('masterTaxId'),
             phone: getVal('masterTelefono'),
             address: getVal('masterDireccion'),
-            ownerName: getVal('masterNombreOwner') || companyName,
+            adminName: adminName,
+            ownerName: adminName,
             ownerEmail: ownerEmail,
             ownerPassword: getVal('masterPass'),
             expirationDate: document.getElementById('masterVenc')?.value || null,

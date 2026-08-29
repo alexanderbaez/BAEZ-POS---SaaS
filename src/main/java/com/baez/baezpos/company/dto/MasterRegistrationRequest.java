@@ -26,6 +26,7 @@ public class MasterRegistrationRequest {
     private LocalDate expirationDate;
 
     // --- DATOS DEL DUEÑO (ADMIN) ---
+    private String adminName;
     private String ownerName;
 
     @NotBlank(message = "El correo del dueño es obligatorio")
@@ -35,4 +36,14 @@ public class MasterRegistrationRequest {
     @NotBlank(message = "La contraseña inicial es obligatoria")
     @Size(min = 6, message = "La contraseña debe tener al menos 6 caracteres")
     private String ownerPassword;
+
+    public String getEffectiveAdminName() {
+        if (adminName != null && !adminName.isBlank()) {
+            return adminName.trim();
+        }
+        if (ownerName != null && !ownerName.isBlank()) {
+            return ownerName.trim();
+        }
+        return companyName != null ? companyName.trim() : "Administrador";
+    }
 }

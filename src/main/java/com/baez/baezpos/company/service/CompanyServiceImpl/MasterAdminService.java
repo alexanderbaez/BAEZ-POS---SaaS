@@ -61,9 +61,9 @@ public class MasterAdminService implements MasterAdmin {
 
         Company savedCompany = companyRepository.save(company);
 
-        // 2. Crear usuario Admin usando setters explícitos para evitar conflictos con Lombok @Builder
+        // 2. Crear usuario Admin desacoplando el nombre humano del nombre del negocio
         User owner = new User();
-        owner.setName(req.getOwnerName() != null && !req.getOwnerName().isBlank() ? req.getOwnerName().trim() : req.getCompanyName().trim());
+        owner.setName(req.getEffectiveAdminName());
         owner.setEmail(cleanEmail);
         owner.setVersion(0L);
         owner.setPassword(passwordEncoder.encode(req.getOwnerPassword()));
