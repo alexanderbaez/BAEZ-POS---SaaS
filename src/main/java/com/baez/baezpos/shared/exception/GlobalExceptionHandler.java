@@ -2,6 +2,9 @@ package com.baez.baezpos.shared.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.persistence.PessimisticLockException;
+import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -20,6 +23,23 @@ import java.util.Map;
 @ControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler({
+            CannotAcquireLockException.class,
+            PessimisticLockException.class,
+            PessimisticLockingFailureException.class,
+            org.hibernate.PessimisticLockException.class
+    })
+    public ResponseEntity<ApiErrorResponse> handleConcurrencyLockException(Exception ex, HttpServletRequest request) {
+        log.warn("Bloqueo de concurrencia detectado [{}]: {}", request.getRequestURI(), ex.getMessage());
+        return buildResponse(
+                HttpStatus.CONFLICT,
+                "Conflict",
+                "Transacción en curso por otro usuario. Por favor, reintente en un segundo.",
+                request.getRequestURI(),
+                null
+        );
+    }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleResourceNotFoundException(ResourceNotFoundException ex, HttpServletRequest request) {

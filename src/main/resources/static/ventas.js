@@ -1354,6 +1354,9 @@ async function finalizarVenta() {
         amountPaid: METODO_PAGO === 'EFECTIVO' ? (pagaCon > 0 ? pagaCon : totalFinal) : totalFinal
     };
 
+    const btnFinalizar = document.getElementById('btnFinalizarVenta') || document.querySelector('.mobile-bottom-bar button');
+    if (btnFinalizar) btnFinalizar.disabled = true;
+
     // ==========================================
     // 10.1 ARQUITECTURA OFFLINE-FIRST: INTERCEPTACIÓN
     // ==========================================
@@ -1460,8 +1463,15 @@ async function finalizarVenta() {
         const data = (contentType && contentType.includes("application/json")) ? await res.json() : {};
 
         if (!res.ok) {
-            // Manejo específico si el backend rechaza por caja cerrada
-            if (res.status === 400 || res.status === 409) {
+            if (res.status === 409) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Transacción Concurrente',
+                    text: data.message || 'Transacción en curso por otro usuario. Por favor, reintente en un segundo.'
+                });
+                return;
+            }
+            if (res.status === 400 && data.message && data.message.toLowerCase().includes('caja')) {
                 SESION_CAJA_ACTIVA = null;
                 actualizarUICaja(false);
             }
