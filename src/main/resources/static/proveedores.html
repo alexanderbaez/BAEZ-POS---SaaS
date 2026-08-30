@@ -207,9 +207,22 @@
               <input type="text" id="abonoInvoiceNumber" class="form-control bg-light border-0 p-2" placeholder="Ej: REC-0001-000123">
             </div>
 
-            <div class="mb-2">
+            <div class="mb-3">
               <label class="small fw-bold text-muted mb-1">Referencia / Comprobante (Opcional)</label>
               <input type="text" id="abonoReferencia" class="form-control bg-light border-0 p-2" placeholder="Ej: Transferencia Santander #8821">
+            </div>
+
+            <!-- Toggle Deducción -->
+            <div class="p-3 bg-light rounded-3 border mb-2" id="boxToggleAbono">
+              <div class="form-check form-switch m-0 d-flex align-items-center">
+                <input class="form-check-input fs-5 me-2" type="checkbox" role="switch" id="abonoDeductFromBox" checked>
+                <label class="form-check-label fw-bold text-dark small text-uppercase" for="abonoDeductFromBox">
+                  Descontar del Flujo / Arqueo
+                </label>
+              </div>
+              <small id="lblAyudaAbonoDeduct" class="text-muted d-block mt-1" style="font-size: 0.78rem;">
+                Descuenta billetes del cajón actual
+              </small>
             </div>
           </form>
         </div>

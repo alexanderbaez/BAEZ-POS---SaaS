@@ -120,18 +120,18 @@ function actualizarEstadoDeductFromBox(metodoSeleccionado, elementSwitch) {
     const esEfectivoCaja = (metodoSeleccionado === 'EFECTIVO_CAJA' || metodoSeleccionado === 'EFECTIVO');
     const lblAyuda = document.getElementById('lblAyudaDeduct');
 
+    elementSwitch.disabled = false;
+
     if (esEfectivoCaja) {
-        elementSwitch.disabled = false;
         if (lblAyuda) {
-            lblAyuda.innerHTML = `Si está activo, se restará del <strong>Efectivo Físico en Caja</strong>. Desactivalo únicamente si fue abonado con fondos personales por fuera del negocio.`;
+            lblAyuda.textContent = "Descuenta billetes del cajón actual";
             lblAyuda.className = "text-muted d-block mt-1 style-subtext";
         }
     } else {
-        elementSwitch.checked = false;
-        elementSwitch.disabled = true;
+        // TRANSFERENCIA
         if (lblAyuda) {
-            lblAyuda.innerHTML = `<i class="bi bi-info-circle-fill text-primary me-1"></i> Al pagar por <strong>Transferencia / QR</strong> no impacta el efectivo físico del cajón diario.`;
-            lblAyuda.className = "text-primary d-block mt-1 style-subtext";
+            lblAyuda.textContent = "Descuenta del saldo bancario del negocio";
+            lblAyuda.className = "text-muted d-block mt-1 style-subtext";
         }
     }
 }
@@ -372,7 +372,7 @@ async function guardarGasto(e) {
     btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Guardando...';
 
     const elementDeduct = document.getElementById('deductFromBox');
-    const deductFromBoxValue = (metodo === 'EFECTIVO_CAJA') && (elementDeduct ? elementDeduct.checked : true);
+    const deductFromBoxValue = (elementDeduct ? elementDeduct.checked : true);
 
     const fechaVal = document.getElementById('fechaGasto')?.value;
     let expenseDateTime = null;

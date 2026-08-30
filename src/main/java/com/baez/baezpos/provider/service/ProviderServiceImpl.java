@@ -172,9 +172,12 @@ public class ProviderServiceImpl implements ProviderService {
             throw new BadRequestException("El monto a abonar debe ser mayor a cero.");
         }
 
-        // Si el pago es en efectivo de caja, validamos que haya liquidez física disponible
+        // Si el pago es en efectivo de caja y deduce, validamos que haya liquidez física disponible
         boolean isEfectivoCaja = (dto.paymentMethod() == PaymentMethod.EFECTIVO_CAJA);
-        if (isEfectivoCaja) {
+        boolean isTransferencia = (dto.paymentMethod() == PaymentMethod.TRANSFERENCIA);
+        boolean deductFromBox = (isEfectivoCaja || isTransferencia) && (dto.deductFromBox() == null || dto.deductFromBox());
+
+        if (isEfectivoCaja && deductFromBox) {
             cashRegisterService.validatePhysicalCashAvailability(companyId, dto.amount());
         }
 
@@ -197,7 +200,7 @@ public class ProviderServiceImpl implements ProviderService {
         Expense expense = Expense.builder()
                 .description(desc)
                 .amount(dto.amount())
-                .deductFromBox(isEfectivoCaja)
+                .deductFromBox(deductFromBox)
                 .category(ExpenseCategory.PROVEEDOR)
                 .paymentMethod(dto.paymentMethod())
                 .reference(dto.reference() != null ? dto.reference().trim() : null)

@@ -46,12 +46,12 @@ public class ExpenseServiceImpl implements ExpenseService {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada con ID: " + companyId));
 
-        // Solo si el método es EFECTIVO_CAJA, deductFromBox es true para descontar de la caja física
         boolean isEfectivoCaja = (dto.paymentMethod() == PaymentMethod.EFECTIVO_CAJA);
-        boolean deductFromBox = isEfectivoCaja && (dto.deductFromBox() == null || dto.deductFromBox());
+        boolean isTransferencia = (dto.paymentMethod() == PaymentMethod.TRANSFERENCIA);
+        boolean deductFromBox = (isEfectivoCaja || isTransferencia) && (dto.deductFromBox() == null || dto.deductFromBox());
 
-        // Si descuenta de la caja física, validamos saldo disponible antes de proceder
-        if (deductFromBox) {
+        // Si descuenta de la caja física (efectivo), validamos saldo disponible antes de proceder
+        if (deductFromBox && isEfectivoCaja) {
             cashRegisterService.validatePhysicalCashAvailability(companyId, dto.amount());
         }
 

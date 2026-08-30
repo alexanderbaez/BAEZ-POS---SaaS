@@ -19,5 +19,7 @@ public record ProviderPaymentRequestDTO(
         String reference,
 
         @Size(max = 50, message = "El número de comprobante o recibo no puede superar los 50 caracteres.")
-        String invoiceNumber
+        String invoiceNumber,
+
+        Boolean deductFromBox
 ) {}

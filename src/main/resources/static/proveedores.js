@@ -26,8 +26,28 @@ document.addEventListener('DOMContentLoaded', () => {
         modalAbonoInstance = new bootstrap.Modal(modalAbonoEl);
     }
 
+    const abonoMetodo = document.getElementById('abonoMetodoPago');
+    if (abonoMetodo) {
+        abonoMetodo.addEventListener('change', (e) => {
+            actualizarEstadoAbonoDeduct(e.target.value);
+        });
+    }
+
     cargarProveedores();
 });
+
+function actualizarEstadoAbonoDeduct(metodo) {
+    const lbl = document.getElementById('lblAyudaAbonoDeduct');
+    const switchEl = document.getElementById('abonoDeductFromBox');
+    if (switchEl) switchEl.disabled = false;
+    if (lbl) {
+        if (metodo === 'EFECTIVO_CAJA' || metodo === 'EFECTIVO') {
+            lbl.textContent = "Descuenta billetes del cajón actual";
+        } else {
+            lbl.textContent = "Descuenta del saldo bancario del negocio";
+        }
+    }
+}
 
 /**
  * Carga la lista de proveedores desde el Backend mediante apiFetch
@@ -409,12 +429,15 @@ async function registrarAbono() {
     const metodoPago = document.getElementById('abonoMetodoPago').value;
     const invoiceNumber = document.getElementById('abonoInvoiceNumber').value.trim() || null;
     const reference = document.getElementById('abonoReferencia').value.trim() || null;
+    const deductSwitch = document.getElementById('abonoDeductFromBox');
+    const deductFromBoxValue = deductSwitch ? deductSwitch.checked : true;
 
     const payload = {
         amount: monto,
         paymentMethod: metodoPago,
         invoiceNumber: invoiceNumber,
-        reference: reference
+        reference: reference,
+        deductFromBox: deductFromBoxValue
     };
 
     try {
