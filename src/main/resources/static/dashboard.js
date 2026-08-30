@@ -735,7 +735,7 @@ async function consultarPorFechas() {
                 ? parseFloat(dataBox.netTransfer)
                 : (transferSales + transferPayments);
 
-            setElementText('txtEfectivoRango', fmtARS.format(cashSales));
+            setElementText('txtEfectivoRango', fmtARS.format(netCash));
             setElementText('txtTransfRango', fmtARS.format(transferSales + transferPayments));
             setElementText('txtFiadosCobradosRango', `+${fmtARS.format(cashPayments)}`);
             setElementText('txtFiadoRango', fmtARS.format(creditSales));
@@ -743,7 +743,7 @@ async function consultarPorFechas() {
             // Inyección del desglose detallado en Efectivo Caja:
             const elDesgloseEfe = document.getElementById('desgloseEfectivoRango') || document.getElementById('countEfectivoRango');
             if (elDesgloseEfe) {
-                elDesgloseEfe.innerHTML = `<small class="text-muted d-block" style="font-size: 0.78rem;">Ventas: ${fmtARS.format(cashSales)}</small>`;
+                elDesgloseEfe.innerHTML = `<small class="text-muted d-block" style="font-size: 0.78rem;">Ventas: ${fmtARS.format(cashSales)} | Cobros Cta: ${fmtARS.format(cashPayments)} | Gastos: -${fmtARS.format(cashExpenses)}</small>`;
             }
 
             // Inyección del desglose detallado en Transferencias:
