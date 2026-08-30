@@ -121,9 +121,46 @@ async function apiFetch(path, options = {}) {
             }
         }
 
+        if (response.status === 403) {
+            try {
+                const clonedRes = response.clone();
+                const errorData = await clonedRes.json();
+
+                if (errorData && (errorData.error === 'CUENTA_SUSPENDIDA' || errorData.error === 'CUENTA_DESACTIVADA')) {
+                    const mensaje = errorData.message || 'Su suscripción se encuentra inhabilitada o vencida.';
+
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Acción Bloqueada',
+                            text: mensaje,
+                            confirmButtonColor: '#e11d48',
+                            confirmButtonText: 'Entendido'
+                        });
+                    }
+
+                    if (typeof bloquearPantallaVentas === 'function') {
+                        bloquearPantallaVentas(mensaje);
+                    }
+
+                    if (typeof chequearEstadoLicencia === 'function') {
+                        chequearEstadoLicencia();
+                    }
+
+                    throw new Error(`[CUENTA_SUSPENDIDA] ${mensaje}`);
+                }
+            } catch (e) {
+                if (e.message && e.message.startsWith('[CUENTA_SUSPENDIDA]')) {
+                    throw e;
+                }
+            }
+        }
+
         return response;
     } catch (err) {
-        console.error(`Error de conexión con el backend: ${url}`, err);
+        if (!err.message || !err.message.startsWith('[CUENTA_SUSPENDIDA]')) {
+            console.error(`Error de conexión con el backend: ${url}`, err);
+        }
         throw err;
     }
 }
