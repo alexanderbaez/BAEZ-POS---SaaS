@@ -16,6 +16,7 @@ import com.baez.baezpos.shared.entity.PaymentMethod;
 import com.baez.baezpos.shared.exception.BadRequestException;
 import com.baez.baezpos.shared.exception.ResourceNotFoundException;
 import com.baez.baezpos.shared.exception.UnauthorizedException;
+import com.baez.baezpos.sale.service.SaleService.CashRegisterService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,7 @@ public class ProviderServiceImpl implements ProviderService {
     private final ProviderRepository providerRepository;
     private final CompanyRepository companyRepository;
     private final ExpenseRepository expenseRepository;
+    private final CashRegisterService cashRegisterService;
     private final AuditService auditService;
 
     @Override
@@ -170,6 +172,12 @@ public class ProviderServiceImpl implements ProviderService {
             throw new BadRequestException("El monto a abonar debe ser mayor a cero.");
         }
 
+        // Si el pago es en efectivo de caja, validamos que haya liquidez física disponible
+        boolean isEfectivoCaja = (dto.paymentMethod() == PaymentMethod.EFECTIVO_CAJA);
+        if (isEfectivoCaja) {
+            cashRegisterService.validatePhysicalCashAvailability(companyId, dto.amount());
+        }
+
         // 1. Restar el monto del currentBalance del proveedor
         BigDecimal currentBal = provider.getCurrentBalance() != null ? provider.getCurrentBalance() : BigDecimal.ZERO;
         BigDecimal newBalance = currentBal.subtract(dto.amount());
@@ -181,7 +189,6 @@ public class ProviderServiceImpl implements ProviderService {
         Provider updatedProvider = providerRepository.save(provider);
 
         // 2. Generar automáticamente un registro en Expense por ese abono
-        boolean isEfectivoCaja = (dto.paymentMethod() == PaymentMethod.EFECTIVO_CAJA);
         String desc = "Abono / Pago a Proveedor: " + provider.getBusinessName();
         if (dto.reference() != null && !dto.reference().isBlank()) {
             desc += " - " + dto.reference().trim();

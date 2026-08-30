@@ -171,6 +171,53 @@ public class CashRegisterServiceImpl implements CashRegisterService {
         return mapToResponseDTO(session);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal getActivePhysicalCashBalance(Long companyId) {
+        CashRegisterSession session = cashRegisterSessionRepository
+                .findFirstByCompanyIdAndStatusOrderByIdDesc(companyId, CashSessionStatus.OPEN)
+                .orElseThrow(() -> new BadRequestException("No hay una caja física abierta para registrar egresos en efectivo."));
+
+        LocalDateTime sStart = session.getOpenedAt();
+        LocalDateTime sEnd = LocalDateTime.now().plusSeconds(2);
+
+        List<Sale> sales = saleRepository.findActiveSalesBySessionIdAndCompanyId(session.getId(), companyId);
+        BigDecimal cashSales = BigDecimal.ZERO;
+        for (Sale s : sales) {
+            String method = s.getPaymentMethod();
+            if (method != null && (method.equalsIgnoreCase("EFECTIVO") || method.equalsIgnoreCase("EFECTIVO_CAJA"))) {
+                cashSales = cashSales.add(s.getTotal() != null ? s.getTotal() : BigDecimal.ZERO);
+            }
+        }
+
+        BigDecimal cobrosEfe = customerMovementRepository.sumPaymentsBySessionAndMethod("EFECTIVO", companyId, session.getId(), sStart, sEnd);
+        if (cobrosEfe == null) cobrosEfe = BigDecimal.ZERO;
+
+        BigDecimal expensesEfe = expenseRepository.sumDeductibleCashExpenses(companyId, sStart, sEnd);
+        if (expensesEfe == null) expensesEfe = BigDecimal.ZERO;
+
+        BigDecimal initialAmount = session.getInitialAmount() != null ? session.getInitialAmount() : BigDecimal.ZERO;
+
+        return initialAmount.add(cashSales).add(cobrosEfe).subtract(expensesEfe);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void validatePhysicalCashAvailability(Long companyId, BigDecimal amountToDeduct) {
+        if (amountToDeduct == null || amountToDeduct.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        BigDecimal saldoActual = getActivePhysicalCashBalance(companyId);
+        if (amountToDeduct.compareTo(saldoActual) > 0) {
+            java.text.DecimalFormatSymbols symbols = new java.text.DecimalFormatSymbols(new java.util.Locale("es", "AR"));
+            symbols.setDecimalSeparator(',');
+            symbols.setGroupingSeparator('.');
+            java.text.DecimalFormat df = new java.text.DecimalFormat("#,##0.00", symbols);
+            String saldoStr = df.format(saldoActual);
+            throw new BadRequestException("Fondos insuficientes en la caja física para este retiro. Saldo disponible: $" + saldoStr);
+        }
+    }
+
     private Long requireCompanyContext() {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         if (companyId == null) {

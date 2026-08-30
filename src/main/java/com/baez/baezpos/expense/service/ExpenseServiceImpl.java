@@ -14,6 +14,7 @@ import com.baez.baezpos.security.util.SecurityUtils;
 import com.baez.baezpos.shared.entity.PaymentMethod;
 import com.baez.baezpos.shared.exception.ResourceNotFoundException;
 import com.baez.baezpos.shared.exception.UnauthorizedException;
+import com.baez.baezpos.sale.service.SaleService.CashRegisterService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,7 @@ public class ExpenseServiceImpl implements ExpenseService {
     private final ExpenseRepository expenseRepository;
     private final CompanyRepository companyRepository;
     private final ProviderRepository providerRepository;
+    private final CashRegisterService cashRegisterService;
     private final AuditService auditService;
 
     @Override
@@ -47,6 +49,11 @@ public class ExpenseServiceImpl implements ExpenseService {
         // Solo si el método es EFECTIVO_CAJA, deductFromBox es true para descontar de la caja física
         boolean isEfectivoCaja = (dto.paymentMethod() == PaymentMethod.EFECTIVO_CAJA);
         boolean deductFromBox = isEfectivoCaja && (dto.deductFromBox() == null || dto.deductFromBox());
+
+        // Si descuenta de la caja física, validamos saldo disponible antes de proceder
+        if (deductFromBox) {
+            cashRegisterService.validatePhysicalCashAvailability(companyId, dto.amount());
+        }
 
         // Si el método es CUENTA_CORRIENTE y existe un providerId, suma el monto a su currentBalance
         if (dto.paymentMethod() == PaymentMethod.CUENTA_CORRIENTE && dto.providerId() != null) {
