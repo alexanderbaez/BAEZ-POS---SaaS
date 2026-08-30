@@ -26,6 +26,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
     e.preventDefault();
 
     // Limpieza preventiva total de cualquier sesión previa
+    sessionStorage.clear();
     localStorage.clear();
 
     const email = document.getElementById('email').value.trim();
@@ -61,15 +62,15 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
             let cleanRole = rawRole.replace('ROLE_', '').trim().toUpperCase();
             if (cleanRole === 'SUPERADMIN') cleanRole = 'SUPER_ADMIN';
 
-            // Almacenamiento seguro en LocalStorage
-            localStorage.setItem('baezpos_token', data.token);
-            localStorage.setItem('baezpos_user_role', cleanRole);
-            localStorage.setItem('baezpos_user_name', data.name || data.username || "Usuario");
+            // Almacenamiento volátil y seguro en SessionStorage
+            sessionStorage.setItem('baezpos_token', data.token);
+            sessionStorage.setItem('baezpos_user_role', cleanRole);
+            sessionStorage.setItem('baezpos_user_name', data.name || data.username || "Usuario");
 
             if (data.companyId) {
-                localStorage.setItem('baezpos_company_id', data.companyId);
+                sessionStorage.setItem('baezpos_company_id', data.companyId);
             } else if (data.company && data.company.id) {
-                localStorage.setItem('baezpos_company_id', data.company.id);
+                sessionStorage.setItem('baezpos_company_id', data.company.id);
             }
 
             // Mapeo de variables de estado de la empresa
@@ -77,8 +78,8 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
             const isTenantActive = companyObj.active !== undefined ? companyObj.active !== false : true;
             const expirationDate = companyObj.expirationDate || companyObj.expiration || '';
 
-            localStorage.setItem('baezpos_tenant_active', isTenantActive ? 'true' : 'false');
-            localStorage.setItem('baezpos_tenant_expiration', expirationDate);
+            sessionStorage.setItem('baezpos_tenant_active', isTenantActive ? 'true' : 'false');
+            sessionStorage.setItem('baezpos_tenant_expiration', expirationDate);
 
             messageContainer.innerHTML = `<div class="alert alert-success custom-alert mb-3"><i class="bi bi-check-circle me-2"></i>Iniciando sesión...</div>`;
 

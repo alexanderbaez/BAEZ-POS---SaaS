@@ -32,8 +32,8 @@ async function cargarDatosEmpresa() {
         const emp = await resp.json();
 
         // Guardar en caché local usando AMBAS claves para sincronizar con Ventas/Cobros
-        localStorage.setItem('config_comercio', JSON.stringify(emp));
-        localStorage.setItem('DATOS_EMPRESA', JSON.stringify(emp));
+        sessionStorage.setItem('config_comercio', JSON.stringify(emp));
+        sessionStorage.setItem('DATOS_EMPRESA', JSON.stringify(emp));
 
         // Llenado de formulario principal
         if (document.getElementById('empNombre')) document.getElementById('empNombre').value = emp.name || '';
@@ -165,9 +165,9 @@ async function actualizarEmpresa(silencioso = false) {
         });
 
         if (resp && resp.ok) {
-            // Sincronizar LocalStorage para consumo dinámico
-            localStorage.setItem('config_comercio', JSON.stringify(data));
-            localStorage.setItem('DATOS_EMPRESA', JSON.stringify(data));
+            // Sincronizar SessionStorage para consumo dinámico
+            sessionStorage.setItem('config_comercio', JSON.stringify(data));
+            sessionStorage.setItem('DATOS_EMPRESA', JSON.stringify(data));
 
             // Actualizar nombre en Navbar si existe
             const elCompanyNav = document.getElementById('companyNameNav');

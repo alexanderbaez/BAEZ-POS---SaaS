@@ -63,7 +63,7 @@ function formatFechaEstandarAR(val) {
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Nombre de usuario y Fecha actual con Zona Horaria de Argentina
-    const userName = (localStorage.getItem('baezpos_user_name') || 'Usuario').toUpperCase();
+    const userName = (sessionStorage.getItem('baezpos_user_name') || 'Usuario').toUpperCase();
     const userEl = document.getElementById('userNameLabel');
     if (userEl) userEl.innerText = userName;
 

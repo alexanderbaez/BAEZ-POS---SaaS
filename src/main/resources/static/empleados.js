@@ -10,7 +10,7 @@ let modalForm = null;
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
     // Verificar si es ADMIN o SUPER_ADMIN
-    const userRole = (localStorage.getItem('baezpos_user_role') || '').toUpperCase().trim();
+    const userRole = (sessionStorage.getItem('baezpos_user_role') || '').toUpperCase().trim();
     if (userRole !== 'ADMIN' && !userRole.includes('SUPER_ADMIN')) {
         Swal.fire({
             title: 'Acceso Denegado',
@@ -272,7 +272,7 @@ function actualizarVisibilidadPin() {
 }
 
 function ajustarOpcionesDeRolSegunPermisos(targetUserRole = null) {
-    const userRole = (localStorage.getItem('baezpos_user_role') || '').toUpperCase().trim();
+    const userRole = (sessionStorage.getItem('baezpos_user_role') || '').toUpperCase().trim();
     const isSuperAdmin = userRole.includes('SUPER_ADMIN');
     const selectRol = document.getElementById('empRol');
     if (!selectRol) return;

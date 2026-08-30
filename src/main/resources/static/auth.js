@@ -14,8 +14,8 @@ const IS_LOCAL = typeof window !== 'undefined' &&
  * 3. Si no es local (!IS_LOCAL), apunta directamente al backend de Render: https://baez-pos-saas.onrender.com
  */
 function resolveBackendUrl() {
-    if (typeof localStorage !== 'undefined') {
-        const customUrl = localStorage.getItem('baezpos_backend_url');
+    if (typeof sessionStorage !== 'undefined') {
+        const customUrl = sessionStorage.getItem('baezpos_backend_url') || (typeof localStorage !== 'undefined' ? localStorage.getItem('baezpos_backend_url') : null);
         if (customUrl) return customUrl.trim();
     }
 
@@ -53,7 +53,7 @@ function esVistaLogin() {
 (function verificarSesionInicial() {
     if (esVistaLogin()) return;
 
-    const token = localStorage.getItem('baezpos_token');
+    const token = sessionStorage.getItem('baezpos_token');
     if (!token) {
         window.location.href = 'login.html';
         return;
@@ -63,6 +63,7 @@ function esVistaLogin() {
         const payload = JSON.parse(atob(token.split('.')[1]));
 
         if (Date.now() >= payload.exp * 1000) {
+            sessionStorage.clear();
             localStorage.clear();
             window.location.href = 'login.html';
             return;
@@ -70,17 +71,18 @@ function esVistaLogin() {
 
         const rolBackend = payload.role || payload.roles || 'EMPLEADO';
         const rolLimpio = Array.isArray(rolBackend) ? rolBackend[0] : rolBackend;
-        localStorage.setItem('baezpos_user_role', rolLimpio.replace('ROLE_', '').toUpperCase().trim());
+        sessionStorage.setItem('baezpos_user_role', rolLimpio.replace('ROLE_', '').toUpperCase().trim());
 
         if (payload.sub) {
-            localStorage.setItem('baezpos_user_email', payload.sub);
+            sessionStorage.setItem('baezpos_user_email', payload.sub);
         }
         if (payload.name || payload.userName) {
-            localStorage.setItem('baezpos_user_name', payload.name || payload.userName);
+            sessionStorage.setItem('baezpos_user_name', payload.name || payload.userName);
         }
 
     } catch (e) {
         console.error("Token inválido o corrupto:", e);
+        sessionStorage.clear();
         localStorage.clear();
         window.location.href = 'login.html';
     }
@@ -93,7 +95,7 @@ async function apiFetch(path, options = {}) {
         headers.set('Content-Type', 'application/json');
     }
 
-    const currentToken = localStorage.getItem('baezpos_token');
+    const currentToken = sessionStorage.getItem('baezpos_token');
     if (currentToken) {
         headers.set('Authorization', `Bearer ${currentToken}`);
     }
@@ -116,6 +118,7 @@ async function apiFetch(path, options = {}) {
 
         if (response.status === 401) {
             if (!esVistaLogin()) {
+                sessionStorage.clear();
                 localStorage.clear();
                 window.location.href = 'login.html';
             }
@@ -173,14 +176,14 @@ async function chequearEstadoLicencia() {
         return;
     }
 
-    const currentToken = localStorage.getItem('baezpos_token');
+    const currentToken = sessionStorage.getItem('baezpos_token');
     if (!currentToken) {
         removerNotificacionVencimiento();
         removerBloqueoVentas();
         return;
     }
 
-    const userRole = (localStorage.getItem('baezpos_user_role') || '').toUpperCase().trim();
+    const userRole = (sessionStorage.getItem('baezpos_user_role') || '').toUpperCase().trim();
     if (userRole === 'SUPER_ADMIN') return;
 
     const currentPath = window.location.pathname.toLowerCase();
@@ -494,6 +497,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Cierre de Sesión Universal
 function cerrarSesion(e) {
     if (e) e.preventDefault();
+    sessionStorage.clear();
     localStorage.clear();
     window.location.href = 'login.html';
 }

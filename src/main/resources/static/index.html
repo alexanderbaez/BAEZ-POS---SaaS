@@ -20,7 +20,7 @@
   <script src="auth.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const token = localStorage.getItem('baezpos_token');
+      const token = sessionStorage.getItem('baezpos_token');
       if (token) {
         window.location.replace('dashboard.html');
       } else {

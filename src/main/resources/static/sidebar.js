@@ -90,9 +90,9 @@
     }
 
     // 2. Recuperar y sanitizar datos de sesión
-    const rawRole = (localStorage.getItem('baezpos_user_role') || 'EMPLEADO').toUpperCase().trim();
-    const rawName = localStorage.getItem('baezpos_user_name') || 'Usuario';
-    const rawTenant = localStorage.getItem('baezpos_tenant_name') || rawName;
+    const rawRole = (sessionStorage.getItem('baezpos_user_role') || 'EMPLEADO').toUpperCase().trim();
+    const rawName = sessionStorage.getItem('baezpos_user_name') || 'Usuario';
+    const rawTenant = sessionStorage.getItem('baezpos_tenant_name') || rawName;
 
     const userRole = escapeHTML(rawRole);
     const userName = escapeHTML(rawName);
@@ -340,6 +340,7 @@ document.addEventListener('click', async (event) => {
 }, { capture: true });
 
 function ejecutarCierreDeSesion() {
+    sessionStorage.clear();
     localStorage.clear();
     window.location.href = 'login.html';
 }

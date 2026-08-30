@@ -74,8 +74,8 @@ document.addEventListener('DOMContentLoaded', async function inicializarModuloVe
     await serviceCargarInfoEmpresa();
     await serviceCargarProductos();
 
-    // Recuperar estado persistido del carrito en localStorage
-    const savedCart = localStorage.getItem('baezpos_cart');
+    // Recuperar estado persistido del carrito en sessionStorage
+    const savedCart = sessionStorage.getItem('baezpos_cart');
     if (savedCart) {
         try {
             const parsed = JSON.parse(savedCart);
@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', async function inicializarModuloVe
                 renderizarCarrito();
             }
         } catch (e) {
-            console.error("Error al restaurar carrito desde localStorage:", e);
+            console.error("Error al restaurar carrito desde sessionStorage:", e);
         }
     }
 
@@ -265,10 +265,10 @@ async function serviceCargarInfoEmpresa() {
         const resp = await apiFetch('/admin/my-company/profile');
         if (resp && resp.ok) {
             DATOS_EMPRESA = await resp.json();
-            localStorage.setItem('config_comercio', JSON.stringify(DATOS_EMPRESA));
-            localStorage.setItem('DATOS_EMPRESA', JSON.stringify(DATOS_EMPRESA));
+            sessionStorage.setItem('config_comercio', JSON.stringify(DATOS_EMPRESA));
+            sessionStorage.setItem('DATOS_EMPRESA', JSON.stringify(DATOS_EMPRESA));
         } else {
-            const dataGuardada = localStorage.getItem('config_comercio') || localStorage.getItem('DATOS_EMPRESA');
+            const dataGuardada = sessionStorage.getItem('config_comercio') || sessionStorage.getItem('DATOS_EMPRESA');
             if (dataGuardada) DATOS_EMPRESA = JSON.parse(dataGuardada);
         }
     } catch (err) {
@@ -281,14 +281,14 @@ async function serviceCargarProductos() {
         const res = await apiFetch('/products');
         if (res && res.ok) {
             PRODUCTOS_DB = await res.json();
-            localStorage.setItem('baezpos_cached_products', JSON.stringify(PRODUCTOS_DB));
+            sessionStorage.setItem('baezpos_cached_products', JSON.stringify(PRODUCTOS_DB));
         } else {
-            const cached = localStorage.getItem('baezpos_cached_products');
+            const cached = sessionStorage.getItem('baezpos_cached_products');
             if (cached) PRODUCTOS_DB = JSON.parse(cached);
         }
     } catch (err) {
         console.warn("[OfflinePOS] Error de red al cargar productos, usando catálogo local persistido:", err);
-        const cached = localStorage.getItem('baezpos_cached_products');
+        const cached = sessionStorage.getItem('baezpos_cached_products');
         if (cached) {
             try { PRODUCTOS_DB = JSON.parse(cached); } catch (e) {}
         }
@@ -380,11 +380,11 @@ function renderizarCarrito() {
     body.innerHTML = '';
     SUBTOTAL_VENTA = 0;
 
-    // Persistencia continua en localStorage
+    // Persistencia continua en sessionStorage
     if (CARRITO && CARRITO.length > 0) {
-        localStorage.setItem('baezpos_cart', JSON.stringify(CARRITO));
+        sessionStorage.setItem('baezpos_cart', JSON.stringify(CARRITO));
     } else {
-        localStorage.removeItem('baezpos_cart');
+        sessionStorage.removeItem('baezpos_cart');
     }
 
     CARRITO.forEach(function procesarItemCarrito(item, index) {
@@ -473,7 +473,7 @@ function calcularVuelto() {
 // 7.1 AUTORIZACIÓN POR PIN DE SUPERVISOR
 // ==========================================
 async function solicitarPinSupervisorSiEsVendedor(motivo = "realizar esta acción") {
-    const rawRole = (localStorage.getItem('baezpos_user_role') || 'VENDEDOR').toUpperCase().trim();
+    const rawRole = (sessionStorage.getItem('baezpos_user_role') || 'VENDEDOR').toUpperCase().trim();
     const esAdminOSuper = (rawRole === 'ADMIN' || rawRole === 'SUPER_ADMIN' || rawRole === 'SUPERVISOR' || rawRole === 'OWNER' || rawRole === 'ADMINISTRADOR');
 
     // Si ya es Admin o Supervisor, no requiere autorización
@@ -661,7 +661,7 @@ async function cancelarVenta() {
     if (!autorizado) return;
 
     CARRITO = [];
-    localStorage.removeItem('baezpos_cart');
+    sessionStorage.removeItem('baezpos_cart');
     const pagaConEl = document.getElementById('pagaCon');
     if (pagaConEl) pagaConEl.value = '';
     const inputDesc = document.getElementById('inputDescuento');
@@ -1360,7 +1360,7 @@ async function finalizarVenta() {
         }
     }
 
-    const configLocal = JSON.parse(localStorage.getItem('config_comercio') || '{}');
+    const configLocal = JSON.parse(sessionStorage.getItem('config_comercio') || '{}');
     const datosEmpresaContext = (typeof DATOS_EMPRESA !== 'undefined' && DATOS_EMPRESA) ? DATOS_EMPRESA : configLocal;
 
     const chkEmitirFiscal = document.getElementById('chkEmitirFactura');
@@ -1406,7 +1406,7 @@ async function finalizarVenta() {
                 nroComprobante: `OFF-${String(offlineSaleId).padStart(6, '0')}`,
                 saleDate: new Date().toISOString(),
                 isOffline: true,
-                userName: (typeof localStorage !== 'undefined' ? localStorage.getItem('baezpos_user_name') : '') || 'Cajero',
+                userName: (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('baezpos_user_name') : '') || 'Cajero',
                 clienteNombre: clienteSeleccionado ? clienteSeleccionado.name : 'CONSUMIDOR FINAL'
             };
 
@@ -1457,7 +1457,7 @@ async function finalizarVenta() {
 
             // Limpieza de estado del carrito
             CARRITO = [];
-            localStorage.removeItem('baezpos_cart');
+            sessionStorage.removeItem('baezpos_cart');
             clienteSeleccionado = null;
             const infoCli = document.getElementById('infoClienteSeleccionado');
             if (infoCli) infoCli.classList.add('d-none');
@@ -1559,7 +1559,7 @@ async function finalizarVenta() {
 
         // Limpieza de estado del carrito
         CARRITO = [];
-        localStorage.removeItem('baezpos_cart');
+        sessionStorage.removeItem('baezpos_cart');
         clienteSeleccionado = null;
         const infoCli = document.getElementById('infoClienteSeleccionado');
         if (infoCli) infoCli.classList.add('d-none');
@@ -1587,7 +1587,7 @@ async function finalizarVenta() {
                     nroComprobante: `OFF-${String(offlineSaleId).padStart(6, '0')}`,
                     saleDate: new Date().toISOString(),
                     isOffline: true,
-                    userName: (typeof localStorage !== 'undefined' ? localStorage.getItem('baezpos_user_name') : '') || 'Cajero',
+                    userName: (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('baezpos_user_name') : '') || 'Cajero',
                     clienteNombre: clienteSeleccionado ? clienteSeleccionado.name : 'CONSUMIDOR FINAL'
                 };
 
@@ -1805,7 +1805,7 @@ function generarPlantillaHTMLTicket(venta) {
     // Si nroComprobante/invoiceNumber viene del backend, lo respeta.
     const nroComprobante = venta.invoiceNumber || venta.nroComprobante || `00001-${String(venta.numeroTicket || venta.id || 1).padStart(8, '0')}`;
     const fechaVenta = venta.saleDate ? new Date(venta.saleDate).toLocaleString('es-AR') : new Date().toLocaleString('es-AR');
-    const cajeroNombre = escapeHtml(venta.sellerName || venta.userName || venta.cashierName || (typeof localStorage !== 'undefined' ? localStorage.getItem('baezpos_user_name') : '') || 'Admin').toUpperCase();
+    const cajeroNombre = escapeHtml(venta.sellerName || venta.userName || venta.cashierName || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('baezpos_user_name') : '') || 'Admin').toUpperCase();
     const metodoPago = (venta.paymentMethod || 'EFECTIVO').replace(/_/g, ' ').toUpperCase();
 
     const nombreCliente = (venta.clienteNombre || (typeof clienteSeleccionado !== 'undefined' && clienteSeleccionado ? clienteSeleccionado.name : 'CONSUMIDOR FINAL')).toUpperCase();
@@ -2051,7 +2051,7 @@ function generarFacturaA4HTML(venta) {
 
     const nroComprobante = venta.invoiceNumber || venta.nroComprobante || `00001-${String(venta.numeroTicket || venta.id || 1).padStart(8, '0')}`;
     const fechaVenta = venta.saleDate ? new Date(venta.saleDate).toLocaleString('es-AR') : new Date().toLocaleString('es-AR');
-    const cajeroNombre = escapeHtml(venta.sellerName || venta.userName || venta.cashierName || (typeof localStorage !== 'undefined' ? localStorage.getItem('baezpos_user_name') : '') || 'Admin').toUpperCase();
+    const cajeroNombre = escapeHtml(venta.sellerName || venta.userName || venta.cashierName || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('baezpos_user_name') : '') || 'Admin').toUpperCase();
     const metodoPago = (venta.paymentMethod || 'EFECTIVO').replace(/_/g, ' ').toUpperCase();
 
     const nombreCliente = escapeHtml((venta.clienteNombre || (typeof clienteSeleccionado !== 'undefined' && clienteSeleccionado ? clienteSeleccionado.name : 'CONSUMIDOR FINAL')).toUpperCase());
@@ -2975,7 +2975,7 @@ function imprimirTicketCierreCaja(dto) {
     const empresa = DATOS_EMPRESA || { name: 'BÁEZ POS', address: '', phone: '', taxId: '' };
     const fechaCierre = dto.closedAt ? new Date(dto.closedAt).toLocaleString('es-AR') : new Date().toLocaleString('es-AR');
     const fechaApertura = dto.openedAt ? new Date(dto.openedAt).toLocaleString('es-AR') : '-';
-    const cajero = dto.userName || localStorage.getItem('baezpos_user_name') || 'Admin';
+    const cajero = dto.userName || sessionStorage.getItem('baezpos_user_name') || 'Admin';
     const inicial = parseFloat(dto.initialAmount ?? 0);
     const ventasEfe = parseFloat(dto.totalCashSales ?? 0);
     const cobrosEfe = parseFloat(dto.totalCustomerPayments ?? 0);

@@ -62,8 +62,8 @@ async function extraerMensajeError(resp) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const rolActual = (localStorage.getItem('baezpos_user_role') || '').toUpperCase().trim();
-    const token = localStorage.getItem('baezpos_token');
+    const rolActual = (sessionStorage.getItem('baezpos_user_role') || '').toUpperCase().trim();
+    const token = sessionStorage.getItem('baezpos_token');
 
     if (!token || (!rolActual.includes('SUPER_ADMIN') && !rolActual.includes('SUPERADMIN'))) {
         console.error("Acceso denegado: Se requiere sesión activa de SUPER_ADMIN.");
