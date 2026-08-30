@@ -736,9 +736,42 @@ async function consultarPorFechas() {
                 : (transferSales + transferPayments - transferExpenses);
 
             const totalGastosPeriodo = cashExpenses + transferExpenses;
-            const liquidezTotal = (dataBox.realBalance !== undefined && dataBox.realBalance !== null)
-                ? (parseFloat(dataBox.realBalance) + netTransfer)
-                : (netCash + netTransfer);
+
+            // === REGLA DE NEGOCIO ESTRICTA: LIQUIDEZ TOTAL ===
+            // 1. Saldo Digital Neto (Transferencias / QR)
+            const saldoDigitalNeto = netTransfer;
+
+            // 2. Saldo Físico Real del ÚLTIMO turno (evita duplicaciones por arrastre de fondos entre turnos)
+            let saldoFisicoReal = netCash; // 3. Fallback: si no hay turnos registrados, Efectivo Neto
+
+            const listaTurnos = Array.isArray(dataBox.todaySessions) ? dataBox.todaySessions : [];
+            if (listaTurnos.length > 0) {
+                const turnosOrdenados = [...listaTurnos].sort((a, b) => {
+                    const fa = parsearFechaLocal(a.openedAt)?.getTime() || 0;
+                    const fb = parsearFechaLocal(b.openedAt)?.getTime() || 0;
+                    return fb - fa;
+                });
+
+                const ultimoTurno = turnosOrdenados[0];
+                if (ultimoTurno) {
+                    const fondoInicial = parseFloat(ultimoTurno.initialAmount || 0);
+                    const ventasEfe = parseFloat(ultimoTurno.totalCashSales || 0);
+                    const cobrosEfe = parseFloat(ultimoTurno.totalCustomerPayments || 0);
+                    const gastosEfe = Math.abs(parseFloat(ultimoTurno.totalExpenses || 0));
+                    const totalFisicoEsperado = fondoInicial + ventasEfe + cobrosEfe - gastosEfe;
+
+                    if (ultimoTurno.status === 'OPEN') {
+                        saldoFisicoReal = totalFisicoEsperado;
+                    } else if (ultimoTurno.declaredAmount !== undefined && ultimoTurno.declaredAmount !== null && !isNaN(parseFloat(ultimoTurno.declaredAmount))) {
+                        saldoFisicoReal = parseFloat(ultimoTurno.declaredAmount);
+                    } else {
+                        saldoFisicoReal = totalFisicoEsperado;
+                    }
+                }
+            }
+
+            // 4. Suma e Inyección: Liquidez Total = Saldo Físico Real (Último Turno) + Saldo Digital Neto
+            const liquidezTotal = saldoFisicoReal + saldoDigitalNeto;
 
             // Poblar métricas principales (Fila 1)
             setElementText('txtLiquidezTotal', fmtARS.format(liquidezTotal));
