@@ -458,8 +458,8 @@ public class SaleServiceImpl implements SaleService {
         // Total Efectivo = Ventas Directas Efectivo + Pagos Cta. Cte. Efectivo - Gastos Efectivo
         BigDecimal periodNetCash = periodCashSales.add(periodCustomerPaymentsCash).subtract(periodExpensesCash);
 
-        // Total Transferencia = Ventas Directas Transferencia + Pagos Cta. Cte. Transferencia
-        BigDecimal periodNetTransfer = periodTransferSales.add(periodCustomerPaymentsTransfer);
+        // Total Transferencia = Ventas Directas Transferencia + Pagos Cta. Cte. Transferencia - Gastos Transferencia
+        BigDecimal periodNetTransfer = periodTransferSales.add(periodCustomerPaymentsTransfer).subtract(periodExpensesTransfer);
 
         return new BoxReportDTO(
                 activeInitialAmount,

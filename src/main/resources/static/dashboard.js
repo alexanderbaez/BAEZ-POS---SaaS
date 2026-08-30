@@ -725,6 +725,7 @@ async function consultarPorFechas() {
             const cashExpenses = parseFloat(dataBox.cashExpenses ?? dataBox.periodExpensesCash ?? 0);
             const transferSales = parseFloat(dataBox.transferSales ?? dataBox.periodTransferSales ?? 0);
             const transferPayments = parseFloat(dataBox.transferPayments ?? dataBox.periodCustomerPaymentsTransfer ?? 0);
+            const transferExpenses = parseFloat(dataBox.transferExpenses ?? dataBox.periodExpensesTransfer ?? 0);
             const creditSales = parseFloat(dataBox.creditSales ?? dataBox.periodCreditSales ?? 0);
 
             const netCash = (dataBox.netCash !== undefined && dataBox.netCash !== null)
@@ -733,10 +734,10 @@ async function consultarPorFechas() {
 
             const netTransfer = (dataBox.netTransfer !== undefined && dataBox.netTransfer !== null)
                 ? parseFloat(dataBox.netTransfer)
-                : (transferSales + transferPayments);
+                : (transferSales + transferPayments - transferExpenses);
 
             setElementText('txtEfectivoRango', fmtARS.format(netCash));
-            setElementText('txtTransfRango', fmtARS.format(transferSales + transferPayments));
+            setElementText('txtTransfRango', fmtARS.format(netTransfer));
             setElementText('txtFiadosCobradosRango', `+${fmtARS.format(cashPayments)}`);
             setElementText('txtFiadoRango', fmtARS.format(creditSales));
 
@@ -749,7 +750,7 @@ async function consultarPorFechas() {
             // Inyección del desglose detallado en Transferencias:
             const elDesgloseTra = document.getElementById('desgloseTransfRango') || document.getElementById('countTransfRango');
             if (elDesgloseTra) {
-                elDesgloseTra.innerHTML = `<small class="text-muted d-block" style="font-size: 0.78rem;">Ventas: ${fmtARS.format(transferSales)} | Cobros Cta: ${fmtARS.format(transferPayments)}</small>`;
+                elDesgloseTra.innerHTML = `<small class="text-muted d-block" style="font-size: 0.78rem;">Ventas: ${fmtARS.format(transferSales)} | Cobros Cta: ${fmtARS.format(transferPayments)} | Gastos: -${fmtARS.format(transferExpenses)}</small>`;
             }
 
             // Inyección del desglose detallado en Fiados Cobrados:
