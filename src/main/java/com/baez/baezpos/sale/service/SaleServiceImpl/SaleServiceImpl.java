@@ -394,11 +394,15 @@ public class SaleServiceImpl implements SaleService {
         BigDecimal totalPendingCredit = customerRepository.sumAllBalancesByCompanyId(companyId);
         if (totalPendingCredit == null) totalPendingCredit = BigDecimal.ZERO;
 
-        // 3. CAPA HISTÓRICA / RANGOS AUDITADOS (FLUJO DE CAJA PURO)
-        List<Sale> rangeSales = saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, startRange, endRange);
-        BigDecimal collectedReplacementCost = BigDecimal.ZERO;
-        long periodOperations = 0;
+        // 3. CAPA HISTÓRICA / RANGOS AUDITADOS (FLUJO DE CAJA PURO OPTIMIZADO VIA SQL)
+        BigDecimal collectedReplacementCost = saleRepository
+                .calculateTotalReplacementCostByCompanyAndDate(companyId, startRange, endRange);
+        if (collectedReplacementCost == null) collectedReplacementCost = BigDecimal.ZERO;
 
+        List<PaymentMethodSummaryProjection> paymentSummaries = saleRepository
+                .aggregateSalesByPaymentMethod(companyId, startRange, endRange);
+
+        long periodOperations = 0;
         BigDecimal periodCashSales = BigDecimal.ZERO;
         BigDecimal periodTransferSales = BigDecimal.ZERO;
         BigDecimal periodCreditSales = BigDecimal.ZERO;
@@ -406,28 +410,22 @@ public class SaleServiceImpl implements SaleService {
         long periodTransferCount = 0;
         long periodCreditCount = 0;
 
-        for (Sale s : rangeSales) {
-            if (Boolean.TRUE.equals(s.getCanceled())) continue;
-            periodOperations++;
+        for (PaymentMethodSummaryProjection ps : paymentSummaries) {
+            String method = normalizePaymentMethod(ps.getPaymentMethod());
+            long count = ps.getCount() != null ? ps.getCount() : 0L;
+            BigDecimal total = ps.getTotal() != null ? ps.getTotal() : BigDecimal.ZERO;
 
-            String method = normalizePaymentMethod(s.getPaymentMethod());
+            periodOperations += count;
+
             if ("EFECTIVO".equals(method)) {
-                periodCashSales = periodCashSales.add(s.getTotal());
-                periodCashCount++;
+                periodCashSales = periodCashSales.add(total);
+                periodCashCount += count;
             } else if ("TRANSFERENCIA".equals(method)) {
-                periodTransferSales = periodTransferSales.add(s.getTotal());
-                periodTransferCount++;
+                periodTransferSales = periodTransferSales.add(total);
+                periodTransferCount += count;
             } else if ("CUENTA_CORRIENTE".equals(method)) {
-                periodCreditSales = periodCreditSales.add(s.getTotal());
-                periodCreditCount++;
-            }
-
-            // El costo de mercadería y ganancia se calculan solo sobre ventas efectivamente cobradas (Efectivo y Transferencia)
-            if (!"CUENTA_CORRIENTE".equals(method) && s.getItems() != null) {
-                for (SaleItem item : s.getItems()) {
-                    BigDecimal costUnit = item.getCost() != null ? item.getCost() : BigDecimal.ZERO;
-                    collectedReplacementCost = collectedReplacementCost.add(costUnit.multiply(item.getQuantity()));
-                }
+                periodCreditSales = periodCreditSales.add(total);
+                periodCreditCount += count;
             }
         }
 

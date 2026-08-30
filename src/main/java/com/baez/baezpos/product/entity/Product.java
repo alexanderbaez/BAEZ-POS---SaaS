@@ -9,9 +9,14 @@ import org.hibernate.annotations.SQLDelete;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "products", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"company_id", "barcode"})
-})
+@Table(name = "products",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"company_id", "barcode"})
+        },
+        indexes = {
+                @Index(name = "idx_products_company_active", columnList = "company_id, active"),
+                @Index(name = "idx_products_company_category", columnList = "company_id, category_id")
+        })
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @SuperBuilder

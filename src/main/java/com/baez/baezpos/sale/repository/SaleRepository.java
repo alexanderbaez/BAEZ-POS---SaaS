@@ -51,4 +51,30 @@ public interface SaleRepository extends JpaRepository<Sale, Long> {
             "FROM Sale s WHERE s.cashRegisterSession.id IN :sessionIds AND s.canceled = false " +
             "GROUP BY s.cashRegisterSession.id, s.paymentMethod")
     List<SessionSalesProjection> aggregateSalesBySessionIds(@Param("sessionIds") List<Long> sessionIds);
+
+    /**
+     * Agregación masiva de costo de reposición: calcula SUM(item.cost * item.quantity)
+     * directamente en el motor SQL sin hidratar grafos de entidades en el heap.
+     */
+    @Query("SELECT COALESCE(SUM(i.cost * i.quantity), 0) FROM SaleItem i " +
+            "WHERE i.sale.company.id = :companyId " +
+            "AND i.sale.saleDate BETWEEN :start AND :end " +
+            "AND i.sale.canceled = false " +
+            "AND i.sale.paymentMethod != 'CUENTA_CORRIENTE'")
+    BigDecimal calculateTotalReplacementCostByCompanyAndDate(
+            @Param("companyId") Long companyId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
+
+    /**
+     * Agregación por método de pago para rangos de auditoría de caja.
+     */
+    @Query("SELECT s.paymentMethod AS paymentMethod, COUNT(s) AS count, COALESCE(SUM(s.total), 0) AS total " +
+            "FROM Sale s " +
+            "WHERE s.company.id = :companyId AND s.saleDate BETWEEN :start AND :end AND s.canceled = false " +
+            "GROUP BY s.paymentMethod")
+    List<com.baez.baezpos.sale.dto.PaymentMethodSummaryProjection> aggregateSalesByPaymentMethod(
+            @Param("companyId") Long companyId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
 }
