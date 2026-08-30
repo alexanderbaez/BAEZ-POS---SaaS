@@ -109,6 +109,8 @@ document.addEventListener('DOMContentLoaded', async function inicializarModuloVe
 // ==========================================
 // 4. CONFIGURACIÓN DE LISTENERS E INTERFAZ
 // ==========================================
+let debounceTimerBuscadorPos = null;
+
 function inicializarBuscadorProductos() {
     const buscador = document.getElementById('buscadorVenta');
     const sugerenciasDiv = document.getElementById('listaSugerencias');
@@ -120,7 +122,7 @@ function inicializarBuscadorProductos() {
 
     buscador.addEventListener('input', function handleInputBuscadorProductos(e) {
         if (sistemaBloqueado) return;
-        const term = e.target.value.toLowerCase().trim();
+        const term = e.target.value.trim();
         indiceSeleccionado = -1;
 
         if (!sugerenciasDiv) return;
@@ -131,13 +133,17 @@ function inicializarBuscadorProductos() {
             return;
         }
 
-        const filtrados = PRODUCTOS_DB.filter(function filtrarProductos(p) {
-            return (p.name && p.name.toLowerCase().includes(term)) ||
-                   (p.description && p.description.toLowerCase().includes(term)) ||
-                   (p.barcode && p.barcode.includes(term));
-        }).slice(0, 8);
-
-        uiRenderizarSugerenciasProductos(filtrados);
+        clearTimeout(debounceTimerBuscadorPos);
+        debounceTimerBuscadorPos = setTimeout(async () => {
+            try {
+                const res = await apiFetch(`/products/search?q=${encodeURIComponent(term)}&limit=10`);
+                if (!res || !res.ok) return;
+                const filtrados = await res.json();
+                uiRenderizarSugerenciasProductos(filtrados);
+            } catch (err) {
+                console.error("Error al buscar productos para POS:", err);
+            }
+        }, 300);
     });
 
     buscador.addEventListener('keydown', function handleKeydownBuscadorProductos(e) {
@@ -277,22 +283,8 @@ async function serviceCargarInfoEmpresa() {
 }
 
 async function serviceCargarProductos() {
-    try {
-        const res = await apiFetch('/products');
-        if (res && res.ok) {
-            PRODUCTOS_DB = await res.json();
-            sessionStorage.setItem('baezpos_cached_products', JSON.stringify(PRODUCTOS_DB));
-        } else {
-            const cached = sessionStorage.getItem('baezpos_cached_products');
-            if (cached) PRODUCTOS_DB = JSON.parse(cached);
-        }
-    } catch (err) {
-        console.warn("[OfflinePOS] Error de red al cargar productos, usando catálogo local persistido:", err);
-        const cached = sessionStorage.getItem('baezpos_cached_products');
-        if (cached) {
-            try { PRODUCTOS_DB = JSON.parse(cached); } catch (e) {}
-        }
-    }
+    // La carga masiva se reemplazó por búsquedas indexadas y paginadas bajo demanda (/products/search)
+    PRODUCTOS_DB = [];
 }
 
 
@@ -568,13 +560,13 @@ async function solicitarPinSupervisorSiEsVendedor(motivo = "realizar esta acció
 async function cambiarCant(index, valor) {
     if (sistemaBloqueado) return;
     const item = CARRITO[index];
-    const original = PRODUCTOS_DB.find(function buscarStockOriginal(p) { return p.id === item.id; });
+    const maxStock = item.stock !== undefined ? item.stock : 99999;
 
     const isDecimal = item.isFractional || (typeof item.cantidad === 'number' && item.cantidad % 1 !== 0);
     const step = isDecimal ? 0.100 : 1;
     const nuevaCant = utilRedondearTresDecimales(item.cantidad + valor * step);
 
-    if (valor > 0 && original && nuevaCant > original.stock) {
+    if (valor > 0 && maxStock !== undefined && nuevaCant > maxStock) {
         if (sndError) sndError.play().catch(function silencioso(){});
         Swal.fire({
             icon: 'info',
@@ -708,6 +700,7 @@ function seleccionarProducto(p) {
                 name: p.name,
                 price: p.price,
                 barcode: p.barcode,
+                stock: p.stock,
                 cantidad: 1,
                 isFractional: false
             });
@@ -799,39 +792,49 @@ function venderPorPesoOImporte(productoBase = null) {
             const esMovil = window.innerWidth <= 991 || ('ontouchstart' in window);
             if (inputBusqueda && !esMovil) inputBusqueda.focus();
 
+            let debouncePesables = null;
+
             if (inputBusqueda && contenedorSugerencias) {
                 inputBusqueda.addEventListener('input', function handleInputPesables() {
-                    const search = inputBusqueda.value.toUpperCase().trim();
+                    const search = inputBusqueda.value.trim();
                     contenedorSugerencias.innerHTML = '';
 
                     if (search.length > 0) {
-                        const filtrados = pesables.filter(function filtrarItemPesable(p) {
-                            return p.name.toUpperCase().includes(search) || (p.barcode && p.barcode.includes(search));
-                        });
+                        clearTimeout(debouncePesables);
+                        debouncePesables = setTimeout(async () => {
+                            try {
+                                const res = await apiFetch(`/products/search?q=${encodeURIComponent(search)}&limit=15`);
+                                if (!res || !res.ok) return;
+                                const productos = await res.json();
 
-                        if (filtrados.length > 0) {
-                            contenedorSugerencias.classList.remove('d-none');
-                            filtrados.forEach(function renderizarItemPesable(p) {
-                                const btn = document.createElement('button');
-                                btn.type = 'button';
-                                btn.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 border-0 border-bottom';
-                                btn.style.fontSize = '0.875rem';
-                                btn.innerHTML = `
-                                    <div class="text-start me-2">
-                                        <div class="fw-bold text-dark mb-0">${p.name.toUpperCase()}</div>
-                                        ${p.isFractional ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill" style="font-size:0.65rem;">⚖️ Pesable</span>' : ''}
-                                    </div>
-                                    <span class="badge bg-light text-dark border fw-bold fs-6">$${(p.price || 0).toFixed(2)}/Kg</span>
-                                `;
-                                btn.onclick = function handleClickItemPesable() {
-                                    Swal.close();
-                                    abrirModalCalculoFraccionado(p);
-                                };
-                                contenedorSugerencias.appendChild(btn);
-                            });
-                        } else {
-                            contenedorSugerencias.classList.add('d-none');
-                        }
+                                if (Array.isArray(productos) && productos.length > 0) {
+                                    contenedorSugerencias.classList.remove('d-none');
+                                    contenedorSugerencias.innerHTML = '';
+                                    productos.forEach(function renderizarItemPesable(p) {
+                                        const btn = document.createElement('button');
+                                        btn.type = 'button';
+                                        btn.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 border-0 border-bottom';
+                                        btn.style.fontSize = '0.875rem';
+                                        btn.innerHTML = `
+                                            <div class="text-start me-2">
+                                                <div class="fw-bold text-dark mb-0">${p.name.toUpperCase()}</div>
+                                                ${p.isFractional ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill" style="font-size:0.65rem;">⚖️ Pesable</span>' : ''}
+                                            </div>
+                                            <span class="badge bg-light text-dark border fw-bold fs-6">$${(p.price || 0).toFixed(2)}/Kg</span>
+                                        `;
+                                        btn.onclick = function handleClickItemPesable() {
+                                            Swal.close();
+                                            abrirModalCalculoFraccionado(p);
+                                        };
+                                        contenedorSugerencias.appendChild(btn);
+                                    });
+                                } else {
+                                    contenedorSugerencias.classList.add('d-none');
+                                }
+                            } catch (e) {
+                                console.error("Error buscando pesables:", e);
+                            }
+                        }, 250);
                     } else {
                         contenedorSugerencias.classList.add('d-none');
                     }
@@ -1195,25 +1198,30 @@ function abrirModalCalculoFraccionado(p) {
 // ==========================================
 async function buscarYAgregar(query) {
     if (!query) return;
-    const term = query.toLowerCase().trim();
+    const term = query.trim();
 
-    if (typeof PRODUCTOS_DB === 'undefined' || !Array.isArray(PRODUCTOS_DB)) {
-        PRODUCTOS_DB = [];
+    try {
+        const res = await apiFetch(`/products/search?q=${encodeURIComponent(term)}&limit=10`);
+        if (res && res.ok) {
+            const productos = await res.json();
+            if (Array.isArray(productos) && productos.length === 1) {
+                // 1 solo resultado (ej: escaneo exacto): agregar inmediatamente
+                seleccionarProducto(productos[0]);
+                return;
+            } else if (Array.isArray(productos) && productos.length > 1) {
+                // Múltiples resultados: mostrar sugerencias
+                uiRenderizarSugerenciasProductos(productos);
+                return;
+            }
+        }
+    } catch (e) {
+        console.error("Error en búsqueda rápida:", e);
     }
 
-    const productoLocal = PRODUCTOS_DB.find(function buscarProductoLocal(prod) {
-        return (prod.barcode && prod.barcode.toLowerCase() === term) ||
-               (prod.name && prod.name.toLowerCase().includes(term));
-    });
-
-    if (productoLocal) {
-        seleccionarProducto(productoLocal);
+    if (/^\d{7,14}$/.test(term)) {
+        await serviceConsultarOpenFoodFacts(term);
     } else {
-        if (/^\d{7,14}$/.test(term)) {
-            await serviceConsultarOpenFoodFacts(term);
-        } else {
-            uiMostrarNotificacionProductoNoEncontrado(term);
-        }
+        uiMostrarNotificacionProductoNoEncontrado(term);
     }
 
     const buscador = document.getElementById('buscadorVenta');

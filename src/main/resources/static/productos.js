@@ -227,56 +227,81 @@ function formatStockDisplay(stock, isFractional) {
 }
 
 // ==========================================
+// ==========================================
 // 3. GESTIÓN DE PRODUCTOS Y PAGINACIÓN
 // ==========================================
-async function listarProductos() {
+let totalPaginasBackend = 1;
+let totalElementosBackend = 0;
+let debounceBuscarTimer = null;
+
+async function listarProductos(pagina = 0) {
     try {
-        const res = await apiFetch(ENDPOINT_PRODUCTS);
+        const res = await apiFetch(`${ENDPOINT_PRODUCTS}?page=${pagina}&size=${LIMITE_POR_PAGINA}&sort=name,asc`);
         if (!res || !res.ok) return;
 
         const data = await res.json();
 
-        // Orden alfabético (A-Z)
-        PRODUCTOS_LOCAL = data.sort((a, b) =>
-            (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' })
-        );
+        if (data && Array.isArray(data.content)) {
+            PRODUCTOS_LOCAL = data.content;
+            PRODUCTOS_FILTRADOS = [...PRODUCTOS_LOCAL];
+            paginaActual = data.number + 1;
+            totalPaginasBackend = data.totalPages || 1;
+            totalElementosBackend = data.totalElements || 0;
+        } else if (Array.isArray(data)) {
+            // Fallback compatibilidad
+            PRODUCTOS_LOCAL = data;
+            PRODUCTOS_FILTRADOS = [...PRODUCTOS_LOCAL];
+            paginaActual = 1;
+            totalPaginasBackend = 1;
+            totalElementosBackend = data.length;
+        }
 
-        PRODUCTOS_FILTRADOS = [...PRODUCTOS_LOCAL];
-        paginaActual = 1;
-        renderizarVistaPaginada();
+        renderizarTabla(PRODUCTOS_FILTRADOS);
+        const inicio = (paginaActual - 1) * LIMITE_POR_PAGINA;
+        const fin = inicio + PRODUCTOS_FILTRADOS.length;
+        renderizarControlesPaginacion(totalElementosBackend, totalPaginasBackend, inicio, fin);
     } catch (err) {
         console.error("Error al listar productos:", err);
     }
 }
 
 function filtrarProductos() {
-    const texto = (document.getElementById('buscador')?.value || '').toLowerCase().trim();
-    const catId = document.getElementById('filtroCategoria')?.value || '';
+    clearTimeout(debounceBuscarTimer);
+    debounceBuscarTimer = setTimeout(async () => {
+        const texto = (document.getElementById('buscador')?.value || '').trim();
+        const catId = document.getElementById('filtroCategoria')?.value || '';
 
-    PRODUCTOS_FILTRADOS = PRODUCTOS_LOCAL.filter(p => {
-        const coincideTexto = (p.name || '').toLowerCase().includes(texto) || (p.barcode && p.barcode.toLowerCase().includes(texto));
-        const coincideCat = catId === "" || p.categoryId == catId;
-        return coincideTexto && coincideCat;
-    }).sort((a, b) =>
-        (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' })
-    );
+        if (!texto && !catId) {
+            listarProductos(0);
+            return;
+        }
 
-    paginaActual = 1;
-    renderizarVistaPaginada();
-}
+        try {
+            const url = texto ? `${ENDPOINT_PRODUCTS}/search?q=${encodeURIComponent(texto)}&limit=100` : `${ENDPOINT_PRODUCTS}?page=0&size=100&sort=name,asc`;
+            const res = await apiFetch(url);
+            if (!res || !res.ok) return;
 
-function renderizarVistaPaginada() {
-    const totalProductos = PRODUCTOS_FILTRADOS.length;
-    const totalPaginas = Math.ceil(totalProductos / LIMITE_POR_PAGINA) || 1;
+            let lista = await res.json();
+            if (lista && Array.isArray(lista.content)) {
+                lista = lista.content;
+            }
 
-    if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+            if (catId) {
+                lista = lista.filter(p => p.categoryId == catId);
+            }
 
-    const inicio = (paginaActual - 1) * LIMITE_POR_PAGINA;
-    const fin = inicio + LIMITE_POR_PAGINA;
-    const productosPagina = PRODUCTOS_FILTRADOS.slice(inicio, fin);
+            PRODUCTOS_LOCAL = lista;
+            PRODUCTOS_FILTRADOS = lista;
+            paginaActual = 1;
+            totalPaginasBackend = 1;
+            totalElementosBackend = lista.length;
 
-    renderizarTabla(productosPagina);
-    renderizarControlesPaginacion(totalProductos, totalPaginas, inicio, fin);
+            renderizarTabla(PRODUCTOS_FILTRADOS);
+            renderizarControlesPaginacion(totalElementosBackend, totalPaginasBackend, 0, PRODUCTOS_FILTRADOS.length);
+        } catch (err) {
+            console.error("Error buscando productos:", err);
+        }
+    }, 300);
 }
 
 function renderizarTabla(lista) {
@@ -355,7 +380,7 @@ function renderizarControlesPaginacion(totalItems, totalPaginas, inicio, fin) {
         </li>
     `;
 
-    // Algoritmo de rango dinámico para evitar Renderizar decenas de números
+    // Algoritmo de rango dinámico para evitar renderizar decenas de números
     const maxPaginasVisibles = 5;
     let pagInicio = Math.max(1, paginaActual - Math.floor(maxPaginasVisibles / 2));
     let pagFin = Math.min(totalPaginas, pagInicio + maxPaginasVisibles - 1);
@@ -393,8 +418,13 @@ function renderizarControlesPaginacion(totalItems, totalPaginas, inicio, fin) {
 }
 
 function cambiarPagina(nuevaPagina) {
-    paginaActual = nuevaPagina;
-    renderizarVistaPaginada();
+    if (nuevaPagina < 1 || nuevaPagina > totalPaginasBackend) return;
+    const texto = (document.getElementById('buscador')?.value || '').trim();
+    if (texto) {
+        // En modo búsqueda, mantener
+        return;
+    }
+    listarProductos(nuevaPagina - 1);
 }
 
 function autogenerarCodigoInput() {

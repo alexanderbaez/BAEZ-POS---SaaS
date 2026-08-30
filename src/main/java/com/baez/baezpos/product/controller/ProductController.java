@@ -5,6 +5,10 @@ import com.baez.baezpos.product.dto.ProductResponseDTO;
 import com.baez.baezpos.product.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,8 +26,9 @@ public class ProductController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'SUPER_ADMIN')")
-    public ResponseEntity<List<ProductResponseDTO>> getAll() {
-        return ResponseEntity.ok(productService.getAllProducts());
+    public ResponseEntity<Page<ProductResponseDTO>> getAll(
+            @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(productService.getAllProducts(pageable));
     }
 
     @PostMapping
@@ -73,7 +78,9 @@ public class ProductController {
 
     @GetMapping("/search")
     @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'SUPER_ADMIN')")
-    public ResponseEntity<List<ProductResponseDTO>> search(@RequestParam(required = false) String q) {
-        return ResponseEntity.ok(productService.searchProducts(q));
+    public ResponseEntity<List<ProductResponseDTO>> search(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false, defaultValue = "20") int limit) {
+        return ResponseEntity.ok(productService.searchProducts(q, limit));
     }
 }

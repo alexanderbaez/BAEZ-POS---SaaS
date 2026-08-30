@@ -13,6 +13,9 @@ import com.baez.baezpos.security.util.SecurityUtils;
 import com.baez.baezpos.shared.exception.BadRequestException;
 import com.baez.baezpos.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -90,6 +93,18 @@ public class ProductServiceImpl implements ProductService {
                 : productRepository.findAllActiveWithCategory();
 
         return products.stream().map(this::mapToResponseDTO).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProductResponseDTO> getAllProducts(Pageable pageable) {
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+
+        Page<Product> page = (companyId != null)
+                ? productRepository.findByCompanyIdAndActiveTrue(companyId, pageable)
+                : productRepository.findByActiveTrue(pageable);
+
+        return page.map(this::mapToResponseDTO);
     }
 
     @Override
@@ -177,14 +192,25 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public List<ProductResponseDTO> searchProducts(String term) {
+        return searchProducts(term, 20);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductResponseDTO> searchProducts(String term, int limit) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         if (companyId == null) return List.of();
 
+        int maxResults = (limit > 0 && limit <= 100) ? limit : 20;
+        Pageable pageable = PageRequest.of(0, maxResults);
+
         if (term == null || term.isBlank()) {
-            return getAllProducts();
+            return productRepository.findByCompanyIdAndActiveTrue(companyId, pageable)
+                    .map(this::mapToResponseDTO)
+                    .getContent();
         }
 
-        return productRepository.searchByTermAndCompanyId(companyId, term.trim())
+        return productRepository.searchByTermAndCompanyId(companyId, term.trim(), pageable)
                 .stream()
                 .map(this::mapToResponseDTO)
                 .toList();
