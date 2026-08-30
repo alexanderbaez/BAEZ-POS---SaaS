@@ -85,7 +85,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 3. Inicializar preset por defecto en Análisis Detallado (Por defecto: Hoy)
     aplicarPresetFecha('HOY');
 
-    // 4. Carga concurrente inicial
+    // 4. Inicializar tooltips de Bootstrap
+    inicializarTooltips();
+
+    // 5. Carga concurrente inicial
     await Promise.allSettled([
         cargarKpisYTablas(),
         cargarGraficoSemanal(),
@@ -344,9 +347,10 @@ function renderizarTurnosCajaPeriodo(sessions, rangoTexto) {
             estadoBadge = '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-unlock-fill me-1"></i>Abierta</span>';
             totalCierreHtml = `
                 <div class="${claseEsperado} amount-num fs-6">${fmtARS.format(totalFisicoEsperado)}</div>
-                <small class="${totalFisicoEsperado < 0 ? 'text-danger fw-semibold' : 'text-success'}" style="font-size: 0.72rem;">
+                <small class="${totalFisicoEsperado < 0 ? 'text-danger fw-semibold' : 'text-success'} d-block" style="font-size: 0.72rem;">
                     <i class="bi bi-lightning-charge me-1"></i>${totalFisicoEsperado < 0 ? 'Desfase Negativo' : 'Esperado en cajón'}
                 </small>
+                <small class="text-muted d-block" style="font-size: 0.68rem;">Incluye fondo de cambio inicial</small>
             `;
         } else {
             estadoBadge = '<span class="badge bg-secondary-subtle text-secondary border border-secondary px-2 py-1"><i class="bi bi-lock-fill me-1"></i>Cerrada</span>';
@@ -363,6 +367,7 @@ function renderizarTurnosCajaPeriodo(sessions, rangoTexto) {
             totalCierreHtml = `
                 <div class="${claseDeclarado} amount-num fs-6">${fmtARS.format(declarado)}</div>
                 ${diffHtml}
+                <small class="text-muted d-block" style="font-size: 0.68rem;">Incluye fondo de cambio inicial</small>
             `;
         }
 
@@ -713,12 +718,6 @@ async function consultarPorFechas() {
             const periodOperations = parseInt(dataBox.periodOperations || 0, 10);
             const ticketPromedio = periodOperations > 0 ? (periodSales / periodOperations) : 0;
 
-            setElementText('txtRecaudacionMes', fmtARS.format(periodSales));
-            setElementText('txtGananciaMes', fmtARS.format(periodProfit));
-            setElementText('txtReposicionMes', fmtARS.format(periodReplacementCost));
-            setElementText('txtVentasCountMes', periodOperations);
-            setElementText('txtTicketPromedio', fmtARS.format(ticketPromedio));
-
             // Trazabilidad Separada y Totales con Flujo de Caja Puro:
             const cashSales = parseFloat(dataBox.cashSales ?? dataBox.periodCashSales ?? 0);
             const cashPayments = parseFloat(dataBox.cashPayments ?? dataBox.periodCustomerPaymentsCash ?? 0);
@@ -736,6 +735,21 @@ async function consultarPorFechas() {
                 ? parseFloat(dataBox.netTransfer)
                 : (transferSales + transferPayments - transferExpenses);
 
+            const totalGastosPeriodo = cashExpenses + transferExpenses;
+            const liquidezTotal = (dataBox.realBalance !== undefined && dataBox.realBalance !== null)
+                ? (parseFloat(dataBox.realBalance) + netTransfer)
+                : (netCash + netTransfer);
+
+            // Poblar métricas principales (Fila 1)
+            setElementText('txtLiquidezTotal', fmtARS.format(liquidezTotal));
+            setElementText('txtRecaudacionMes', fmtARS.format(periodSales));
+            setElementText('txtTotalGastosRango', fmtARS.format(totalGastosPeriodo));
+            setElementText('txtGananciaMes', fmtARS.format(periodProfit));
+            setElementText('txtReposicionMes', fmtARS.format(periodReplacementCost));
+            setElementText('txtVentasCountMes', periodOperations);
+            setElementText('txtTicketPromedio', fmtARS.format(ticketPromedio));
+
+            // Poblar ingresos por medio de pago (Fila 2)
             setElementText('txtEfectivoRango', fmtARS.format(netCash));
             setElementText('txtTransfRango', fmtARS.format(netTransfer));
             setElementText('txtFiadosCobradosRango', `+${fmtARS.format(cashPayments)}`);
@@ -929,6 +943,16 @@ function escapeHTML(str) {
         .replace(/'/g, '&#039;');
 }
 
+function inicializarTooltips() {
+    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltipTriggerList.forEach(el => {
+            bootstrap.Tooltip.getOrCreateInstance(el);
+        });
+    }
+}
+
 // Exposición al scope global para eventos onclick/onchange en el DOM
 window.aplicarPresetFecha = aplicarPresetFecha;
 window.consultarPorFechas = consultarPorFechas;
+window.inicializarTooltips = inicializarTooltips;

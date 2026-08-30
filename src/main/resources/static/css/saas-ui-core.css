@@ -993,3 +993,21 @@ body.login-page {
   }
 }
 
+/* ==========================================================================
+   TOOLTIPS & UTILIDADES DE INTERACCIÓN
+   ========================================================================== */
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.tooltip .tooltip-inner {
+  background-color: var(--saas-text-heading, #0f172a);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: var(--saas-radius-sm, 6px);
+  box-shadow: var(--saas-shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+  max-width: 260px;
+}
+
