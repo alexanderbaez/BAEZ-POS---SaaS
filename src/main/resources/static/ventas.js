@@ -2864,78 +2864,94 @@ async function ejecutarCierreCaja(payload) {
 async function mostrarResultadoArqueoModal(dto) {
     const sistema = parseFloat(dto.systemAmount ?? 0);
     const declarado = parseFloat(dto.declaredAmount ?? 0);
-    const diferencia = parseFloat(dto.difference ?? 0);
+    const diferencia = parseFloat(dto.difference ?? (declarado - sistema));
+
+    const inicial = parseFloat(dto.initialAmount ?? 0);
+    const ventasEfe = parseFloat(dto.totalCashSales ?? 0);
+    const cobrosEfe = parseFloat(dto.totalCustomerPayments ?? 0);
+    const gastosEfe = Math.abs(parseFloat(dto.totalExpenses ?? 0));
 
     let iconType = 'success';
-    let titleHeader = '¡Caja Cerrada Exitosamente!';
-    let diffBadge = `<span class="badge bg-success-subtle text-success fs-7 border border-success-subtle px-2.5 py-1.5 rounded-pill">Diferencia: $0,00 (Cuadrada)</span>`;
-    let estadoTexto = 'El dinero físico coincide con el cálculo del sistema.';
+    let titleHeader = '¡Cierre de Caja Exitoso!';
+    let diffColorClass = 'text-success';
+    let diffSign = '';
+    let diffBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1.5 rounded-pill fw-semibold"><i class="bi bi-check-circle-fill me-1"></i>Caja Cuadrada (Exacto)</span>`;
+    let estadoTexto = 'El dinero físico coincide perfectamente con el cálculo del sistema.';
 
-    if (diferencia < 0) {
+    if (diferencia < -0.01) {
         iconType = 'warning';
         titleHeader = 'Cierre con FALTANTE';
-        diffBadge = `<span class="badge bg-danger-subtle text-danger fs-7 border border-danger-subtle px-2.5 py-1.5 rounded-pill">Faltante: -$${formatearMonedaSegura(Math.abs(diferencia))}</span>`;
-        estadoTexto = 'Se detectó un faltante de dinero respecto al cálculo del sistema.';
-    } else if (diferencia > 0) {
+        diffColorClass = 'text-danger';
+        diffSign = '-';
+        diffBadge = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-1.5 rounded-pill fw-semibold"><i class="bi bi-exclamation-triangle-fill me-1"></i>Faltante de Efectivo</span>`;
+        estadoTexto = 'Se detectó un faltante de dinero físico respecto al cálculo del sistema.';
+    } else if (diferencia > 0.01) {
         iconType = 'info';
         titleHeader = 'Cierre con SOBRANTE';
-        diffBadge = `<span class="badge bg-primary-subtle text-primary fs-7 border border-primary-subtle px-2.5 py-1.5 rounded-pill">Sobrante: +$${formatearMonedaSegura(diferencia)}</span>`;
-        estadoTexto = 'Se registró más efectivo que el calculado por el sistema.';
+        diffColorClass = 'text-success';
+        diffSign = '+';
+        diffBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1.5 rounded-pill fw-semibold"><i class="bi bi-plus-circle-fill me-1"></i>Sobrante de Efectivo</span>`;
+        estadoTexto = 'Se registró más dinero físico que el calculado por el sistema.';
     }
 
     const resultado = await Swal.fire({
         icon: iconType,
-        title: `<span class="fs-6 fs-sm-5 fw-bold text-dark">${titleHeader}</span>`,
-        width: '100%',
+        title: `<div class="fw-bold text-dark fs-4 mb-0">${titleHeader}</div>`,
+        width: 500,
+        padding: '1.75rem 1.5rem',
         customClass: {
-            container: 'p-1 p-sm-3',
-            popup: 'rounded-4 shadow-lg border-0 my-2 mx-auto mw-100',
-            htmlContainer: 'mx-0 my-1 px-2 px-sm-3 text-start'
+            popup: 'rounded-4 shadow-lg border-0',
+            htmlContainer: 'm-0 p-0 text-start'
         },
         html: `
-            <div class="text-center mb-2.5">
+            <div class="text-center my-2">
                 ${diffBadge}
-                <p class="text-muted small mt-1.5 mb-0" style="font-size: 0.78rem;">${estadoTexto}</p>
+                <p class="text-muted small mt-2 mb-0" style="font-size: 0.82rem;">${estadoTexto}</p>
             </div>
 
-            <!-- Comparativa Principal (Auditoría Arqueo Ciego) -->
-            <div class="bg-light p-2.5 p-sm-3 rounded-3 border mb-2.5 fs-7">
-                <div class="d-flex justify-content-between align-items-center mb-1.5">
-                    <span class="text-secondary">Efectivo Teórico (Sistema):</span>
-                    <span class="fw-bold text-dark">$${formatearMonedaSegura(sistema)}</span>
-                </div>
-                <div class="d-flex justify-content-between align-items-center mb-1.5">
-                    <span class="text-secondary">Efectivo Declarado (Físico):</span>
-                    <span class="fw-bold text-success">$${formatearMonedaSegura(declarado)}</span>
-                </div>
-                <hr class="my-1.5">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="fw-bold text-dark">Diferencia Final:</span>
-                    <span class="fw-bold fs-6 ${diferencia < 0 ? 'text-danger' : (diferencia > 0 ? 'text-primary' : 'text-success')}">
-                        ${diferencia > 0 ? '+' : ''}$${formatearMonedaSegura(diferencia)}
-                    </span>
+            <!-- Resumen de Auditoría / Ticket Principal -->
+            <div class="card border rounded-3 bg-white shadow-sm mt-3 mb-3">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <span class="text-secondary fw-semibold small">Efectivo Teórico (Sistema):</span>
+                        <span class="fw-bold text-dark fs-6 amount-num">$${formatearMonedaSegura(sistema)}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <span class="text-secondary fw-semibold small">Efectivo Declarado (Físico):</span>
+                        <span class="fw-bold text-dark fs-6 amount-num">$${formatearMonedaSegura(declarado)}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center pt-2.5 pb-1">
+                        <div>
+                            <span class="fw-bold text-dark fs-5 d-block">Diferencia Final:</span>
+                            <small class="text-muted" style="font-size: 0.72rem;">(Físico Declarado vs Sistema)</small>
+                        </div>
+                        <span class="fw-bold fs-4 ${diffColorClass} amount-num">
+                            ${diffSign}$${formatearMonedaSegura(Math.abs(diferencia))}
+                        </span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Resumen Operativo en Lista Flex -->
-            <div class="bg-white p-2.5 rounded-3 border text-start fs-7">
-                <span class="fw-bold text-secondary d-block mb-1.5" style="font-size: 0.75rem;">Desglose del Turno:</span>
-
-                <div class="d-flex justify-content-between align-items-center py-0.5 border-bottom border-light">
-                    <span class="text-muted small">+ Fondo Inicial:</span>
-                    <span class="fw-semibold text-dark">$${formatearMonedaSegura(dto.initialAmount)}</span>
+            <!-- Desglose Secundario del Turno -->
+            <div class="bg-light border rounded-3 p-3">
+                <div class="d-flex align-items-center text-secondary fw-bold small text-uppercase mb-2" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+                    <i class="bi bi-receipt me-1.5 text-primary"></i> Desglose del Turno
                 </div>
-                <div class="d-flex justify-content-between align-items-center py-0.5 border-bottom border-light">
-                    <span class="text-muted small">+ Ventas en Efectivo:</span>
-                    <span class="fw-semibold text-dark">$${formatearMonedaSegura(dto.totalCashSales)}</span>
+                <div class="d-flex justify-content-between align-items-center py-1.5 border-bottom small">
+                    <span class="text-muted">+ Fondo Inicial:</span>
+                    <span class="fw-semibold text-dark amount-num">$${formatearMonedaSegura(inicial)}</span>
                 </div>
-                <div class="d-flex justify-content-between align-items-center py-0.5 border-bottom border-light">
-                    <span class="text-muted small">+ Cobranza Cta. Cte. (Efectivo):</span>
-                    <span class="fw-semibold text-dark">$${formatearMonedaSegura(dto.totalCustomerPayments)}</span>
+                <div class="d-flex justify-content-between align-items-center py-1.5 border-bottom small">
+                    <span class="text-muted">+ Ventas en Efectivo:</span>
+                    <span class="fw-semibold text-success amount-num">+$${formatearMonedaSegura(ventasEfe)}</span>
                 </div>
-                <div class="d-flex justify-content-between align-items-center py-0.5">
-                    <span class="text-muted small">- Gastos en Efectivo:</span>
-                    <span class="fw-semibold text-danger">-$${formatearMonedaSegura(dto.totalExpenses)}</span>
+                <div class="d-flex justify-content-between align-items-center py-1.5 border-bottom small">
+                    <span class="text-muted">+ Cobranza Cta. Cte. (Efectivo):</span>
+                    <span class="fw-semibold text-success amount-num">+$${formatearMonedaSegura(cobrosEfe)}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center pt-1.5 small">
+                    <span class="text-muted">- Gastos en Efectivo:</span>
+                    <span class="fw-semibold text-danger amount-num">-$${formatearMonedaSegura(gastosEfe)}</span>
                 </div>
             </div>
         `,
