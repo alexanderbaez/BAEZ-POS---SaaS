@@ -32,6 +32,18 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) throws Exception {
+        // Lanzamos la inicialización pesada de forma asíncrona para no bloquear el Hilo Principal (Main)
+        // y permitir que el servidor HTTP (Tomcat) acepte peticiones inmediatamente.
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            try {
+                ejecutarInicializacionAsincrona();
+            } catch (Exception e) {
+                log.error("Error en inicialización de datos en background: ", e);
+            }
+        });
+    }
+
+    private void ejecutarInicializacionAsincrona() {
         // ==========================================
         // SANITIZACIÓN DIRECTA SQL (JPA Versioning Null Fix)
         // ==========================================
