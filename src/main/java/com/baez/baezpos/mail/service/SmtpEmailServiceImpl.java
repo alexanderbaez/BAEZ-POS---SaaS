@@ -19,7 +19,7 @@ import java.util.Map;
 public class SmtpEmailServiceImpl implements EmailService {
 
     private final AuditService auditService;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Value("${resend.api.key:}")
     private String resendApiKey;

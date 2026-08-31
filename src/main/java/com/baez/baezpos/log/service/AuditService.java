@@ -27,7 +27,7 @@ public class AuditService {
     /**
      * Registra auditorías de manera asíncrona sin bloquear la transacción principal.
      */
-    @Async
+    @Async("taskExecutor")
     @Transactional
     public void logActionAsync(Long companyId, String userEmail, String action, String description, String level) {
         try {
