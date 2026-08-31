@@ -5,6 +5,11 @@ let VENTA_SELECCIONADA = null;
 let VENTAS_GLOBALES = [];
 let DATOS_EMPRESA = null;
 
+let paginaActual = 1;
+let totalPaginasBackend = 1;
+let totalElementosBackend = 0;
+const LIMITE_POR_PAGINA = 20;
+
 // ==========================================
 // 2. INICIALIZACIÓN Y NORMALIZACIÓN DE FECHAS
 // ==========================================
@@ -18,7 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (fechaHastaEl && !fechaHastaEl.value) fechaHastaEl.value = hoyLocal;
 
     await cargarInfoEmpresa();
-    await cargarVentas();
+    await cargarVentas(0);
 });
 
 async function cargarInfoEmpresa() {
@@ -33,9 +38,9 @@ async function cargarInfoEmpresa() {
 }
 
 // ==========================================
-// 3. CARGA DE DATOS Y FILTRADO
+// 3. CARGA DE DATOS Y FILTRADO (PAGINADA)
 // ==========================================
-async function cargarVentas() {
+async function cargarVentas(pagina = 0) {
     const desdeInput = document.getElementById('fechaDesde');
     const hastaInput = document.getElementById('fechaHasta');
 
@@ -49,21 +54,106 @@ async function cargarVentas() {
     try {
         const tbody = document.getElementById('listaVentas');
         if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center p-5 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Buscando transacciones...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center p-5 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Buscando transacciones...</td></tr>';
         }
 
-        const res = await apiFetch(`/sales?desde=${desde}&hasta=${hasta}`);
+        const res = await apiFetch(`/sales/history?desde=${desde}&hasta=${hasta}&page=${pagina}&size=${LIMITE_POR_PAGINA}&sort=saleDate,desc`);
         if (!res.ok) throw new Error("Error al obtener el historial");
 
-        const ventas = await res.json();
-        VENTAS_GLOBALES = Array.isArray(ventas) ? ventas : (ventas.data || []);
+        const data = await res.json();
+        let lista = [];
 
+        if (data && Array.isArray(data.content)) {
+            lista = data.content;
+            paginaActual = data.number + 1;
+            totalPaginasBackend = data.totalPages;
+            totalElementosBackend = data.totalElements;
+        } else if (Array.isArray(data)) {
+            lista = data;
+            paginaActual = 1;
+            totalPaginasBackend = 1;
+            totalElementosBackend = data.length;
+        }
+
+        VENTAS_GLOBALES = lista;
         cargarVentasFiltradas();
+
+        const inicio = (paginaActual - 1) * LIMITE_POR_PAGINA;
+        const fin = inicio + VENTAS_GLOBALES.length;
+        renderizarControlesPaginacion(totalElementosBackend, totalPaginasBackend, inicio, fin);
 
     } catch (err) {
         console.error("Error al mapear historial:", err);
         Swal.fire('Error', 'No se pudieron recuperar las ventas para el rango seleccionado.', 'error');
     }
+}
+
+function renderizarControlesPaginacion(totalItems, totalPaginas, inicio, fin) {
+    const infoText = document.getElementById('infoPaginacion');
+    const contenedor = document.getElementById('paginacionContenedor');
+
+    if (infoText) {
+        if (totalItems === 0) {
+            infoText.innerText = "Mostrando 0 comprobantes";
+        } else {
+            const limiteSuperior = fin > totalItems ? totalItems : fin;
+            infoText.innerText = `Mostrando ${inicio + 1} - ${limiteSuperior} de ${totalItems} comprobantes`;
+        }
+    }
+
+    if (!contenedor) return;
+    contenedor.innerHTML = '';
+
+    if (totalPaginas <= 1) return;
+
+    let html = '';
+
+    // Botón Anterior
+    html += `
+        <li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
+            <button class="page-link" onclick="cambiarPaginaHistorial(${paginaActual - 1})"><i class="bi bi-chevron-left"></i></button>
+        </li>
+    `;
+
+    const maxPaginasVisibles = 5;
+    let pagInicio = Math.max(1, paginaActual - Math.floor(maxPaginasVisibles / 2));
+    let pagFin = Math.min(totalPaginas, pagInicio + maxPaginasVisibles - 1);
+
+    if (pagFin - pagInicio + 1 < maxPaginasVisibles) {
+        pagInicio = Math.max(1, pagFin - maxPaginasVisibles + 1);
+    }
+
+    if (pagInicio > 1) {
+        html += `<li class="page-item"><button class="page-link" onclick="cambiarPaginaHistorial(1)">1</button></li>`;
+        if (pagInicio > 2) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+    }
+
+    for (let i = pagInicio; i <= pagFin; i++) {
+        html += `
+            <li class="page-item ${i === paginaActual ? 'active' : ''}">
+                <button class="page-link" onclick="cambiarPaginaHistorial(${i})">${i}</button>
+            </li>
+        `;
+    }
+
+    if (pagFin < totalPaginas) {
+        if (pagFin < totalPaginas - 1) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        html += `<li class="page-item"><button class="page-link" onclick="cambiarPaginaHistorial(${totalPaginas})">${totalPaginas}</button></li>`;
+    }
+
+    // Botón Siguiente
+    html += `
+        <li class="page-item ${paginaActual === totalPaginas ? 'disabled' : ''}">
+            <button class="page-link" onclick="cambiarPaginaHistorial(${paginaActual + 1})"><i class="bi bi-chevron-right"></i></button>
+        </li>
+    `;
+
+    contenedor.innerHTML = html;
+}
+
+function cambiarPaginaHistorial(nuevaPagina) {
+    if (nuevaPagina < 1 || nuevaPagina > totalPaginasBackend) return;
+    cargarVentas(nuevaPagina - 1);
 }
 
 function cargarVentasFiltradas() {

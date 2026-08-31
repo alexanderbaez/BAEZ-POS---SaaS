@@ -8,6 +8,10 @@ import com.baez.baezpos.sale.service.SaleService.*;
 import com.baez.baezpos.security.util.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -40,6 +44,15 @@ public class SaleController {
         if (desde == null) desde = LocalDate.now();
         if (hasta == null) hasta = LocalDate.now();
         return ResponseEntity.ok(saleService.getSalesByDateRange(desde, hasta));
+    }
+
+    @GetMapping("/history")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'SUPER_ADMIN')")
+    public ResponseEntity<Page<SaleResponseDTO>> listHistoryPaginated(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
+            @PageableDefault(size = 20, sort = "saleDate", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(saleService.getSalesByDateRange(desde, hasta, pageable));
     }
 
     @GetMapping("/{id}")

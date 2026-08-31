@@ -8,6 +8,10 @@ import com.baez.baezpos.customer.service.CustomerService;
 import com.baez.baezpos.shared.dto.MessageResponseDTO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,8 +29,9 @@ public class CustomerController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'SUPER_ADMIN')")
-    public ResponseEntity<List<CustomerResponseDTO>> listCustomers() {
-        return ResponseEntity.ok(customerService.getAll());
+    public ResponseEntity<Page<CustomerResponseDTO>> listCustomers(
+            @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(customerService.getAll(pageable));
     }
 
     @PostMapping
@@ -38,8 +43,10 @@ public class CustomerController {
 
     @GetMapping("/search")
     @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'SUPER_ADMIN')")
-    public ResponseEntity<List<CustomerResponseDTO>> search(@RequestParam(required = false) String q) {
-        return ResponseEntity.ok(customerService.searchCustomers(q));
+    public ResponseEntity<Page<CustomerResponseDTO>> search(
+            @RequestParam(required = false) String q,
+            @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(customerService.searchCustomers(q, pageable));
     }
 
     @GetMapping("/{id}/movements")

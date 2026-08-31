@@ -47,6 +47,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
            "AND (LOWER(p.name) LIKE LOWER(CONCAT('%', :term, '%')) " +
            "     OR LOWER(p.barcode) LIKE LOWER(CONCAT('%', :term, '%')) " +
            "     OR (p.category IS NOT NULL AND LOWER(p.category.name) LIKE LOWER(CONCAT('%', :term, '%')))) " +
-           "ORDER BY CASE WHEN p.barcode = :term THEN 0 WHEN LOWER(p.name) LIKE LOWER(CONCAT(:term, '%')) THEN 1 ELSE 2 END, p.name ASC")
+           "ORDER BY CASE " +
+           "    WHEN LOWER(p.barcode) = LOWER(:term) THEN 0 " +
+           "    WHEN LOWER(p.name) = LOWER(:term) THEN 1 " +
+           "    WHEN LOWER(p.name) LIKE LOWER(CONCAT(:term, '%')) THEN 2 " +
+           "    ELSE 3 END, p.name ASC")
     List<Product> searchByTermAndCompanyId(@Param("companyId") Long companyId, @Param("term") String term, org.springframework.data.domain.Pageable pageable);
 }

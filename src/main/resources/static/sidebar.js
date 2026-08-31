@@ -115,7 +115,7 @@
                 <!-- Header del Sidebar -->
                 <div class="p-3 text-center border-bottom border-secondary border-opacity-25">
                   <h3 class="text-white fw-bold m-0" style="letter-spacing: -0.5px;">BaezPOS</h3>
-                  <small class="text-primary fw-semibold" style="font-size: 0.75rem;">SaaS Cloud Edition</small>
+                  <small class="text-primary fw-semibold" style="font-size: 0.75rem;">Sistema de Punto de Venta</small>
                 </div>
 
                 <!-- Menú de Navegación -->

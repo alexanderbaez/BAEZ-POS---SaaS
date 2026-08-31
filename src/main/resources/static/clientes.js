@@ -15,6 +15,12 @@ let CLIENTES_CACHE = [];
 let MOVIMIENTOS_CACHE = [];
 let CLIENTE_ACTUAL = { id: null, nombre: '', telefono: '' };
 
+let paginaActual = 1;
+let totalPaginasBackend = 1;
+let totalElementosBackend = 0;
+const LIMITE_POR_PAGINA = 20;
+let debounceBuscarClientesTimer = null;
+
 // ==========================================
 // UTILS & HELPERS SEGURIDAD
 // ==========================================
@@ -54,7 +60,7 @@ function formatQuantity(quantity, isFractional) {
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        await Promise.all([cargarDatosEmpresa(), cargarClientes()]);
+        await Promise.all([cargarDatosEmpresa(), cargarClientes(0)]);
     } finally {
         if (typeof ocultarPantallaDeCarga === 'function') {
             ocultarPantallaDeCarga();
@@ -85,16 +91,35 @@ async function cargarDatosEmpresa() {
 }
 
 // ==========================================
-// 2. LÓGICA Y CARGA DE CLIENTES
+// 2. LÓGICA Y CARGA DE CLIENTES (PAGINADA)
 // ==========================================
 
-async function cargarClientes() {
+async function cargarClientes(pagina = 0) {
     try {
-        const resp = await apiFetch(API_CUSTOMERS);
+        const resp = await apiFetch(`${API_CUSTOMERS}?page=${pagina}&size=${LIMITE_POR_PAGINA}&sort=name,asc`);
         if (!resp || !resp.ok) throw new Error("Error al obtener clientes");
 
-        CLIENTES_CACHE = await resp.json();
+        const data = await resp.json();
+        let lista = [];
+
+        if (data && Array.isArray(data.content)) {
+            lista = data.content;
+            paginaActual = data.number + 1;
+            totalPaginasBackend = data.totalPages;
+            totalElementosBackend = data.totalElements;
+        } else if (Array.isArray(data)) {
+            lista = data;
+            paginaActual = 1;
+            totalPaginasBackend = 1;
+            totalElementosBackend = data.length;
+        }
+
+        CLIENTES_CACHE = lista;
         renderizarClientes(CLIENTES_CACHE);
+
+        const inicio = (paginaActual - 1) * LIMITE_POR_PAGINA;
+        const fin = inicio + CLIENTES_CACHE.length;
+        renderizarControlesPaginacion(totalElementosBackend, totalPaginasBackend, inicio, fin);
     } catch (err) {
         console.error("Error cargando clientes:", err);
         const tbody = document.getElementById('tablaClientes');
@@ -184,22 +209,110 @@ function renderizarClientes(clientes) {
     }
 }
 
+function renderizarControlesPaginacion(totalItems, totalPaginas, inicio, fin) {
+    const infoText = document.getElementById('infoPaginacion');
+    const contenedor = document.getElementById('paginacionContenedor');
+
+    if (infoText) {
+        if (totalItems === 0) {
+            infoText.innerText = "Mostrando 0 clientes";
+        } else {
+            const limiteSuperior = fin > totalItems ? totalItems : fin;
+            infoText.innerText = `Mostrando ${inicio + 1} - ${limiteSuperior} de ${totalItems} clientes`;
+        }
+    }
+
+    if (!contenedor) return;
+    contenedor.innerHTML = '';
+
+    if (totalPaginas <= 1) return;
+
+    let html = '';
+
+    // Botón Anterior
+    html += `
+        <li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
+            <button class="page-link" onclick="cambiarPaginaClientes(${paginaActual - 1})"><i class="bi bi-chevron-left"></i></button>
+        </li>
+    `;
+
+    const maxPaginasVisibles = 5;
+    let pagInicio = Math.max(1, paginaActual - Math.floor(maxPaginasVisibles / 2));
+    let pagFin = Math.min(totalPaginas, pagInicio + maxPaginasVisibles - 1);
+
+    if (pagFin - pagInicio + 1 < maxPaginasVisibles) {
+        pagInicio = Math.max(1, pagFin - maxPaginasVisibles + 1);
+    }
+
+    if (pagInicio > 1) {
+        html += `<li class="page-item"><button class="page-link" onclick="cambiarPaginaClientes(1)">1</button></li>`;
+        if (pagInicio > 2) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+    }
+
+    for (let i = pagInicio; i <= pagFin; i++) {
+        html += `
+            <li class="page-item ${i === paginaActual ? 'active' : ''}">
+                <button class="page-link" onclick="cambiarPaginaClientes(${i})">${i}</button>
+            </li>
+        `;
+    }
+
+    if (pagFin < totalPaginas) {
+        if (pagFin < totalPaginas - 1) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        html += `<li class="page-item"><button class="page-link" onclick="cambiarPaginaClientes(${totalPaginas})">${totalPaginas}</button></li>`;
+    }
+
+    // Botón Siguiente
+    html += `
+        <li class="page-item ${paginaActual === totalPaginas ? 'disabled' : ''}">
+            <button class="page-link" onclick="cambiarPaginaClientes(${paginaActual + 1})"><i class="bi bi-chevron-right"></i></button>
+        </li>
+    `;
+
+    contenedor.innerHTML = html;
+}
+
+function cambiarPaginaClientes(nuevaPagina) {
+    if (nuevaPagina < 1 || nuevaPagina > totalPaginasBackend) return;
+    cargarClientes(nuevaPagina - 1);
+}
+
 function filtrarClientes() {
-    const texto = (document.getElementById('buscarCliente')?.value || '').toLowerCase().trim();
-    const soloDeudores = document.getElementById('filtroDeudores')?.checked || false;
+    clearTimeout(debounceBuscarClientesTimer);
+    debounceBuscarClientesTimer = setTimeout(async () => {
+        const texto = (document.getElementById('buscarCliente')?.value || '').trim();
+        const soloDeudores = document.getElementById('filtroDeudores')?.checked || false;
 
-    const filtrados = CLIENTES_CACHE.filter(c => {
-        const nombre = (c.name || '').toLowerCase();
-        const dni = (c.dniCuit || '').toLowerCase();
-        const saldo = parseFloat(c.currentBalance) || 0;
+        if (!texto && !soloDeudores) {
+            cargarClientes(0);
+            return;
+        }
 
-        const coincideTexto = nombre.includes(texto) || dni.includes(texto);
-        const cumpleDeuda = !soloDeudores || saldo > 0;
+        try {
+            const url = texto
+                ? `${API_CUSTOMERS}/search?q=${encodeURIComponent(texto)}&size=100`
+                : `${API_CUSTOMERS}?page=0&size=100&sort=name,asc`;
+            const resp = await apiFetch(url);
+            if (!resp || !resp.ok) return;
 
-        return coincideTexto && cumpleDeuda;
-    });
+            let data = await resp.json();
+            let lista = Array.isArray(data.content) ? data.content : (Array.isArray(data) ? data : []);
 
-    renderizarClientes(filtrados);
+            if (soloDeudores) {
+                lista = lista.filter(c => (parseFloat(c.currentBalance) || 0) > 0);
+            }
+
+            CLIENTES_CACHE = lista;
+            paginaActual = 1;
+            totalPaginasBackend = 1;
+            totalElementosBackend = lista.length;
+
+            renderizarClientes(CLIENTES_CACHE);
+            renderizarControlesPaginacion(totalElementosBackend, totalPaginasBackend, 0, CLIENTES_CACHE.length);
+        } catch (err) {
+            console.error("Error buscando clientes:", err);
+        }
+    }, 300);
 }
 
 // ==========================================

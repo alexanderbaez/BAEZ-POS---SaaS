@@ -136,7 +136,12 @@ function actualizarEstadoDeductFromBox(metodoSeleccionado, elementSwitch) {
     }
 }
 
-async function cargarGastos() {
+let paginaActual = 1;
+let totalPaginasBackend = 1;
+let totalElementosBackend = 0;
+const LIMITE_POR_PAGINA = 20;
+
+async function cargarGastos(pagina = 0) {
     const tbody = document.getElementById('listaGastos');
     if (tbody) {
         tbody.innerHTML = `
@@ -149,12 +154,31 @@ async function cargarGastos() {
     }
 
     try {
-        const res = await apiFetch('/expenses');
+        const res = await apiFetch(`/expenses?page=${pagina}&size=${LIMITE_POR_PAGINA}&sort=expenseDate,desc`);
         if (!res || !res.ok) throw new Error("Error al comunicarse con la API de Gastos.");
 
-        gastosGlobales = await res.json();
+        const data = await res.json();
+        let lista = [];
+
+        if (data && Array.isArray(data.content)) {
+            lista = data.content;
+            paginaActual = data.number + 1;
+            totalPaginasBackend = data.totalPages;
+            totalElementosBackend = data.totalElements;
+        } else if (Array.isArray(data)) {
+            lista = data;
+            paginaActual = 1;
+            totalPaginasBackend = 1;
+            totalElementosBackend = data.length;
+        }
+
+        gastosGlobales = lista;
         renderizarGastos(gastosGlobales);
         calcularResumenGastos(gastosGlobales);
+
+        const inicio = (paginaActual - 1) * LIMITE_POR_PAGINA;
+        const fin = inicio + gastosGlobales.length;
+        renderizarControlesPaginacion(totalElementosBackend, totalPaginasBackend, inicio, fin);
     } catch (err) {
         console.error("Error al cargar gastos:", err);
         if (tbody) {
@@ -167,6 +191,74 @@ async function cargarGastos() {
                 </tr>`;
         }
     }
+}
+
+function renderizarControlesPaginacion(totalItems, totalPaginas, inicio, fin) {
+    const infoText = document.getElementById('infoPaginacion');
+    const contenedor = document.getElementById('paginacionContenedor');
+
+    if (infoText) {
+        if (totalItems === 0) {
+            infoText.innerText = "Mostrando 0 gastos";
+        } else {
+            const limiteSuperior = fin > totalItems ? totalItems : fin;
+            infoText.innerText = `Mostrando ${inicio + 1} - ${limiteSuperior} de ${totalItems} gastos`;
+        }
+    }
+
+    if (!contenedor) return;
+    contenedor.innerHTML = '';
+
+    if (totalPaginas <= 1) return;
+
+    let html = '';
+
+    // Botón Anterior
+    html += `
+        <li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
+            <button class="page-link" onclick="cambiarPaginaGastos(${paginaActual - 1})"><i class="bi bi-chevron-left"></i></button>
+        </li>
+    `;
+
+    const maxPaginasVisibles = 5;
+    let pagInicio = Math.max(1, paginaActual - Math.floor(maxPaginasVisibles / 2));
+    let pagFin = Math.min(totalPaginas, pagInicio + maxPaginasVisibles - 1);
+
+    if (pagFin - pagInicio + 1 < maxPaginasVisibles) {
+        pagInicio = Math.max(1, pagFin - maxPaginasVisibles + 1);
+    }
+
+    if (pagInicio > 1) {
+        html += `<li class="page-item"><button class="page-link" onclick="cambiarPaginaGastos(1)">1</button></li>`;
+        if (pagInicio > 2) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+    }
+
+    for (let i = pagInicio; i <= pagFin; i++) {
+        html += `
+            <li class="page-item ${i === paginaActual ? 'active' : ''}">
+                <button class="page-link" onclick="cambiarPaginaGastos(${i})">${i}</button>
+            </li>
+        `;
+    }
+
+    if (pagFin < totalPaginas) {
+        if (pagFin < totalPaginas - 1) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        html += `<li class="page-item"><button class="page-link" onclick="cambiarPaginaGastos(${totalPaginas})">${totalPaginas}</button></li>`;
+    }
+
+    // Botón Siguiente
+    html += `
+        <li class="page-item ${paginaActual === totalPaginas ? 'disabled' : ''}">
+            <button class="page-link" onclick="cambiarPaginaGastos(${paginaActual + 1})"><i class="bi bi-chevron-right"></i></button>
+        </li>
+    `;
+
+    contenedor.innerHTML = html;
+}
+
+function cambiarPaginaGastos(nuevaPagina) {
+    if (nuevaPagina < 1 || nuevaPagina > totalPaginasBackend) return;
+    cargarGastos(nuevaPagina - 1);
 }
 
 function aplicarFiltros() {
@@ -191,8 +283,7 @@ function limpiarFiltros() {
     if (document.getElementById('filtroTexto')) document.getElementById('filtroTexto').value = '';
     if (document.getElementById('filtroCategoria')) document.getElementById('filtroCategoria').value = '';
     if (document.getElementById('filtroMetodoPago')) document.getElementById('filtroMetodoPago').value = '';
-    renderizarGastos(gastosGlobales);
-    calcularResumenGastos(gastosGlobales);
+    cargarGastos(0);
 }
 
 function renderizarGastos(gastos) {

@@ -13,6 +13,8 @@ import com.baez.baezpos.shared.exception.ResourceNotFoundException;
 import com.baez.baezpos.security.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -171,6 +173,18 @@ public class UserServiceImpl implements UserService {
         return userRepository.findByActiveTrue().stream()
                     .map(this::convertToDTO)
                     .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<UserResponseDTO> getAllUsers(Pageable pageable) {
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+
+        Page<User> page = (companyId != null)
+                ? userRepository.findByCompanyIdAndActiveTrue(companyId, pageable)
+                : userRepository.findByActiveTrue(pageable);
+
+        return page.map(this::convertToDTO);
     }
 
     @Override

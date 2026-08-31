@@ -45,23 +45,36 @@ document.addEventListener('DOMContentLoaded', () => {
     cargarEmpleados();
 });
 
+let paginaActual = 1;
+let totalPaginasBackend = 1;
+let totalElementosBackend = 0;
+const LIMITE_POR_PAGINA = 20;
+
 // ==========================================
-// 2. CARGA Y RENDERIZADO DE EMPLEADOS
+// 2. CARGA Y RENDERIZADO DE EMPLEADOS (PAGINADA)
 // ==========================================
-async function cargarEmpleados() {
+async function cargarEmpleados(pagina = 0) {
     try {
-        const res = await apiFetch('/users');
+        const res = await apiFetch(`/users?page=${pagina}&size=${LIMITE_POR_PAGINA}&sort=name,asc`);
         if (!res || !res.ok) throw new Error("Error al obtener la lista de usuarios");
 
-        const usuarios = await res.json();
+        const data = await res.json();
         const tbody = document.getElementById('tablaEmpleados');
         if (!tbody) return;
 
         tbody.innerHTML = '';
 
-        if (!Array.isArray(usuarios)) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-warning fw-semibold">Respuesta no válida del servidor.</td></tr>';
-            return;
+        let usuarios = [];
+        if (data && Array.isArray(data.content)) {
+            usuarios = data.content;
+            paginaActual = data.number + 1;
+            totalPaginasBackend = data.totalPages;
+            totalElementosBackend = data.totalElements;
+        } else if (Array.isArray(data)) {
+            usuarios = data;
+            paginaActual = 1;
+            totalPaginasBackend = 1;
+            totalElementosBackend = data.length;
         }
 
         // Filtrar registros inactivos
@@ -69,6 +82,7 @@ async function cargarEmpleados() {
 
         if (usuariosActivos.length === 0) {
             tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-muted fw-semibold">No hay empleados activos registrados.</td></tr>';
+            renderizarControlesPaginacion(0, 0, 0, 0);
             return;
         }
 
@@ -118,10 +132,82 @@ async function cargarEmpleados() {
                 </tr>
             `;
         });
+
+        const inicio = (paginaActual - 1) * LIMITE_POR_PAGINA;
+        const fin = inicio + usuariosActivos.length;
+        renderizarControlesPaginacion(totalElementosBackend, totalPaginasBackend, inicio, fin);
     } catch (e) {
         console.error("Error al cargar empleados:", e);
         Swal.fire('Error', 'No se pudieron cargar los empleados', 'error');
     }
+}
+
+function renderizarControlesPaginacion(totalItems, totalPaginas, inicio, fin) {
+    const infoText = document.getElementById('infoPaginacion');
+    const contenedor = document.getElementById('paginacionContenedor');
+
+    if (infoText) {
+        if (totalItems === 0) {
+            infoText.innerText = "Mostrando 0 empleados";
+        } else {
+            const limiteSuperior = fin > totalItems ? totalItems : fin;
+            infoText.innerText = `Mostrando ${inicio + 1} - ${limiteSuperior} de ${totalItems} empleados`;
+        }
+    }
+
+    if (!contenedor) return;
+    contenedor.innerHTML = '';
+
+    if (totalPaginas <= 1) return;
+
+    let html = '';
+
+    // Botón Anterior
+    html += `
+        <li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
+            <button class="page-link" onclick="cambiarPaginaEmpleados(${paginaActual - 1})"><i class="bi bi-chevron-left"></i></button>
+        </li>
+    `;
+
+    const maxPaginasVisibles = 5;
+    let pagInicio = Math.max(1, paginaActual - Math.floor(maxPaginasVisibles / 2));
+    let pagFin = Math.min(totalPaginas, pagInicio + maxPaginasVisibles - 1);
+
+    if (pagFin - pagInicio + 1 < maxPaginasVisibles) {
+        pagInicio = Math.max(1, pagFin - maxPaginasVisibles + 1);
+    }
+
+    if (pagInicio > 1) {
+        html += `<li class="page-item"><button class="page-link" onclick="cambiarPaginaEmpleados(1)">1</button></li>`;
+        if (pagInicio > 2) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+    }
+
+    for (let i = pagInicio; i <= pagFin; i++) {
+        html += `
+            <li class="page-item ${i === paginaActual ? 'active' : ''}">
+                <button class="page-link" onclick="cambiarPaginaEmpleados(${i})">${i}</button>
+            </li>
+        `;
+    }
+
+    if (pagFin < totalPaginas) {
+        if (pagFin < totalPaginas - 1) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        html += `<li class="page-item"><button class="page-link" onclick="cambiarPaginaEmpleados(${totalPaginas})">${totalPaginas}</button></li>`;
+    }
+
+    // Botón Siguiente
+    html += `
+        <li class="page-item ${paginaActual === totalPaginas ? 'disabled' : ''}">
+            <button class="page-link" onclick="cambiarPaginaEmpleados(${paginaActual + 1})"><i class="bi bi-chevron-right"></i></button>
+        </li>
+    `;
+
+    contenedor.innerHTML = html;
+}
+
+function cambiarPaginaEmpleados(nuevaPagina) {
+    if (nuevaPagina < 1 || nuevaPagina > totalPaginasBackend) return;
+    cargarEmpleados(nuevaPagina - 1);
 }
 
 // ==========================================

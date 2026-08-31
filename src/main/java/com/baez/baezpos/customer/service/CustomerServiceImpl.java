@@ -19,6 +19,8 @@ import com.baez.baezpos.security.util.SecurityUtils;
 import com.baez.baezpos.shared.exception.BadRequestException;
 import com.baez.baezpos.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +47,17 @@ public class CustomerServiceImpl implements CustomerService {
                 : customerRepository.findAll();
 
         return customers.stream().map(this::mapToDTO).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CustomerResponseDTO> getAll(Pageable pageable) {
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        Page<Customer> page = (companyId != null)
+                ? customerRepository.findByCompanyIdAndActiveTrue(companyId, pageable)
+                : customerRepository.findAll(pageable);
+
+        return page.map(this::mapToDTO);
     }
 
     @Override
@@ -135,6 +148,21 @@ public class CustomerServiceImpl implements CustomerService {
                 : customerRepository.findAll();
 
         return customers.stream().map(this::mapToDTO).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CustomerResponseDTO> searchCustomers(String query, Pageable pageable) {
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        if (query == null || query.isBlank()) {
+            return getAll(pageable);
+        }
+
+        Page<Customer> customers = (companyId != null)
+                ? customerRepository.searchCustomersByCompanyId(query.trim(), companyId, pageable)
+                : customerRepository.findAll(pageable);
+
+        return customers.map(this::mapToDTO);
     }
 
     @Override

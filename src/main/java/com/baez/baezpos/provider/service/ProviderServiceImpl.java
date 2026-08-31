@@ -19,6 +19,8 @@ import com.baez.baezpos.shared.exception.UnauthorizedException;
 import com.baez.baezpos.sale.service.SaleService.CashRegisterService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,6 +51,16 @@ public class ProviderServiceImpl implements ProviderService {
 
     @Override
     @Transactional(readOnly = true)
+    public Page<ProviderResponseDTO> getAll(Pageable pageable) {
+        Long companyId = getRequiredCompanyId();
+        Page<Provider> page = (companyId != null)
+                ? providerRepository.findByCompanyIdAndActiveTrue(companyId, pageable)
+                : providerRepository.findAll(pageable);
+        return page.map(this::mapToDTO);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public ProviderResponseDTO getById(Long id) {
         Long companyId = getRequiredCompanyId();
         Provider provider = providerRepository.findByIdAndCompanyIdAndActiveTrue(id, companyId)
@@ -67,6 +79,19 @@ public class ProviderServiceImpl implements ProviderService {
                 .stream()
                 .map(this::mapToDTO)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProviderResponseDTO> search(String query, Pageable pageable) {
+        Long companyId = getRequiredCompanyId();
+        if (query == null || query.trim().isEmpty()) {
+            return getAll(pageable);
+        }
+        Page<Provider> page = (companyId != null)
+                ? providerRepository.searchProvidersByCompanyId(query.trim(), companyId, pageable)
+                : providerRepository.findAll(pageable);
+        return page.map(this::mapToDTO);
     }
 
     @Override

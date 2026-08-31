@@ -5,6 +5,10 @@ import com.baez.baezpos.expense.dto.ExpenseResponseDTO;
 import com.baez.baezpos.expense.service.ExpenseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,8 +32,9 @@ public class ExpenseController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'CAJERO')")
-    public ResponseEntity<List<ExpenseResponseDTO>> list() {
-        return ResponseEntity.ok(expenseService.getAllExpenses());
+    public ResponseEntity<Page<ExpenseResponseDTO>> list(
+            @PageableDefault(size = 20, sort = "expenseDate", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(expenseService.getAllExpenses(pageable));
     }
 
     @DeleteMapping("/{id}")

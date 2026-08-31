@@ -1,12 +1,12 @@
-/**
- * BÁEZ POS - MÓDULO DE GESTIÓN DE PROVEEDORES (SaaS Multi-tenant)
- * Alexander Baez - 2026
- */
-
 let proveedoresGlobales = [];
 let debounceTimer = null;
 let modalProveedorInstance = null;
 let modalAbonoInstance = null;
+
+let paginaActual = 1;
+let totalPaginasBackend = 1;
+let totalElementosBackend = 0;
+const LIMITE_POR_PAGINA = 20;
 
 // Formateador estándar de moneda local (ARS)
 const fmtARS = new Intl.NumberFormat('es-AR', {
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    cargarProveedores();
+    cargarProveedores(0);
 });
 
 function actualizarEstadoAbonoDeduct(metodo) {
@@ -50,9 +50,9 @@ function actualizarEstadoAbonoDeduct(metodo) {
 }
 
 /**
- * Carga la lista de proveedores desde el Backend mediante apiFetch
+ * Carga la lista de proveedores desde el Backend de forma paginada
  */
-async function cargarProveedores() {
+async function cargarProveedores(pagina = 0) {
     const tbody = document.getElementById('tablaProveedores');
     if (tbody) {
         tbody.innerHTML = `
@@ -65,14 +65,33 @@ async function cargarProveedores() {
     }
 
     try {
-        const res = await apiFetch('/providers');
+        const res = await apiFetch(`/providers?page=${pagina}&size=${LIMITE_POR_PAGINA}&sort=businessName,asc`);
         if (!res || !res.ok) {
             throw new Error("No se pudo obtener el listado de proveedores.");
         }
 
-        proveedoresGlobales = await res.json();
+        const data = await res.json();
+        let lista = [];
+
+        if (data && Array.isArray(data.content)) {
+            lista = data.content;
+            paginaActual = data.number + 1;
+            totalPaginasBackend = data.totalPages;
+            totalElementosBackend = data.totalElements;
+        } else if (Array.isArray(data)) {
+            lista = data;
+            paginaActual = 1;
+            totalPaginasBackend = 1;
+            totalElementosBackend = data.length;
+        }
+
+        proveedoresGlobales = lista;
         renderizarProveedores(proveedoresGlobales);
         actualizarKPIs(proveedoresGlobales);
+
+        const inicio = (paginaActual - 1) * LIMITE_POR_PAGINA;
+        const fin = inicio + proveedoresGlobales.length;
+        renderizarControlesPaginacion(totalElementosBackend, totalPaginasBackend, inicio, fin);
     } catch (err) {
         console.error("Error al cargar proveedores:", err);
         if (tbody) {
@@ -183,11 +202,79 @@ function renderizarProveedores(lista) {
     tbody.appendChild(fragment);
 }
 
+function renderizarControlesPaginacion(totalItems, totalPaginas, inicio, fin) {
+    const infoText = document.getElementById('infoPaginacion');
+    const contenedor = document.getElementById('paginacionContenedor');
+
+    if (infoText) {
+        if (totalItems === 0) {
+            infoText.innerText = "Mostrando 0 proveedores";
+        } else {
+            const limiteSuperior = fin > totalItems ? totalItems : fin;
+            infoText.innerText = `Mostrando ${inicio + 1} - ${limiteSuperior} de ${totalItems} proveedores`;
+        }
+    }
+
+    if (!contenedor) return;
+    contenedor.innerHTML = '';
+
+    if (totalPaginas <= 1) return;
+
+    let html = '';
+
+    // Botón Anterior
+    html += `
+        <li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
+            <button class="page-link" onclick="cambiarPaginaProveedores(${paginaActual - 1})"><i class="bi bi-chevron-left"></i></button>
+        </li>
+    `;
+
+    const maxPaginasVisibles = 5;
+    let pagInicio = Math.max(1, paginaActual - Math.floor(maxPaginasVisibles / 2));
+    let pagFin = Math.min(totalPaginas, pagInicio + maxPaginasVisibles - 1);
+
+    if (pagFin - pagInicio + 1 < maxPaginasVisibles) {
+        pagInicio = Math.max(1, pagFin - maxPaginasVisibles + 1);
+    }
+
+    if (pagInicio > 1) {
+        html += `<li class="page-item"><button class="page-link" onclick="cambiarPaginaProveedores(1)">1</button></li>`;
+        if (pagInicio > 2) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+    }
+
+    for (let i = pagInicio; i <= pagFin; i++) {
+        html += `
+            <li class="page-item ${i === paginaActual ? 'active' : ''}">
+                <button class="page-link" onclick="cambiarPaginaProveedores(${i})">${i}</button>
+            </li>
+        `;
+    }
+
+    if (pagFin < totalPaginas) {
+        if (pagFin < totalPaginas - 1) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        html += `<li class="page-item"><button class="page-link" onclick="cambiarPaginaProveedores(${totalPaginas})">${totalPaginas}</button></li>`;
+    }
+
+    // Botón Siguiente
+    html += `
+        <li class="page-item ${paginaActual === totalPaginas ? 'disabled' : ''}">
+            <button class="page-link" onclick="cambiarPaginaProveedores(${paginaActual + 1})"><i class="bi bi-chevron-right"></i></button>
+        </li>
+    `;
+
+    contenedor.innerHTML = html;
+}
+
+function cambiarPaginaProveedores(nuevaPagina) {
+    if (nuevaPagina < 1 || nuevaPagina > totalPaginasBackend) return;
+    cargarProveedores(nuevaPagina - 1);
+}
+
 /**
  * Actualiza los contadores y métricas de deuda
  */
 function actualizarKPIs(lista) {
-    const totalProveedores = lista ? lista.length : 0;
+    const totalProveedores = totalElementosBackend || (lista ? lista.length : 0);
     let deudaConsolidada = 0;
 
     if (lista) {
@@ -207,28 +294,44 @@ function actualizarKPIs(lista) {
 }
 
 /**
- * Filtro interactivo por texto y por solo deudores
+ * Filtro interactivo con búsqueda reactiva
  */
 function filtrarProveedores() {
     clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-        const q = (document.getElementById('buscarProveedor')?.value || '').toLowerCase().trim();
+    debounceTimer = setTimeout(async () => {
+        const q = (document.getElementById('buscarProveedor')?.value || '').trim();
         const soloDeuda = document.getElementById('filtroDeuda')?.checked || false;
 
-        const filtrados = proveedoresGlobales.filter(p => {
-            const matchTexto = (p.businessName || '').toLowerCase().includes(q) ||
-                               (p.taxId || '').toLowerCase().includes(q) ||
-                               (p.phone || '').toLowerCase().includes(q) ||
-                               (p.email || '').toLowerCase().includes(q);
+        if (!q && !soloDeuda) {
+            cargarProveedores(0);
+            return;
+        }
 
-            const saldo = parseFloat(p.currentBalance) || 0;
-            const matchDeuda = !soloDeuda || (saldo > 0);
+        try {
+            const url = q
+                ? `/providers/search?q=${encodeURIComponent(q)}&size=100`
+                : `/providers?page=0&size=100&sort=businessName,asc`;
+            const res = await apiFetch(url);
+            if (!res || !res.ok) return;
 
-            return matchTexto && matchDeuda;
-        });
+            let data = await res.json();
+            let lista = Array.isArray(data.content) ? data.content : (Array.isArray(data) ? data : []);
 
-        renderizarProveedores(filtrados);
-    }, 200);
+            if (soloDeuda) {
+                lista = lista.filter(p => (parseFloat(p.currentBalance) || 0) > 0);
+            }
+
+            proveedoresGlobales = lista;
+            paginaActual = 1;
+            totalPaginasBackend = 1;
+            totalElementosBackend = lista.length;
+
+            renderizarProveedores(proveedoresGlobales);
+            renderizarControlesPaginacion(totalElementosBackend, totalPaginasBackend, 0, proveedoresGlobales.length);
+        } catch (err) {
+            console.error("Error buscando proveedores:", err);
+        }
+    }, 300);
 }
 
 /**

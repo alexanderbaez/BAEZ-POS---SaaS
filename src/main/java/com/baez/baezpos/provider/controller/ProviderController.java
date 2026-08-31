@@ -6,6 +6,10 @@ import com.baez.baezpos.provider.dto.ProviderResponseDTO;
 import com.baez.baezpos.provider.service.ProviderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,8 +27,9 @@ public class ProviderController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'SUPER_ADMIN')")
-    public ResponseEntity<List<ProviderResponseDTO>> getAll() {
-        return ResponseEntity.ok(providerService.getAll());
+    public ResponseEntity<Page<ProviderResponseDTO>> getAll(
+            @PageableDefault(size = 20, sort = "businessName", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(providerService.getAll(pageable));
     }
 
     @GetMapping("/{id}")
@@ -35,8 +40,10 @@ public class ProviderController {
 
     @GetMapping("/search")
     @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'SUPER_ADMIN')")
-    public ResponseEntity<List<ProviderResponseDTO>> search(@RequestParam(required = false) String q) {
-        return ResponseEntity.ok(providerService.search(q));
+    public ResponseEntity<Page<ProviderResponseDTO>> search(
+            @RequestParam(required = false) String q,
+            @PageableDefault(size = 20, sort = "businessName", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(providerService.search(q, pageable));
     }
 
     @PostMapping

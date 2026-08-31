@@ -31,6 +31,8 @@ import com.baez.baezpos.user.entity.User;
 import com.baez.baezpos.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -655,6 +657,18 @@ public class SaleServiceImpl implements SaleService {
         List<Sale> sales = saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, start, end);
 
         return sales.stream().map(this::mapToResponseDTO).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<SaleResponseDTO> getSalesByDateRange(LocalDate desde, LocalDate hasta, Pageable pageable) {
+        Long companyId = requireCompanyContext();
+        LocalDateTime start = (desde != null) ? desde.atStartOfDay() : LocalDate.now().minusMonths(1).atStartOfDay();
+        LocalDateTime end = (hasta != null) ? hasta.atTime(LocalTime.MAX) : LocalDate.now().atTime(LocalTime.MAX);
+
+        Page<Sale> sales = saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, start, end, pageable);
+
+        return sales.map(this::mapToResponseDTO);
     }
 
     private Long requireCompanyContext() {

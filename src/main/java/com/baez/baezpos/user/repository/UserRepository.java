@@ -29,9 +29,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // ==========================================
     List<User> findByCompanyIdAndActiveTrue(Long companyId);
 
+    org.springframework.data.domain.Page<User> findByCompanyIdAndActiveTrue(Long companyId, org.springframework.data.domain.Pageable pageable);
+
     long countByCompanyIdAndActiveTrue(Long companyId);
 
     List<User> findByActiveTrue();
+
+    org.springframework.data.domain.Page<User> findByActiveTrue(org.springframework.data.domain.Pageable pageable);
 
     Optional<User> findByIdAndCompanyIdAndActiveTrue(Long id, Long companyId);
 

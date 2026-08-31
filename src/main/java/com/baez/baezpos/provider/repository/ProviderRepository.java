@@ -19,6 +19,8 @@ public interface ProviderRepository extends JpaRepository<Provider, Long> {
 
     List<Provider> findByCompanyIdAndActiveTrue(Long companyId);
 
+    org.springframework.data.domain.Page<Provider> findByCompanyIdAndActiveTrue(Long companyId, org.springframework.data.domain.Pageable pageable);
+
     Optional<Provider> findByIdAndCompanyId(Long id, Long companyId);
 
     Optional<Provider> findByIdAndCompanyIdAndActiveTrue(Long id, Long companyId);
@@ -26,6 +28,10 @@ public interface ProviderRepository extends JpaRepository<Provider, Long> {
     @Query("SELECT p FROM Provider p WHERE p.company.id = :companyId AND p.active = true AND " +
             "(LOWER(p.businessName) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.taxId) LIKE LOWER(CONCAT('%', :query, '%')))")
     List<Provider> searchProvidersByCompanyId(@Param("query") String query, @Param("companyId") Long companyId);
+
+    @Query("SELECT p FROM Provider p WHERE p.company.id = :companyId AND p.active = true AND " +
+            "(LOWER(p.businessName) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.taxId) LIKE LOWER(CONCAT('%', :query, '%')))")
+    org.springframework.data.domain.Page<Provider> searchProvidersByCompanyId(@Param("query") String query, @Param("companyId") Long companyId, org.springframework.data.domain.Pageable pageable);
 
     @Query("SELECT COALESCE(SUM(p.currentBalance), 0) FROM Provider p WHERE p.company.id = :companyId AND p.active = true")
     BigDecimal sumAllBalancesByCompanyId(@Param("companyId") Long companyId);

@@ -5,6 +5,9 @@ import com.baez.baezpos.sale.dto.ChartDataDTO;
 import com.baez.baezpos.sale.dto.SaleRequestDTO;
 import com.baez.baezpos.sale.dto.SaleResponseDTO;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.time.LocalDate;
 import java.util.List;
 
@@ -16,4 +19,5 @@ public interface SaleService {
     List<ChartDataDTO> getSalesChartData();
     void cancelSale(Long saleId);
     List<SaleResponseDTO> getSalesByDateRange(LocalDate desde, LocalDate hasta);
+    Page<SaleResponseDTO> getSalesByDateRange(LocalDate desde, LocalDate hasta, Pageable pageable);
 }

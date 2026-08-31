@@ -17,11 +17,17 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
     List<Customer> findByCompanyIdAndActiveTrue(Long companyId);
 
+    org.springframework.data.domain.Page<Customer> findByCompanyIdAndActiveTrue(Long companyId, org.springframework.data.domain.Pageable pageable);
+
     Optional<Customer> findByIdAndCompanyId(Long id, Long companyId);
 
     @Query("SELECT c FROM Customer c WHERE c.company.id = :companyId AND c.active = true AND " +
             "(LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(c.dniCuit) LIKE LOWER(CONCAT('%', :query, '%')))")
     List<Customer> searchCustomersByCompanyId(@Param("query") String query, @Param("companyId") Long companyId);
+
+    @Query("SELECT c FROM Customer c WHERE c.company.id = :companyId AND c.active = true AND " +
+            "(LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(c.dniCuit) LIKE LOWER(CONCAT('%', :query, '%')))")
+    org.springframework.data.domain.Page<Customer> searchCustomersByCompanyId(@Param("query") String query, @Param("companyId") Long companyId, org.springframework.data.domain.Pageable pageable);
 
     @Query("SELECT COALESCE(SUM(c.currentBalance), 0) FROM Customer c WHERE c.company.id = :companyId AND c.active = true")
     BigDecimal sumAllBalancesByCompanyId(@Param("companyId") Long companyId);

@@ -17,6 +17,8 @@ import com.baez.baezpos.shared.exception.UnauthorizedException;
 import com.baez.baezpos.sale.service.SaleService.CashRegisterService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -115,6 +117,18 @@ public class ExpenseServiceImpl implements ExpenseService {
                 .stream()
                 .map(this::mapToDTO)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ExpenseResponseDTO> getAllExpenses(Pageable pageable) {
+        Long companyId = SecurityUtils.getCurrentCompanyId();
+        if (companyId == null) {
+            throw new UnauthorizedException("Acceso denegado: Contexto de empresa no identificado.");
+        }
+
+        Page<Expense> page = expenseRepository.findByCompanyIdOrderByExpenseDateDesc(companyId, pageable);
+        return page.map(this::mapToDTO);
     }
 
     @Override
