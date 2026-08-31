@@ -108,10 +108,20 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
             BigDecimal currentStock = product.getStock() != null ? product.getStock() : BigDecimal.ZERO;
             product.setStock(currentStock.add(item.getQuantity()));
             
-            // Actualizar costo de reposición del producto (si se desea mantener sincronizado el costo global)
-            product.setCost(item.getUnitCost());
+            // Proteger margen de ganancia ante variaciones al alza del costo
+            BigDecimal oldCost = product.getCost() != null ? product.getCost() : BigDecimal.ZERO;
+            BigDecimal newCost = item.getUnitCost();
+            BigDecimal oldPrice = product.getPrice() != null ? product.getPrice() : BigDecimal.ZERO;
+            
+            if (oldCost.compareTo(BigDecimal.ZERO) > 0 && newCost.compareTo(oldCost) > 0) {
+                java.math.BigDecimal factor = newCost.divide(oldCost, 4, java.math.RoundingMode.HALF_UP);
+                java.math.BigDecimal newPrice = oldPrice.multiply(factor).setScale(2, java.math.RoundingMode.HALF_UP);
+                product.setPrice(newPrice);
+            }
+            
+            product.setCost(newCost);
             productRepository.save(product);
-
+            
             // Registrar/Actualizar relación en ProviderProduct
             ProviderProduct providerProduct = providerProductRepository
                     .findByCompanyIdAndProviderIdAndProductId(companyId, order.getProvider().getId(), product.getId())
