@@ -146,10 +146,10 @@ public class AuthService {
 
         User user = userOpt.get();
         String temporaryPassword = generateRandomPassword(8);
+        String encodedPassword = passwordEncoder.encode(temporaryPassword);
+        LocalDateTime now = LocalDateTime.now();
 
-        user.setPassword(passwordEncoder.encode(temporaryPassword));
-        user.setPasswordResetAt(LocalDateTime.now());
-        userRepository.save(user);
+        userRepository.updatePasswordAndResetAt(user.getId(), encodedPassword, now, now);
 
         try {
             emailService.enviarMailResetPassword(
@@ -158,7 +158,7 @@ public class AuthService {
                     temporaryPassword
             );
         } catch (Exception e) {
-            log.error("Fallo en el envío SMTP de clave temporal a {}: {}", cleanEmail, e.getMessage());
+            log.error("Fallo en el despacho de clave temporal a {}: {}", cleanEmail, e.getMessage());
         }
     }
 

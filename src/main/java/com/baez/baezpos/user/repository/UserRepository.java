@@ -3,10 +3,12 @@ package com.baez.baezpos.user.repository;
 import com.baez.baezpos.user.entity.Role;
 import com.baez.baezpos.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,6 +19,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(@Param("email") String email);
 
     boolean existsByEmail(String email);
+
+    @Modifying
+    @Query("UPDATE User u SET u.password = :password, u.passwordResetAt = :resetAt, u.updatedAt = :now, u.version = COALESCE(u.version, 0) + 1 WHERE u.id = :id")
+    int updatePasswordAndResetAt(@Param("id") Long id, @Param("password") String password, @Param("resetAt") LocalDateTime resetAt, @Param("now") LocalDateTime now);
 
     // ==========================================
     // BÚSQUEDAS FILTRADAS POR BAJA LÓGICA (active = true)

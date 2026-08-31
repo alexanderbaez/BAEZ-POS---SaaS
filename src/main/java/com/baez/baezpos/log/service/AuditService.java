@@ -5,6 +5,7 @@ import com.baez.baezpos.log.dto.SystemLogResponseDTO;
 import com.baez.baezpos.log.entity.SystemLog;
 import com.baez.baezpos.log.repository.SystemLogRepository;
 import com.baez.baezpos.security.util.SecurityUtils;
+import com.baez.baezpos.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -21,6 +22,7 @@ import java.util.List;
 public class AuditService {
 
     private final SystemLogRepository logRepository;
+    private final UserRepository userRepository;
 
     /**
      * Registra auditorías de manera asíncrona sin bloquear la transacción principal.
@@ -39,11 +41,20 @@ public class AuditService {
                 Company company = new Company();
                 company.setId(companyId);
                 logBuilder.company(company);
+            } else if (userEmail != null && !userEmail.equalsIgnoreCase("SISTEMA")) {
+                try {
+                    userRepository.findByEmail(userEmail.trim().toLowerCase())
+                            .ifPresent(u -> {
+                                if (u.getCompany() != null) {
+                                    logBuilder.company(u.getCompany());
+                                }
+                            });
+                } catch (Exception ignored) {}
             }
 
             logRepository.save(logBuilder.build());
         } catch (Exception e) {
-            log.error("Error al registrar auditoría en background [{}]: {}", action, e.getMessage());
+            log.debug("Aviso de auditoría en background [{}]: {}", action, e.getMessage());
         }
     }
 
