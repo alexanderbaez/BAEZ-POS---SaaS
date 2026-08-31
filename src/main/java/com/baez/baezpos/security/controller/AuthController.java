@@ -26,15 +26,9 @@ public class AuthController {
     public ResponseEntity<?> authenticate(
             @Valid @RequestBody AuthenticationRequest request
     ) {
-        try {
-            log.info("Intento de autenticación para el usuario: {}", request.getEmail());
-            AuthenticationResponse response = authService.authenticate(request);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("ERROR CRÍTICO EN AUTENTICACIÓN para {}: {}", request.getEmail(), e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("message", "Credenciales incorrectas", "detail", e.getMessage()));
-        }
+        log.info("Intento de autenticación para el usuario: {}", request.getEmail());
+        AuthenticationResponse response = authService.authenticate(request);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/setup-status")

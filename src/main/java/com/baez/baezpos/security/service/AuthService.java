@@ -42,7 +42,7 @@ public class AuthService {
     @Transactional
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
         String cleanEmail = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
-        String cleanPassword = request.getPassword() != null ? request.getPassword().trim() : "";
+        String rawPassword = request.getPassword() != null ? request.getPassword() : "";
 
         User user = userRepository.findByEmail(cleanEmail)
                 .orElseThrow(() -> new BadCredentialsException("Credenciales incorrectas. Verifique email y contraseña."));
@@ -53,7 +53,7 @@ public class AuthService {
 
         // Autenticación estándar y segura de Spring Security mediante BCryptPasswordEncoder
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(cleanEmail, cleanPassword)
+                new UsernamePasswordAuthenticationToken(cleanEmail, rawPassword)
         );
 
         // Si el usuario ingresó exitosamente usando una clave temporal, limpiamos el flag de reseteo de forma atómica
