@@ -140,26 +140,40 @@ function abrirModalRecuperacion() {
     if (msgRecup) msgRecup.innerHTML = '';
 
     if (modalRecuperacionInstance) modalRecuperacionInstance.show();
+    setTimeout(() => {
+        if (emailRecup) emailRecup.focus();
+    }, 350);
 }
 
-async function enviarRecuperacion() {
+async function solicitarRecuperacion() {
     const emailInput = document.getElementById('emailRecuperacion');
     const msgRecup = document.getElementById('msgRecuperacion');
     const btn = document.getElementById('btnEnviarRecuperacion');
-    const txtBtn = document.getElementById('txtBtnRecup');
-    const loader = document.getElementById('loaderRecup');
+    const txtBtn = document.getElementById('btnRecuperarText') || document.getElementById('txtBtnRecup');
+    const loader = document.getElementById('loaderRecuperar') || document.getElementById('loaderRecup');
 
     if (!emailInput || !emailInput.value.trim()) {
-        if (msgRecup) msgRecup.innerHTML = `<div class="alert alert-warning py-2 mb-3"><i class="bi bi-exclamation-circle me-1"></i>Por favor ingresá un email válido.</div>`;
+        if (msgRecup) {
+            msgRecup.innerHTML = `
+                <div class="alert alert-warning py-2 mb-3 d-flex align-items-center">
+                    <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                    <span>Por favor ingresá un email válido.</span>
+                </div>`;
+        }
+        if (emailInput) emailInput.focus();
         return;
     }
 
     const email = emailInput.value.trim();
 
+    // 1. Estado de carga visual (Spinner y bloqueo)
     if (msgRecup) msgRecup.innerHTML = '';
     if (txtBtn) txtBtn.classList.add('d-none');
     if (loader) loader.classList.remove('d-none');
-    if (btn) btn.classList.add('disabled');
+    if (btn) {
+        btn.disabled = true;
+        btn.classList.add('disabled');
+    }
 
     try {
         const response = await apiFetch('/auth/forgot-password', {
@@ -167,29 +181,102 @@ async function enviarRecuperacion() {
             body: JSON.stringify({ email: email })
         });
 
-        const data = await response.json();
+        let data = {};
+        try {
+            data = await response.json();
+        } catch (jsonErr) {
+            data = {};
+        }
 
         if (response.ok) {
+            const successMsg = data.message || 'Se ha enviado una nueva contraseña temporal a tu correo electrónico.';
+            
             if (msgRecup) {
-                msgRecup.innerHTML = `<div class="alert alert-success py-2 mb-3"><i class="bi bi-check-circle me-1"></i>${data.message || 'Se ha enviado una nueva contraseña temporal a su correo.'}</div>`;
+                msgRecup.innerHTML = `
+                    <div class="alert alert-success py-3 mb-3 d-flex align-items-center">
+                        <i class="bi bi-check-circle-fill me-2 fs-4 text-success"></i>
+                        <div>
+                            <strong>¡Correo enviado!</strong><br>
+                            <span>${successMsg}</span>
+                        </div>
+                    </div>`;
             }
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Correo Enviado!',
+                    text: 'Revisá tu bandeja de entrada (y spam). Te enviamos una contraseña provisoria.',
+                    confirmButtonColor: '#2563eb',
+                    timer: 5000
+                });
+            }
+
             setTimeout(() => {
                 if (modalRecuperacionInstance) modalRecuperacionInstance.hide();
+                if (msgRecup) msgRecup.innerHTML = '';
+                if (emailInput) emailInput.value = '';
             }, 3000);
+
         } else {
-            const errorMsg = data.message || 'No se pudo procesar la solicitud.';
+            const errorMsg = data.message || 'No se encontró un usuario con ese correo o no se pudo procesar la solicitud.';
             if (msgRecup) {
-                msgRecup.innerHTML = `<div class="alert alert-danger py-2 mb-3"><i class="bi bi-exclamation-triangle me-1"></i>${errorMsg}</div>`;
+                msgRecup.innerHTML = `
+                    <div class="alert alert-danger py-2 mb-3 d-flex align-items-center">
+                        <i class="bi bi-x-circle-fill me-2 fs-5"></i>
+                        <span>${errorMsg}</span>
+                    </div>`;
+            }
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de Recuperación',
+                    text: errorMsg,
+                    confirmButtonColor: '#2563eb'
+                });
             }
         }
     } catch (e) {
         console.error("Error al enviar solicitud de recuperación:", e);
         if (msgRecup) {
-            msgRecup.innerHTML = `<div class="alert alert-danger py-2 mb-3"><i class="bi bi-wifi-off me-1"></i>Error de conexión con el servidor.</div>`;
+            msgRecup.innerHTML = `
+                <div class="alert alert-danger py-2 mb-3 d-flex align-items-center">
+                    <i class="bi bi-wifi-off me-2 fs-5"></i>
+                    <span>Error de conexión con el servidor. Verificá tu red.</span>
+                </div>`;
         }
     } finally {
+        // Restaurar estado del botón
         if (txtBtn) txtBtn.classList.remove('d-none');
         if (loader) loader.classList.add('d-none');
-        if (btn) btn.classList.remove('disabled');
+        if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('disabled');
+        }
     }
 }
+
+// Alias para compatibilidad de llamadas
+const enviarRecuperacion = solicitarRecuperacion;
+
+// Listener para disparar recuperación con la tecla Enter en el input
+document.addEventListener('DOMContentLoaded', () => {
+    const emailRecupInput = document.getElementById('emailRecuperacion');
+    if (emailRecupInput) {
+        emailRecupInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                solicitarRecuperacion();
+            }
+        });
+    }
+
+    const btnRecup = document.getElementById('btnEnviarRecuperacion');
+    if (btnRecup) {
+        btnRecup.addEventListener('click', (e) => {
+            e.preventDefault();
+            solicitarRecuperacion();
+        });
+    }
+});
