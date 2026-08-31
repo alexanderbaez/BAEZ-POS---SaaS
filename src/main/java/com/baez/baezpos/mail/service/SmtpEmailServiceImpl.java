@@ -12,6 +12,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Map;
+import java.nio.charset.StandardCharsets;
 
 @Service
 @RequiredArgsConstructor
@@ -43,7 +44,7 @@ public class SmtpEmailServiceImpl implements EmailService {
 
         try {
             HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setContentType(new MediaType("application", "json", StandardCharsets.UTF_8));
             headers.setBearerAuth(resendApiKey.trim());
 
             Map<String, Object> payload = Map.of(

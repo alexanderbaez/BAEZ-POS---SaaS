@@ -229,3 +229,86 @@ window.imprimirHTMLConIframe = function(htmlContent) {
     }
 };
 
+
+/**
+ * ==========================================================================
+ * DRAGGABLE MODALS GLOBALES
+ * ==========================================================================
+ * Convierte automáticamente todos los modales con cabecera en arrastrables.
+ */
+document.addEventListener('DOMContentLoaded', () => {
+    let isDragging = false;
+    let startX = 0, startY = 0;
+    let initialLeft = 0, initialTop = 0;
+    let activeModal = null;
+
+    document.addEventListener('mousedown', (e) => {
+        const header = e.target.closest('.modal-header');
+        if (!header) return;
+
+        const modal = header.closest('.modal-content');
+        if (!modal) return;
+
+        isDragging = true;
+        activeModal = modal;
+        
+        const rect = modal.getBoundingClientRect();
+        
+        // Use inline transform or fallback to positioning
+        const style = window.getComputedStyle(modal);
+        const transform = style.transform;
+        
+        if (transform !== 'none') {
+            const matrix = new DOMMatrix(transform);
+            initialLeft = matrix.m41;
+            initialTop = matrix.m42;
+        } else {
+            initialLeft = 0;
+            initialTop = 0;
+        }
+
+        startX = e.clientX;
+        startY = e.clientY;
+
+        header.style.cursor = 'grabbing';
+        document.body.style.userSelect = 'none';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging || !activeModal) return;
+
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+
+        activeModal.style.transform = \	ranslate(\px, \px)\;
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isDragging && activeModal) {
+            const header = activeModal.querySelector('.modal-header');
+            if (header) header.style.cursor = 'grab';
+        }
+        isDragging = false;
+        activeModal = null;
+        document.body.style.userSelect = '';
+    });
+    
+    // Add grab cursor to all existing and future modal headers
+    const initCursors = () => {
+        document.querySelectorAll('.modal-header').forEach(h => {
+            if (h.style.cursor !== 'grab' && h.style.cursor !== 'grabbing') {
+                h.style.cursor = 'grab';
+            }
+        });
+    };
+    
+    initCursors();
+    
+    // Observe DOM for new modals
+    const observer = new MutationObserver((mutations) => {
+        for (let m of mutations) {
+            if (m.addedNodes.length) initCursors();
+        }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+});
