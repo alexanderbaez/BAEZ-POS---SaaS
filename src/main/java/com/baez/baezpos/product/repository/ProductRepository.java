@@ -1,6 +1,7 @@
 package com.baez.baezpos.product.repository;
 
 import com.baez.baezpos.product.entity.Product;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
