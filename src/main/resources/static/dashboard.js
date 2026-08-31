@@ -908,10 +908,13 @@ async function cargarAlertasStock() {
     if (!container) return;
 
     try {
-        const res = await apiFetch('/products');
+        const res = await apiFetch('/products?size=1000');
         if (!res || !res.ok) return;
 
-        const productos = await res.json();
+        const pageData = await res.json();
+        // El backend devuelve Page<ProductResponseDTO> que contiene { content: [...] }
+        const productos = pageData.content ? pageData.content : pageData;
+
         if (!Array.isArray(productos)) return;
 
         const criticos = productos.filter(p => {

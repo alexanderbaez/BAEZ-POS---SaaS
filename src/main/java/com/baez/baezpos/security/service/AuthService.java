@@ -138,9 +138,16 @@ public class AuthService {
         }
 
         User user = userOpt.get();
+        LocalDateTime now = LocalDateTime.now();
+
+        // Anti-Spam: Cooldown de 2 minutos para evitar ráfagas de correos
+        if (user.getPasswordResetAt() != null && user.getPasswordResetAt().isAfter(now.minusMinutes(2))) {
+            log.warn("Bloqueo de seguridad: Intento de recuperación masivo detectado para {}", cleanEmail);
+            throw new BadRequestException("Ya enviamos un correo recientemente. Revisá tu bandeja de entrada o esperá 2 minutos para volver a intentar.");
+        }
+
         String temporaryPassword = generateRandomPassword(8);
         String encodedPassword = passwordEncoder.encode(temporaryPassword);
-        LocalDateTime now = LocalDateTime.now();
 
         // Se persiste de forma atómica la contraseña encriptada con BCrypt en la base de datos
         userRepository.updatePasswordAndResetAt(user.getId(), encodedPassword, now, now);
