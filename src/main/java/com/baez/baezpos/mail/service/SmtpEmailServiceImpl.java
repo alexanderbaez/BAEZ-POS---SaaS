@@ -104,4 +104,13 @@ public class SmtpEmailServiceImpl implements EmailService {
         String html = EmailTemplateBuilder.buildResetPassword(nombreUsuario, nuevaPassword);
         enviarCorreoInterno(destinatario, asunto, html);
     }
+
+    @Override
+    @Async("taskExecutor")
+    public void enviarMailPurchaseOrder(String destinatario, String nombreProveedor, String detallePedido) {
+        log.info("[EmailService] Despachando Orden de Compra a: {}", destinatario);
+        String asunto = "Nueva Orden de Compra - BÁEZ POS";
+        String html = EmailTemplateBuilder.buildPurchaseOrder(nombreProveedor, detallePedido);
+        enviarCorreoInterno(destinatario, asunto, html);
+    }
 }

@@ -9,6 +9,8 @@ public interface PurchaseOrderService {
     PurchaseOrderResponseDTO createOrder(PurchaseOrderRequestDTO dto);
     PurchaseOrderResponseDTO receiveOrder(Long id);
     PurchaseOrderResponseDTO cancelOrder(Long id);
+    void deleteOrder(Long id);
+    void sendPurchaseOrderEmail(Long id);
     PurchaseOrderResponseDTO getOrderById(Long id);
     Page<PurchaseOrderResponseDTO> getOrdersByProvider(Long providerId, Pageable pageable);
     Page<PurchaseOrderResponseDTO> getAllOrders(Pageable pageable);

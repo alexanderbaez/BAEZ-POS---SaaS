@@ -3,6 +3,7 @@ package com.baez.baezpos.provider.service;
 import com.baez.baezpos.company.entity.Company;
 import com.baez.baezpos.company.repository.CompanyRepository;
 import com.baez.baezpos.log.service.AuditService;
+import com.baez.baezpos.mail.service.EmailService;
 import com.baez.baezpos.product.entity.Product;
 import com.baez.baezpos.product.repository.ProductRepository;
 import com.baez.baezpos.provider.dto.PurchaseOrderItemRequestDTO;
@@ -41,6 +42,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     private final ProviderProductRepository providerProductRepository;
     private final CompanyRepository companyRepository;
     private final AuditService auditService;
+    private final EmailService emailService;
 
     @Override
     @Transactional
@@ -166,6 +168,49 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
         auditService.logAction("ORDEN_COMPRA_CANCELADA", "Orden ID " + order.getId() + " cancelada.", "INFO");
         return mapToDTO(order);
+    }
+
+    @Override
+    @Transactional
+    public void deleteOrder(Long id) {
+        Long companyId = getCompanyId();
+        PurchaseOrder order = purchaseOrderRepository.findByIdAndCompanyId(id, companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Orden no encontrada"));
+
+        if (order.getStatus() == OrderStatus.RECEIVED) {
+            throw new IllegalStateException("No se pueden eliminar órdenes en estado RECEIVED");
+        }
+
+        purchaseOrderItemRepository.deleteAll(order.getItems());
+        purchaseOrderRepository.delete(order);
+
+        auditService.logAction("ORDEN_COMPRA_ELIMINADA", "Orden ID " + id + " eliminada permanentemente.", "INFO");
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void sendPurchaseOrderEmail(Long id) {
+        Long companyId = getCompanyId();
+        PurchaseOrder order = purchaseOrderRepository.findByIdAndCompanyId(id, companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Orden no encontrada"));
+        
+        Provider provider = order.getProvider();
+        if (provider.getEmail() == null || provider.getEmail().isBlank()) {
+            throw new IllegalStateException("El proveedor no tiene un email registrado");
+        }
+        
+        StringBuilder detalle = new StringBuilder();
+        detalle.append("Orden de Compra #").append(order.getId()).append("\n\n");
+        for (PurchaseOrderItem item : order.getItems()) {
+            detalle.append("- ").append(item.getProduct().getName())
+                   .append(" | Cantidad: ").append(item.getQuantity())
+                   .append(" | Costo Un.: $").append(item.getUnitCost())
+                   .append(" | Subtotal: $").append(item.getSubtotal())
+                   .append("\n");
+        }
+        detalle.append("\nTotal: $").append(order.getTotalAmount());
+        
+        emailService.enviarMailPurchaseOrder(provider.getEmail(), provider.getBusinessName(), detalle.toString());
     }
 
     @Override

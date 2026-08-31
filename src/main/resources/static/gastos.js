@@ -72,7 +72,8 @@ async function cargarProveedoresParaSelect() {
     try {
         const res = await apiFetch('/providers');
         if (res && res.ok) {
-            proveedoresDisponibles = await res.json();
+            const data = await res.json();
+            proveedoresDisponibles = data.content || data;
             poblarSelectProveedores();
         }
     } catch (e) {

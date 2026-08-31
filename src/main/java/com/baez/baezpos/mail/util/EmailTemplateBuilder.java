@@ -244,6 +244,54 @@ public final class EmailTemplateBuilder {
     }
 
     /**
+     * Correo de notificación de nueva Orden de Compra.
+     */
+    public static String buildPurchaseOrder(String nombreProveedor, String detallePedido) {
+        String safeProveedor = HtmlUtils.htmlEscape(nombreProveedor != null ? nombreProveedor : "Proveedor");
+        
+        String bodyContent = """
+            <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.6; color: #334155;">
+                Hola <strong style="color: #0f172a;">%s</strong>,
+            </p>
+            <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #475569;">
+                Te enviamos una nueva <strong>Orden de Compra</strong> desde la plataforma BÁEZ POS.
+            </p>
+            
+            <!-- DETALLE DEL PEDIDO -->
+            <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="margin: 24px 0; background-color: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #10b981; border-radius: 8px; overflow: hidden;">
+                <tr>
+                    <td style="padding: 20px;">
+                        <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                                <td style="padding-bottom: 12px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #047857;">
+                                    📦 Detalle de la Orden
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 6px 0; font-size: 14px; color: #475569; font-family: Consolas, Monaco, 'Courier New', monospace; white-space: pre-wrap;">
+%s
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+
+            <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #475569;">
+                Aguardamos confirmación. ¡Muchas gracias!
+            </p>
+            """.formatted(safeProveedor, detallePedido);
+
+        return renderPlantillaBase(
+                "Nueva Orden de Compra",
+                "Detalle de pedido adjunto",
+                "#10b981",
+                "#047857",
+                bodyContent
+        );
+    }
+
+    /**
      * Estructura HTML base unificada: layout responsive en tablas (max-width 600px), fondo #f4f6f8,
      * contenedor blanco #ffffff, tipografía elegante, cabecera corporativa y pie de página institucional.
      */

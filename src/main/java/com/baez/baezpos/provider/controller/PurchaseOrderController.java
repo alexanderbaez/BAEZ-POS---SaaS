@@ -39,6 +39,20 @@ public class PurchaseOrderController {
         return ResponseEntity.ok(purchaseOrderService.cancelOrder(id));
     }
 
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE')")
+    public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
+        purchaseOrderService.deleteOrder(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/send-email")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE')")
+    public ResponseEntity<Void> sendEmail(@PathVariable Long id) {
+        purchaseOrderService.sendPurchaseOrderEmail(id);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE')")
     public ResponseEntity<PurchaseOrderResponseDTO> getById(@PathVariable Long id) {

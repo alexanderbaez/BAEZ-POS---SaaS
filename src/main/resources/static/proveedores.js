@@ -653,15 +653,18 @@ async function cargarOrdenes(pagina = 0) {
             let badgeEstado = '';
             let btnRecibir = '';
             let btnCancelar = '';
+            let btnEliminar = '';
             
             if (orden.status === 'PENDING') {
                 badgeEstado = `<span class="badge bg-light text-warning border border-warning-subtle px-2 py-1"><i class="bi bi-clock me-1"></i>Pendiente</span>`;
                 btnRecibir = `<button class="btn btn-sm btn-outline-success mx-1" onclick="recibirOrden(${orden.id})" title="Recibir Stock"><i class="bi bi-box-seam"></i></button>`;
-                btnCancelar = `<button class="btn btn-sm btn-outline-danger mx-1" onclick="cancelarOrden(${orden.id})" title="Cancelar Orden"><i class="bi bi-x-circle"></i></button>`;
+                btnCancelar = `<button class="btn btn-sm btn-outline-warning mx-1" onclick="cancelarOrden(${orden.id})" title="Cancelar Orden"><i class="bi bi-x-circle"></i></button>`;
+                btnEliminar = `<button class="btn btn-sm btn-outline-danger mx-1" onclick="eliminarOrden(${orden.id})" title="Eliminar Orden"><i class="bi bi-trash"></i></button>`;
             } else if (orden.status === 'RECEIVED') {
                 badgeEstado = `<span class="badge bg-light text-success border border-success-subtle px-2 py-1"><i class="bi bi-check2-circle me-1"></i>Recibido</span>`;
             } else if (orden.status === 'CANCELED') {
                 badgeEstado = `<span class="badge bg-light text-danger border border-danger-subtle px-2 py-1"><i class="bi bi-x-circle me-1"></i>Cancelado</span>`;
+                btnEliminar = `<button class="btn btn-sm btn-outline-danger mx-1" onclick="eliminarOrden(${orden.id})" title="Eliminar Orden"><i class="bi bi-trash"></i></button>`;
             }
 
             const tr = document.createElement('tr');
@@ -673,6 +676,7 @@ async function cargarOrdenes(pagina = 0) {
                 <td class="text-end pe-3">
                     ${btnRecibir}
                     ${btnCancelar}
+                    ${btnEliminar}
                 </td>
             `;
             fragment.appendChild(tr);
@@ -874,27 +878,34 @@ window.generarOrdenCompra = async function() {
             const modalEl = document.getElementById('modalNuevaOrden');
             const modal = bootstrap.Modal.getInstance(modalEl);
             if (modal) modal.hide();
-            cargarOrdenes(0);
-            
             Swal.fire({
                 icon: 'success',
                 title: 'Orden Generada',
-                text: 'La orden fue registrada con éxito.',
-                timer: 1500,
-                showConfirmButton: false
+                text: 'La orden fue registrada con éxito. ¿Deseas enviarla al proveedor?',
+                showCancelButton: true,
+                confirmButtonText: '<i class="bi bi-whatsapp"></i> WhatsApp',
+                cancelButtonText: '<i class="bi bi-envelope"></i> Email',
+                confirmButtonColor: '#25D366',
+                cancelButtonColor: '#3b82f6',
+                showCloseButton: true,
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const providerSelect = document.getElementById('ordenProveedorId');
+                    const providerName = providerSelect.options[providerSelect.selectedIndex].text;
+                    
+                    let wmsg = `Hola ${providerName}, te envío el siguiente pedido:\n\n`;
+                    carritoOrden.forEach(i => {
+                        wmsg += `- ${i.quantity} x ${i.productName}\n`;
+                    });
+                    wmsg += `\nAguardo confirmación. ¡Muchas gracias!`;
+                    
+                    const wlink = `https://wa.me/?text=${encodeURIComponent(wmsg)}`;
+                    window.open(wlink, '_blank');
+                } else if (result.dismiss === Swal.DismissReason.cancel) {
+                    enviarOrdenEmail(orden.id);
+                }
             });
-            
-            const providerSelect = document.getElementById('ordenProveedorId');
-            const providerName = providerSelect.options[providerSelect.selectedIndex].text;
-            
-            let wmsg = `Hola ${providerName}, te envío el siguiente pedido:\n\n`;
-            carritoOrden.forEach(i => {
-                wmsg += `- ${i.quantity} x ${i.productName}\n`;
-            });
-            wmsg += `\nAguardo confirmación. ¡Muchas gracias!`;
-            
-            const wlink = `https://wa.me/?text=${encodeURIComponent(wmsg)}`;
-            window.open(wlink, '_blank');
+            cargarOrdenes(0);
             
         } else {
             const err = await res.json();
@@ -955,6 +966,48 @@ window.cancelarOrden = async function(id) {
             }
         } catch (err) {
             Swal.fire('Error', 'Fallo de conexión.', 'error');
+        }
+    }
+};
+
+window.enviarOrdenEmail = async function(id) {
+    try {
+        Swal.fire({ title: 'Enviando...', text: 'Por favor, espere.', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+        const res = await apiFetch(`/purchase-orders/${id}/send-email`, { method: 'POST' });
+        if (res.ok) {
+            Swal.fire('Enviado', 'La orden fue enviada por correo exitosamente.', 'success');
+        } else {
+            const err = await res.json();
+            Swal.fire('Atención', err.message || 'No se pudo enviar el correo', 'error');
+        }
+    } catch (e) {
+        Swal.fire('Error', 'Fallo en el envío', 'error');
+    }
+};
+
+window.eliminarOrden = async function(id) {
+    const confirm = await Swal.fire({ 
+        title: '¿Eliminar Orden?', 
+        text: 'Esta acción no se puede deshacer.', 
+        icon: 'warning', 
+        showCancelButton: true, 
+        confirmButtonText: 'Sí, eliminar', 
+        cancelButtonText: 'Cancelar', 
+        confirmButtonColor: '#dc2626' 
+    });
+    
+    if (confirm.isConfirmed) {
+        try {
+            const res = await apiFetch(`/purchase-orders/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                Swal.fire('Eliminada', 'La orden ha sido eliminada.', 'success');
+                cargarOrdenes(0);
+            } else {
+                const err = await res.json();
+                Swal.fire('Atención', err.message || 'No se pudo eliminar la orden', 'error');
+            }
+        } catch (e) {
+            Swal.fire('Error', 'No se pudo procesar la solicitud', 'error');
         }
     }
 };
