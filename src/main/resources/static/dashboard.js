@@ -151,8 +151,8 @@ async function cargarKpisYTablas() {
         const mesActual = ahora.getMonth();
         const anioActual = ahora.getFullYear();
         const gastosMes = listaGastos.filter(g => {
-            if (!g.date) return false;
-            const fechaG = new Date(g.date);
+            if (!g.expenseDate) return false;
+            const fechaG = new Date(g.expenseDate);
             return fechaG.getMonth() === mesActual && fechaG.getFullYear() === anioActual;
         });
 
@@ -170,6 +170,9 @@ async function cargarKpisYTablas() {
             }
             if (dataBoxMes.periodProfit !== undefined) {
                 gananciaNeta = parseFloat(dataBoxMes.periodProfit) || 0;
+            }
+            if (dataBoxMes.periodExpensesCash !== undefined && dataBoxMes.periodExpensesTransfer !== undefined) {
+                totalGastosMes = (parseFloat(dataBoxMes.periodExpensesCash) || 0) + (parseFloat(dataBoxMes.periodExpensesTransfer) || 0);
             }
         }
 

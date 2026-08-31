@@ -77,11 +77,8 @@ async function cargarVentas(pagina = 0) {
 
         VENTAS_GLOBALES = lista;
         cargarVentasFiltradas();
-
-        const inicio = (paginaActual - 1) * LIMITE_POR_PAGINA;
-        const fin = inicio + VENTAS_GLOBALES.length;
-        renderizarControlesPaginacion(totalElementosBackend, totalPaginasBackend, inicio, fin);
-
+        renderizarControlesPaginacion(totalElementosBackend, totalPaginasBackend, pagina * LIMITE_POR_PAGINA + 1, pagina * LIMITE_POR_PAGINA + lista.length);
+        await cargarResumenGlobal(desde, hasta);
     } catch (err) {
         console.error("Error al mapear historial:", err);
         Swal.fire('Error', 'No se pudieron recuperar las ventas para el rango seleccionado.', 'error');
@@ -167,7 +164,6 @@ function cargarVentasFiltradas() {
     }
 
     renderizarTabla(ventasFiltradas);
-    calcularResumenVisto(ventasFiltradas);
 }
 
 function obtenerNumTicketVisual(v) {
@@ -441,58 +437,64 @@ function verDetalle(idVenta) {
 // ==========================================
 // 7. RESUMEN SUPERIOR
 // ==========================================
-function calcularResumenVisto(ventas) {
-    let totalEfe = 0;
-    let totalTra = 0;
-    let totalLib = 0;
+async function cargarResumenGlobal(desde, hasta) {
+    try {
+        const res = await apiFetch(`/sales/report/box?from=${desde}&to=${hasta}`);
+        if (!res.ok) return;
+        const box = await res.json();
 
-    ventas.forEach(v => {
-        if (v.status !== "ANULADA" && !v.canceled) {
-            const montoTotal = parseFloat(v.total) || 0;
-            if (v.paymentMethod === 'TRANSFERENCIA') {
-                totalTra += montoTotal;
-            } else if (v.paymentMethod === 'CUENTA_CORRIENTE') {
-                totalLib += montoTotal;
-            } else {
-                totalEfe += montoTotal;
-            }
-        }
-    });
+        const totalEfe = parseFloat(box.periodCashSales) || 0;
+        const totalTra = parseFloat(box.periodTransferSales) || 0;
+        const totalLib = parseFloat(box.periodCreditSales) || 0;
 
-    const totalCajaReal = totalEfe + totalTra;
-    const totalMontoVendido = totalEfe + totalTra + totalLib;
-    const fmt = (val) => `$${val.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
+        const totalCajaReal = totalEfe + totalTra;
+        const totalMontoVendido = totalEfe + totalTra + totalLib;
+        const fmt = (val) => `$${val.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
 
-    const safeSetText = (id, val) => {
-        const el = document.getElementById(id);
-        if (el) el.innerText = val;
-    };
+        const safeSetText = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = val;
+        };
 
-    safeSetText('resumenEfectivo', fmt(totalEfe));
-    safeSetText('resumenTransf', fmt(totalTra));
-    safeSetText('resumenLibreta', fmt(totalLib));
-    safeSetText('resumenTotalCaja', fmt(totalCajaReal));
-    safeSetText('resumenVentaTotal', fmt(totalMontoVendido));
+        safeSetText('resumenEfectivo', fmt(totalEfe));
+        safeSetText('resumenTransf', fmt(totalTra));
+        safeSetText('resumenLibreta', fmt(totalLib));
+        safeSetText('resumenTotalCaja', fmt(totalCajaReal));
+        safeSetText('resumenVentaTotal', fmt(totalMontoVendido));
+    } catch (e) {
+        console.error("Error al cargar resumen global:", e);
+    }
 }
 
 // ==========================================
 // 8. REPORTES ROBUSTOS (PDF Y EXCEL)
 // ==========================================
-function obtenerVentasParaExportar() {
+async function obtenerVentasParaExportar() {
     const filtroEl = document.getElementById('filtroMetodo');
     const metodo = filtroEl ? filtroEl.value : "TODOS";
+    const desde = document.getElementById('fechaDesde') ? document.getElementById('fechaDesde').value : formatInputDate(new Date());
+    const hasta = document.getElementById('fechaHasta') ? document.getElementById('fechaHasta').value : formatInputDate(new Date());
 
-    return VENTAS_GLOBALES.filter(v => {
-        if (v.status === "ANULADA" || v.canceled) return false;
-        if (metodo !== "TODOS") {
-            return (v.paymentMethod || 'EFECTIVO') === metodo;
-        }
-        return true;
-    });
+    try {
+        const res = await apiFetch(`/sales?desde=${desde}&hasta=${hasta}`);
+        if (!res || !res.ok) return [];
+        const todasLasVentas = await res.json();
+
+        return todasLasVentas.filter(v => {
+            if (v.status === "ANULADA" || v.canceled) return false;
+            if (metodo !== "TODOS") {
+                return (v.paymentMethod || 'EFECTIVO') === metodo;
+            }
+            return true;
+        });
+    } catch (e) {
+        console.error('Error obteniendo ventas para exportar:', e);
+        return [];
+    }
 }
 
-function exportarPDF() {
-    const ventasAExportar = obtenerVentasParaExportar();
+async function exportarPDF() {
+    const ventasAExportar = await obtenerVentasParaExportar();
 
     if (ventasAExportar.length === 0) {
         return Swal.fire('Sin datos', 'No hay ventas activas para exportar en el rango seleccionado.', 'info');
@@ -606,8 +608,8 @@ function exportarPDF() {
     doc.save(`Reporte_Ventas_${fechaDesde}_al_${fechaHasta}.pdf`);
 }
 
-function exportarExcelPro() {
-    const ventasAExportar = obtenerVentasParaExportar();
+async function exportarExcelPro() {
+    const ventasAExportar = await obtenerVentasParaExportar();
 
     if (ventasAExportar.length === 0) {
         return Swal.fire('Atención', 'No hay datos activos para exportar en el rango seleccionado.', 'info');
