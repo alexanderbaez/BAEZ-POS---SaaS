@@ -15,7 +15,7 @@ import java.util.List;
 @Entity
 @Table(name = "sales", indexes = {
         @Index(name = "idx_sales_company_date", columnList = "company_id, sale_date"),
-        @Index(name = "idx_sales_nro_comprobante", columnList = "nro_comprobante")
+        @Index(name = "idx_sales_company_nro_comprobante", columnList = "company_id, nro_comprobante")
 })
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor

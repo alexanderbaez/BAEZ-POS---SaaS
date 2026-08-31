@@ -9,7 +9,9 @@ import org.hibernate.annotations.SQLDelete;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "providers")
+@Table(name = "providers", indexes = {
+        @Index(name = "idx_providers_company_active", columnList = "company_id, active")
+})
 @Getter
 @Setter
 @NoArgsConstructor
