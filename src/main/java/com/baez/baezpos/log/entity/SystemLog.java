@@ -1,6 +1,7 @@
 package com.baez.baezpos.log.entity;
 
-import com.baez.baezpos.shared.entity.TenantEntity;
+import com.baez.baezpos.company.entity.Company;
+import com.baez.baezpos.shared.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -15,11 +16,15 @@ import java.time.LocalDateTime;
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @SuperBuilder
-public class SystemLog extends TenantEntity {
+public class SystemLog extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id", nullable = true)
+    private Company company;
 
     @Column(nullable = false)
     private String action; // Ej: "VENTA", "ELIMINACION_PRODUCTO", "AJUSTE_STOCK"
