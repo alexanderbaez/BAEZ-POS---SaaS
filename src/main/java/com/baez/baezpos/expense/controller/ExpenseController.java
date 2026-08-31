@@ -33,8 +33,10 @@ public class ExpenseController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'CAJERO')")
     public ResponseEntity<Page<ExpenseResponseDTO>> list(
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate desde,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate hasta,
             @PageableDefault(size = 20, sort = "expenseDate", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(expenseService.getAllExpenses(pageable));
+        return ResponseEntity.ok(expenseService.getAllExpenses(desde, hasta, pageable));
     }
 
     @DeleteMapping("/{id}")

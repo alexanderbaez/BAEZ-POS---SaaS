@@ -90,36 +90,49 @@
         </div>
 
         <!-- BARRA DE FILTROS AVANZADOS -->
-        <div class="card p-3 mb-4">
-            <div class="row g-2 g-md-3 align-items-center">
-                <div class="col-12 col-md-4">
-                    <div class="input-group">
-                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                        <input type="text" id="filtroTexto" class="form-control border-start-0" placeholder="Buscar por concepto o comprobante...">
-                    </div>
+        <div class="card p-3 shadow-sm mb-4">
+            <div class="row g-2 g-md-3 align-items-end">
+                <div class="col-6 col-md-2">
+                    <label class="small fw-bold text-muted text-uppercase mb-1 d-block" for="fechaDesde">Desde:</label>
+                    <input type="date" id="fechaDesde" class="form-control form-control-sm border-0 bg-light">
                 </div>
-                <div class="col-12 col-sm-6 col-md-3">
-                    <select id="filtroCategoria" class="form-select">
-                        <option value="">Todas las Categorías</option>
-                        <option value="PROVEEDOR">Pago a Proveedor</option>
-                        <option value="SERVICIOS">Servicios (Luz, Internet)</option>
+                <div class="col-6 col-md-2">
+                    <label class="small fw-bold text-muted text-uppercase mb-1 d-block" for="fechaHasta">Hasta:</label>
+                    <input type="date" id="fechaHasta" class="form-control form-control-sm border-0 bg-light">
+                </div>
+                <div class="col-12 col-md-2">
+                    <label class="small fw-bold text-muted text-uppercase mb-1 d-block" for="filtroCategoria">Categoría:</label>
+                    <select id="filtroCategoria" class="form-select form-select-sm border-0 bg-light">
+                        <option value="">Todas</option>
+                        <option value="PROVEEDOR">Proveedor</option>
+                        <option value="SERVICIOS">Servicios</option>
                         <option value="LOGISTICA">Fletes / Logística</option>
-                        <option value="SUELDOS">Sueldos / Adelantos</option>
-                        <option value="MANTENIMIENTO">Mantenimiento / Insumos</option>
+                        <option value="SUELDOS">Sueldos</option>
+                        <option value="MANTENIMIENTO">Mantenimiento</option>
                         <option value="CAJA_CHICA">Caja Chica</option>
-                        <option value="VARIOS_RETIRO">Retiro Personal / Varios</option>
+                        <option value="VARIOS_RETIRO">Retiro Varios</option>
                     </select>
                 </div>
-                <div class="col-12 col-sm-6 col-md-3">
-                    <select id="filtroMetodoPago" class="form-select">
-                        <option value="">Todos los Medios de Pago</option>
-                        <option value="EFECTIVO_CAJA">Efectivo de Caja</option>
-                        <option value="TRANSFERENCIA">Transferencia Bancaria / QR</option>
+                <div class="col-12 col-md-2">
+                    <label class="small fw-bold text-muted text-uppercase mb-1 d-block" for="filtroMetodoPago">Origen:</label>
+                    <select id="filtroMetodoPago" class="form-select form-select-sm border-0 bg-light">
+                        <option value="">Todos</option>
+                        <option value="EFECTIVO_CAJA">Efectivo Caja</option>
+                        <option value="TRANSFERENCIA">Transferencia / QR</option>
                     </select>
                 </div>
-                <div class="col-12 col-md-2 text-md-end">
-                    <button class="btn btn-outline-secondary w-100 fw-semibold" onclick="limpiarFiltros()">
-                        <i class="bi bi-arrow-counterclockwise me-1"></i> Limpiar
+                <div class="col-12 col-md-2">
+                    <label class="small fw-bold text-muted text-uppercase mb-1 d-block" for="filtroTexto">Búsqueda:</label>
+                    <input type="text" id="filtroTexto" class="form-control form-control-sm border-0 bg-light" placeholder="Concepto...">
+                </div>
+                <div class="col-6 col-md-1">
+                    <button class="btn btn-outline-secondary btn-sm w-100 fw-bold shadow-sm" onclick="limpiarFiltros()" title="Limpiar Filtros">
+                        <i class="bi bi-eraser"></i>
+                    </button>
+                </div>
+                <div class="col-6 col-md-1">
+                    <button class="btn btn-primary btn-sm w-100 fw-bold shadow-sm" onclick="cargarGastosDesdeHasta()">
+                        <i class="bi bi-search"></i>
                     </button>
                 </div>
             </div>

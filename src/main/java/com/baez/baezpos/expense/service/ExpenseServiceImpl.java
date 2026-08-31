@@ -121,13 +121,21 @@ public class ExpenseServiceImpl implements ExpenseService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ExpenseResponseDTO> getAllExpenses(Pageable pageable) {
+    public Page<ExpenseResponseDTO> getAllExpenses(java.time.LocalDate desde, java.time.LocalDate hasta, Pageable pageable) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         if (companyId == null) {
             throw new UnauthorizedException("Acceso denegado: Contexto de empresa no identificado.");
         }
 
-        Page<Expense> page = expenseRepository.findByCompanyIdOrderByExpenseDateDesc(companyId, pageable);
+        Page<Expense> page;
+        if (desde != null && hasta != null) {
+            LocalDateTime start = desde.atStartOfDay();
+            LocalDateTime end = hasta.atTime(java.time.LocalTime.MAX);
+            page = expenseRepository.findByCompanyIdAndExpenseDateBetweenOrderByExpenseDateDesc(companyId, start, end, pageable);
+        } else {
+            page = expenseRepository.findByCompanyIdOrderByExpenseDateDesc(companyId, pageable);
+        }
+        
         return page.map(this::mapToDTO);
     }
 

@@ -141,7 +141,21 @@ let totalPaginasBackend = 1;
 let totalElementosBackend = 0;
 const LIMITE_POR_PAGINA = 20;
 
+function cargarGastosDesdeHasta() {
+    cargarGastos(0);
+}
+
 async function cargarGastos(pagina = 0) {
+    const desdeInput = document.getElementById('fechaDesde');
+    const hastaInput = document.getElementById('fechaHasta');
+    const desde = desdeInput ? desdeInput.value : '';
+    const hasta = hastaInput ? hastaInput.value : '';
+
+    let queryParams = `?page=${pagina}&size=${LIMITE_POR_PAGINA}&sort=expenseDate,desc`;
+    if (desde && hasta) {
+        queryParams += `&desde=${desde}&hasta=${hasta}`;
+    }
+
     const tbody = document.getElementById('listaGastos');
     if (tbody) {
         tbody.innerHTML = `
@@ -154,7 +168,7 @@ async function cargarGastos(pagina = 0) {
     }
 
     try {
-        const res = await apiFetch(`/expenses?page=${pagina}&size=${LIMITE_POR_PAGINA}&sort=expenseDate,desc`);
+        const res = await apiFetch(`/expenses${queryParams}`);
         if (!res || !res.ok) throw new Error("Error al comunicarse con la API de Gastos.");
 
         const data = await res.json();
@@ -308,13 +322,13 @@ function renderizarGastos(gastos) {
     }
 
     const mapaCategorias = {
-        'PROVEEDOR': { label: 'Proveedor', class: 'bg-primary text-white' },
-        'SERVICIOS': { label: 'Servicios', class: 'bg-warning text-dark' },
-        'LOGISTICA': { label: 'Logística / Flete', class: 'bg-info text-dark' },
-        'SUELDOS': { label: 'Sueldos', class: 'bg-success text-white' },
-        'MANTENIMIENTO': { label: 'Mantenimiento', class: 'bg-secondary text-white' },
-        'CAJA_CHICA': { label: 'Caja Chica', class: 'bg-danger text-white' },
-        'VARIOS_RETIRO': { label: 'Retiro / Varios', class: 'bg-dark text-white' }
+        'PROVEEDOR': { label: 'Proveedor', class: 'bg-light text-dark border border-secondary-subtle' },
+        'SERVICIOS': { label: 'Servicios', class: 'bg-light text-dark border border-secondary-subtle' },
+        'LOGISTICA': { label: 'Logística / Flete', class: 'bg-light text-dark border border-secondary-subtle' },
+        'SUELDOS': { label: 'Sueldos', class: 'bg-light text-dark border border-secondary-subtle' },
+        'MANTENIMIENTO': { label: 'Mantenimiento', class: 'bg-light text-dark border border-secondary-subtle' },
+        'CAJA_CHICA': { label: 'Caja Chica', class: 'bg-light text-dark border border-secondary-subtle' },
+        'VARIOS_RETIRO': { label: 'Retiro / Varios', class: 'bg-light text-dark border border-secondary-subtle' }
     };
 
     const fragment = document.createDocumentFragment();
@@ -358,16 +372,16 @@ function renderizarGastos(gastos) {
         const esCajaFuerte = (g.paymentMethod === 'EFECTIVO_CAJA_FUERTE');
         let badgeCaja = '';
 
-        if (esCtaCte) {
-            badgeCaja = '<span class="badge bg-warning-subtle text-dark border border-warning ms-1" style="font-size: 10px;" title="Deuda con Proveedor"><i class="bi bi-clock-history me-1"></i>Deuda Cta. Cte</span>';
-        } else if (esCajaFuerte) {
-            badgeCaja = '<span class="badge bg-secondary-subtle text-secondary border border-secondary ms-1" style="font-size: 10px;" title="Fondos de Caja Fuerte / Fuera de caja física"><i class="bi bi-safe me-1"></i>Caja Fuerte</span>';
-        } else if (g.deductFromBox && esEfectivoCaja) {
-            badgeCaja = '<span class="badge bg-danger text-white border border-danger ms-1" style="font-size: 10px;" title="Restado del efectivo físico en caja"><i class="bi bi-cash me-1"></i>Descuenta Caja</span>';
-        } else if (g.paymentMethod === 'TRANSFERENCIA') {
-            badgeCaja = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1" style="font-size: 10px;" title="Pago por Transferencia Bancaria / QR"><i class="bi bi-bank me-1"></i>Digital / Banco</span>';
-        } else if (!g.deductFromBox) {
-            badgeCaja = '<span class="badge bg-secondary-subtle text-secondary border border-secondary ms-1" style="font-size: 10px;" title="No descuenta caja física">Sin Descuento Caja</span>';
+        if (g.deductFromBox) {
+            if (esCtaCte) {
+                badgeCaja = '<span class="badge bg-light text-secondary border border-secondary-subtle ms-1" style="font-size: 10px;" title="Deuda con Proveedor"><i class="bi bi-clock-history me-1"></i>Deuda Cta. Cte</span>';
+            } else if (esCajaFuerte) {
+                badgeCaja = '<span class="badge bg-light text-secondary border border-secondary-subtle ms-1" style="font-size: 10px;" title="Fondos de Caja Fuerte / Fuera de caja física"><i class="bi bi-safe me-1"></i>Caja Fuerte</span>';
+            } else if (esEfectivoCaja) {
+                badgeCaja = '<span class="badge bg-light text-secondary border border-secondary-subtle ms-1" style="font-size: 10px;" title="Restado del efectivo físico en caja"><i class="bi bi-cash me-1"></i>Descuenta Caja</span>';
+            } else if (g.paymentMethod === 'TRANSFERENCIA') {
+                badgeCaja = '<span class="badge bg-light text-secondary border border-secondary-subtle ms-1" style="font-size: 10px;" title="Pago por Transferencia Bancaria / QR"><i class="bi bi-bank me-1"></i>Digital / Banco</span>';
+            }
         }
 
         const tr = document.createElement('tr');
