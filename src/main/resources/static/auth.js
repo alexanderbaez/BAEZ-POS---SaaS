@@ -482,6 +482,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (esVistaLogin()) {
         removerNotificacionVencimiento();
         removerBloqueoVentas();
+        ocultarPantallaDeCarga();
         return;
     }
 
@@ -493,6 +494,66 @@ document.addEventListener('DOMContentLoaded', () => {
     chequearEstadoLicencia();
     setInterval(chequearEstadoLicencia, 15000);
 });
+
+// ==========================================
+// 6. SPLASH SCREEN GLOBAL (CONTROL DE ARRANQUE / COLD-START)
+// ==========================================
+function inyectarPantallaDeCarga() {
+    if (esVistaLogin()) return;
+    if (document.getElementById('baez-splash-screen')) return;
+
+    const splash = document.createElement('div');
+    splash.id = 'baez-splash-screen';
+    splash.innerHTML = `
+      <div class="splash-brand-container">
+        <div class="splash-logo-badge">
+          <i class="bi bi-cart3"></i>
+        </div>
+        <h1 class="splash-title">BAEZ POS</h1>
+        <div class="splash-subtitle">Sistema de Punto de Venta</div>
+        <div class="splash-loader-bar">
+          <div class="splash-loader-progress"></div>
+        </div>
+        <div class="splash-status-text" id="splash-status-label">Iniciando aplicación...</div>
+      </div>
+    `;
+
+    if (document.body) {
+        document.body.prepend(splash);
+    } else {
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!document.getElementById('baez-splash-screen')) {
+                document.body.prepend(splash);
+            }
+        });
+    }
+
+    // Timeout de seguridad estricto (8s) para no bloquear la interfaz
+    setTimeout(() => {
+        ocultarPantallaDeCarga();
+    }, 8000);
+}
+
+function ocultarPantallaDeCarga() {
+    const splash = document.getElementById('baez-splash-screen');
+    if (!splash) return;
+
+    splash.classList.add('fade-out');
+    setTimeout(() => {
+        if (splash && splash.parentNode) {
+            splash.parentNode.removeChild(splash);
+        }
+    }, 500);
+}
+
+// Inyección anticipada en el flujo del script
+if (typeof document !== 'undefined' && !esVistaLogin()) {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', inyectarPantallaDeCarga);
+    } else {
+        inyectarPantallaDeCarga();
+    }
+}
 
 // Cierre de Sesión Universal
 function cerrarSesion(e) {

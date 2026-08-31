@@ -262,6 +262,10 @@ async function listarProductos(pagina = 0) {
         renderizarControlesPaginacion(totalElementosBackend, totalPaginasBackend, inicio, fin);
     } catch (err) {
         console.error("Error al listar productos:", err);
+    } finally {
+        if (typeof ocultarPantallaDeCarga === 'function') {
+            ocultarPantallaDeCarga();
+        }
     }
 }
 

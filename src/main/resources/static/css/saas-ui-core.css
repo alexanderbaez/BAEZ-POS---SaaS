@@ -1011,3 +1011,145 @@ body.login-page {
   max-width: 260px;
 }
 
+/* ==========================================================================
+   SPLASH SCREEN GLOBAL (#baez-splash-screen)
+   ========================================================================== */
+#baez-splash-screen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #0f172a;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+#baez-splash-screen.fade-out {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.splash-brand-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: splashFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.splash-logo-badge {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.85rem;
+  color: #ffffff;
+  box-shadow: 0 12px 28px -6px rgba(37, 99, 235, 0.55);
+  margin-bottom: 1.25rem;
+  position: relative;
+}
+
+.splash-logo-badge::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), transparent);
+  z-index: -1;
+  animation: splashPulse 2s infinite ease-in-out;
+}
+
+.splash-title {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: #ffffff !important;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.splash-subtitle {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #94a3b8;
+  margin-top: 0.35rem;
+  margin-bottom: 2rem;
+  letter-spacing: -0.01em;
+}
+
+.splash-loader-bar {
+  width: 180px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.splash-loader-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 45%;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  border-radius: 999px;
+  animation: splashIndeterminate 1.5s infinite ease-in-out;
+}
+
+.splash-status-text {
+  margin-top: 0.9rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #64748b;
+  letter-spacing: 0.02em;
+}
+
+@keyframes splashFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes splashPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.1;
+  }
+}
+
+@keyframes splashIndeterminate {
+  0% {
+    left: -45%;
+  }
+  50% {
+    left: 40%;
+    width: 60%;
+  }
+  100% {
+    left: 100%;
+    width: 45%;
+  }
+}
+

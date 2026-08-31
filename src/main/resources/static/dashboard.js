@@ -94,6 +94,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         cargarGraficoSemanal(),
         cargarAlertasStock()
     ]);
+
+    if (typeof ocultarPantallaDeCarga === 'function') {
+        ocultarPantallaDeCarga();
+    }
 });
 
 // ===================================================================

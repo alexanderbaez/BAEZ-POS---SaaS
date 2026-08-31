@@ -103,6 +103,10 @@ document.addEventListener('DOMContentLoaded', async function inicializarModuloVe
     if (navigator.onLine && typeof syncPendingSales === 'function') {
         syncPendingSales();
     }
+
+    if (typeof ocultarPantallaDeCarga === 'function') {
+        ocultarPantallaDeCarga();
+    }
 });
 
 

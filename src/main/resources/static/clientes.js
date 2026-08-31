@@ -53,7 +53,13 @@ function formatQuantity(quantity, isFractional) {
 // 1. INICIALIZACIÓN
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
-    await Promise.all([cargarDatosEmpresa(), cargarClientes()]);
+    try {
+        await Promise.all([cargarDatosEmpresa(), cargarClientes()]);
+    } finally {
+        if (typeof ocultarPantallaDeCarga === 'function') {
+            ocultarPantallaDeCarga();
+        }
+    }
 
     // Listener para filtros de búsqueda dinámica
     const buscarInput = document.getElementById('buscarCliente');
