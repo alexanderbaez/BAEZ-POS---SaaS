@@ -109,13 +109,22 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Orígenes permitidos para AWS Amplify y desarrollo local
-        config.setAllowedOrigins(List.of("https://master.d3gp9of2938ba5.amplifyapp.com", "http://localhost:5173", "http://localhost:8080"));
+        // Orígenes permitidos explícitos y patrones para producción y desarrollo
+        config.setAllowedOriginPatterns(List.of(
+                "https://baezpos.com",
+                "https://www.baezpos.com",
+                "https://*.baezpos.com",
+                "https://*.amplifyapp.com",
+                "https://*.onrender.com",
+                "http://localhost:*",
+                "http://127.0.0.1:*"
+        ));
 
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
-        config.setExposedHeaders(List.of("Authorization"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("Authorization", "Content-Disposition", "X-Total-Count"));
         config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
