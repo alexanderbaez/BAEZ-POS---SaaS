@@ -19,8 +19,11 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado con email: " + email));
+        // Normalización defensiva: garantiza búsqueda insensible a mayúsculas/espacios
+        // independientemente del origen del token o del AuthenticationManager.
+        String normalizedEmail = (email != null) ? email.trim().toLowerCase() : "";
+        User user = userRepository.findByEmail(normalizedEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado con email: " + normalizedEmail));
 
         return UserPrincipal.create(user);
     }

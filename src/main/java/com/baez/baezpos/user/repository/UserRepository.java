@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,10 +22,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
 
     @Modifying
+    @Transactional
     @Query("UPDATE User u SET u.password = :password, u.passwordResetAt = :resetAt, u.updatedAt = :now, u.version = COALESCE(u.version, 0) + 1 WHERE u.id = :id")
     int updatePasswordAndResetAt(@Param("id") Long id, @Param("password") String password, @Param("resetAt") LocalDateTime resetAt, @Param("now") LocalDateTime now);
 
     @Modifying
+    @Transactional
     @Query("UPDATE User u SET u.passwordResetAt = NULL, u.updatedAt = :now WHERE u.id = :id")
     int clearPasswordResetAt(@Param("id") Long id, @Param("now") LocalDateTime now);
 
