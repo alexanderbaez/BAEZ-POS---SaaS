@@ -13,7 +13,7 @@ public class MainViewController {
 
     @GetMapping("/")
     public String index() {
-        // Redirigimos siempre a login, el frontend (login.js) decidirá si nos manda a setup.html
+        // Redirigimos siempre a login, el frontend (login.js) decidir\u00E1 si nos manda a setup.html
         return "redirect:/login.html";
     }
 

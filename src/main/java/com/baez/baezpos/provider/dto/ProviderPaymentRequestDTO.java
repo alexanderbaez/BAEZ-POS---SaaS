@@ -12,13 +12,13 @@ public record ProviderPaymentRequestDTO(
         @Positive(message = "El monto del pago debe ser mayor a cero.")
         BigDecimal amount,
 
-        @NotNull(message = "El método de pago es obligatorio.")
+        @NotNull(message = "El m\u00E9todo de pago es obligatorio.")
         PaymentMethod paymentMethod,
 
         @Size(max = 255, message = "El comprobante o referencia no puede superar los 255 caracteres.")
         String reference,
 
-        @Size(max = 50, message = "El número de comprobante o recibo no puede superar los 50 caracteres.")
+        @Size(max = 50, message = "El n\u00FAmero de comprobante o recibo no puede superar los 50 caracteres.")
         String invoiceNumber,
 
         Boolean deductFromBox

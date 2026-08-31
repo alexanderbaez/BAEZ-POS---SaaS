@@ -77,7 +77,7 @@ public class UserPrincipal implements UserDetails {
         return new UserPrincipal(
                 userId,
                 email,
-                "", // Contraseña no requerida en contexto stateless de sesión
+                "", // Contrase\u00F1a no requerida en contexto stateless de sesi\u00F3n
                 enabled,
                 companyId,
                 companyActive,
@@ -88,21 +88,21 @@ public class UserPrincipal implements UserDetails {
     }
 
     /**
-     * Comprobación de vigencia de la suscripción/licencia.
-     * Retorna true si es SuperAdmin, o si la empresa está activa y no vencida.
+     * Comprobaci\u00F3n de vigencia de la suscripci\u00F3n/licencia.
+     * Retorna true si es SuperAdmin, o si la empresa est\u00E1 activa y no vencida.
      */
     public boolean isCompanyAccessValid() {
-        // 1. SuperAdmin siempre tiene acceso válido
+        // 1. SuperAdmin siempre tiene acceso v\u00E1lido
         if (this.role == Role.SUPER_ADMIN || this.companyId == null) {
             return true;
         }
 
-        // 2. Si la empresa fue inhabilitada explícitamente
+        // 2. Si la empresa fue inhabilitada expl\u00EDcitamente
         if (!this.companyActive) {
             return false;
         }
 
-        // 3. Si la fecha de vencimiento existe y ya transcurrió
+        // 3. Si la fecha de vencimiento existe y ya transcurri\u00F3
         if (this.companyExpirationDate != null && LocalDate.now().isAfter(this.companyExpirationDate)) {
             return false;
         }

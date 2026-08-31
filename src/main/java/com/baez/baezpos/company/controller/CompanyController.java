@@ -37,7 +37,7 @@ public class CompanyController {
         return ResponseEntity.ok(companyService.verificarEstadoSuscripcionAutenticada());
     }
 
-    // --- GESTIÓN DE CAJEROS (VENDEDORES) ---
+    // --- GESTI\u00D3N DE CAJEROS (VENDEDORES) ---
     @GetMapping("/employees")
     public ResponseEntity<List<UserResponseDTO>> getAllEmployees() {
         return ResponseEntity.ok(companyService.getMyEmployees());

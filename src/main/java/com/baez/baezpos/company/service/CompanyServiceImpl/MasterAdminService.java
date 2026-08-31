@@ -69,11 +69,11 @@ public class MasterAdminService implements MasterAdmin {
         owner.setPassword(passwordEncoder.encode(req.getOwnerPassword()));
         owner.setRole(Role.ADMIN);
         owner.setCompany(savedCompany);
-        owner.setActive(true); // <--- Asignación garantizada en memoria y BD
+        owner.setActive(true); // <--- Asignaci\u00F3n garantizada en memoria y BD
 
         User savedOwner = userRepository.save(owner);
 
-        // 3. Envío directo de correo de bienvenida con sus credenciales de acceso
+        // 3. Env\u00EDo directo de correo de bienvenida con sus credenciales de acceso
         try {
             emailService.enviarMailBienvenida(
                     savedOwner.getEmail(),
@@ -82,7 +82,7 @@ public class MasterAdminService implements MasterAdmin {
                     req.getOwnerPassword()
             );
         } catch (Exception e) {
-            log.error("ADVERTENCIA: La empresa ID {} se creó correctamente, pero falló el envío del correo a {}: {}",
+            log.error("ADVERTENCIA: La empresa ID {} se cre\u00F3 correctamente, pero fall\u00F3 el env\u00EDo del correo a {}: {}",
                     savedCompany.getId(), savedOwner.getEmail(), e.getMessage());
         }
     }
@@ -95,7 +95,7 @@ public class MasterAdminService implements MasterAdmin {
 
         if (dto.getTaxId() != null && !dto.getTaxId().trim().equals(company.getTaxId())) {
             if (companyRepository.existsByTaxId(dto.getTaxId().trim())) {
-                throw new IllegalArgumentException("El CUIT/TaxID ya está asignado a otra empresa.");
+                throw new IllegalArgumentException("El CUIT/TaxID ya est\u00E1 asignado a otra empresa.");
             }
             company.setTaxId(dto.getTaxId().trim());
         }
@@ -191,7 +191,7 @@ public class MasterAdminService implements MasterAdmin {
     public void resetOwnerPassword(Long companyId, String newRawPassword) {
         User owner = userRepository.findByCompanyIdAndRole(companyId, Role.ADMIN).stream()
                 .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("No se encontró un administrador para esta empresa"));
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontr\u00F3 un administrador para esta empresa"));
 
         owner.setPassword(passwordEncoder.encode(newRawPassword));
         userRepository.save(owner);
@@ -203,7 +203,7 @@ public class MasterAdminService implements MasterAdmin {
                     newRawPassword
             );
         } catch (Exception e) {
-            log.error("Error al enviar email de restablecimiento de contraseña a {}: {}", owner.getEmail(), e.getMessage());
+            log.error("Error al enviar email de restablecimiento de contrase\u00F1a a {}: {}", owner.getEmail(), e.getMessage());
         }
     }
 

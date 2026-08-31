@@ -23,10 +23,10 @@ public class AuthVerificationController {
     @GetMapping("/verify")
     public ResponseEntity<MessageResponseDTO> confirmAccount(@RequestParam("token") String token) {
         VerificationToken verificationToken = tokenRepository.findByToken(token)
-                .orElseThrow(() -> new IllegalArgumentException("Token de activación inválido o inexistente."));
+                .orElseThrow(() -> new IllegalArgumentException("Token de activaci\u00F3n inv\u00E1lido o inexistente."));
 
         if (verificationToken.isExpired()) {
-            throw new IllegalArgumentException("El enlace de activación ha expirado. Contacte con soporte.");
+            throw new IllegalArgumentException("El enlace de activaci\u00F3n ha expirado. Contacte con soporte.");
         }
 
         User user = verificationToken.getUser();
@@ -41,6 +41,6 @@ public class AuthVerificationController {
 
         tokenRepository.delete(verificationToken);
 
-        return ResponseEntity.ok(MessageResponseDTO.of("¡Cuenta activada con éxito! Ya puede iniciar sesión en BaezPOS."));
+        return ResponseEntity.ok(MessageResponseDTO.of("\u00A1Cuenta activada con \u00E9xito! Ya puede iniciar sesi\u00F3n en BaezPOS."));
     }
 }

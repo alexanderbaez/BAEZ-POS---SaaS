@@ -26,7 +26,7 @@ public class InventoryMovement extends TenantEntity {
 
     /**
      * Cantidad en unidades decimales para soportar movimientos fraccionados.
-     * Ejemplo: entrada de 2.500 kg de queso → quantity = 2.500
+     * Ejemplo: entrada de 2.500 kg de queso \u2192 quantity = 2.500
      */
     @Column(nullable = false, precision = 12, scale = 3)
     private BigDecimal quantity;

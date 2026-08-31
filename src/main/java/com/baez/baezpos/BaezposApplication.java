@@ -27,13 +27,13 @@ public class BaezposApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(BaezposApplication.class, args);
 		System.out.println("==========================================");
-		System.out.println("BÃƒÂEZ POS SaaS Multi-Tenant iniciado correctamente.");
+		System.out.println("B\u00C3\u0192\u00C2\u0081EZ POS SaaS Multi-Tenant iniciado correctamente.");
 		System.out.println("==========================================");
 	}
 
 	/**
-	 * Pool de hilos asÃƒÂ­ncronos optimizado para Render Free Tier (1 vCPU / 512MB).
-	 * Core=1 hilo (mÃƒÂ­nimo), Max=2 (pico), Queue=50 tareas encoladas.
+	 * Pool de hilos as\u00C3\u0192\u00C2\u00ADncronos optimizado para Render Free Tier (1 vCPU / 512MB).
+	 * Core=1 hilo (m\u00C3\u0192\u00C2\u00ADnimo), Max=2 (pico), Queue=50 tareas encoladas.
 	 * Previene OOM y thread starvation en entornos de recursos estrictos.
 	 */
 	@Bean(name = "taskExecutor")
@@ -50,7 +50,7 @@ public class BaezposApplication {
 	}
 
 	/**
-	 * RestTemplate reutilizable con timeouts de conexiÃƒÂ³n explÃƒÂ­citos.
+	 * RestTemplate reutilizable con timeouts de conexi\u00C3\u0192\u00C2\u00B3n expl\u00C3\u0192\u00C2\u00ADcitos.
 	 * Evita instanciar un RestTemplate nuevo por cada correo enviado.
 	 */
 	@Bean
@@ -60,4 +60,4 @@ public class BaezposApplication {
 				.readTimeout(Duration.ofSeconds(15))
 				.build();
 	}
-}
+}

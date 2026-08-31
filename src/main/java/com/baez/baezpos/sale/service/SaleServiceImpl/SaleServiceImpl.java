@@ -154,7 +154,7 @@ public class SaleServiceImpl implements SaleService {
         sale.setTotal(totalFinal.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : totalFinal);
 
         // ==========================================
-        // EMISIÓN FISCAL AFIP WSFEv1
+        // EMISI\u00D3N FISCAL AFIP WSFEv1
         // ==========================================
         if (saleDTO.shouldEmitInvoice()) {
             afipBillingService.processFiscalSale(sale, company);
@@ -197,8 +197,8 @@ public class SaleServiceImpl implements SaleService {
             log.error("Error al registrar auditoria de la venta #{}: {}", savedSale.getNroComprobante(), e.getMessage());
         }
 
-        // MED-03: write-last — addBalance se ejecuta al final, garantizando que la venta,
-        // el inventario y la cuenta corriente ya estén confirmados antes de actualizar el saldo de caja.
+        // MED-03: write-last \u2014 addBalance se ejecuta al final, garantizando que la venta,
+        // el inventario y la cuenta corriente ya est\u00E9n confirmados antes de actualizar el saldo de caja.
         if (!"CUENTA_CORRIENTE".equals(paymentMethodClean)) {
             cashRegisterSessionRepository.addBalance(activeSession.getId(), savedSale.getTotal());
         }
@@ -217,7 +217,7 @@ public class SaleServiceImpl implements SaleService {
         BigDecimal nuevoSaldo = customer.getCurrentBalance().add(savedSale.getTotal());
 
         if (customer.getCreditLimit() != null && nuevoSaldo.compareTo(customer.getCreditLimit()) > 0) {
-            throw new BadRequestException("La venta supera el límite de crédito configurado para el cliente.");
+            throw new BadRequestException("La venta supera el l\u00EDmite de cr\u00E9dito configurado para el cliente.");
         }
 
         customerService.updateBalance(
@@ -385,7 +385,7 @@ public class SaleServiceImpl implements SaleService {
             activeRealBalance = activeRealBalance.subtract(transferExpensesToday);
         }
 
-        // Total Ingresos Reales del Día (Ventas Efectivo/Transferencia + Cobros de Deudas)
+        // Total Ingresos Reales del D\u00EDa (Ventas Efectivo/Transferencia + Cobros de Deudas)
         BigDecimal totalSalesToday = directCashSalesToday
                 .add(directTransferSalesToday)
                 .add(cobrosEfeToday)
@@ -396,7 +396,7 @@ public class SaleServiceImpl implements SaleService {
         BigDecimal totalPendingCredit = customerRepository.sumAllBalancesByCompanyId(companyId);
         if (totalPendingCredit == null) totalPendingCredit = BigDecimal.ZERO;
 
-        // 3. CAPA HISTÓRICA / RANGOS AUDITADOS (FLUJO DE CAJA PURO OPTIMIZADO VIA SQL)
+        // 3. CAPA HIST\u00D3RICA / RANGOS AUDITADOS (FLUJO DE CAJA PURO OPTIMIZADO VIA SQL)
         BigDecimal collectedReplacementCost = saleRepository
                 .calculateTotalReplacementCostByCompanyAndDate(companyId, startRange, endRange);
         if (collectedReplacementCost == null) collectedReplacementCost = BigDecimal.ZERO;
@@ -431,28 +431,28 @@ public class SaleServiceImpl implements SaleService {
             }
         }
 
-        // Cobros de Cuenta Corriente en el período
+        // Cobros de Cuenta Corriente en el per\u00EDodo
         BigDecimal periodCustomerPaymentsCash = customerMovementRepository.sumPaymentsByMethodAndCompanyId("EFECTIVO", companyId, startRange, endRange);
         if (periodCustomerPaymentsCash == null) periodCustomerPaymentsCash = BigDecimal.ZERO;
 
         BigDecimal periodCustomerPaymentsTransfer = customerMovementRepository.sumPaymentsByMethodAndCompanyId("TRANSFERENCIA", companyId, startRange, endRange);
         if (periodCustomerPaymentsTransfer == null) periodCustomerPaymentsTransfer = BigDecimal.ZERO;
 
-        // Gastos en el período
+        // Gastos en el per\u00EDodo
         BigDecimal periodExpensesCash = expenseRepository.sumDeductibleCashExpenses(companyId, startRange, endRange);
         if (periodExpensesCash == null) periodExpensesCash = BigDecimal.ZERO;
 
         BigDecimal periodExpensesTransfer = expenseRepository.sumDeductibleExpensesByPaymentMethod(companyId, PaymentMethod.TRANSFERENCIA, startRange, endRange);
         if (periodExpensesTransfer == null) periodExpensesTransfer = BigDecimal.ZERO;
 
-        // FÓRMULA DE RECAUDACIÓN (FLUJO DE CAJA PURO):
+        // F\u00D3RMULA DE RECAUDACI\u00D3N (FLUJO DE CAJA PURO):
         // grossRevenue = Ventas (Efectivo + Transferencia) + Cobros de Deudas (Efectivo + Transferencia)
         BigDecimal grossRevenue = periodCashSales
                 .add(periodTransferSales)
                 .add(periodCustomerPaymentsCash)
                 .add(periodCustomerPaymentsTransfer);
 
-        // netRevenue (Ganancia Neta) sobre ventas efectivamente cobradas menos costo de mercadería
+        // netRevenue (Ganancia Neta) sobre ventas efectivamente cobradas menos costo de mercader\u00EDa
         BigDecimal netRevenue = grossRevenue.subtract(collectedReplacementCost);
 
         // Total Efectivo = Ventas Directas Efectivo + Pagos Cta. Cte. Efectivo - Gastos Efectivo
@@ -505,7 +505,7 @@ public class SaleServiceImpl implements SaleService {
         LocalDateTime start = session.getOpenedAt();
         LocalDateTime end = session.getClosedAt() != null ? session.getClosedAt().plusSeconds(2) : LocalDateTime.now().plusSeconds(2);
 
-        // CRIT-02: Usar query con companyId para defensa de segunda línea.
+        // CRIT-02: Usar query con companyId para defensa de segunda l\u00EDnea.
         List<Sale> sales = saleRepository.findActiveSalesBySessionIdAndCompanyId(session.getId(), session.getCompany().getId());
 
         BigDecimal cashSales = BigDecimal.ZERO;
@@ -615,12 +615,12 @@ public class SaleServiceImpl implements SaleService {
                         product.getId(),
                         item.getQuantity(),
                         MovementType.IN,
-                        "Devolución por anulación de Ticket #" + sale.getNroComprobante()
+                        "Devoluci\u00F3n por anulaci\u00F3n de Ticket #" + sale.getNroComprobante()
                 );
             }
         }
 
-        // Compensación contable en cuenta corriente si el pago fue fiado / cuenta corriente
+        // Compensaci\u00F3n contable en cuenta corriente si el pago fue fiado / cuenta corriente
         if ("CUENTA_CORRIENTE".equalsIgnoreCase(sale.getPaymentMethod())) {
             // MED-04: Usar companyId para garantizar que el movimiento pertenece al mismo tenant.
             Optional<CustomerMovement> movementOpt = customerMovementRepository
@@ -631,7 +631,7 @@ public class SaleServiceImpl implements SaleService {
                         customer.getId(),
                         sale.getTotal(),
                         "CREDITO",
-                        "Compensación por anulación de Ticket #" + sale.getNroComprobante(),
+                        "Compensaci\u00F3n por anulaci\u00F3n de Ticket #" + sale.getNroComprobante(),
                         sale,
                         sale.getPaymentMethod()
                 );
@@ -643,7 +643,7 @@ public class SaleServiceImpl implements SaleService {
         try {
             auditService.logAction("ANULACION_VENTA", "Ticket #" + sale.getNroComprobante() + " anulado", "WARN");
         } catch (Exception e) {
-            log.error("Error al registrar auditoría de anulación para el Ticket #{}: {}", sale.getNroComprobante(), e.getMessage());
+            log.error("Error al registrar auditor\u00EDa de anulaci\u00F3n para el Ticket #{}: {}", sale.getNroComprobante(), e.getMessage());
         }
     }
 
@@ -674,7 +674,7 @@ public class SaleServiceImpl implements SaleService {
     private Long requireCompanyContext() {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         if (companyId == null) {
-            throw new BadRequestException("Acceso denegado: Se requiere un contexto de empresa válido.");
+            throw new BadRequestException("Acceso denegado: Se requiere un contexto de empresa v\u00E1lido.");
         }
         return companyId;
     }

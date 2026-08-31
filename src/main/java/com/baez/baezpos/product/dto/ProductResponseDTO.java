@@ -10,11 +10,11 @@ public record ProductResponseDTO(
         String name,
         String description,
         String categoryName,    // Para la tabla
-        Long categoryId,        // PARA EL SELECT EN EDICIÓN
+        Long categoryId,        // PARA EL SELECT EN EDICI\u00D3N
         BigDecimal price,
-        BigDecimal cost,        // PARA EL CAMPO COSTO EN EDICIÓN
+        BigDecimal cost,        // PARA EL CAMPO COSTO EN EDICI\u00D3N
         BigDecimal stock,       // BigDecimal para soportar fraccionables
         BigDecimal minStock,    // BigDecimal para soportar fraccionables
         String barcode,
-        Boolean isFractional    // El POS usa este campo para mostrar el modal de fracción
+        Boolean isFractional    // El POS usa este campo para mostrar el modal de fracci\u00F3n
 ) {}

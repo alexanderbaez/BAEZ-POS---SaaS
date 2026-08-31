@@ -7,7 +7,7 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * Configuración de Spring MVC para el registro del interceptor de suscripción multi-tenant.
+ * Configuraci\u00F3n de Spring MVC para el registro del interceptor de suscripci\u00F3n multi-tenant.
  */
 @Configuration
 @RequiredArgsConstructor
@@ -18,7 +18,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(tenantSubscriptionInterceptor)
-                // Aplicar a los módulos transaccionales y de mutación de negocio del tenant
+                // Aplicar a los m\u00F3dulos transaccionales y de mutaci\u00F3n de negocio del tenant
                 .addPathPatterns(
                         "/api/v1/sales/**",
                         "/api/v1/cash-register/**",
@@ -31,7 +31,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/v1/inventory/**",
                         "/api/v1/users/**"
                 )
-                // Excluir autenticación, super admin y endpoints de auditoría de suscripción
+                // Excluir autenticaci\u00F3n, super admin y endpoints de auditor\u00EDa de suscripci\u00F3n
                 .excludePathPatterns(
                         "/api/v1/auth/**",
                         "/api/v1/super-admin/**",

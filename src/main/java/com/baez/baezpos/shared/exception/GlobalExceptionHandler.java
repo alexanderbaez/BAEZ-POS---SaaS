@@ -39,11 +39,11 @@ public class GlobalExceptionHandler {
             OptimisticLockException.class
     })
     public ResponseEntity<ApiErrorResponse> handleConcurrencyLockException(Exception ex, HttpServletRequest request) {
-        log.warn("Bloqueo o colisión de concurrencia detectado [{}]: {}", request.getRequestURI(), ex.getMessage());
+        log.warn("Bloqueo o colisi\u00F3n de concurrencia detectado [{}]: {}", request.getRequestURI(), ex.getMessage());
         return buildResponse(
                 HttpStatus.CONFLICT,
                 "Conflict",
-                "Transacción en curso por otro usuario. Reintente.",
+                "Transacci\u00F3n en curso por otro usuario. Reintente.",
                 request.getRequestURI(),
                 null
         );
@@ -57,7 +57,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<ApiErrorResponse> handleBadRequestException(BadRequestException ex, HttpServletRequest request) {
-        log.warn("Petición incorrecta [{}]: {}", request.getRequestURI(), ex.getMessage());
+        log.warn("Petici\u00F3n incorrecta [{}]: {}", request.getRequestURI(), ex.getMessage());
         return buildResponse(HttpStatus.BAD_REQUEST, "Bad Request", ex.getMessage(), request.getRequestURI(), null);
     }
 
@@ -69,14 +69,14 @@ public class GlobalExceptionHandler {
             String errorMessage = error.getDefaultMessage();
             errors.put(fieldName, errorMessage);
         });
-        log.warn("Error de validación [{}]: {}", request.getRequestURI(), errors);
-        return buildResponse(HttpStatus.BAD_REQUEST, "Validation Error", "Error de validación en los campos enviados.", request.getRequestURI(), errors);
+        log.warn("Error de validaci\u00F3n [{}]: {}", request.getRequestURI(), errors);
+        return buildResponse(HttpStatus.BAD_REQUEST, "Validation Error", "Error de validaci\u00F3n en los campos enviados.", request.getRequestURI(), errors);
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
-        log.warn("Error de conversión de parámetro [{}]: '{}' con valor '{}'", request.getRequestURI(), ex.getName(), ex.getValue());
-        String msg = String.format("El parámetro '%s' recibió un valor de formato inválido: '%s'", ex.getName(), ex.getValue());
+        log.warn("Error de conversi\u00F3n de par\u00E1metro [{}]: '{}' con valor '{}'", request.getRequestURI(), ex.getName(), ex.getValue());
+        String msg = String.format("El par\u00E1metro '%s' recibi\u00F3 un valor de formato inv\u00E1lido: '%s'", ex.getName(), ex.getValue());
         return buildResponse(HttpStatus.BAD_REQUEST, "Bad Request", msg, request.getRequestURI(), null);
     }
 
@@ -89,25 +89,25 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiErrorResponse> handleAccessDeniedException(AccessDeniedException ex, HttpServletRequest request) {
         log.warn("Acceso denegado [{}]: {}", request.getRequestURI(), ex.getMessage());
-        String msg = (ex.getMessage() != null && !ex.getMessage().isBlank()) ? ex.getMessage() : "Acceso denegado. No tienes permisos suficientes para realizar esta acción.";
+        String msg = (ex.getMessage() != null && !ex.getMessage().isBlank()) ? ex.getMessage() : "Acceso denegado. No tienes permisos suficientes para realizar esta acci\u00F3n.";
         return buildResponse(HttpStatus.FORBIDDEN, "Forbidden", msg, request.getRequestURI(), null);
     }
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiErrorResponse> handleBadCredentialsException(BadCredentialsException ex, HttpServletRequest request) {
-        log.warn("Credenciales inválidas [{}]: {}", request.getRequestURI(), ex.getMessage());
+        log.warn("Credenciales inv\u00E1lidas [{}]: {}", request.getRequestURI(), ex.getMessage());
         return buildResponse(HttpStatus.UNAUTHORIZED, "Unauthorized", "Credenciales incorrectas.", request.getRequestURI(), null);
     }
 
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiErrorResponse> handleAuthenticationException(AuthenticationException ex, HttpServletRequest request) {
-        log.warn("Error de autenticación [{}]: {}", request.getRequestURI(), ex.getMessage());
-        return buildResponse(HttpStatus.UNAUTHORIZED, "Unauthorized", "Error de autenticación. Debes iniciar sesión.", request.getRequestURI(), null);
+        log.warn("Error de autenticaci\u00F3n [{}]: {}", request.getRequestURI(), ex.getMessage());
+        return buildResponse(HttpStatus.UNAUTHORIZED, "Unauthorized", "Error de autenticaci\u00F3n. Debes iniciar sesi\u00F3n.", request.getRequestURI(), null);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGlobalException(Exception ex, HttpServletRequest request) {
-        log.error("Excepción no controlada en [{}]: ", request.getRequestURI(), ex);
+        log.error("Excepci\u00F3n no controlada en [{}]: ", request.getRequestURI(), ex);
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", "Ha ocurrido un error inesperado. Por favor, contacte al administrador.", request.getRequestURI(), null);
     }
 

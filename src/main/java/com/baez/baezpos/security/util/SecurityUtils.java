@@ -7,7 +7,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 public class SecurityUtils {
 
     private SecurityUtils() {
-        // Constructor privado para clase de utilidad estática
+        // Constructor privado para clase de utilidad est\u00E1tica
     }
 
     public static String getCurrentUserEmail() {

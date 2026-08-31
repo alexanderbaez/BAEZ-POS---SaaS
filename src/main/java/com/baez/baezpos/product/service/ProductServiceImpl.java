@@ -37,29 +37,29 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponseDTO createProduct(ProductRequestDTO dto) {
         Long companyId = requireCompanyContext();
 
-        // 1. Validar duplicado por código de barras dentro de la misma empresa
+        // 1. Validar duplicado por c\u00F3digo de barras dentro de la misma empresa
         if (dto.barcode() != null && !dto.barcode().trim().isEmpty()) {
             Optional<Product> existing = productRepository.findByBarcodeAndCompanyIdWithCategory(dto.barcode().trim(), companyId);
             if (existing.isPresent()) {
                 Product p = existing.get();
                 if (p.getActive()) {
-                    throw new BadRequestException("El producto con código '" + dto.barcode() + "' ya existe en su empresa.");
+                    throw new BadRequestException("El producto con c\u00F3digo '" + dto.barcode() + "' ya existe en su empresa.");
                 }
                 // Si estaba inactivo, se reactiva con los nuevos datos
                 Category category = categoryRepository.findByIdAndCompanyId(dto.categoryId(), companyId)
-                        .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada en su empresa"));
+                        .orElseThrow(() -> new ResourceNotFoundException("Categor\u00EDa no encontrada en su empresa"));
 
                 updateProductData(p, dto, category);
                 p.setActive(true);
                 Product saved = productRepository.save(p);
-                auditService.logAction("REACTIVACION_PRODUCTO", "Producto reactivado mediante creación: " + saved.getName(), "INFO");
+                auditService.logAction("REACTIVACION_PRODUCTO", "Producto reactivado mediante creaci\u00F3n: " + saved.getName(), "INFO");
                 return mapToResponseDTO(saved);
             }
         }
 
         // 2. Crear nuevo producto
         Category category = categoryRepository.findByIdAndCompanyId(dto.categoryId(), companyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada en su empresa"));
+                .orElseThrow(() -> new ResourceNotFoundException("Categor\u00EDa no encontrada en su empresa"));
 
         Company companyRef = companyRepository.getReferenceById(companyId);
 
@@ -127,7 +127,7 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado en su empresa"));
 
         Category category = categoryRepository.findByIdAndCompanyId(dto.categoryId(), companyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada en su empresa"));
+                .orElseThrow(() -> new ResourceNotFoundException("Categor\u00EDa no encontrada en su empresa"));
 
         updateProductData(product, dto, category);
         Product updated = productRepository.save(product);
@@ -219,7 +219,7 @@ public class ProductServiceImpl implements ProductService {
     private Long requireCompanyContext() {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         if (companyId == null) {
-            throw new BadRequestException("Acceso denegado: Operación requiere contexto de empresa.");
+            throw new BadRequestException("Acceso denegado: Operaci\u00F3n requiere contexto de empresa.");
         }
         return companyId;
     }
@@ -237,7 +237,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     private ProductResponseDTO mapToResponseDTO(Product p) {
-        String catName = (p.getCategory() != null) ? p.getCategory().getName() : "Sin Categoría";
+        String catName = (p.getCategory() != null) ? p.getCategory().getName() : "Sin Categor\u00EDa";
         Long catId = (p.getCategory() != null) ? p.getCategory().getId() : null;
 
         return new ProductResponseDTO(

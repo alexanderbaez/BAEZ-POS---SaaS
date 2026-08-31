@@ -99,7 +99,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Orden no encontrada"));
 
         if (order.getStatus() != OrderStatus.PENDING) {
-            throw new IllegalStateException("Solo se pueden recibir órdenes en estado PENDING");
+            throw new IllegalStateException("Solo se pueden recibir \u00F3rdenes en estado PENDING");
         }
 
         // Actualizar stock y costos
@@ -124,7 +124,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
             product.setCost(newCost);
             productRepository.save(product);
             
-            // Registrar/Actualizar relación en ProviderProduct
+            // Registrar/Actualizar relaci\u00F3n en ProviderProduct
             ProviderProduct providerProduct = providerProductRepository
                     .findByCompanyIdAndProviderIdAndProductId(companyId, order.getProvider().getId(), product.getId())
                     .orElseGet(() -> ProviderProduct.builder()
@@ -160,7 +160,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Orden no encontrada"));
 
         if (order.getStatus() != OrderStatus.PENDING) {
-            throw new IllegalStateException("Solo se pueden cancelar órdenes en estado PENDING");
+            throw new IllegalStateException("Solo se pueden cancelar \u00F3rdenes en estado PENDING");
         }
 
         order.setStatus(OrderStatus.CANCELED);
@@ -178,7 +178,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Orden no encontrada"));
 
         if (order.getStatus() == OrderStatus.RECEIVED) {
-            throw new IllegalStateException("No se pueden eliminar órdenes en estado RECEIVED");
+            throw new IllegalStateException("No se pueden eliminar \u00F3rdenes en estado RECEIVED");
         }
 
         purchaseOrderItemRepository.deleteAll(order.getItems());

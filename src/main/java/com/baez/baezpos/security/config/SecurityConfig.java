@@ -109,7 +109,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Orígenes permitidos explícitos y patrones para producción y desarrollo
+        // Or\u00EDgenes permitidos expl\u00EDcitos y patrones para producci\u00F3n y desarrollo
         config.setAllowedOriginPatterns(List.of(
                 "https://baezpos.com",
                 "https://www.baezpos.com",
