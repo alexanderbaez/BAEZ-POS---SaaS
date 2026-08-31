@@ -47,6 +47,29 @@
         </button>
       </div>
     </div>
+    </div>
+
+    <!-- Pestañas de Navegación -->
+    <ul class="nav nav-tabs mb-4 border-bottom" id="proveedorTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active fw-bold text-dark px-4" id="tab-directorio" data-bs-toggle="tab" data-bs-target="#vistaProveedores" type="button" role="tab" onclick="cambiarVista('proveedores')">
+          <i class="bi bi-person-lines-fill me-2"></i>Directorio
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link fw-bold text-secondary px-4" id="tab-ordenes" data-bs-toggle="tab" data-bs-target="#vistaOrdenes" type="button" role="tab" onclick="cambiarVista('ordenes')">
+          <i class="bi bi-cart3 me-2"></i>Órdenes de Compra
+        </button>
+      </li>
+    </ul>
+
+    <!-- Contenedor Principal (Vistas) -->
+    <div class="tab-content" id="proveedorTabsContent">
+
+      <!-- ==============================================
+           VISTA: DIRECTORIO DE PROVEEDORES
+           ============================================== -->
+      <div class="tab-pane fade show active" id="vistaProveedores" role="tabpanel">
 
     <!-- KPIs Financieros -->
     <div class="row g-3 mb-4">
@@ -120,7 +143,50 @@
         </nav>
       </div>
     </div>
-  </div>
+    </div>
+      </div> <!-- /vistaProveedores -->
+
+      <!-- ==============================================
+           VISTA: ÓRDENES DE COMPRA
+           ============================================== -->
+      <div class="tab-pane fade" id="vistaOrdenes" role="tabpanel">
+        
+        <!-- Acciones Órdenes -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h5 class="fw-bold m-0 text-dark">Historial de Compras</h5>
+          <button class="btn btn-dark shadow-sm fw-bold px-4" onclick="abrirModalNuevaOrden()">
+            <i class="bi bi-plus-lg me-2"></i>Generar Orden
+          </button>
+        </div>
+
+        <!-- Tabla de Órdenes -->
+        <div class="card table-card shadow-sm p-3 p-md-4 border-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead>
+              <tr class="text-muted small text-uppercase">
+                <th class="border-0 ps-3">Fecha</th>
+                <th class="border-0">Proveedor</th>
+                <th class="border-0">Estado</th>
+                <th class="border-0 text-end">Total</th>
+                <th class="border-0 text-end pe-3">Acciones</th>
+              </tr>
+              </thead>
+              <tbody id="tablaOrdenes">
+              <tr><td colspan="5" class="text-center p-4 text-muted">Cargando órdenes...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card-footer bg-white border-0 py-3 px-4 d-flex justify-content-between align-items-center">
+            <span class="text-muted small" id="infoPaginacionOrdenes">Mostrando 0 órdenes</span>
+            <nav aria-label="Navegación de órdenes">
+              <ul class="pagination pagination-sm m-0" id="paginacionOrdenesContenedor"></ul>
+            </nav>
+          </div>
+        </div>
+
+      </div> <!-- /vistaOrdenes -->
+    </div> <!-- /tab-content -->
 
   <!-- Modal Nuevo / Editar Proveedor -->
   <div class="modal fade" id="modalProveedor" tabindex="-1" data-bs-backdrop="static">
@@ -245,10 +311,82 @@
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="js/ui-helpers.js"></script>
-<script src="sidebar.js"></script>
-<script src="auth.js"></script>
-<script src="proveedores.js"></script>
+  <!-- Modal Nueva Orden de Compra -->
+  <div class="modal fade" id="modalNuevaOrden" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header border-0 p-4">
+          <h5 class="fw-bold m-0"><i class="bi bi-cart-plus me-2 text-dark"></i>Generar Orden de Compra</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4 pt-0">
+          
+          <div class="row g-4">
+            <!-- Columna Izquierda: Selección -->
+            <div class="col-12 col-lg-4 border-end">
+              <div class="mb-3">
+                <label class="small fw-bold text-muted mb-1">1. Proveedor *</label>
+                <select id="ordenProveedorId" class="form-select bg-light border-0 p-2 shadow-none" required>
+                  <option value="">Seleccione un proveedor...</option>
+                </select>
+              </div>
+
+              <div class="mb-4">
+                <label class="small fw-bold text-muted mb-1">2. Buscar Producto</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light border-0"><i class="bi bi-search"></i></span>
+                  <input type="text" id="ordenBuscarProd" class="form-control bg-light border-0 p-2 shadow-none" placeholder="Buscar por nombre o código...">
+                </div>
+                <div class="list-group mt-2 shadow-sm d-none" id="listaSugerenciasProd" style="max-height: 250px; overflow-y: auto;">
+                  <!-- Sugerencias dinámicas -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Columna Derecha: Carrito -->
+            <div class="col-12 col-lg-8">
+              <label class="small fw-bold text-muted mb-2">3. Detalle de la Orden</label>
+              
+              <div class="table-responsive border rounded-3 mb-3">
+                <table class="table align-middle mb-0">
+                  <thead class="bg-light">
+                    <tr class="small text-muted text-uppercase">
+                      <th class="ps-3 border-0">Producto</th>
+                      <th class="border-0" style="width: 120px;">Costo Un. ($)</th>
+                      <th class="border-0" style="width: 120px;">Cant.</th>
+                      <th class="border-0 text-end">Subtotal</th>
+                      <th class="border-0 text-end pe-3"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="carritoBody">
+                    <tr><td colspan="5" class="text-center p-4 text-muted small">El carrito está vacío. Busque un producto para agregarlo.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="d-flex justify-content-end align-items-center mb-2">
+                <span class="fw-bold text-muted me-3">TOTAL ORDEN:</span>
+                <h3 class="fw-bold m-0 text-dark amount-num" id="carritoTotal">$0,00</h3>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="modal-footer border-0 p-4 pt-2 d-flex flex-column flex-md-row gap-2 justify-content-end">
+          <button type="button" class="btn btn-light px-4 w-100 w-md-auto" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-dark px-4 fw-bold w-100 w-md-auto" onclick="generarOrdenCompra()">
+            <i class="bi bi-whatsapp me-2 text-success"></i>Generar y Enviar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="js/ui-helpers.js"></script>
+  <script src="sidebar.js"></script>
+  <script src="auth.js"></script>
+  <script src="proveedores.js"></script>
 </body>
 </html>

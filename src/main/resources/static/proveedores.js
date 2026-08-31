@@ -610,3 +610,346 @@ window.eliminarProveedor = eliminarProveedor;
 window.abrirModalAbono = abrirModalAbono;
 window.registrarAbono = registrarAbono;
 window.filtrarProveedores = filtrarProveedores;
+
+/* ==========================================================
+   MÓDULO: ÓRDENES DE COMPRA (FASE 2)
+   ========================================================== */
+let carritoOrden = [];
+let sugerenciasTimeout = null;
+
+// Cambiar Vista (Pestañas)
+window.cambiarVista = function(vista) {
+    if (vista === 'ordenes') {
+        cargarOrdenes(0);
+    } else {
+        cargarProveedores(0);
+    }
+};
+
+// Cargar Órdenes Paginadas
+async function cargarOrdenes(pagina = 0) {
+    const tbody = document.getElementById('tablaOrdenes');
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-muted">Cargando órdenes...</td></tr>`;
+    
+    try {
+        const res = await apiFetch(`/purchase-orders?page=${pagina}&size=20&sort=orderDate,desc`);
+        if (!res.ok) throw new Error("Error cargando historial de órdenes");
+        const data = await res.json();
+        
+        const content = data.content || data;
+        
+        if (content.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-muted">No hay órdenes registradas.</td></tr>`;
+            return;
+        }
+        
+        const fragment = document.createDocumentFragment();
+        
+        content.forEach(orden => {
+            const fechaObj = new Date(orden.orderDate);
+            const fechaFormateada = fechaObj.toLocaleDateString('es-AR') + ' ' + fechaObj.toLocaleTimeString('es-AR', {hour: '2-digit', minute:'2-digit'});
+            
+            let badgeEstado = '';
+            let btnRecibir = '';
+            let btnCancelar = '';
+            
+            if (orden.status === 'PENDING') {
+                badgeEstado = `<span class="badge bg-light text-warning border border-warning-subtle px-2 py-1"><i class="bi bi-clock me-1"></i>Pendiente</span>`;
+                btnRecibir = `<button class="btn btn-sm btn-outline-success mx-1" onclick="recibirOrden(${orden.id})" title="Recibir Stock"><i class="bi bi-box-seam"></i></button>`;
+                btnCancelar = `<button class="btn btn-sm btn-outline-danger mx-1" onclick="cancelarOrden(${orden.id})" title="Cancelar Orden"><i class="bi bi-x-circle"></i></button>`;
+            } else if (orden.status === 'RECEIVED') {
+                badgeEstado = `<span class="badge bg-light text-success border border-success-subtle px-2 py-1"><i class="bi bi-check2-circle me-1"></i>Recibido</span>`;
+            } else if (orden.status === 'CANCELED') {
+                badgeEstado = `<span class="badge bg-light text-danger border border-danger-subtle px-2 py-1"><i class="bi bi-x-circle me-1"></i>Cancelado</span>`;
+            }
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="ps-3"><span class="fw-semibold text-dark">${fechaFormateada}</span></td>
+                <td><span class="fw-bold text-dark">${escapeHTML(orden.providerName)}</span></td>
+                <td>${badgeEstado}</td>
+                <td class="text-end fw-bold text-dark amount-num">${fmtARS.format(orden.totalAmount)}</td>
+                <td class="text-end pe-3">
+                    ${btnRecibir}
+                    ${btnCancelar}
+                </td>
+            `;
+            fragment.appendChild(tr);
+        });
+        
+        tbody.innerHTML = '';
+        tbody.appendChild(fragment);
+        
+        if (data.totalElements !== undefined) {
+            const infoPaginacion = document.getElementById('infoPaginacionOrdenes');
+            if(infoPaginacion) infoPaginacion.textContent = `Mostrando ${content.length} de ${data.totalElements} órdenes`;
+        }
+        
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-danger">Error: ${err.message}</td></tr>`;
+    }
+}
+
+// Abrir Modal de Nueva Orden
+window.abrirModalNuevaOrden = async function() {
+    carritoOrden = [];
+    document.getElementById('ordenProveedorId').innerHTML = '<option value="">Seleccione un proveedor...</option>';
+    document.getElementById('ordenBuscarProd').value = '';
+    document.getElementById('listaSugerenciasProd').classList.add('d-none');
+    renderizarCarrito();
+    
+    try {
+        const res = await apiFetch(`/providers?page=0&size=1000&sort=businessName,asc`);
+        if (res.ok) {
+            const data = await res.json();
+            const providers = data.content || data;
+            const select = document.getElementById('ordenProveedorId');
+            providers.forEach(p => {
+                select.innerHTML += `<option value="${p.id}">${escapeHTML(p.businessName)}</option>`;
+            });
+        }
+    } catch (err) {
+        console.error("Error cargando proveedores para modal", err);
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById('modalNuevaOrden'));
+    modal.show();
+};
+
+// Búsqueda de Productos para el Carrito
+const ordenBuscarProd = document.getElementById('ordenBuscarProd');
+if(ordenBuscarProd) {
+    ordenBuscarProd.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        if (sugerenciasTimeout) clearTimeout(sugerenciasTimeout);
+        
+        if (query.length < 2) {
+            document.getElementById('listaSugerenciasProd').classList.add('d-none');
+            return;
+        }
+        
+        sugerenciasTimeout = setTimeout(async () => {
+            try {
+                const res = await apiFetch(`/products/search?q=${encodeURIComponent(query)}&limit=10`);
+                if (res.ok) {
+                    const productos = await res.json();
+                    const divSugerencias = document.getElementById('listaSugerenciasProd');
+                    divSugerencias.innerHTML = '';
+                    
+                    if (productos.length === 0) {
+                        divSugerencias.innerHTML = `<div class="list-group-item text-muted small">No se encontraron productos.</div>`;
+                    } else {
+                        productos.forEach(prod => {
+                            const a = document.createElement('a');
+                            a.href = "#";
+                            a.className = "list-group-item list-group-item-action d-flex justify-content-between align-items-center";
+                            a.innerHTML = `
+                                <div>
+                                    <span class="fw-bold d-block text-dark">${escapeHTML(prod.name)}</span>
+                                    <small class="text-muted">Costo actual: ${fmtARS.format(prod.cost)}</small>
+                                </div>
+                                <i class="bi bi-plus-circle text-primary"></i>
+                            `;
+                            a.onclick = (event) => {
+                                event.preventDefault();
+                                agregarAlCarrito(prod);
+                                divSugerencias.classList.add('d-none');
+                                document.getElementById('ordenBuscarProd').value = '';
+                            };
+                            divSugerencias.appendChild(a);
+                        });
+                    }
+                    divSugerencias.classList.remove('d-none');
+                }
+            } catch (err) {
+                console.error("Error buscando productos", err);
+            }
+        }, 300);
+    });
+}
+
+function agregarAlCarrito(producto) {
+    const existe = carritoOrden.find(i => i.productId === producto.id);
+    if (existe) {
+        existe.quantity += 1;
+    } else {
+        carritoOrden.push({
+            productId: producto.id,
+            productName: producto.name,
+            quantity: 1,
+            unitCost: producto.cost || 0
+        });
+    }
+    renderizarCarrito();
+}
+
+window.eliminarItemCarrito = function(index) {
+    carritoOrden.splice(index, 1);
+    renderizarCarrito();
+};
+
+window.actualizarItemCarrito = function(index, campo, valor) {
+    const val = parseFloat(valor);
+    if (!isNaN(val) && val >= 0) {
+        carritoOrden[index][campo] = val;
+    }
+    renderizarCarrito();
+};
+
+function renderizarCarrito() {
+    const tbody = document.getElementById('carritoBody');
+    let total = 0;
+    
+    if (carritoOrden.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-muted small">El carrito está vacío. Busque un producto para agregarlo.</td></tr>`;
+        document.getElementById('carritoTotal').textContent = fmtARS.format(0);
+        return;
+    }
+    
+    const fragment = document.createDocumentFragment();
+    carritoOrden.forEach((item, index) => {
+        const subtotal = item.quantity * item.unitCost;
+        total += subtotal;
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="ps-3"><span class="fw-semibold text-dark">${escapeHTML(item.productName)}</span></td>
+            <td>
+                <input type="number" step="0.01" min="0" class="form-control form-control-sm text-end bg-light border-0 fw-bold" 
+                       value="${item.unitCost}" onchange="actualizarItemCarrito(${index}, 'unitCost', this.value)">
+            </td>
+            <td>
+                <input type="number" step="0.01" min="0.01" class="form-control form-control-sm text-end bg-light border-0 fw-bold" 
+                       value="${item.quantity}" onchange="actualizarItemCarrito(${index}, 'quantity', this.value)">
+            </td>
+            <td class="text-end fw-bold text-dark amount-num">${fmtARS.format(subtotal)}</td>
+            <td class="text-end pe-3">
+                <button class="btn btn-sm btn-outline-danger border-0" onclick="eliminarItemCarrito(${index})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+        fragment.appendChild(tr);
+    });
+    
+    tbody.innerHTML = '';
+    tbody.appendChild(fragment);
+    document.getElementById('carritoTotal').textContent = fmtARS.format(total);
+}
+
+window.generarOrdenCompra = async function() {
+    const providerId = document.getElementById('ordenProveedorId').value;
+    if (!providerId) {
+        return Swal.fire("Atención", "Debe seleccionar un proveedor", "warning");
+    }
+    
+    if (carritoOrden.length === 0) {
+        return Swal.fire("Atención", "El carrito no puede estar vacío", "warning");
+    }
+    
+    const payload = {
+        providerId: parseInt(providerId),
+        items: carritoOrden.map(i => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            unitCost: i.unitCost
+        }))
+    };
+    
+    try {
+        const res = await apiFetch(`/purchase-orders`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        
+        if (res.ok) {
+            const orden = await res.json();
+            
+            const modalEl = document.getElementById('modalNuevaOrden');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+            cargarOrdenes(0);
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Orden Generada',
+                text: 'La orden fue registrada con éxito.',
+                timer: 1500,
+                showConfirmButton: false
+            });
+            
+            const providerSelect = document.getElementById('ordenProveedorId');
+            const providerName = providerSelect.options[providerSelect.selectedIndex].text;
+            
+            let wmsg = `Hola ${providerName}, te envío el siguiente pedido:\n\n`;
+            carritoOrden.forEach(i => {
+                wmsg += `- ${i.quantity} x ${i.productName}\n`;
+            });
+            wmsg += `\nAguardo confirmación. ¡Muchas gracias!`;
+            
+            const wlink = `https://wa.me/?text=${encodeURIComponent(wmsg)}`;
+            window.open(wlink, '_blank');
+            
+        } else {
+            const err = await res.json();
+            Swal.fire("Error", err.message || "No se pudo generar la orden", "error");
+        }
+    } catch (err) {
+        Swal.fire("Error", "Ocurrió un error al generar la orden", "error");
+    }
+};
+
+window.recibirOrden = async function(id) {
+    const confirm = await Swal.fire({
+        title: '¿Recibir mercadería?',
+        text: 'Esto sumará el stock de forma automática y cargará el saldo a la deuda del proveedor. Esta acción es irreversible.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#16a34a',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Sí, recibir'
+    });
+    
+    if (confirm.isConfirmed) {
+        try {
+            const res = await apiFetch(`/purchase-orders/${id}/receive`, { method: 'PUT' });
+            if (res.ok) {
+                Swal.fire('¡Recibido!', 'El stock fue actualizado y la cuenta corriente ajustada.', 'success');
+                cargarOrdenes(0);
+            } else {
+                const err = await res.json();
+                Swal.fire('Error', err.message || 'No se pudo procesar la recepción.', 'error');
+            }
+        } catch (err) {
+            Swal.fire('Error', 'Fallo de conexión.', 'error');
+        }
+    }
+};
+
+window.cancelarOrden = async function(id) {
+    const confirm = await Swal.fire({
+        title: '¿Cancelar orden?',
+        text: 'La orden se marcará como cancelada y no tendrá efectos contables ni de stock.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, cancelar'
+    });
+    
+    if (confirm.isConfirmed) {
+        try {
+            const res = await apiFetch(`/purchase-orders/${id}/cancel`, { method: 'PUT' });
+            if (res.ok) {
+                Swal.fire('¡Cancelada!', 'La orden fue cancelada exitosamente.', 'success');
+                cargarOrdenes(0);
+            } else {
+                const err = await res.json();
+                Swal.fire('Error', err.message || 'No se pudo cancelar.', 'error');
+            }
+        } catch (err) {
+            Swal.fire('Error', 'Fallo de conexión.', 'error');
+        }
+    }
+};
