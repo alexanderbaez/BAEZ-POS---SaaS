@@ -1,14 +1,14 @@
 ﻿/**
- * BÃEZ POS - CENTINELA DE SEGURIDAD Y LICENCIAMIENTO QUIRÃšRGICO (SaaS)
+ * BÁEZ POS - CENTINELA DE SEGURIDAD Y LICENCIAMIENTO QUIRÚRGICO (SaaS)
  * Alexander Baez - 2026
  */
 
-// Detecta si se estÃ¡ ejecutando en entorno de desarrollo local
+// Detecta si se está ejecutando en entorno de desarrollo local
 const IS_LOCAL = typeof window !== 'undefined' && 
     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
 /**
- * ResoluciÃ³n directa de BACKEND_URL:
+ * Resolución directa de BACKEND_URL:
  * 1. Override de desarrollo persistido en localStorage ('baezpos_backend_url')
  * 2. Si es localhost, apunta a http://localhost:8080
  * 3. Si no es local (!IS_LOCAL), apunta directamente al backend de Render: https://baez-pos-saas.onrender.com
@@ -49,7 +49,7 @@ function esVistaLogin() {
     return esUrlLogin || tieneFormLogin;
 }
 
-// 1. VerificaciÃ³n, decodificaciÃ³n estricta del Token JWT y SincronizaciÃ³n de Identidad
+// 1. Verificación, decodificación estricta del Token JWT y Sincronización de Identidad
 (function verificarSesionInicial() {
     if (esVistaLogin()) return;
 
@@ -81,7 +81,7 @@ function esVistaLogin() {
         }
 
     } catch (e) {
-        console.error("Token invÃ¡lido o corrupto:", e);
+        console.error("Token inválido o corrupto:", e);
         sessionStorage.clear();
         localStorage.clear();
         window.location.href = 'login.html';
@@ -130,12 +130,12 @@ async function apiFetch(path, options = {}) {
                 const errorData = await clonedRes.json();
 
                 if (errorData && (errorData.error === 'CUENTA_SUSPENDIDA' || errorData.error === 'CUENTA_DESACTIVADA')) {
-                    const mensaje = errorData.message || 'Su suscripciÃ³n se encuentra inhabilitada o vencida.';
+                    const mensaje = errorData.message || 'Su suscripción se encuentra inhabilitada o vencida.';
 
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({
                             icon: 'error',
-                            title: 'AcciÃ³n Bloqueada',
+                            title: 'Acción Bloqueada',
                             text: mensaje,
                             confirmButtonColor: '#e11d48',
                             confirmButtonText: 'Entendido'
@@ -162,7 +162,7 @@ async function apiFetch(path, options = {}) {
         return response;
     } catch (err) {
         if (!err.message || !err.message.startsWith('[CUENTA_SUSPENDIDA]')) {
-            console.error(`Error de conexiÃ³n con el backend: ${url}`, err);
+            console.error(`Error de conexión con el backend: ${url}`, err);
         }
         throw err;
     }
@@ -208,7 +208,7 @@ async function chequearEstadoLicencia() {
             if (data.active === false || data.vencido === true) {
                 removerNotificacionVencimiento();
                 if (esPaginaPOS) {
-                    bloquearPantallaVentas(data.message || "Tu suscripciÃ³n/licencia se encuentra vencida.");
+                    bloquearPantallaVentas(data.message || "Tu suscripción/licencia se encuentra vencida.");
                 } else {
                     removerBloqueoVentas();
                 }
@@ -223,7 +223,7 @@ async function chequearEstadoLicencia() {
         } else if (res && res.status === 403) {
             removerNotificacionVencimiento();
             if (esPaginaPOS) {
-                bloquearPantallaVentas("Su suscripciÃ³n se encuentra inhabilitada por administraciÃ³n.");
+                bloquearPantallaVentas("Su suscripción se encuentra inhabilitada por administración.");
             } else {
                 removerBloqueoVentas();
             }
@@ -314,9 +314,9 @@ function bloquearPantallaVentas(mensaje) {
             <h3 class="fw-bold text-dark mb-2 fs-4 fs-md-3">Punto de Venta Bloqueado</h3>
             <p class="text-muted mb-4 small fs-md-6" style="line-height: 1.5;">
                 ${mensaje}<br><br>
-                <strong>El mÃ³dulo de emisiÃ³n de ventas se encuentra inhabilitado por falta de pago. Regulariza tu abono para volver a cobrar.</strong>
+                <strong>El módulo de emisión de ventas se encuentra inhabilitado por falta de pago. Regulariza tu abono para volver a cobrar.</strong>
             </p>
-            <a href="https://wa.me/${MI_WHATSAPP}?text=Hola Alexander, mi Punto de Venta en BaezPOS se encuentra bloqueado por suscripciÃ³n."
+            <a href="https://wa.me/${MI_WHATSAPP}?text=Hola Alexander, mi Punto de Venta en BaezPOS se encuentra bloqueado por suscripción."
                target="_blank"
                class="btn btn-success btn-lg fw-bold py-3 rounded-pill shadow mb-3 w-100 d-flex align-items-center justify-content-center gap-2">
                 <i class="bi bi-whatsapp fs-5"></i> Regularizar Pago por WhatsApp
@@ -344,7 +344,7 @@ function removerBloqueoVentas() {
 }
 
 /**
- * NOTIFICACIÃ“N FLOTANTE DE VENCIMIENTO (BANNER SUPERIOR)
+ * NOTIFICACIÓN FLOTANTE DE VENCIMIENTO (BANNER SUPERIOR)
  */
 function mostrarNotificacionVencimientoGlobal(dias) {
     if (esVistaLogin()) return;
@@ -396,11 +396,11 @@ function mostrarNotificacionVencimientoGlobal(dias) {
         document.body.appendChild(banner);
     }
 
-    const textoDias = dias === 0 ? 'vence <strong>HOY</strong>' : `vence en <strong>${dias} ${dias === 1 ? 'dÃ­a' : 'dÃ­as'}</strong>`;
+    const textoDias = dias === 0 ? 'vence <strong>HOY</strong>' : `vence en <strong>${dias} ${dias === 1 ? 'día' : 'días'}</strong>`;
 
     banner.innerHTML = `
         <i class="bi bi-exclamation-triangle-fill text-danger fs-6"></i>
-        <span>AtenciÃ³n: Tu suscripciÃ³n ${textoDias}. RecordÃ¡ regularizar el pago.</span>
+        <span>Atención: Tu suscripción ${textoDias}. Recordá regularizar el pago.</span>
     `;
 }
 
@@ -429,13 +429,13 @@ function actualizarEstadoRedGlobal() {
 
     if (!isOnline) {
         if (typeof showSaasToast === 'function') {
-            showSaasToast('warning', 'Modo Offline activo: Las ventas se guardarÃ¡n localmente');
+            showSaasToast('warning', 'Modo Offline activo: Las ventas se guardarán localmente');
         } else if (typeof Swal !== 'undefined') {
             Swal.fire({
                 toast: true,
                 position: 'top-end',
                 icon: 'warning',
-                title: 'Modo Offline: Sin conexiÃ³n',
+                title: 'Modo Offline: Sin conexión',
                 showConfirmButton: false,
                 timer: 3000
             });
@@ -459,7 +459,7 @@ function actualizarEstadoRedGlobal() {
             badgeOffline.classList.add('d-none');
         }
 
-        // Si vuelve la conexiÃ³n y hay funciÃ³n de sincronizaciÃ³n, ejecutarla
+        // Si vuelve la conexión y hay función de sincronización, ejecutarla
         if (typeof window.syncPendingSales === 'function') {
             window.syncPendingSales();
         }
@@ -469,7 +469,7 @@ function actualizarEstadoRedGlobal() {
 window.addEventListener('online', () => {
     actualizarEstadoRedGlobal();
     if (typeof showSaasToast === 'function') {
-        showSaasToast('success', 'ConexiÃ³n a Internet restablecida');
+        showSaasToast('success', 'Conexión a Internet restablecida');
     }
 });
 
@@ -477,7 +477,7 @@ window.addEventListener('offline', () => {
     actualizarEstadoRedGlobal();
 });
 
-// InicializaciÃ³n de ciclo de vida seguro
+// Inicialización de ciclo de vida seguro
 document.addEventListener('DOMContentLoaded', () => {
     if (esVistaLogin()) {
         removerNotificacionVencimiento();
@@ -514,7 +514,7 @@ function inyectarPantallaDeCarga() {
         <div class="splash-loader-bar">
           <div class="splash-loader-progress"></div>
         </div>
-        <div class="splash-status-text" id="splash-status-label">Iniciando aplicaciÃ³n...</div>
+        <div class="splash-status-text" id="splash-status-label">Iniciando aplicación...</div>
       </div>
     `;
 
@@ -546,7 +546,7 @@ function ocultarPantallaDeCarga() {
     }, 500);
 }
 
-// InyecciÃ³n anticipada en el flujo del script
+// Inyección anticipada en el flujo del script
 if (typeof document !== 'undefined' && !esVistaLogin()) {
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', inyectarPantallaDeCarga);
@@ -555,7 +555,7 @@ if (typeof document !== 'undefined' && !esVistaLogin()) {
     }
 }
 
-// Cierre de SesiÃ³n Universal
+// Cierre de Sesión Universal
 function cerrarSesion(e) {
     if (e) e.preventDefault();
     sessionStorage.clear();

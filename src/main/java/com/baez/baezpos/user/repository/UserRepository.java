@@ -32,7 +32,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     int clearPasswordResetAt(@Param("id") Long id, @Param("now") LocalDateTime now);
 
     // ==========================================
-    // BÃƒÅ¡SQUEDAS FILTRADAS POR BAJA LÃƒâ€œGICA (active = true)
+    // BÚSQUEDAS FILTRADAS POR BAJA LÓGICA (active = true)
     // ==========================================
     List<User> findByCompanyIdAndActiveTrue(Long companyId);
 
@@ -49,9 +49,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByCompanyIdAndRoleAndActiveTrue(Long companyId, Role role);
 
     // ==========================================
-    // MÃƒâ€°TODOS MANTENIDOS PARA COMPATIBILIDAD CON OTROS MÃƒâ€œDULOS
+    // MÉTODOS MANTENIDOS PARA COMPATIBILIDAD CON OTROS MÓDULOS
     // ==========================================
-    List<User> findByCompanyIdAndRole(Long companyId, Role role); // <--- RESTAURADO PARA SOLUCIONAR EL ERROR DE COMPILACIÃƒâ€œN
+    List<User> findByCompanyIdAndRole(Long companyId, Role role); // <--- RESTAURADO PARA SOLUCIONAR EL ERROR DE COMPILACIÓN
 
     List<User> findByCompanyId(Long companyId);
 

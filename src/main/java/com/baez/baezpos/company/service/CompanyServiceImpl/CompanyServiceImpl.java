@@ -41,7 +41,7 @@ public class CompanyServiceImpl implements CompanyService {
     private Company getAuthenticatedCompanyEntity() {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         if (companyId == null) {
-            throw new ResourceNotFoundException("No se encontrÃ³ contexto de empresa para el usuario actual");
+            throw new ResourceNotFoundException("No se encontró contexto de empresa para el usuario actual");
         }
         return companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
@@ -79,11 +79,11 @@ public class CompanyServiceImpl implements CompanyService {
 
         try {
             auditService.logAction(
-                    "ACTUALIZACIÃ“N DE PERFIL",
-                    "El comercio '" + nombreAntiguo + "' actualizÃ³ sus datos de configuraciÃ³n. Nuevo nombre: '" + savedCompany.getName() + "'."
+                    "ACTUALIZACIÓN DE PERFIL",
+                    "El comercio '" + nombreAntiguo + "' actualizó sus datos de configuración. Nuevo nombre: '" + savedCompany.getName() + "'."
             );
         } catch (Exception e) {
-            log.warn("No se pudo registrar el log de auditorÃ­a: {}", e.getMessage());
+            log.warn("No se pudo registrar el log de auditoría: {}", e.getMessage());
         }
 
         return convertToDTOClient(savedCompany);
@@ -114,9 +114,9 @@ public class CompanyServiceImpl implements CompanyService {
         if (!isManualActive) {
             res.put("message", "Su cuenta ha sido inhabilitada por el administrador del sistema.");
         } else if (isExpired) {
-            res.put("message", "Tu suscripciÃ³n/licencia se encuentra vencida.");
+            res.put("message", "Tu suscripción/licencia se encuentra vencida.");
         } else {
-            res.put("message", "SuscripciÃ³n activa.");
+            res.put("message", "Suscripción activa.");
         }
 
         return res;
@@ -132,7 +132,7 @@ public class CompanyServiceImpl implements CompanyService {
         int maxEmployees = company.getMaxEmployees() != null ? company.getMaxEmployees() : 1;
         long activeEmployees = userRepository.countByCompanyIdAndActiveTrue(companyId);
         if (activeEmployees >= maxEmployees) {
-            throw new BadRequestException("LÃ­mite de empleados alcanzado en su plan actual. ComunÃ­quese con soporte para actualizar su suscripciÃ³n.");
+            throw new BadRequestException("Límite de empleados alcanzado en su plan actual. Comuníquese con soporte para actualizar su suscripción.");
         }
 
         if (userRepository.existsByEmail(dto.getEmail())) {
@@ -140,7 +140,7 @@ public class CompanyServiceImpl implements CompanyService {
         }
 
         if (dto.getPassword() == null || dto.getPassword().trim().length() < 6) {
-            throw new IllegalArgumentException("Debe proporcionar una contraseÃ±a vÃ¡lida de al menos 6 caracteres para el empleado.");
+            throw new IllegalArgumentException("Debe proporcionar una contraseña válida de al menos 6 caracteres para el empleado.");
         }
 
         User employee = new User();
@@ -153,7 +153,7 @@ public class CompanyServiceImpl implements CompanyService {
 
         User savedEmployee = userRepository.save(employee);
 
-        // EnvÃ­o de correo de bienvenida
+        // Envío de correo de bienvenida
         try {
             emailService.enviarMailBienvenida(
                     savedEmployee.getEmail(),
@@ -187,17 +187,17 @@ public class CompanyServiceImpl implements CompanyService {
         // Validar duplicado si intenta cambiar el email
         if (!employee.getEmail().equalsIgnoreCase(dto.getEmail())) {
             if (userRepository.existsByEmail(dto.getEmail())) {
-                throw new IllegalArgumentException("El email '" + dto.getEmail() + "' ya estÃ¡ registrado por otro usuario.");
+                throw new IllegalArgumentException("El email '" + dto.getEmail() + "' ya está registrado por otro usuario.");
             }
             employee.setEmail(dto.getEmail());
         }
 
         employee.setName(dto.getName());
 
-        // Si se especifica una nueva contraseÃ±a
+        // Si se especifica una nueva contraseña
         if (dto.getPassword() != null && !dto.getPassword().trim().isEmpty()) {
             if (dto.getPassword().trim().length() < 6) {
-                throw new IllegalArgumentException("La contraseÃ±a debe tener al menos 6 caracteres.");
+                throw new IllegalArgumentException("La contraseña debe tener al menos 6 caracteres.");
             }
             employee.setPassword(passwordEncoder.encode(dto.getPassword()));
             try {
@@ -207,7 +207,7 @@ public class CompanyServiceImpl implements CompanyService {
                         dto.getPassword()
                 );
             } catch (Exception e) {
-                log.error("Error al notificar nueva contraseÃ±a al vendedor {}: {}", employee.getEmail(), e.getMessage());
+                log.error("Error al notificar nueva contraseña al vendedor {}: {}", employee.getEmail(), e.getMessage());
             }
         }
 

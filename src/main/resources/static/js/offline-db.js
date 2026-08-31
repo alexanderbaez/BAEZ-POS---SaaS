@@ -1,6 +1,6 @@
 ﻿/**
  * ============================================================================
- * BÃEZ POS - BASE DE DATOS LOCAL INDEXEDDB (Arquitectura Offline-First)
+ * BÁEZ POS - BASE DE DATOS LOCAL INDEXEDDB (Arquitectura Offline-First)
  * Alexander Baez - 2026
  * ============================================================================
  */
@@ -12,7 +12,7 @@ const STORE_PENDING_SALES = 'pending_sales';
 let dbInstance = null;
 
 /**
- * Abre o inicializa la conexiÃ³n con IndexedDB
+ * Abre o inicializa la conexión con IndexedDB
  * @returns {Promise<IDBDatabase>}
  */
 function openOfflineDB() {
@@ -22,7 +22,7 @@ function openOfflineDB() {
         }
 
         if (!('indexedDB' in window)) {
-            console.warn('[OfflineDB] IndexedDB no estÃ¡ soportado en este navegador.');
+            console.warn('[OfflineDB] IndexedDB no está soportado en este navegador.');
             return reject(new Error('IndexedDB no soportado'));
         }
 
@@ -50,7 +50,7 @@ function openOfflineDB() {
 }
 
 /**
- * Guarda una venta offline pendiente de sincronizaciÃ³n en IndexedDB
+ * Guarda una venta offline pendiente de sincronización en IndexedDB
  * @param {Object} saleData - Datos de la venta (payload)
  * @returns {Promise<number>} ID asignado a la venta offline
  */
@@ -83,7 +83,7 @@ async function savePendingSale(saleData) {
 }
 
 /**
- * Obtiene todas las ventas pendientes de sincronizaciÃ³n
+ * Obtiene todas las ventas pendientes de sincronización
  * @returns {Promise<Array>} Lista de ventas pendientes con su ID local
  */
 async function getPendingSales() {
@@ -117,7 +117,7 @@ async function deletePendingSale(id) {
         const request = store.delete(Number(id));
 
         request.onsuccess = () => {
-            console.log(`[OfflineDB] Venta local #${id} eliminada tras sincronizaciÃ³n exitosa.`);
+            console.log(`[OfflineDB] Venta local #${id} eliminada tras sincronización exitosa.`);
             resolve();
         };
 
@@ -153,7 +153,7 @@ async function countPendingSales() {
     }
 }
 
-// ExposiciÃ³n global
+// Exposición global
 window.savePendingSale = savePendingSale;
 window.getPendingSales = getPendingSales;
 window.deletePendingSale = deletePendingSale;

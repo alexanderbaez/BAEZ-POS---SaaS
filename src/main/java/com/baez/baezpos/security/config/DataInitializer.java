@@ -32,20 +32,20 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) throws Exception {
-        // Lanzamos la inicializaciÃ³n pesada de forma asÃ­ncrona para no bloquear el Hilo Principal (Main)
+        // Lanzamos la inicialización pesada de forma asíncrona para no bloquear el Hilo Principal (Main)
         // y permitir que el servidor HTTP (Tomcat) acepte peticiones inmediatamente.
         java.util.concurrent.CompletableFuture.runAsync(() -> {
             try {
                 ejecutarInicializacionAsincrona();
             } catch (Exception e) {
-                log.error("Error en inicializaciÃ³n de datos en background: ", e);
+                log.error("Error en inicialización de datos en background: ", e);
             }
         });
     }
 
     private void ejecutarInicializacionAsincrona() {
         // ==========================================
-        // SANITIZACIÃ“N DIRECTA SQL (JPA Versioning Null Fix)
+        // SANITIZACIÓN DIRECTA SQL (JPA Versioning Null Fix)
         // ==========================================
         sanearVersionesBaseDeDatos();
 
@@ -72,7 +72,7 @@ public class DataInitializer implements CommandLineRunner {
                 .build();
 
         userRepository.save(superAdmin);
-        log.info("SUPER_ADMIN inicializado con Ã©xito: {}", superAdminEmail);
+        log.info("SUPER_ADMIN inicializado con éxito: {}", superAdminEmail);
     }
 
     private void sanearVersionesBaseDeDatos() {
@@ -86,7 +86,7 @@ public class DataInitializer implements CommandLineRunner {
             try {
                 jdbcTemplate.execute("UPDATE " + table + " SET version = 0 WHERE version IS NULL");
             } catch (Exception e) {
-                log.debug("No se pudo ejecutar sanitizaciÃ³n sobre tabla {}: {}", table, e.getMessage());
+                log.debug("No se pudo ejecutar sanitización sobre tabla {}: {}", table, e.getMessage());
             }
         }
 
@@ -96,6 +96,6 @@ public class DataInitializer implements CommandLineRunner {
             log.debug("No se pudo alterar la longitud de columna security_pin: {}", e.getMessage());
         }
 
-        log.info("SanitizaciÃ³n preventiva de versiones JPA completada exitosamente.");
+        log.info("Sanitización preventiva de versiones JPA completada exitosamente.");
     }
 }

@@ -13,7 +13,7 @@
 </head>
 <body>
 
-<!-- Sidebar DinÃ¡mico -->
+<!-- Sidebar Dinámico -->
 <div id="sidebar-container"></div>
 
 <!-- Contenido Principal -->
@@ -46,7 +46,7 @@
 
   <div class="container-fluid p-3 p-md-4">
 
-    <!-- SISTEMA DE PESTAÃ‘AS (NAV-PILLS SAAS PREMIUM) -->
+    <!-- SISTEMA DE PESTAÑAS (NAV-PILLS SAAS PREMIUM) -->
     <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mb-4">
       <ul class="nav nav-pills p-1 bg-white border rounded-3 shadow-sm" id="dashboardTabs" role="tablist">
         <li class="nav-item" role="presentation">
@@ -56,7 +56,7 @@
         </li>
         <li class="nav-item" role="presentation">
           <button class="nav-link fw-bold" id="tab-analisis-btn" data-bs-toggle="pill" data-bs-target="#tab-analisis" type="button" role="tab" aria-controls="tab-analisis" aria-selected="false">
-            <i class="bi bi-sliders me-1.5"></i> AnÃ¡lisis Detallado
+            <i class="bi bi-sliders me-1.5"></i> Análisis Detallado
           </button>
         </li>
       </ul>
@@ -129,17 +129,17 @@
           </div>
         </div>
 
-        <!-- FILA 2: GRÃFICO CENTRAL ANCHO -->
+        <!-- FILA 2: GRÁFICO CENTRAL ANCHO -->
         <div class="row g-3 mb-4">
           <div class="col-12">
             <div class="card p-3 p-md-4">
               <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mb-3">
                 <div>
-                  <h5 class="fw-bold text-dark mb-0"><i class="bi bi-bar-chart-line-fill text-primary me-2"></i>EvoluciÃ³n Semanal de FacturaciÃ³n</h5>
-                  <small class="text-muted">Total de ventas en los Ãºltimos 7 dÃ­as</small>
+                  <h5 class="fw-bold text-dark mb-0"><i class="bi bi-bar-chart-line-fill text-primary me-2"></i>Evolución Semanal de Facturación</h5>
+                  <small class="text-muted">Total de ventas en los últimos 7 días</small>
                 </div>
                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 fw-semibold">
-                  <i class="bi bi-lightning-charge me-1"></i> ActualizaciÃ³n en Tiempo Real
+                  <i class="bi bi-lightning-charge me-1"></i> Actualización en Tiempo Real
                 </span>
               </div>
               <div style="position: relative; height: 350px; width: 100%;">
@@ -149,13 +149,13 @@
           </div>
         </div>
 
-        <!-- FILA 3: TABLAS RÃPIDAS (TOP PRODUCTOS & ÃšLTIMOS MOVIMIENTOS) -->
+        <!-- FILA 3: TABLAS RÁPIDAS (TOP PRODUCTOS & ÚLTIMOS MOVIMIENTOS) -->
         <div class="row g-3 mb-4">
           <!-- Izquierda: Top 5 Productos Vendidos -->
           <div class="col-12 col-lg-6">
             <div class="card table-card h-100">
               <div class="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center">
-                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-trophy-fill text-warning me-2"></i>Top 5 Productos MÃ¡s Vendidos</h6>
+                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-trophy-fill text-warning me-2"></i>Top 5 Productos Más Vendidos</h6>
                 <a href="productos.html" class="btn btn-sm btn-link text-decoration-none fw-bold p-0">Ver inventario <i class="bi bi-chevron-right small"></i></a>
               </div>
               <div class="table-responsive">
@@ -164,7 +164,7 @@
                     <tr>
                       <th class="ps-3">Producto</th>
                       <th class="text-center">Unidades</th>
-                      <th class="text-end pe-3">RecaudaciÃ³n</th>
+                      <th class="text-end pe-3">Recaudación</th>
                     </tr>
                   </thead>
                   <tbody id="tablaTopProductos">
@@ -175,11 +175,11 @@
             </div>
           </div>
 
-          <!-- Derecha: Ãšltimos 5 Movimientos -->
+          <!-- Derecha: Últimos 5 Movimientos -->
           <div class="col-12 col-lg-6">
             <div class="card table-card h-100">
               <div class="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center">
-                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-arrow-left-right text-primary me-2"></i>Ãšltimos 5 Movimientos</h6>
+                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-arrow-left-right text-primary me-2"></i>Últimos 5 Movimientos</h6>
                 <a href="historial.html" class="btn btn-sm btn-link text-decoration-none fw-bold p-0">Ver historial <i class="bi bi-chevron-right small"></i></a>
               </div>
               <div class="table-responsive">
@@ -203,7 +203,7 @@
       </div>
 
       <!-- ===================================================================
-           TAB 2: ANÃLISIS DETALLADO (FILTRO DE RANGOS & MÃ‰TRICAS HISTÃ“RICAS)
+           TAB 2: ANÁLISIS DETALLADO (FILTRO DE RANGOS & MÃ‰TRICAS HISTÓRICAS)
            =================================================================== -->
       <div class="tab-pane fade" id="tab-analisis" role="tabpanel" aria-labelledby="tab-analisis-btn">
 
@@ -211,8 +211,8 @@
         <div class="card p-3 p-md-4 mb-4 shadow-sm">
           <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
             <div>
-              <h5 class="fw-bold text-dark mb-0"><i class="bi bi-sliders me-2 text-primary"></i>Filtro de AnÃ¡lisis HistÃ³rico</h5>
-              <small class="text-muted" id="lblRangoActivo">Selecciona un rango para auditar mÃ©tricas</small>
+              <h5 class="fw-bold text-dark mb-0"><i class="bi bi-sliders me-2 text-primary"></i>Filtro de Análisis Histórico</h5>
+              <small class="text-muted" id="lblRangoActivo">Selecciona un rango para auditar métricas</small>
             </div>
 
             <div class="d-flex flex-column flex-sm-row flex-wrap align-items-stretch align-items-sm-center gap-2">
@@ -221,9 +221,9 @@
                 <option value="AYER">Ayer</option>
                 <option value="ESTE_MES">Este Mes</option>
                 <option value="MES_PASADO">Mes Pasado</option>
-                <option value="3_MESES">Ãšltimos 3 Meses</option>
-                <option value="ESTE_ANO">AÃ±o Actual</option>
-                <option value="ANO_PASADO">AÃ±o Pasado</option>
+                <option value="3_MESES">Últimos 3 Meses</option>
+                <option value="ESTE_ANO">Año Actual</option>
+                <option value="ANO_PASADO">Año Pasado</option>
               </select>
 
               <div class="d-flex align-items-center gap-1 bg-light px-2.5 py-1 rounded-3 border">
@@ -243,9 +243,9 @@
           </div>
         </div>
 
-        <!-- FILA 1: TARJETAS PRINCIPALES (JERARQUÃA FINANCIERA & NÃšMEROS GORDOS) -->
+        <!-- FILA 1: TARJETAS PRINCIPALES (JERARQUÍA FINANCIERA & NÚMEROS GORDOS) -->
         <div class="row g-3 mb-4">
-          <!-- 1. Liquidez Total (Plata en Mano) - MÃ¡xima JerarquÃ­a Visual -->
+          <!-- 1. Liquidez Total (Plata en Mano) - Máxima Jerarquía Visual -->
           <div class="col-12 col-lg-4">
             <div class="card p-3 stat-card border-start border-4 border-success h-100 shadow-sm">
               <div class="d-flex justify-content-between align-items-start mb-2">
@@ -255,7 +255,7 @@
                 </div>
               </div>
               <h2 class="fw-bold text-success mb-1 mt-1 amount-num fs-3" id="txtLiquidezTotal">$0,00</h2>
-              <small class="text-muted d-block fw-medium">CajÃ³n fÃ­sico actual + Saldo digital neto</small>
+              <small class="text-muted d-block fw-medium">Cajón físico actual + Saldo digital neto</small>
             </div>
           </div>
 
@@ -269,7 +269,7 @@
                 </div>
               </div>
               <h3 class="fw-bold text-dark mb-1 mt-1 amount-num fs-4" id="txtRecaudacionMes">$0,00</h3>
-              <small class="text-muted d-block">FacturaciÃ³n total del dÃ­a, sin descontar gastos</small>
+              <small class="text-muted d-block">Facturación total del día, sin descontar gastos</small>
             </div>
           </div>
 
@@ -283,7 +283,7 @@
                 </div>
               </div>
               <h3 class="fw-bold text-danger mb-1 mt-1 amount-num fs-4" id="txtTotalGastosRango">$0,00</h3>
-              <small class="text-muted d-block">Dinero que saliÃ³ del negocio hoy</small>
+              <small class="text-muted d-block">Dinero que salió del negocio hoy</small>
             </div>
           </div>
         </div>
@@ -356,7 +356,7 @@
           </div>
         </div>
 
-        <!-- FILA 3: HISTORIAL Y AUDITORÃA DE TURNOS DE CAJA DEL PERÃODO -->
+        <!-- FILA 3: HISTORIAL Y AUDITORÍA DE TURNOS DE CAJA DEL PERÍODO -->
         <div class="card p-3 p-md-4 mb-4 shadow-sm border-0 bg-white rounded-4" id="sectionTurnosCajaPeriodo">
           <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mb-3">
             <div class="d-flex align-items-center gap-2">
@@ -365,7 +365,7 @@
               </div>
               <div>
                 <div class="d-flex align-items-center gap-2">
-                  <h6 class="fw-bold text-dark mb-0 fs-5">Turnos de Caja del PerÃ­odo</h6>
+                  <h6 class="fw-bold text-dark mb-0 fs-5">Turnos de Caja del Período</h6>
                   <span class="badge bg-primary rounded-pill px-2.5 py-1" id="badgeTurnosCajaCount" style="font-size: 0.75rem;">
                     0 turno(s)
                   </span>
@@ -374,7 +374,7 @@
               </div>
             </div>
             <span class="badge bg-light text-secondary border px-2.5 py-1.5 small fw-semibold" id="lblTurnosPeriodoInfo">
-              AuditorÃ­a de Turnos
+              Auditoría de Turnos
             </span>
           </div>
 
@@ -390,7 +390,7 @@
                   <th class="text-end">Cobros Cta.</th>
                   <th class="text-end">Gastos Caja</th>
                   <th class="text-end pe-3">
-                    Total Cierre / FÃ­sico
+                    Total Cierre / Físico
                     <small class="d-block text-muted text-lowercase fw-normal" style="font-size: 0.68rem;">(Incluye fondo de cambio inicial)</small>
                   </th>
                 </tr>
@@ -409,18 +409,18 @@
 
         <!-- FILA C: EGRESOS CLASIFICADOS & CLIENTES / STOCK -->
         <div class="row g-3 mb-4">
-          <!-- Izquierda: Egresos del PerÃ­odo -->
+          <!-- Izquierda: Egresos del Período -->
           <div class="col-12 col-lg-6">
             <div class="card p-3 p-md-4 h-100">
               <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-pie-chart-fill text-danger me-2"></i>Egresos del PerÃ­odo Clasificados</h6>
+                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-pie-chart-fill text-danger me-2"></i>Egresos del Período Clasificados</h6>
                 <span class="badge bg-danger text-white amount-num px-2.5 py-1" id="txtTotalEgresosRango">$0,00</span>
               </div>
               <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                   <thead>
                     <tr>
-                      <th class="ps-3">CategorÃ­a</th>
+                      <th class="ps-3">Categoría</th>
                       <th class="text-center">Comprobantes</th>
                       <th class="text-end pe-3">Subtotal</th>
                     </tr>
@@ -437,7 +437,7 @@
           <div class="col-12 col-lg-6">
             <div class="card p-3 p-md-4 h-100">
               <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Alertas de Inventario CrÃ­tico</h6>
+                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Alertas de Inventario Crítico</h6>
                 <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5" id="badgeStockCount">0</span>
               </div>
               <div id="listaAlertasStock" class="overflow-y-auto" style="max-height: 260px;">

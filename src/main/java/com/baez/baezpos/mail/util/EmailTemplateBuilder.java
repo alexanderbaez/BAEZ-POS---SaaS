@@ -12,7 +12,7 @@ public final class EmailTemplateBuilder {
     private static final String LOGIN_URL = "https://www.baezpos.com/login.html";
 
     private EmailTemplateBuilder() {
-        // Clase de utilidad estÃƒÂ¡tica
+        // Clase de utilidad estÃƒ¡tica
     }
 
     /**
@@ -29,7 +29,7 @@ public final class EmailTemplateBuilder {
                 Hola <strong style="color: #0f172a;">%s</strong>,
             </p>
             <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #475569;">
-                Ã‚Â¡Te damos la bienvenida a <strong>BÃƒÂEZ POS</strong>! Tu usuario para la empresa <strong style="color: #1e40af;">%s</strong> ha sido dado de alta exitosamente en la plataforma.
+                Ã‚¡Te damos la bienvenida a <strong>BÃƒÂEZ POS</strong>! Tu usuario para la empresa <strong style="color: #1e40af;">%s</strong> ha sido dado de alta exitosamente en la plataforma.
             </p>
 
             <!-- CARD DE CREDENCIALES -->
@@ -84,14 +84,14 @@ public final class EmailTemplateBuilder {
             <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f1f5f9; border-radius: 6px; margin-top: 20px;">
                 <tr>
                     <td style="padding: 14px 18px; font-size: 13px; color: #64748b; line-height: 1.5;">
-                        Ã°Å¸â€ºÂ¡Ã¯Â¸Â <strong>RecomendaciÃƒÂ³n de Seguridad:</strong> Te sugerimos ingresar a la plataforma y actualizar tu contraseÃƒÂ±a de acceso desde el menÃƒÂº de perfil o configuraciÃƒÂ³n.
+                        Ã°Å¸â€º¡Ã¯Â¸Â <strong>RecomendaciÃƒÂ³n de Seguridad:</strong> Te sugerimos ingresar a la plataforma y actualizar tu contraseÃƒÂ±a de acceso desde el menÃƒÂº de perfil o configuraciÃƒÂ³n.
                     </td>
                 </tr>
             </table>
             """.formatted(safeUsuario, safeEmpresa, safeDestinatario, safePassword, LOGIN_URL);
 
         return renderPlantillaBase(
-                "Ã‚Â¡Bienvenido a BÃƒÂ¡ezPOS!",
+                "Ã‚¡Bienvenido a BÃƒ¡ezPOS!",
                 "Tu cuenta ha sido activada correctamente",
                 "#2563eb",
                 "#1e40af",
@@ -159,7 +159,7 @@ public final class EmailTemplateBuilder {
             """.formatted(safeUsuario, safeEmpresa, safeDestinatario, LOGIN_URL);
 
         return renderPlantillaBase(
-                "Ã‚Â¡Bienvenido a BÃƒÂ¡ezPOS!",
+                "Ã‚¡Bienvenido a BÃƒ¡ezPOS!",
                 "ConfirmaciÃƒÂ³n y alta de cuenta comercial",
                 "#2563eb",
                 "#1e40af",
@@ -279,7 +279,7 @@ public final class EmailTemplateBuilder {
             </table>
 
             <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #475569;">
-                Aguardamos confirmaciÃƒÂ³n. Ã‚Â¡Muchas gracias!<br>
+                Aguardamos confirmaciÃƒÂ³n. Ã‚¡Muchas gracias!<br>
                 <strong>Atte. Equipo de %s</strong>
             </p>
             """.formatted(safeProveedor, safeCompany, detallePedido, safeCompany);
@@ -295,7 +295,7 @@ public final class EmailTemplateBuilder {
 
     /**
      * Estructura HTML base unificada: layout responsive en tablas (max-width 600px), fondo #f4f6f8,
-     * contenedor blanco #ffffff, tipografÃƒÂ­a elegante, cabecera corporativa y pie de pÃƒÂ¡gina institucional.
+     * contenedor blanco #ffffff, tipografÃƒÂ­a elegante, cabecera corporativa y pie de pÃƒ¡gina institucional.
      */
     private static String renderPlantillaBase(String tituloEncabezado, String subtituloEncabezado, String colorPrimario, String colorSecundario, String cuerpoHtml) {
         return """
@@ -367,7 +367,7 @@ public final class EmailTemplateBuilder {
                                             Portal Oficial: <a href="%s" target="_blank" style="color: #2563eb; text-decoration: none; font-weight: 600;">www.baezpos.com</a>
                                         </p>
                                         <p style="margin: 0; font-size: 11px; color: #94a3b8; line-height: 1.4;">
-                                            Este es un correo automÃƒÂ¡tico de seguridad y notificaciÃƒÂ³n. Por favor no respondas a este mensaje.<br>&copy; 2026 BÃƒÂEZ POS. Todos los derechos reservados.
+                                            Este es un correo automÃƒ¡tico de seguridad y notificaciÃƒÂ³n. Por favor no respondas a este mensaje.<br>&copy; 2026 BÃƒÂEZ POS. Todos los derechos reservados.
                                         </p>
                                     </td>
                                 </tr>

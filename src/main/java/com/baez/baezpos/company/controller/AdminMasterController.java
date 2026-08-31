@@ -53,16 +53,16 @@ public class AdminMasterController {
     @PatchMapping("/{id}/extend")
     public ResponseEntity<MessageResponseDTO> extendSubscription(@PathVariable Long id) {
         masterAdminService.extendSubscriptionMaster(id);
-        return ResponseEntity.ok(MessageResponseDTO.of("SuscripciÃ³n extendida 30 dÃ­as."));
+        return ResponseEntity.ok(MessageResponseDTO.of("Suscripción extendida 30 días."));
     }
 
     @PatchMapping("/{id}/reset-password")
     public ResponseEntity<MessageResponseDTO> resetPassword(@PathVariable Long id, @RequestBody Map<String, String> body) {
         String newPass = body.get("password");
         if (newPass == null || newPass.trim().isEmpty()) {
-            throw new IllegalArgumentException("La nueva contraseÃ±a no puede estar vacÃ­a.");
+            throw new IllegalArgumentException("La nueva contraseña no puede estar vacía.");
         }
         masterAdminService.resetOwnerPassword(id, newPass.trim());
-        return ResponseEntity.ok(MessageResponseDTO.of("ContraseÃ±a restablecida correctamente."));
+        return ResponseEntity.ok(MessageResponseDTO.of("Contraseña restablecida correctamente."));
     }
 }

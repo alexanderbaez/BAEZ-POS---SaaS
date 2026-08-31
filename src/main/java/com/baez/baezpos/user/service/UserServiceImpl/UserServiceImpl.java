@@ -52,7 +52,7 @@ public class UserServiceImpl implements UserService {
         // Un ADMIN no puede crear otro ADMIN ni un SUPER_ADMIN
         if (currentUserRole == Role.ADMIN && 
            (dto.getRole() == Role.ADMIN || dto.getRole() == Role.SUPER_ADMIN)) {
-            throw new AccessDeniedException("ViolaciÃ³n de seguridad: No puedes crear usuarios con privilegios iguales o superiores.");
+            throw new AccessDeniedException("Violación de seguridad: No puedes crear usuarios con privilegios iguales o superiores.");
         }
 
         Long companyId = SecurityUtils.getCurrentCompanyId();
@@ -68,7 +68,7 @@ public class UserServiceImpl implements UserService {
                 throw new IllegalArgumentException("El email '" + cleanEmail + "' ya pertenece a un usuario activo.");
             }
 
-            // Bloquear reasignaciÃ³n de tenants: Queda prohibido cambiar el company_id de un usuario inactivo
+            // Bloquear reasignación de tenants: Queda prohibido cambiar el company_id de un usuario inactivo
             Long existingCompanyId = (existingUser.getCompany() != null) ? existingUser.getCompany().getId() : null;
 
             if (!Objects.equals(companyId, existingCompanyId)) {
@@ -81,7 +81,7 @@ public class UserServiceImpl implements UserService {
                 int maxEmployees = company.getMaxEmployees() != null ? company.getMaxEmployees() : 1;
                 long activeEmployees = userRepository.countByCompanyIdAndActiveTrue(companyId);
                 if (activeEmployees >= maxEmployees) {
-                    throw new BadRequestException("LÃ­mite de empleados alcanzado en su plan actual. ComunÃ­quese con soporte para actualizar su suscripciÃ³n.");
+                    throw new BadRequestException("Límite de empleados alcanzado en su plan actual. Comuníquese con soporte para actualizar su suscripción.");
                 }
             }
 
@@ -91,7 +91,7 @@ public class UserServiceImpl implements UserService {
 
             if (dto.getPassword() != null && !dto.getPassword().trim().isEmpty()) {
                 if (dto.getPassword().trim().length() < 6) {
-                    throw new IllegalArgumentException("La contraseÃ±a debe tener al menos 6 caracteres.");
+                    throw new IllegalArgumentException("La contraseña debe tener al menos 6 caracteres.");
                 }
                 existingUser.setPassword(passwordEncoder.encode(dto.getPassword()));
             }
@@ -114,7 +114,7 @@ public class UserServiceImpl implements UserService {
             int maxEmployees = company.getMaxEmployees() != null ? company.getMaxEmployees() : 1;
             long activeEmployees = userRepository.countByCompanyIdAndActiveTrue(companyId);
             if (activeEmployees >= maxEmployees) {
-                throw new BadRequestException("LÃ­mite de empleados alcanzado en su plan actual. ComunÃ­quese con soporte para actualizar su suscripciÃ³n.");
+                throw new BadRequestException("Límite de empleados alcanzado en su plan actual. Comuníquese con soporte para actualizar su suscripción.");
             }
         }
 
@@ -123,7 +123,7 @@ public class UserServiceImpl implements UserService {
         user.setEmail(cleanEmail);
 
         if (dto.getPassword() == null || dto.getPassword().trim().length() < 6) {
-            throw new IllegalArgumentException("Debe proporcionar una contraseÃ±a vÃ¡lida de al menos 6 caracteres.");
+            throw new IllegalArgumentException("Debe proporcionar una contraseña válida de al menos 6 caracteres.");
         }
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setRole(targetRole);
@@ -207,23 +207,23 @@ public class UserServiceImpl implements UserService {
             }
         }
 
-        // Control de degradaciÃ³n de Admin a Vendedor (Anti Self-Lockout)
+        // Control de degradación de Admin a Vendedor (Anti Self-Lockout)
         if (existing.getRole() == Role.ADMIN && dto.getRole() == Role.VENDEDOR) {
-            throw new IllegalStateException("ProtecciÃ³n del sistema: No puedes degradar la cuenta del Administrador a Vendedor.");
+            throw new IllegalStateException("Protección del sistema: No puedes degradar la cuenta del Administrador a Vendedor.");
         }
 
         // Control de escalada de privilegios de Vendedor a Admin por un Admin regular
         if (existing.getRole() == Role.VENDEDOR && 
            (dto.getRole() == Role.ADMIN || dto.getRole() == Role.SUPER_ADMIN) && 
            currentUserRole != Role.SUPER_ADMIN) {
-            throw new AccessDeniedException("ViolaciÃ³n de seguridad: No puedes crear o actualizar usuarios con privilegios iguales o superiores.");
+            throw new AccessDeniedException("Violación de seguridad: No puedes crear o actualizar usuarios con privilegios iguales o superiores.");
         }
 
         String cleanEmail = dto.getEmail().trim().toLowerCase();
         // Validar si intenta cambiar el email por uno que ya existe en el sistema
         if (!existing.getEmail().equalsIgnoreCase(cleanEmail)) {
             if (userRepository.existsByEmail(cleanEmail)) {
-                throw new IllegalArgumentException("El email '" + cleanEmail + "' ya estÃ¡ registrado por otro usuario.");
+                throw new IllegalArgumentException("El email '" + cleanEmail + "' ya está registrado por otro usuario.");
             }
             existing.setEmail(cleanEmail);
         }
@@ -240,7 +240,7 @@ public class UserServiceImpl implements UserService {
 
         if (dto.getPassword() != null && !dto.getPassword().trim().isEmpty()) {
             if (dto.getPassword().trim().length() < 6) {
-                throw new IllegalArgumentException("La contraseÃ±a debe tener al menos 6 caracteres.");
+                throw new IllegalArgumentException("La contraseña debe tener al menos 6 caracteres.");
             }
             existing.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
@@ -275,7 +275,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void updatePasswordOnly(String email, String newPassword) {
         if (newPassword == null || newPassword.trim().length() < 6) {
-            throw new IllegalArgumentException("La nueva contraseÃ±a debe tener al menos 6 caracteres.");
+            throw new IllegalArgumentException("La nueva contraseña debe tener al menos 6 caracteres.");
         }
         User user = userRepository.findByEmail(email.trim().toLowerCase())
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
@@ -288,8 +288,8 @@ public class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public String validateSupervisorPin(String requestPin) {
         if (requestPin == null || requestPin.trim().isEmpty()) {
-            System.out.println("AUDIT: PIN recibido vacÃ­o o nulo.");
-            return "AUDIT_ERROR: PIN recibido vacÃ­o o nulo.";
+            System.out.println("AUDIT: PIN recibido vacío o nulo.");
+            return "AUDIT_ERROR: PIN recibido vacío o nulo.";
         }
 
         String rawPin = requestPin.trim();
@@ -299,7 +299,7 @@ public class UserServiceImpl implements UserService {
             currentUser = userRepository.findByEmail(currentEmail).orElse(null);
         }
 
-        // 1. Â¿El vendedor (o usuario actual) tiene su propio PIN asignado y coincide?
+        // 1. ¿El vendedor (o usuario actual) tiene su propio PIN asignado y coincide?
         if (currentUser != null && currentUser.getSecurityPin() != null && !currentUser.getSecurityPin().trim().isEmpty()) {
             String userStoredPin = currentUser.getSecurityPin().trim();
             boolean matches = false;
@@ -370,16 +370,16 @@ public class UserServiceImpl implements UserService {
 
         if (currentUserRole == Role.ADMIN && 
            (requestedRole == Role.ADMIN || requestedRole == Role.SUPER_ADMIN)) {
-            throw new AccessDeniedException("ViolaciÃ³n de seguridad: No puedes crear usuarios con privilegios iguales o superiores.");
+            throw new AccessDeniedException("Violación de seguridad: No puedes crear usuarios con privilegios iguales o superiores.");
         }
 
         if (requestedRole == Role.SUPER_ADMIN && !isSuperAdmin) {
-            throw new AccessDeniedException("ViolaciÃ³n de seguridad: No puedes crear usuarios con privilegios iguales o superiores.");
+            throw new AccessDeniedException("Violación de seguridad: No puedes crear usuarios con privilegios iguales o superiores.");
         }
 
         if (!isSuperAdmin) {
             if (requestedRole != null && requestedRole != Role.VENDEDOR) {
-                throw new AccessDeniedException("ViolaciÃ³n de seguridad: No puedes crear usuarios con privilegios iguales o superiores.");
+                throw new AccessDeniedException("Violación de seguridad: No puedes crear usuarios con privilegios iguales o superiores.");
             }
             return requestedRole != null ? requestedRole : Role.VENDEDOR;
         }

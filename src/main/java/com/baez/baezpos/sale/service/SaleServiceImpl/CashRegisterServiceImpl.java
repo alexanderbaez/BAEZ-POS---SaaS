@@ -60,7 +60,7 @@ public class CashRegisterServiceImpl implements CashRegisterService {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa asociada no encontrada"));
 
-        // LÃ“GICA DE SECUENCIA DIARIA POR TENANT (Reinicia cada dÃ­a a 1)
+        // LÓGICA DE SECUENCIA DIARIA POR TENANT (Reinicia cada día a 1)
         LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
         LocalDateTime endOfToday = LocalDate.now().atTime(LocalTime.MAX);
         int todayCount = cashRegisterSessionRepository.countSessionsByCompanyAndDateRange(companyId, startOfToday, endOfToday);
@@ -80,7 +80,7 @@ public class CashRegisterServiceImpl implements CashRegisterService {
         try {
             auditService.logAction("APERTURA_CAJA", "Caja #" + savedSession.getSessionNumber() + " abierta con fondo inicial de $" + savedSession.getInitialAmount(), "INFO");
         } catch (Exception e) {
-            log.error("Error al registrar auditorÃ­a de apertura de caja: {}", e.getMessage());
+            log.error("Error al registrar auditoría de apertura de caja: {}", e.getMessage());
         }
 
         return mapToResponseDTO(savedSession);
@@ -95,14 +95,14 @@ public class CashRegisterServiceImpl implements CashRegisterService {
                 .findFirstByCompanyIdAndStatusOrderByIdDesc(companyId, CashSessionStatus.OPEN)
                 .orElseThrow(() -> new BadRequestException("No hay ninguna caja abierta para cerrar."));
 
-        // MED-01: Un VENDEDOR solo puede cerrar la sesiÃ³n que Ã©l mismo abriÃ³.
+        // MED-01: Un VENDEDOR solo puede cerrar la sesión que él mismo abrió.
         // El ADMIN puede cerrar cualquier caja de su empresa.
         Role currentRole = SecurityUtils.getCurrentUserRole();
         if (Role.VENDEDOR.equals(currentRole)) {
             Long currentUserId = SecurityUtils.getCurrentUserId();
             if (session.getUser() == null || !session.getUser().getId().equals(currentUserId)) {
                 throw new AccessDeniedException(
-                    "Un Vendedor solo puede cerrar la sesiÃ³n de caja que Ã©l mismo abriÃ³."
+                    "Un Vendedor solo puede cerrar la sesión de caja que él mismo abrió."
                 );
             }
         }
@@ -110,10 +110,10 @@ public class CashRegisterServiceImpl implements CashRegisterService {
         LocalDateTime closedAt = LocalDateTime.now();
         session.setClosedAt(closedAt);
 
-        // Ventana de auditorÃ­a con margen de 2 segundos para eventos concurrentes
+        // Ventana de auditoría con margen de 2 segundos para eventos concurrentes
         LocalDateTime searchEnd = closedAt.plusSeconds(2);
 
-        // CRIT-02: Usar query con companyId obligatorio (defensa de segunda lÃ­nea)
+        // CRIT-02: Usar query con companyId obligatorio (defensa de segunda línea)
         List<Sale> sales = saleRepository.findActiveSalesBySessionIdAndCompanyId(session.getId(), companyId);
 
         BigDecimal cashSales = BigDecimal.ZERO;
@@ -124,7 +124,7 @@ public class CashRegisterServiceImpl implements CashRegisterService {
             }
         }
 
-        // Cobros de deudas en efectivo registrados para la sesiÃ³n o rango
+        // Cobros de deudas en efectivo registrados para la sesión o rango
         BigDecimal cobrosEfe = customerMovementRepository.sumPaymentsBySessionAndMethod("EFECTIVO", companyId, session.getId(), session.getOpenedAt(), searchEnd);
         if (cobrosEfe == null) cobrosEfe = BigDecimal.ZERO;
 
@@ -132,7 +132,7 @@ public class CashRegisterServiceImpl implements CashRegisterService {
         BigDecimal expensesEfe = expenseRepository.sumDeductibleCashExpenses(companyId, session.getOpenedAt(), searchEnd);
         if (expensesEfe == null) expensesEfe = BigDecimal.ZERO;
 
-        // EcuaciÃ³n de Arqueo FÃ­sico de CajÃ³n (Arqueo Ciego exacto)
+        // Ecuación de Arqueo Físico de Cajón (Arqueo Ciego exacto)
         // systemAmount = Fondo Inicial + Ventas Efectivo + Cobranzas Cta Cte Efectivo - Gastos Efectivo
         BigDecimal systemCashCalculated = session.getInitialAmount()
                 .add(cashSales)
@@ -153,7 +153,7 @@ public class CashRegisterServiceImpl implements CashRegisterService {
         try {
             auditService.logAction("CIERRE_CAJA", "Caja #" + closedSession.getSessionNumber() + " cerrada. Declarado: $" + declared + " | Esperado: $" + systemCashCalculated + " | Dif: $" + difference, "INFO");
         } catch (Exception e) {
-            log.error("Error al registrar auditorÃ­a de cierre de caja: {}", e.getMessage());
+            log.error("Error al registrar auditoría de cierre de caja: {}", e.getMessage());
         }
 
         return mapToResponseDTO(closedSession);
@@ -166,7 +166,7 @@ public class CashRegisterServiceImpl implements CashRegisterService {
 
         CashRegisterSession session = cashRegisterSessionRepository
                 .findFirstByCompanyIdAndStatusOrderByIdDesc(companyId, CashSessionStatus.OPEN)
-                .orElseThrow(() -> new ResourceNotFoundException("No se encontrÃ³ una caja abierta."));
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró una caja abierta."));
 
         return mapToResponseDTO(session);
     }
@@ -176,7 +176,7 @@ public class CashRegisterServiceImpl implements CashRegisterService {
     public BigDecimal getActivePhysicalCashBalance(Long companyId) {
         CashRegisterSession session = cashRegisterSessionRepository
                 .findFirstByCompanyIdAndStatusOrderByIdDesc(companyId, CashSessionStatus.OPEN)
-                .orElseThrow(() -> new BadRequestException("No hay una caja fÃ­sica abierta para registrar egresos en efectivo."));
+                .orElseThrow(() -> new BadRequestException("No hay una caja física abierta para registrar egresos en efectivo."));
 
         LocalDateTime sStart = session.getOpenedAt();
         LocalDateTime sEnd = LocalDateTime.now().plusSeconds(2);
@@ -214,14 +214,14 @@ public class CashRegisterServiceImpl implements CashRegisterService {
             symbols.setGroupingSeparator('.');
             java.text.DecimalFormat df = new java.text.DecimalFormat("#,##0.00", symbols);
             String saldoStr = df.format(saldoActual);
-            throw new BadRequestException("Fondos insuficientes en la caja fÃ­sica para este retiro. Saldo disponible: $" + saldoStr);
+            throw new BadRequestException("Fondos insuficientes en la caja física para este retiro. Saldo disponible: $" + saldoStr);
         }
     }
 
     private Long requireCompanyContext() {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         if (companyId == null) {
-            throw new BadRequestException("Acceso denegado: Se requiere un contexto de empresa vÃ¡lido.");
+            throw new BadRequestException("Acceso denegado: Se requiere un contexto de empresa válido.");
         }
         return companyId;
     }
@@ -234,7 +234,7 @@ public class CashRegisterServiceImpl implements CashRegisterService {
         }
         String email = SecurityUtils.getCurrentUserEmail();
         if (email == null) {
-            throw new BadRequestException("No se identificÃ³ el usuario autenticado.");
+            throw new BadRequestException("No se identificó el usuario autenticado.");
         }
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado: " + email));
@@ -244,7 +244,7 @@ public class CashRegisterServiceImpl implements CashRegisterService {
         LocalDateTime start = session.getOpenedAt();
         LocalDateTime end = session.getClosedAt() != null ? session.getClosedAt().plusSeconds(2) : LocalDateTime.now().plusSeconds(2);
 
-        // CRIT-02: Usar query con companyId para defensa de segunda lÃ­nea.
+        // CRIT-02: Usar query con companyId para defensa de segunda línea.
         List<Sale> sales = saleRepository.findActiveSalesBySessionIdAndCompanyId(session.getId(), session.getCompany().getId());
 
         BigDecimal cashSales = BigDecimal.ZERO;

@@ -11,12 +11,12 @@ public record CustomerRequestDTO(
         @Size(max = 150, message = "El nombre no puede superar los 150 caracteres")
         String name,
 
-        @Size(max = 30, message = "El telÃ©fono no puede superar los 30 caracteres")
+        @Size(max = 30, message = "El teléfono no puede superar los 30 caracteres")
         String phone,
 
         @Size(max = 20, message = "El DNI/CUIT no puede superar los 20 caracteres")
         String dniCuit,
 
-        @PositiveOrZero(message = "El lÃ­mite de crÃ©dito debe ser un monto vÃ¡lido")
+        @PositiveOrZero(message = "El límite de crédito debe ser un monto válido")
         BigDecimal creditLimit
 ) {}

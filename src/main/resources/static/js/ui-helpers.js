@@ -1,14 +1,14 @@
 ﻿/**
  * ==========================================================================
- * BÃEZ POS - UI HELPERS GLOBALES (SaaS Premium Suite)
+ * BÁEZ POS - UI HELPERS GLOBALES (SaaS Premium Suite)
  * Alexander Baez - 2026
  * ==========================================================================
  */
 
 /**
- * Controla el estado de carga visual y bloqueo de interacciÃ³n de cualquier botÃ³n.
+ * Controla el estado de carga visual y bloqueo de interacción de cualquier botón.
  *
- * @param {HTMLElement|string} buttonElement - Elemento o selector CSS del botÃ³n.
+ * @param {HTMLElement|string} buttonElement - Elemento o selector CSS del botón.
  * @param {boolean} isLoading - true para activar el spinner y deshabilitar; false para restaurar.
  * @param {string} [loadingText="Procesando..."] - Texto a mostrar junto al spinner.
  */
@@ -35,14 +35,14 @@ function setButtonLoading(buttonElement, isLoading, loadingText = 'Procesando...
 }
 
 /**
- * Inyecta dinÃ¡micamente una vista de estado vacÃ­o (.empty-state) estilizada y profesional.
- * Soporta tanto contenedores genÃ©ricos (div) como tablas (tbody/table) adaptando el colSpan.
+ * Inyecta dinámicamente una vista de estado vacío (.empty-state) estilizada y profesional.
+ * Soporta tanto contenedores genéricos (div) como tablas (tbody/table) adaptando el colSpan.
  *
- * @param {HTMLElement|string} container - Elemento o ID del contenedor donde se inyectarÃ¡.
+ * @param {HTMLElement|string} container - Elemento o ID del contenedor donde se inyectará.
  * @param {string} [iconClass="bi-inbox"] - Clase del icono de Bootstrap Icons.
- * @param {string} [title="Sin registros disponibles"] - TÃ­tulo principal del estado vacÃ­o.
- * @param {string} [message="No se encontraron datos coincidentes para mostrar en este momento."] - DescripciÃ³n o texto secundario.
- * @param {string} [actionHtml=""] - CÃ³digo HTML opcional de botÃ³n o enlace de acciÃ³n.
+ * @param {string} [title="Sin registros disponibles"] - Título principal del estado vacío.
+ * @param {string} [message="No se encontraron datos coincidentes para mostrar en este momento."] - Descripción o texto secundario.
+ * @param {string} [actionHtml=""] - Código HTML opcional de botón o enlace de acción.
  * @param {number} [colSpan=6] - Cantidad de columnas si se renderiza dentro de un tbody.
  */
 function renderEmptyState(container, iconClass = 'bi-inbox', title = 'Sin registros disponibles', message = 'No se encontraron datos coincidentes para mostrar en este momento.', actionHtml = '', colSpan = 6) {
@@ -79,7 +79,7 @@ function renderEmptyState(container, iconClass = 'bi-inbox', title = 'Sin regist
 }
 
 /**
- * Formateador de moneda local estÃ¡ndar para la aplicaciÃ³n
+ * Formateador de moneda local estándar para la aplicación
  */
 const formatMoneyARS = new Intl.NumberFormat('es-AR', {
     style: 'currency',
@@ -88,9 +88,9 @@ const formatMoneyARS = new Intl.NumberFormat('es-AR', {
 });
 
 /**
- * Toast de notificaciÃ³n rÃ¡pido con SweetAlert2 si estÃ¡ presente
+ * Toast de notificación rápido con SweetAlert2 si está presente
  */
-function showSaasToast(icon = 'success', title = 'OperaciÃ³n completada') {
+function showSaasToast(icon = 'success', title = 'Operación completada') {
     if (typeof Swal !== 'undefined') {
         Swal.fire({
             toast: true,
@@ -104,7 +104,7 @@ function showSaasToast(icon = 'success', title = 'OperaciÃ³n completada') {
     }
 }
 
-// Exportar funciones a Ã¡mbito global
+// Exportar funciones a ámbito global
 window.setButtonLoading = setButtonLoading;
 window.renderEmptyState = renderEmptyState;
 window.formatMoneyARS = formatMoneyARS;
@@ -147,7 +147,7 @@ window.fmtCantidadTicket = function(cantidad, isFractional) {
 };
 
 /**
- * Formateador de importes monetarios para tickets tÃ©rmicos POS.
+ * Formateador de importes monetarios para tickets térmicos POS.
  */
 window.fmtPrecioTicket = function(monto) {
     const num = parseFloat(monto || 0);
@@ -155,7 +155,7 @@ window.fmtPrecioTicket = function(monto) {
 };
 
 /**
- * Funciones de compatibilidad global para formateo de moneda estÃ¡ndar
+ * Funciones de compatibilidad global para formateo de moneda estándar
  */
 if (typeof window.formatearMoneda !== 'function') {
     window.formatearMoneda = function(monto) {
@@ -186,8 +186,8 @@ if (typeof window.escapeHTML !== 'function') {
 }
 
 /**
- * Motor de impresiÃ³n nativo global mediante CSS @media print y #print-section.
- * Sincroniza la carga de imÃ¡genes antes de invocar window.print().
+ * Motor de impresión nativo global mediante CSS @media print y #print-section.
+ * Sincroniza la carga de imágenes antes de invocar window.print().
  */
 window.imprimirHTMLConIframe = function(htmlContent) {
     let printSection = document.getElementById('print-section');

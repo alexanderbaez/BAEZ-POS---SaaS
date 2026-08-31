@@ -1,5 +1,5 @@
 ﻿/**
- * BÃEZ POS - PERFIL DE LA EMPRESA & CONFIGURACIÃ“N (SaaS)
+ * BÁEZ POS - PERFIL DE LA EMPRESA & CONFIGURACIÓN (SaaS)
  * Alexander Baez - 2026
  */
 
@@ -7,7 +7,7 @@
 const ENDPOINT_PROFILE = '/admin/my-company/profile';
 
 // ==========================================
-// 1. INICIALIZACIÃ“N
+// 1. INICIALIZACIÓN
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Cargar datos de la empresa desde la BD
@@ -27,11 +27,11 @@ async function cargarDatosEmpresa() {
     try {
         const resp = await apiFetch(ENDPOINT_PROFILE);
 
-        if (!resp || !resp.ok) throw new Error("No se pudo obtener la informaciÃ³n de la empresa.");
+        if (!resp || !resp.ok) throw new Error("No se pudo obtener la información de la empresa.");
 
         const emp = await resp.json();
 
-        // Guardar en cachÃ© local usando AMBAS claves para sincronizar con Ventas/Cobros
+        // Guardar en caché local usando AMBAS claves para sincronizar con Ventas/Cobros
         sessionStorage.setItem('config_comercio', JSON.stringify(emp));
         sessionStorage.setItem('DATOS_EMPRESA', JSON.stringify(emp));
 
@@ -59,7 +59,7 @@ async function cargarDatosEmpresa() {
         const elCompanyNav = document.getElementById('companyNameNav');
         if (elCompanyNav) elCompanyNav.innerText = (emp.name || 'MI NEGOCIO').toUpperCase();
 
-        // GestiÃ³n de suscripciÃ³n y vencimiento
+        // Gestión de suscripción y vencimiento
         procesarVencimiento(emp.expirationDate);
 
         // Actualizar la vista previa inicial
@@ -111,7 +111,7 @@ function procesarVencimiento(fechaStr) {
         badge.className = "badge rounded-pill px-3 py-2 bg-danger-subtle text-danger border border-danger-subtle fw-bold";
         badge.innerText = "SERVICIO VENCIDO";
         if (alerta) alerta.classList.remove('d-none');
-        if (mensajeDias) mensajeDias.innerHTML = `<strong>Tu servicio ha vencido.</strong> ContactÃ¡ al soporte para renovar tu acceso hoy mismo.`;
+        if (mensajeDias) mensajeDias.innerHTML = `<strong>Tu servicio ha vencido.</strong> Contactá al soporte para renovar tu acceso hoy mismo.`;
     } else if (difDias <= 7) {
         badge.className = "badge rounded-pill px-3 py-2 bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-bold";
         badge.innerText = "VENCE PRONTO";
@@ -119,7 +119,7 @@ function procesarVencimiento(fechaStr) {
             alerta.classList.remove('d-none');
             alerta.classList.replace('alert-danger', 'alert-warning');
         }
-        if (mensajeDias) mensajeDias.innerText = `Tu abono mensual vence en ${difDias} dÃ­as. Â¡No te quedes sin sistema!`;
+        if (mensajeDias) mensajeDias.innerText = `Tu abono mensual vence en ${difDias} días. ¡No te quedes sin sistema!`;
     } else {
         badge.className = "badge rounded-pill px-3 py-2 bg-success-subtle text-success border border-success-subtle fw-bold";
         badge.innerText = "SERVICIO ACTIVO";
@@ -133,7 +133,7 @@ function procesarVencimiento(fechaStr) {
 async function actualizarEmpresa(silencioso = false) {
     const nombre = document.getElementById('empNombre')?.value.trim();
     if (!nombre) {
-        Swal.fire('AtenciÃ³n', 'El nombre del negocio es obligatorio.', 'warning');
+        Swal.fire('Atención', 'El nombre del negocio es obligatorio.', 'warning');
         return;
     }
 
@@ -153,7 +153,7 @@ async function actualizarEmpresa(silencioso = false) {
     try {
         if (!silencioso) {
             Swal.fire({
-                title: 'Guardando configuraciÃ³n...',
+                title: 'Guardando configuración...',
                 allowOutsideClick: false,
                 didOpen: () => Swal.showLoading()
             });
@@ -165,7 +165,7 @@ async function actualizarEmpresa(silencioso = false) {
         });
 
         if (resp && resp.ok) {
-            // Sincronizar SessionStorage para consumo dinÃ¡mico
+            // Sincronizar SessionStorage para consumo dinámico
             sessionStorage.setItem('config_comercio', JSON.stringify(data));
             sessionStorage.setItem('DATOS_EMPRESA', JSON.stringify(data));
 
@@ -175,7 +175,7 @@ async function actualizarEmpresa(silencioso = false) {
 
             if (!silencioso) {
                 Swal.fire({
-                    title: 'Â¡Actualizado!',
+                    title: '¡Actualizado!',
                     text: 'La identidad de tu negocio ha sido guardada.',
                     icon: 'success',
                     timer: 2000,
@@ -208,12 +208,12 @@ async function cambiarPassword() {
     const confirm = document.getElementById('confirmarPass')?.value;
 
     if (!pass || pass.length < 6) {
-        Swal.fire('AtenciÃ³n', 'La contraseÃ±a debe tener al menos 6 caracteres.', 'warning');
+        Swal.fire('Atención', 'La contraseña debe tener al menos 6 caracteres.', 'warning');
         return;
     }
 
     if (pass !== confirm) {
-        Swal.fire('Error', 'Las contraseÃ±as no coinciden.', 'error');
+        Swal.fire('Error', 'Las contraseñas no coinciden.', 'error');
         return;
     }
 
@@ -229,20 +229,20 @@ async function cambiarPassword() {
         });
 
         if (resp && resp.ok) {
-            Swal.fire('Â¡Ã‰xito!', 'ContraseÃ±a actualizada correctamente.', 'success');
+            Swal.fire('¡Ã‰xito!', 'Contraseña actualizada correctamente.', 'success');
             if (document.getElementById('nuevaPass')) document.getElementById('nuevaPass').value = '';
             if (document.getElementById('confirmarPass')) document.getElementById('confirmarPass').value = '';
         } else {
             throw new Error();
         }
     } catch (err) {
-        console.error("Error al actualizar contraseÃ±a:", err);
-        Swal.fire('Error', 'No se pudo cambiar la contraseÃ±a. Revisa el servidor.', 'error');
+        console.error("Error al actualizar contraseña:", err);
+        Swal.fire('Error', 'No se pudo cambiar la contraseña. Revisa el servidor.', 'error');
     }
 }
 
 // ==========================================
-// 4. LÃ“GICA DE VISTA PREVIA DEL TICKET
+// 4. LÓGICA DE VISTA PREVIA DEL TICKET
 // ==========================================
 function vincularSwitchFiscal() {
     const switchFiscal = document.getElementById('checkMostrarFiscal');
@@ -330,7 +330,7 @@ function actualizarPreview() {
     if (elNombre) elNombre.innerText = (document.getElementById('empNombre')?.value || 'TU NEGOCIO').toUpperCase();
 
     const elDir = document.getElementById('previewDir');
-    if (elDir) elDir.innerText = document.getElementById('empDireccion')?.value || 'Tu DirecciÃ³n';
+    if (elDir) elDir.innerText = document.getElementById('empDireccion')?.value || 'Tu Dirección';
 
     const elTel = document.getElementById('previewTel');
     if (elTel) elTel.innerText = 'Tel: ' + (document.getElementById('empTel')?.value || '000-000');
@@ -346,7 +346,7 @@ function actualizarPreview() {
     if (elIibb) elIibb.innerText = document.getElementById('empIibb')?.value || '-';
 
     const elMsg = document.getElementById('previewMsg');
-    if (elMsg) elMsg.innerText = document.getElementById('empTicketMsg')?.value || 'Â¡Gracias por su compra!';
+    if (elMsg) elMsg.innerText = document.getElementById('empTicketMsg')?.value || '¡Gracias por su compra!';
 
     const elIva = document.getElementById('previewIva');
     if (elIva) elIva.innerText = document.getElementById('empIva')?.value || 'Responsable Monotributo';
@@ -364,7 +364,7 @@ function actualizarPreview() {
 }
 
 // ==========================================
-// 5. EXPOSICIÃ“N AL SCOPE GLOBAL
+// 5. EXPOSICIÓN AL SCOPE GLOBAL
 // ==========================================
 window.actualizarEmpresa = actualizarEmpresa;
 window.cambiarPassword = cambiarPassword;

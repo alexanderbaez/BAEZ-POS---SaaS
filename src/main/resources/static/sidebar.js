@@ -1,5 +1,5 @@
 ﻿/**
- * BÃEZ POS - COMPONENTE SIDEBAR Y NAVBAR DINÃMICO (SaaS Multi-tenant)
+ * BÁEZ POS - COMPONENTE SIDEBAR Y NAVBAR DINÁMICO (SaaS Multi-tenant)
  * Alexander Baez - 2026
  */
 
@@ -13,7 +13,7 @@
                 body {
                     background-color: #f8fafc;
                 }
-                /* Empujamos Ãºnicamente el contenedor principal o el body con margen izquierdo limpio (sincronizado a 250px) */
+                /* Empujamos únicamente el contenedor principal o el body con margen izquierdo limpio (sincronizado a 250px) */
                 body > *:not(#sidebar):not(#sidebar-overlay) {
                     margin-left: 250px !important;
                 }
@@ -89,7 +89,7 @@
         document.head.appendChild(estilos);
     }
 
-    // 2. Recuperar y sanitizar datos de sesiÃ³n
+    // 2. Recuperar y sanitizar datos de sesión
     const rawRole = (sessionStorage.getItem('baezpos_user_role') || 'EMPLEADO').toUpperCase().trim();
     const rawName = sessionStorage.getItem('baezpos_user_name') || 'Usuario';
     const rawTenant = sessionStorage.getItem('baezpos_tenant_name') || rawName;
@@ -104,7 +104,7 @@
 
     const paginaActual = window.location.pathname.split("/").pop() || "dashboard.html";
 
-    // 3. InyecciÃ³n del menÃº
+    // 3. Inyección del menú
     function inyectarHTML() {
         const sidebarContainer = document.getElementById('sidebar-container');
         if (!sidebarContainer) return;
@@ -118,7 +118,7 @@
                   <small class="text-primary fw-semibold" style="font-size: 0.75rem;">Sistema de Punto de Venta</small>
                 </div>
 
-                <!-- MenÃº de NavegaciÃ³n -->
+                <!-- Menú de Navegación -->
                 <div class="nav flex-column px-1 gap-1 mt-3">
                   ${isSuperAdmin ? `
                   <a href="admin-maestro.html" class="nav-link-custom bg-warning bg-opacity-20 text-warning ${paginaActual === 'admin-maestro.html' ? 'active-page' : ''}">
@@ -183,7 +183,7 @@
                 </div>
 
                 <a href="#" id="btnCerrarSesion" class="nav-link-custom text-danger">
-                  <i class="bi bi-box-arrow-left me-3 fs-5"></i> Cerrar SesiÃ³n
+                  <i class="bi bi-box-arrow-left me-3 fs-5"></i> Cerrar Sesión
                 </a>
               </div>
             </nav>
@@ -308,7 +308,7 @@ function cerrarSidebar() {
     }
 }
 
-// Interceptor de Cierre de SesiÃ³n
+// Interceptor de Cierre de Sesión
 document.addEventListener('click', async (event) => {
     const btnLogout = event.target.closest('#btnCerrarSesion');
     if (!btnLogout) return;
@@ -319,13 +319,13 @@ document.addEventListener('click', async (event) => {
 
     if (typeof Swal !== 'undefined') {
         const resultado = await Swal.fire({
-            title: 'Â¿Cerrar sesiÃ³n?',
-            text: 'TendrÃ¡s que volver a ingresar tus credenciales para acceder al sistema.',
+            title: '¿Cerrar sesión?',
+            text: 'Tendrás que volver a ingresar tus credenciales para acceder al sistema.',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
             cancelButtonColor: '#6b7280',
-            confirmButtonText: 'SÃ­, cerrar sesiÃ³n',
+            confirmButtonText: 'Sí, cerrar sesión',
             cancelButtonText: 'Cancelar'
         });
 
@@ -333,7 +333,7 @@ document.addEventListener('click', async (event) => {
             ejecutarCierreDeSesion();
         }
     } else {
-        if (confirm('Â¿EstÃ¡s seguro de que deseas cerrar sesiÃ³n?')) {
+        if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
             ejecutarCierreDeSesion();
         }
     }

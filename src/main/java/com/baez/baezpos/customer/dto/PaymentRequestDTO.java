@@ -11,6 +11,6 @@ public record PaymentRequestDTO(
         @Positive(message = "El monto del pago debe ser mayor a cero")
         BigDecimal amount,
 
-        @NotBlank(message = "El mÃ©todo de pago es obligatorio")
+        @NotBlank(message = "El método de pago es obligatorio")
         String method
 ) {}

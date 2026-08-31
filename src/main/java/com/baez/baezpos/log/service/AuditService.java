@@ -25,7 +25,7 @@ public class AuditService {
     private final UserRepository userRepository;
 
     /**
-     * Registra auditorÃ­as de manera asÃ­ncrona sin bloquear la transacciÃ³n principal.
+     * Registra auditorías de manera asíncrona sin bloquear la transacción principal.
      */
     @Async("taskExecutor")
     @Transactional
@@ -54,12 +54,12 @@ public class AuditService {
 
             logRepository.save(logBuilder.build());
         } catch (Exception e) {
-            log.debug("Aviso de auditorÃ­a en background [{}]: {}", action, e.getMessage());
+            log.debug("Aviso de auditoría en background [{}]: {}", action, e.getMessage());
         }
     }
 
     /**
-     * MÃ©todo wrapper sincrÃ³nico para resolver seguridad y enviar al worker asÃ­ncrono
+     * Método wrapper sincrónico para resolver seguridad y enviar al worker asíncrono
      */
     public void logAction(String action, String description, String level) {
         Long companyId = SecurityUtils.getCurrentCompanyId();

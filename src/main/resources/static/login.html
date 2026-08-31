@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -15,7 +15,7 @@
 <div class="login-card">
   <div class="card-header-custom">
     <h1 class="logo-text">BaezPOS</h1>
-    <p class="text-muted small text-uppercase" style="letter-spacing: 1px;">GestiÃ³n de Comercio</p>
+    <p class="text-muted small text-uppercase" style="letter-spacing: 1px;">Gestión de Comercio</p>
   </div>
 
   <div class="card-body p-4 pt-0">
@@ -31,10 +31,10 @@
       </div>
 
       <div class="mb-4">
-        <label class="form-label text-uppercase small fw-bold text-muted">ContraseÃ±a</label>
+        <label class="form-label text-uppercase small fw-bold text-muted">Contraseña</label>
         <div class="input-group">
           <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
-          <input type="password" class="form-control" id="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" required>
+          <input type="password" class="form-control" id="password" placeholder="••••••••" required>
         </div>
       </div>
 
@@ -44,7 +44,7 @@
       </button>
 
       <div class="text-center mt-3">
-        <a href="#" class="text-decoration-none small text-muted fw-bold" onclick="abrirModalRecuperacion()">Â¿Olvidaste tu contraseÃ±a?</a>
+        <a href="#" class="text-decoration-none small text-muted fw-bold" onclick="abrirModalRecuperacion()">¿Olvidaste tu contraseña?</a>
       </div>
     </form>
   </div>
@@ -52,20 +52,20 @@
   <div class="bg-light p-3 text-center border-top">
     <span class="text-muted small">Powered by <strong>Alexander Baez</strong> &copy; 2026</span>
     <div class="mt-2">
-      <a href="/terminos.html" class="text-muted small text-decoration-none me-2" style="font-size:0.75rem;">TÃ©rminos y Condiciones</a>
-      <span class="text-muted" style="font-size:0.75rem;">Â·</span>
-      <a href="/privacidad.html" class="text-muted small text-decoration-none ms-2" style="font-size:0.75rem;">PolÃ­tica de Privacidad</a>
+      <a href="/terminos.html" class="text-muted small text-decoration-none me-2" style="font-size:0.75rem;">Términos y Condiciones</a>
+      <span class="text-muted" style="font-size:0.75rem;">·</span>
+      <a href="/privacidad.html" class="text-muted small text-decoration-none ms-2" style="font-size:0.75rem;">Política de Privacidad</a>
     </div>
   </div>
 </div>
 
-<!-- MODAL DE RECUPERACIÃ“N DE CONTRASEÃ‘A VIA EMAIL -->
+<!-- MODAL DE RECUPERACIÓN DE CONTRASEÑA VIA EMAIL -->
 <div class="modal fade" id="modalRecuperacion" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-0 shadow-lg">
       <div class="modal-header border-0 pb-0 bg-primary text-white p-4">
         <div>
-          <h5 class="modal-title fw-bold text-white mb-1"><i class="bi bi-envelope-at me-2"></i>Recuperar ContraseÃ±a</h5>
+          <h5 class="modal-title fw-bold text-white mb-1"><i class="bi bi-envelope-at me-2"></i>Recuperar Contraseña</h5>
           <p class="text-white-50 mb-0 small">Solo disponible para administradores</p>
         </div>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -74,7 +74,7 @@
         <div id="msgRecuperacion"></div>
         <p class="text-muted small mb-4">
           <i class="bi bi-info-circle me-1 text-primary"></i>
-          IngresÃ¡ tu email de administrador. RecibirÃ¡s una contraseÃ±a temporal para acceder al sistema.
+          Ingresá tu email de administrador. Recibirás una contraseña temporal para acceder al sistema.
         </p>
         <div class="mb-3">
           <label class="form-label text-uppercase small fw-bold text-muted">Email de Administrador</label>
@@ -87,7 +87,7 @@
       <div class="modal-footer bg-light border-0 p-3 d-flex flex-column-reverse flex-md-row gap-2 justify-content-md-end">
         <button type="button" class="btn btn-light px-4 w-100 w-md-auto" data-bs-dismiss="modal">Cancelar</button>
         <button type="button" class="btn btn-primary px-4 fw-bold w-100 w-md-auto" id="btnEnviarRecuperacion" onclick="solicitarRecuperacion()">
-          <span id="btnRecuperarText"><i class="bi bi-send me-1"></i>Enviar ContraseÃ±a</span>
+          <span id="btnRecuperarText"><i class="bi bi-send me-1"></i>Enviar Contraseña</span>
           <div class="spinner-border spinner-border-sm d-none" id="loaderRecuperar" role="status"></div>
         </button>
       </div>

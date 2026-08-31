@@ -14,7 +14,7 @@
 <div id="sidebar-container"></div>
 
 <div id="content">
-  <!-- Navbar con InformaciÃ³n de Usuario / Tenant -->
+  <!-- Navbar con Información de Usuario / Tenant -->
   <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom p-3">
     <div class="container-fluid p-0">
       <button type="button" id="sidebarCollapse" class="btn btn-outline-primary d-md-none me-2">
@@ -31,22 +31,22 @@
   </nav>
 
   <div class="container-fluid p-3 p-md-4">
-    <!-- Banner de SuscripciÃ³n / Vencimiento -->
+    <!-- Banner de Suscripción / Vencimiento -->
     <div id="alertaVencimiento" class="alert alert-danger d-none border-0 shadow-sm mb-4 rounded-4">
       <div class="d-flex align-items-center">
         <i class="bi bi-exclamation-triangle-fill fs-3 me-3 flex-shrink-0"></i>
         <div>
-          <h6 class="fw-bold mb-0">AtenciÃ³n con tu SuscripciÃ³n</h6>
-          <p class="mb-0 small" id="mensajeDias">Tu servicio vence pronto. ContactÃ¡ al soporte para renovar tu acceso.</p>
+          <h6 class="fw-bold mb-0">Atención con tu Suscripción</h6>
+          <p class="mb-0 small" id="mensajeDias">Tu servicio vence pronto. Contactá al soporte para renovar tu acceso.</p>
         </div>
       </div>
     </div>
 
-    <!-- Encabezado del MÃ³dulo -->
+    <!-- Encabezado del Módulo -->
     <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
       <div>
-        <h2 class="fw-bold m-0 text-dark fs-3 fs-md-2">ConfiguraciÃ³n del Negocio</h2>
-        <p class="text-muted small mb-0">AdministrÃ¡ los datos pÃºblicos de tu comercio, parÃ¡metros fiscales y credenciales.</p>
+        <h2 class="fw-bold m-0 text-dark fs-3 fs-md-2">Configuración del Negocio</h2>
+        <p class="text-muted small mb-0">Administrá los datos públicos de tu comercio, parámetros fiscales y credenciales.</p>
       </div>
       <div>
         <span id="badgeEstado" class="badge rounded-pill px-3 py-2 bg-success-subtle text-success border border-success-subtle fw-bold fs-7">
@@ -56,7 +56,7 @@
     </div>
 
   <div class="row g-4">
-    <!-- Columna Principal: Formulario de ConfiguraciÃ³n -->
+    <!-- Columna Principal: Formulario de Configuración -->
     <div class="col-12 col-lg-7 col-xl-8">
       <form id="formEmpresa">
 
@@ -70,38 +70,38 @@
             <div class="row g-3">
               <div class="col-12 col-md-6">
                 <label class="form-label small fw-semibold text-secondary" for="empNombre">Nombre Comercial *</label>
-                <input type="text" id="empNombre" class="form-control" placeholder="Ej: Mi AlmacÃ©n">
+                <input type="text" id="empNombre" class="form-control" placeholder="Ej: Mi Almacén">
               </div>
               <div class="col-12 col-md-6">
                 <label class="form-label small fw-semibold text-secondary" for="empCuit">CUIT / CUIL *</label>
                 <input type="text" id="empCuit" class="form-control" placeholder="20-12345678-9">
               </div>
               <div class="col-12 col-md-6">
-                <label class="form-label small fw-semibold text-secondary" for="empTel">TelÃ©fono / WhatsApp</label>
+                <label class="form-label small fw-semibold text-secondary" for="empTel">Teléfono / WhatsApp</label>
                 <input type="text" id="empTel" class="form-control" placeholder="+54 9 ...">
               </div>
               <div class="col-12 col-md-6">
-                <label class="form-label small fw-semibold text-secondary" for="empEmail">Correo ElectrÃ³nico</label>
+                <label class="form-label small fw-semibold text-secondary" for="empEmail">Correo Electrónico</label>
                 <input type="email" id="empEmail" class="form-control" placeholder="contacto@negocio.com">
               </div>
               <div class="col-12">
-                <label class="form-label small fw-semibold text-secondary" for="empDireccion">DirecciÃ³n Comercial</label>
+                <label class="form-label small fw-semibold text-secondary" for="empDireccion">Dirección Comercial</label>
                 <input type="text" id="empDireccion" class="form-control" placeholder="Av. Principal 123">
               </div>
               <div class="col-12">
                 <label class="form-label small fw-semibold text-secondary" for="empTicketMsg">Mensaje al Pie del Ticket</label>
-                <textarea id="empTicketMsg" class="form-control" rows="2" placeholder="Ej: Â¡Gracias por su compra! Cambios dentro de los 30 dÃ­as."></textarea>
+                <textarea id="empTicketMsg" class="form-control" rows="2" placeholder="Ej: ¡Gracias por su compra! Cambios dentro de los 30 días."></textarea>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Bloque 2: ConfiguraciÃ³n Fiscal (ARCA / AFIP) -->
+        <!-- Bloque 2: Configuración Fiscal (ARCA / AFIP) -->
         <div class="card card-saas mb-4">
           <div class="card-saas-header d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center gap-2">
               <i class="bi bi-file-earmark-text text-primary fs-5"></i>
-              <h6 class="fw-bold m-0">ParÃ¡metros Fiscales (ARCA / AFIP)</h6>
+              <h6 class="fw-bold m-0">Parámetros Fiscales (ARCA / AFIP)</h6>
             </div>
             <div class="form-check form-switch m-0">
               <input class="form-check-input fs-5 cursor-pointer" type="checkbox" id="checkMostrarFiscal" checked>
@@ -118,7 +118,7 @@
                 <input type="date" id="empInicioAct" class="form-control">
               </div>
               <div class="col-12 col-md-4">
-                <label class="form-label small fw-semibold text-secondary" for="empIva">CondiciÃ³n IVA</label>
+                <label class="form-label small fw-semibold text-secondary" for="empIva">Condición IVA</label>
                 <select id="empIva" class="form-select">
                   <option value="Responsable Monotributo">Responsable Monotributo</option>
                   <option value="Responsable Inscripto">Responsable Inscripto</option>
@@ -139,11 +139,11 @@
           <div class="card-body p-4">
             <div class="row g-3 align-items-end">
               <div class="col-12 col-md-5">
-                <label class="form-label small fw-semibold text-secondary" for="nuevaPass">Nueva ContraseÃ±a</label>
+                <label class="form-label small fw-semibold text-secondary" for="nuevaPass">Nueva Contraseña</label>
                 <input type="password" id="nuevaPass" class="form-control" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="new-password">
               </div>
               <div class="col-12 col-md-5">
-                <label class="form-label small fw-semibold text-secondary" for="confirmarPass">Repetir ContraseÃ±a</label>
+                <label class="form-label small fw-semibold text-secondary" for="confirmarPass">Repetir Contraseña</label>
                 <input type="password" id="confirmarPass" class="form-control" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="new-password">
               </div>
               <div class="col-12 col-md-2">
@@ -155,31 +155,31 @@
           </div>
         </div>
 
-        <!-- Barra de AcciÃ³n Final -->
+        <!-- Barra de Acción Final -->
         <div class="card card-saas p-3 bg-light border d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
           <div class="ps-2">
             <span class="text-uppercase text-muted fw-bold d-block" style="font-size: 10px;">Vencimiento del Servicio</span>
             <span id="vencimientoTexto" class="fw-bold text-dark fs-6">-</span>
           </div>
           <button type="button" class="btn btn-primary px-4 py-2.5 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2" onclick="actualizarEmpresa()">
-            <i class="bi bi-floppy-fill"></i> Guardar ConfiguraciÃ³n
+            <i class="bi bi-floppy-fill"></i> Guardar Configuración
           </button>
         </div>
 
       </form>
     </div>
 
-    <!-- Columna Secundaria: Vista Previa Ticket TÃ©rmico (Exacta) -->
+    <!-- Columna Secundaria: Vista Previa Ticket Térmico (Exacta) -->
     <div class="col-12 col-lg-5 col-xl-4">
       <div class="sticky-ticket-container">
         <label class="form-label text-muted fw-bold small text-uppercase mb-2">Vista Previa del Ticket</label>
 
         <div class="card preview-ticket p-3">
           <div class="text-center">
-            <!-- Ãcono original de la casita/kiosco -->
+            <!-- Ícono original de la casita/kiosco -->
             <i class="bi bi-shop fs-1 text-primary"></i>
             <h5 class="fw-bold mb-0 text-uppercase" id="previewNombre">TU NEGOCIO</h5>
-            <p class="mb-0 small" id="previewDir">Tu DirecciÃ³n</p>
+            <p class="mb-0 small" id="previewDir">Tu Dirección</p>
             <p class="mb-0 small" id="previewTel">Tel: 000-000</p>
             <p class="small text-muted mb-1" id="previewEmail"></p>
 
@@ -210,12 +210,12 @@
             <!-- Pie Fiscal (AFIP / QR) -->
             <div id="previewPieFiscal">
               <div class="my-2 p-2 border border-dark rounded d-inline-block bg-white text-dark fw-bold style-subtext">
-                [ CÃ“DIGO QR ARCA / AFIP ]
+                [ CÓDIGO QR ARCA / AFIP ]
               </div>
               <div class="text-center text-dark fw-bold style-subtext">CAE: 76543210987654</div>
             </div>
 
-            <p class="small mt-2 text-muted mb-0" id="previewMsg">Â¡Gracias por su compra!</p>
+            <p class="small mt-2 text-muted mb-0" id="previewMsg">¡Gracias por su compra!</p>
           </div>
         </div>
       </div>

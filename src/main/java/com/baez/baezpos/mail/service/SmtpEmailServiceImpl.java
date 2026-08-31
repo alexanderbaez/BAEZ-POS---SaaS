@@ -36,7 +36,7 @@ public class SmtpEmailServiceImpl implements EmailService {
         }
 
         if (resendApiKey == null || resendApiKey.isBlank()) {
-            log.error("[EmailService] RESEND_API_KEY no estÃƒÂ¡ configurada en las variables de entorno. Correo no enviado a: {}", destinatario);
+            log.error("[EmailService] RESEND_API_KEY no estÃƒ¡ configurada en las variables de entorno. Correo no enviado a: {}", destinatario);
             safeAuditLog("EMAIL_ERROR", "RESEND_API_KEY no configurada. Destinatario: " + destinatario, "ERROR");
             return;
         }
@@ -82,7 +82,7 @@ public class SmtpEmailServiceImpl implements EmailService {
     @Async("taskExecutor")
     public void enviarMailBienvenida(String destinatario, String nombreEmpresa, String nombreUsuario, String passwordTemporal) {
         log.info("[EmailService] Despachando correo de bienvenida con credenciales a: {}", destinatario);
-        String asunto = "Ã‚Â¡Bienvenido a BÃƒÂEZ POS! - Credenciales de acceso";
+        String asunto = "Ã‚¡Bienvenido a BÃƒÂEZ POS! - Credenciales de acceso";
         String html = EmailTemplateBuilder.buildBienvenidaConPassword(nombreUsuario, nombreEmpresa, destinatario, passwordTemporal);
         enviarCorreoInterno(destinatario, asunto, html);
     }
@@ -91,7 +91,7 @@ public class SmtpEmailServiceImpl implements EmailService {
     @Async("taskExecutor")
     public void enviarMailBienvenida(String destinatario, String nombreUsuario, String nombreEmpresa) {
         log.info("[EmailService] Despachando confirmaciÃƒÂ³n de cuenta a: {}", destinatario);
-        String asunto = "Ã‚Â¡Bienvenido a BÃƒÂEZ POS! - ConfirmaciÃƒÂ³n de cuenta";
+        String asunto = "Ã‚¡Bienvenido a BÃƒÂEZ POS! - ConfirmaciÃƒÂ³n de cuenta";
         String html = EmailTemplateBuilder.buildBienvenidaSinPassword(nombreUsuario, nombreEmpresa, destinatario);
         enviarCorreoInterno(destinatario, asunto, html);
     }

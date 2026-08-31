@@ -1,5 +1,5 @@
-﻿/**
- * BAEZ POS - MÃ“DULO DE GESTIÃ“N DE EGRESOS (SaaS Multi-tenant)
+/**
+ * BAEZ POS - MÓDULO DE GESTIÓN DE EGRESOS (SaaS Multi-tenant)
  * Alexander Baez - 2026
  */
 
@@ -7,7 +7,7 @@ let gastosGlobales = [];
 let proveedoresDisponibles = [];
 let debounceTimer = null;
 
-// Formateador estÃ¡ndar de moneda local (ARS)
+// Formateador estándar de moneda local (ARS)
 const fmtARS = new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency: 'ARS',
@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
         formGasto.addEventListener('submit', guardarGasto);
     }
 
-    // Regla de Negocio UI: Actualizar feedback contextual segÃºn el medio de pago
+    // Regla de Negocio UI: Actualizar feedback contextual según el medio de pago
     const metodoPagoGasto = document.getElementById('metodoPagoGasto');
     const deductFromBox = document.getElementById('deductFromBox');
 
@@ -37,11 +37,11 @@ document.addEventListener('DOMContentLoaded', () => {
             actualizarEstadoDeductFromBox(e.target.value, deductFromBox);
         });
 
-        // EjecuciÃ³n inicial para el estado por defecto del select
+        // Ejecución inicial para el estado por defecto del select
         actualizarEstadoDeductFromBox(metodoPagoGasto.value, deductFromBox);
     }
 
-    // Regla de Negocio UI: Mostrar/Ocultar campos de Proveedor segÃºn categorÃ­a
+    // Regla de Negocio UI: Mostrar/Ocultar campos de Proveedor según categoría
     const catGasto = document.getElementById('catGasto');
     if (catGasto) {
         catGasto.addEventListener('change', (e) => {
@@ -125,7 +125,7 @@ function actualizarEstadoDeductFromBox(metodoSeleccionado, elementSwitch) {
 
     if (esEfectivoCaja) {
         if (lblAyuda) {
-            lblAyuda.textContent = "Descuenta billetes del cajÃ³n actual";
+            lblAyuda.textContent = "Descuenta billetes del cajón actual";
             lblAyuda.className = "text-muted d-block mt-1 style-subtext";
         }
     } else {
@@ -201,7 +201,7 @@ async function cargarGastos(pagina = 0) {
                 <tr>
                     <td colspan="6" class="text-center text-danger p-4">
                         <i class="bi bi-exclamation-triangle fs-4 d-block mb-2"></i>
-                        No se pudieron obtener los datos. Verifique su conexiÃ³n o autenticaciÃ³n.
+                        No se pudieron obtener los datos. Verifique su conexión o autenticación.
                     </td>
                 </tr>`;
         }
@@ -228,7 +228,7 @@ function renderizarControlesPaginacion(totalItems, totalPaginas, inicio, fin) {
 
     let html = '';
 
-    // BotÃ³n Anterior
+    // Botón Anterior
     html += `
         <li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
             <button class="page-link" onclick="cambiarPaginaGastos(${paginaActual - 1})"><i class="bi bi-chevron-left"></i></button>
@@ -261,7 +261,7 @@ function renderizarControlesPaginacion(totalItems, totalPaginas, inicio, fin) {
         html += `<li class="page-item"><button class="page-link" onclick="cambiarPaginaGastos(${totalPaginas})">${totalPaginas}</button></li>`;
     }
 
-    // BotÃ³n Siguiente
+    // Botón Siguiente
     html += `
         <li class="page-item ${paginaActual === totalPaginas ? 'disabled' : ''}">
             <button class="page-link" onclick="cambiarPaginaGastos(${paginaActual + 1})"><i class="bi bi-chevron-right"></i></button>
@@ -325,7 +325,7 @@ function renderizarGastos(gastos) {
     const mapaCategorias = {
         'PROVEEDOR': { label: 'Proveedor', class: 'bg-light text-dark border border-secondary-subtle' },
         'SERVICIOS': { label: 'Servicios', class: 'bg-light text-dark border border-secondary-subtle' },
-        'LOGISTICA': { label: 'LogÃ­stica / Flete', class: 'bg-light text-dark border border-secondary-subtle' },
+        'LOGISTICA': { label: 'Logística / Flete', class: 'bg-light text-dark border border-secondary-subtle' },
         'SUELDOS': { label: 'Sueldos', class: 'bg-light text-dark border border-secondary-subtle' },
         'MANTENIMIENTO': { label: 'Mantenimiento', class: 'bg-light text-dark border border-secondary-subtle' },
         'CAJA_CHICA': { label: 'Caja Chica', class: 'bg-light text-dark border border-secondary-subtle' },
@@ -367,7 +367,7 @@ function renderizarGastos(gastos) {
             iconoMetodo = 'bi-journal-text text-danger';
         }
 
-        // LÃ“GICA DE BADGES SEPARADOS (EFECTIVO VS DIGITAL VS CTA CTE)
+        // LÓGICA DE BADGES SEPARADOS (EFECTIVO VS DIGITAL VS CTA CTE)
         const esEfectivoCaja = (g.paymentMethod === 'EFECTIVO_CAJA' || g.paymentMethod === 'EFECTIVO');
         const esCtaCte = (g.paymentMethod === 'CUENTA_CORRIENTE');
         const esCajaFuerte = (g.paymentMethod === 'EFECTIVO_CAJA_FUERTE');
@@ -377,9 +377,9 @@ function renderizarGastos(gastos) {
             if (esCtaCte) {
                 badgeCaja = '<span class="badge bg-light text-secondary border border-secondary-subtle ms-1" style="font-size: 10px;" title="Deuda con Proveedor"><i class="bi bi-clock-history me-1"></i>Deuda Cta. Cte</span>';
             } else if (esCajaFuerte) {
-                badgeCaja = '<span class="badge bg-light text-secondary border border-secondary-subtle ms-1" style="font-size: 10px;" title="Fondos de Caja Fuerte / Fuera de caja fÃ­sica"><i class="bi bi-safe me-1"></i>Caja Fuerte</span>';
+                badgeCaja = '<span class="badge bg-light text-secondary border border-secondary-subtle ms-1" style="font-size: 10px;" title="Fondos de Caja Fuerte / Fuera de caja física"><i class="bi bi-safe me-1"></i>Caja Fuerte</span>';
             } else if (esEfectivoCaja) {
-                badgeCaja = '<span class="badge bg-light text-secondary border border-secondary-subtle ms-1" style="font-size: 10px;" title="Restado del efectivo fÃ­sico en caja"><i class="bi bi-cash me-1"></i>Descuenta Caja</span>';
+                badgeCaja = '<span class="badge bg-light text-secondary border border-secondary-subtle ms-1" style="font-size: 10px;" title="Restado del efectivo físico en caja"><i class="bi bi-cash me-1"></i>Descuenta Caja</span>';
             } else if (g.paymentMethod === 'TRANSFERENCIA') {
                 badgeCaja = '<span class="badge bg-light text-secondary border border-secondary-subtle ms-1" style="font-size: 10px;" title="Pago por Transferencia Bancaria / QR"><i class="bi bi-bank me-1"></i>Digital / Banco</span>';
             }
@@ -451,8 +451,8 @@ async function guardarGasto(e) {
     if (isNaN(monto) || monto <= 0) {
         return Swal.fire({
             icon: 'warning',
-            title: 'Monto invÃ¡lido',
-            text: 'Ingrese un importe vÃ¡lido mayor a cero.',
+            title: 'Monto inválido',
+            text: 'Ingrese un importe válido mayor a cero.',
             confirmButtonColor: '#e11d48'
         });
     }
@@ -467,7 +467,7 @@ async function guardarGasto(e) {
         return Swal.fire({
             icon: 'warning',
             title: 'Proveedor Requerido',
-            text: 'Para registrar un gasto en Cuenta Corriente, debe seleccionar a quÃ© proveedor se le sumarÃ¡ la deuda.',
+            text: 'Para registrar un gasto en Cuenta Corriente, debe seleccionar a qué proveedor se le sumará la deuda.',
             confirmButtonColor: '#e11d48'
         });
     }
@@ -535,7 +535,7 @@ async function guardarGasto(e) {
             cargarGastos();
             cargarProveedoresParaSelect();
         } else {
-            let errorMsg = "OcurriÃ³ un problema al asentar el gasto.";
+            let errorMsg = "Ocurrió un problema al asentar el gasto.";
             try {
                 const errorData = await res.json();
                 errorMsg = errorData.message || errorData.error || errorMsg;
@@ -554,8 +554,8 @@ async function guardarGasto(e) {
 
 async function confirmarEliminarGasto(id) {
     const result = await Swal.fire({
-        title: 'Â¿Eliminar egreso?',
-        text: "Esta acciÃ³n anularÃ¡ el registro y recalcularÃ¡ los balances de caja.",
+        title: '¿Eliminar egreso?',
+        text: "Esta acción anulará el registro y recalculará los balances de caja.",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#e11d48',

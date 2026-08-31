@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public record SaleRequestDTO(
-        @NotEmpty(message = "La venta debe incluir al menos un Ã­tem")
+        @NotEmpty(message = "La venta debe incluir al menos un ítem")
         @Valid
         List<SaleItemRequestDTO> items,
 
@@ -22,7 +22,7 @@ public record SaleRequestDTO(
         @PositiveOrZero(message = "El porcentaje de recargo no puede ser negativo")
         BigDecimal surchargeRate,
 
-        @NotBlank(message = "El mÃ©todo de pago es obligatorio")
+        @NotBlank(message = "El método de pago es obligatorio")
         String paymentMethod,
 
         Long customerId,

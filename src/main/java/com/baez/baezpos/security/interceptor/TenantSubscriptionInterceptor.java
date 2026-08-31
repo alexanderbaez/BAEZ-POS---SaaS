@@ -23,7 +23,7 @@ import java.util.Set;
 /**
  * Interceptor de seguridad en tiempo real para mutaciones de negocio (POST, PUT, DELETE, PATCH).
  * Resuelve la vulnerabilidad de "Stateless Claim Lag" validando el estado y vigencia
- * de la suscripciÃ³n del tenant directamente contra la base de datos sin afectar el rendimiento de lectura.
+ * de la suscripción del tenant directamente contra la base de datos sin afectar el rendimiento de lectura.
  */
 @Component
 @RequiredArgsConstructor
@@ -55,7 +55,7 @@ public class TenantSubscriptionInterceptor implements HandlerInterceptor {
         // 2. Extraer contexto de seguridad autenticado
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
-            return true; // Seguridad global (Spring Security) se encargarÃ¡ del 401 si corresponde
+            return true; // Seguridad global (Spring Security) se encargará del 401 si corresponde
         }
 
         Object principal = authentication.getPrincipal();
@@ -73,7 +73,7 @@ public class TenantSubscriptionInterceptor implements HandlerInterceptor {
         // 4. Consulta directa y ligera a Base de Datos (Fuente de Verdad en Tiempo Real)
         Optional<Company> companyOpt = companyRepository.findById(companyId);
         if (companyOpt.isEmpty()) {
-            log.warn("Bloqueo de mutaciÃ³n: Empresa ID {} no encontrada en BD.", companyId);
+            log.warn("Bloqueo de mutación: Empresa ID {} no encontrada en BD.", companyId);
             sendSubscriptionForbiddenResponse(response, "Empresa no encontrada o dada de baja.");
             return false;
         }
@@ -84,12 +84,12 @@ public class TenantSubscriptionInterceptor implements HandlerInterceptor {
         boolean isActive = Boolean.TRUE.equals(company.getActive());
         boolean isExpired = company.getExpirationDate() != null && today.isAfter(company.getExpirationDate());
 
-        // 5. Guillotina de seguridad: Bloquear si la empresa estÃ¡ inhabilitada o expirada
+        // 5. Guillotina de seguridad: Bloquear si la empresa está inhabilitada o expirada
         if (!isActive || isExpired) {
-            log.warn("Bloqueo de mutaciÃ³n: Empresa ID '{}' intentÃ³ ejecutar '{} {}' con estado [Activa={}, Vencida={}].",
+            log.warn("Bloqueo de mutación: Empresa ID '{}' intentó ejecutar '{} {}' con estado [Activa={}, Vencida={}].",
                     companyId, method, request.getRequestURI(), isActive, isExpired);
 
-            sendSubscriptionForbiddenResponse(response, "SuscripciÃ³n inactiva o vencida");
+            sendSubscriptionForbiddenResponse(response, "Suscripción inactiva o vencida");
             return false;
         }
 

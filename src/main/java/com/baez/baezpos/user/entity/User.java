@@ -45,7 +45,7 @@ public class User extends BaseEntity {
     @Column(name = "security_pin", length = 255, nullable = true)
     private String securityPin;
 
-    // RELACIÃ“N MULTI-TENANT (SaaS)
+    // RELACIÓN MULTI-TENANT (SaaS)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = true)
     private Company company;

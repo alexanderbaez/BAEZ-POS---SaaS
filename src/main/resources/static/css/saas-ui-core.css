@@ -1,12 +1,12 @@
 ﻿/* ==========================================================================
-   BÃEZ POS - SAAS UI CORE DESIGN SYSTEM (Stripe / Vercel Standard)
+   BÁEZ POS - SAAS UI CORE DESIGN SYSTEM (Stripe / Vercel Standard)
    Alexander Baez - 2026
    ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-  /* TipografÃ­a y Fuentes */
+  /* Tipografía y Fuentes */
   --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
 
   /* Paleta Base Light Premium */
@@ -21,7 +21,7 @@
   --saas-text-muted: #64748b;
   --saas-text-subtle: #94a3b8;
 
-  /* Colores de Marca y AcciÃ³n */
+  /* Colores de Marca y Acción */
   --saas-primary: #2563eb;
   --saas-primary-hover: #1d4ed8;
   --saas-primary-subtle: #eff6ff;
@@ -42,7 +42,7 @@
   --saas-shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
   --saas-shadow-modal: 0 25px 50px -12px rgba(15, 23, 42, 0.18);
 
-  /* Radios de curvatura estÃ¡ndar */
+  /* Radios de curvatura estándar */
   --saas-radius-sm: 8px;
   --saas-radius-md: 12px;
   --saas-radius-lg: 16px;
@@ -52,7 +52,7 @@
 }
 
 /* ==========================================================================
-   RESETEOS GLOBALES Y TIPOGRAFÃA
+   RESETEOS GLOBALES Y TIPOGRAFÍA
    ========================================================================== */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -83,7 +83,7 @@ button, input, select, textarea {
   font-family: var(--font-sans) !important;
 }
 
-/* TipografÃ­a Tabular para NÃºmeros e Importes Financieros */
+/* Tipografía Tabular para Números e Importes Financieros */
 .amount-num, .font-mono-num {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
@@ -209,7 +209,7 @@ button, input, select, textarea {
 }
 
 /* ==========================================================================
-   INPUTS Y FORMULARIOS (DISEÃ‘O CLARO, CONTRASTE Ã“PTIMO Y FOCUS PREMIUM)
+   INPUTS Y FORMULARIOS (DISEÑO CLARO, CONTRASTE ÓPTIMO Y FOCUS PREMIUM)
    ========================================================================== */
 label.form-label, .form-label, .form-group label {
   color: #334155 !important;
@@ -558,7 +558,7 @@ body.login-page {
 }
 
 /* ==========================================================================
-   ESTADO VACÃO PROFESIONAL (.empty-state)
+   ESTADO VACÍO PROFESIONAL (.empty-state)
    ========================================================================== */
 .empty-state {
   display: flex;
@@ -660,7 +660,7 @@ body.login-page {
     width: 100% !important;
   }
 
-  /* RespiraciÃ³n MÃ³vil / Padding Seguro (MÃ­nimo 15px en telÃ©fono) */
+  /* Respiración Móvil / Padding Seguro (Mínimo 15px en teléfono) */
   .container-fluid {
     padding-left: 15px !important;
     padding-right: 15px !important;
@@ -676,7 +676,7 @@ body.login-page {
     padding: 15px !important;
   }
 
-  /* TÃ­tulos y TipografÃ­a Mobile */
+  /* Títulos y Tipografía Mobile */
   h1, .h1 { font-size: 1.4rem !important; }
   h2, .h2 { font-size: 1.25rem !important; }
   h3, .h3 { font-size: 1.1rem !important; }
@@ -754,7 +754,7 @@ body.login-page {
     margin-top: 12px;
   }
 
-  /* Modales en Mobile: RespiraciÃ³n y padding mÃ­nimo de 15px */
+  /* Modales en Mobile: Respiración y padding mínimo de 15px */
   .modal-dialog {
     margin: 15px !important;
   }
@@ -778,7 +778,7 @@ body.login-page {
     margin: 0 !important;
   }
 
-  /* Botones de acciÃ³n */
+  /* Botones de acción */
   .btn-action {
     width: 32px;
     height: 32px;
@@ -941,7 +941,7 @@ body.login-page {
 }
 
 /* ==========================================================================
-   ARQUITECTURA DE IMPRESIÃ“N NATIVA DUAL (POS80 / A4)
+   ARQUITECTURA DE IMPRESIÓN NATIVA DUAL (POS80 / A4)
    ========================================================================== */
 #print-section {
   display: none;
@@ -971,7 +971,7 @@ body.login-page {
     font-size: 10pt;
   }
 
-  /* Plantilla Ticket TÃ©rmico POS80 */
+  /* Plantilla Ticket Térmico POS80 */
   #print-section.layout-ticket,
   #print-section .layout-ticket,
   #print-section:has(.layout-ticket),
@@ -994,7 +994,7 @@ body.login-page {
 }
 
 /* ==========================================================================
-   TOOLTIPS & UTILIDADES DE INTERACCIÃ“N
+   TOOLTIPS & UTILIDADES DE INTERACCIÓN
    ========================================================================== */
 .cursor-pointer {
   cursor: pointer;

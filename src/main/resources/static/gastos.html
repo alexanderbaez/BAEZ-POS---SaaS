@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
   <link rel="icon" type="image/x-icon" href="/logo.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BÃEZ POS - Control Profesional de Gastos</title>
+    <title>BÁEZ POS - Control Profesional de Gastos</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
@@ -21,7 +21,7 @@
             <button type="button" id="sidebarCollapse" class="btn btn-outline-secondary d-md-none me-2">
                 <i class="bi bi-list"></i>
             </button>
-            <span class="navbar-brand fw-bold text-slate-700 fs-6 d-none d-md-inline">MÃ“DULO FINANCIERO</span>
+            <span class="navbar-brand fw-bold text-slate-700 fs-6 d-none d-md-inline">MÓDULO FINANCIERO</span>
             <div class="ms-auto d-flex align-items-center">
                 <div class="text-end me-3">
                     <div id="userName" class="fw-semibold text-dark text-capitalize fs-6">Usuario</div>
@@ -35,7 +35,7 @@
     </nav>
 
     <div class="container-fluid p-3 p-md-4">
-        <!-- Encabezado con BotÃ³n de AcciÃ³n -->
+        <!-- Encabezado con Botón de Acción -->
         <div class="row mb-4 align-items-center justify-content-between g-3">
             <div class="col-12 col-md-7">
                 <div class="d-flex align-items-center gap-2">
@@ -43,8 +43,8 @@
                         <i class="bi bi-wallet2 fs-4"></i>
                     </div>
                     <div>
-                        <h3 class="fw-bold text-dark mb-0 fs-4">GestiÃ³n de Gastos y Egresos</h3>
-                        <p class="text-muted small mb-0">Control analÃ­tico de costos operativos, cajas chicas y compras a proveedores.</p>
+                        <h3 class="fw-bold text-dark mb-0 fs-4">Gestión de Gastos y Egresos</h3>
+                        <p class="text-muted small mb-0">Control analítico de costos operativos, cajas chicas y compras a proveedores.</p>
                     </div>
                 </div>
             </div>
@@ -74,7 +74,7 @@
                         <i class="bi bi-truck text-primary fs-5"></i>
                     </div>
                     <div class="fs-3 amount-num text-primary mt-1" id="txtTotalProveedores">$0,00</div>
-                    <small class="text-muted mt-1 d-block">MercaderÃ­a e Insumos directos</small>
+                    <small class="text-muted mt-1 d-block">Mercadería e Insumos directos</small>
                 </div>
             </div>
             <div class="col-12 col-md-4">
@@ -101,12 +101,12 @@
                     <input type="date" id="fechaHasta" class="form-control form-control-sm border-0 bg-light">
                 </div>
                 <div class="col-12 col-md-2">
-                    <label class="small fw-bold text-muted text-uppercase mb-1 d-block" for="filtroCategoria">CategorÃ­a:</label>
+                    <label class="small fw-bold text-muted text-uppercase mb-1 d-block" for="filtroCategoria">Categoría:</label>
                     <select id="filtroCategoria" class="form-select form-select-sm border-0 bg-light">
                         <option value="">Todas</option>
                         <option value="PROVEEDOR">Proveedor</option>
                         <option value="SERVICIOS">Servicios</option>
-                        <option value="LOGISTICA">Fletes / LogÃ­stica</option>
+                        <option value="LOGISTICA">Fletes / Logística</option>
                         <option value="SUELDOS">Sueldos</option>
                         <option value="MANTENIMIENTO">Mantenimiento</option>
                         <option value="CAJA_CHICA">Caja Chica</option>
@@ -122,7 +122,7 @@
                     </select>
                 </div>
                 <div class="col-12 col-md-2">
-                    <label class="small fw-bold text-muted text-uppercase mb-1 d-block" for="filtroTexto">BÃºsqueda:</label>
+                    <label class="small fw-bold text-muted text-uppercase mb-1 d-block" for="filtroTexto">Búsqueda:</label>
                     <input type="text" id="filtroTexto" class="form-control form-control-sm border-0 bg-light" placeholder="Concepto...">
                 </div>
                 <div class="col-6 col-md-1">
@@ -145,8 +145,8 @@
                     <thead>
                     <tr>
                         <th class="ps-3">FECHA / HORA</th>
-                        <th>DESCRIPCIÃ“N Y REF.</th>
-                        <th class="d-none d-sm-table-cell">CATEGORÃA</th>
+                        <th>DESCRIPCIÓN Y REF.</th>
+                        <th class="d-none d-sm-table-cell">CATEGORÍA</th>
                         <th class="d-none d-md-table-cell">MEDIO / ORIGEN</th>
                         <th class="text-end">MONTO</th>
                         <th class="text-center pe-3">ACCIONES</th>
@@ -159,7 +159,7 @@
             </div>
             <div class="card-footer bg-white border-0 py-3 px-4 d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
                 <span class="text-muted small" id="infoPaginacion">Mostrando 0 gastos</span>
-                <nav aria-label="NavegaciÃ³n de gastos">
+                <nav aria-label="Navegación de gastos">
                     <ul class="pagination pagination-sm m-0" id="paginacionContenedor"></ul>
                 </nav>
             </div>
@@ -178,7 +178,7 @@
                         </div>
                         <div>
                             <h5 class="modal-title fw-bold text-dark m-0">Registrar Nuevo Egreso de Dinero</h5>
-                            <small class="text-muted">Control y auditorÃ­a de egresos operativos y compras</small>
+                            <small class="text-muted">Control y auditoría de egresos operativos y compras</small>
                         </div>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
@@ -204,15 +204,15 @@
                             </div>
                         </div>
 
-                        <!-- FILA 2: CategorÃ­a/Tipo de Gasto y Medio de Pago -->
+                        <!-- FILA 2: Categoría/Tipo de Gasto y Medio de Pago -->
                         <div class="row g-3 mb-4">
                             <div class="col-12 col-md-6">
-                                <label class="form-label text-dark fw-bold small text-uppercase mb-2">CategorÃ­a / Tipo de Gasto *</label>
+                                <label class="form-label text-dark fw-bold small text-uppercase mb-2">Categoría / Tipo de Gasto *</label>
                                 <select id="catGasto" class="form-select form-select-lg rounded-3 shadow-sm border" required>
                                     <option value="CAJA_CHICA">Caja Chica (Limpieza, insumos diarios)</option>
                                     <option value="PROVEEDOR">Pago / Compra a Proveedor</option>
                                     <option value="SERVICIOS">Servicios (Luz, Agua, Internet, Gas)</option>
-                                    <option value="LOGISTICA">Fletes / LogÃ­stica / Combustible</option>
+                                    <option value="LOGISTICA">Fletes / Logística / Combustible</option>
                                     <option value="SUELDOS">Sueldos / Adelantos de Personal</option>
                                     <option value="MANTENIMIENTO">Mantenimiento / Reparaciones</option>
                                     <option value="VARIOS_RETIRO">Retiro Personal / Varios (Comida, no operativo)</option>
@@ -221,13 +221,13 @@
                             <div class="col-12 col-md-6">
                                 <label class="form-label text-dark fw-bold small text-uppercase mb-2">Origen / Medio de Pago *</label>
                                 <select id="metodoPagoGasto" class="form-select form-select-lg rounded-3 shadow-sm border" required>
-                                    <option value="EFECTIVO_CAJA">Efectivo (Sale del cajÃ³n diario)</option>
+                                    <option value="EFECTIVO_CAJA">Efectivo (Sale del cajón diario)</option>
                                     <option value="TRANSFERENCIA">Transferencia Bancaria / QR Digital</option>
                                 </select>
                             </div>
                         </div>
 
-                        <!-- SECCIÃ“N DINÃMICA DE PROVEEDOR (visible cuando CategorÃ­a = PROVEEDOR) -->
+                        <!-- SECCIÓN DINÁMICA DE PROVEEDOR (visible cuando Categoría = PROVEEDOR) -->
                         <div class="row g-3 mb-4 d-none" id="seccionProveedor">
                             <div class="col-12 col-md-6">
                                 <label class="form-label text-primary fw-bold small text-uppercase mb-2"><i class="bi bi-truck me-1"></i>Proveedor Asignado *</label>
@@ -241,10 +241,10 @@
                             </div>
                         </div>
 
-                        <!-- FILA 3: Concepto / DescripciÃ³n ampliada (textarea limpio) -->
+                        <!-- FILA 3: Concepto / Descripción ampliada (textarea limpio) -->
                         <div class="mb-4">
-                            <label class="form-label text-dark fw-bold small text-uppercase mb-2">Concepto / DescripciÃ³n Ampliada *</label>
-                            <textarea id="descGasto" class="form-control rounded-3 p-3 shadow-sm border" rows="3" placeholder="Detalla el motivo del egreso (ej: Compra de bolsas para mostrador, pago mensual de servicio elÃ©ctrico...)" required autocomplete="off"></textarea>
+                            <label class="form-label text-dark fw-bold small text-uppercase mb-2">Concepto / Descripción Ampliada *</label>
+                            <textarea id="descGasto" class="form-control rounded-3 p-3 shadow-sm border" rows="3" placeholder="Detalla el motivo del egreso (ej: Compra de bolsas para mostrador, pago mensual de servicio eléctrico...)" required autocomplete="off"></textarea>
                         </div>
 
                         <!-- Referencia Adicional -->
@@ -253,7 +253,7 @@
                             <input type="text" id="refComprobante" class="form-control p-2.5 rounded-3 bg-light border" placeholder="Ej: Recibo NÂ° 98124, Ticket fiscal...">
                         </div>
 
-                        <!-- TOGGLE CAJA CHICA DINÃMICO -->
+                        <!-- TOGGLE CAJA CHICA DINÁMICO -->
                         <div class="p-3 bg-light rounded-3 border" id="boxToggleCaja">
                             <div class="form-check form-switch m-0 d-flex align-items-center">
                                 <input class="form-check-input fs-5 me-2" type="checkbox" role="switch" id="deductFromBox" checked>
@@ -262,7 +262,7 @@
                                 </label>
                             </div>
                             <small id="lblAyudaDeduct" class="text-muted d-block mt-1 style-subtext" style="font-size: 0.78rem;">
-                                Descuenta billetes del cajÃ³n actual
+                                Descuenta billetes del cajón actual
                             </small>
                         </div>
                     </div>

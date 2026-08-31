@@ -1,7 +1,7 @@
-﻿-- ==============================================================================
--- SCRIPT DE MIGRACIÃ“N DE ESQUEMA: MÃ“DULO DE COMPRAS (Ã“RDENES DE COMPRA)
+-- ==============================================================================
+-- SCRIPT DE MIGRACIÓN DE ESQUEMA: MÓDULO DE COMPRAS (ÓRDENES DE COMPRA)
 -- Base de Datos: MySQL (Aiven)
--- Entorno: ProducciÃ³n (Render)
+-- Entorno: Producción (Render)
 -- ==============================================================================
 
 -- 1. Crear tabla 'purchase_orders'

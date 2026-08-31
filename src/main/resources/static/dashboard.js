@@ -1,5 +1,5 @@
 ﻿/**
- * BÃEZ POS - SAAS DASHBOARD (Vista Gerencial & AnÃ¡lisis Detallado)
+ * BÁEZ POS - SAAS DASHBOARD (Vista Gerencial & Análisis Detallado)
  * Alexander Baez - 2026
  */
 
@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         fechaEl.innerText = dtFormatFechaCompleta.format(new Date());
     }
 
-    // 2. Configurar listener para resize de Chart.js al cambiar de pestaÃ±as
+    // 2. Configurar listener para resize de Chart.js al cambiar de pestañas
     const tabGerencialBtn = document.getElementById('tab-gerencial-btn');
     if (tabGerencialBtn) {
         tabGerencialBtn.addEventListener('shown.bs.tab', () => {
@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // 3. Inicializar preset por defecto en AnÃ¡lisis Detallado (Por defecto: Hoy)
+    // 3. Inicializar preset por defecto en Análisis Detallado (Por defecto: Hoy)
     aplicarPresetFecha('HOY');
 
     // 4. Inicializar tooltips de Bootstrap
@@ -246,9 +246,9 @@ function renderizarTopProductos(ventas) {
 
     if (listaOrdenada.length === 0) {
         if (typeof renderEmptyState === 'function') {
-            renderEmptyState('tablaTopProductos', 'bi-trophy', 'Sin ventas este mes', 'Los productos mÃ¡s vendidos aparecerÃ¡n aquÃ­ automÃ¡ticamente.', '', 3);
+            renderEmptyState('tablaTopProductos', 'bi-trophy', 'Sin ventas este mes', 'Los productos más vendidos aparecerán aquí automáticamente.', '', 3);
         } else {
-            tbody.innerHTML = '<tr><td colspan="3" class="text-center p-4 text-muted">Sin registros de ventas en este perÃ­odo.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center p-4 text-muted">Sin registros de ventas en este período.</td></tr>';
         }
         return;
     }
@@ -304,13 +304,13 @@ function renderizarTurnosCajaPeriodo(sessions, rangoTexto) {
             <tr>
                 <td colspan="8" class="text-center p-4 text-muted">
                     <i class="bi bi-inbox fs-4 d-block mb-1 text-secondary"></i>
-                    No se registraron turnos de caja en el perÃ­odo seleccionado.
+                    No se registraron turnos de caja en el período seleccionado.
                 </td>
             </tr>`;
         return;
     }
 
-    // Ordenar turnos: los mÃ¡s recientes arriba
+    // Ordenar turnos: los más recientes arriba
     const turnosOrdenados = [...lista].sort((a, b) => {
         const fa = parsearFechaLocal(a.openedAt)?.getTime() || 0;
         const fb = parsearFechaLocal(b.openedAt)?.getTime() || 0;
@@ -335,7 +335,7 @@ function renderizarTurnosCajaPeriodo(sessions, rangoTexto) {
         const cobrosEfe = parseFloat(s.totalCustomerPayments || 0);
         const gastosEfe = Math.abs(parseFloat(s.totalExpenses || 0));
 
-        // FÃ³rmula aislada estricta: Total FÃ­sico Esperado = Fondo + Ventas + Cobros - Gastos
+        // Fórmula aislada estricta: Total Físico Esperado = Fondo + Ventas + Cobros - Gastos
         const totalFisicoEsperado = fondoInicial + ventasEfe + cobrosEfe - gastosEfe;
 
         const declarado = parseFloat(s.declaredAmount || 0);
@@ -355,7 +355,7 @@ function renderizarTurnosCajaPeriodo(sessions, rangoTexto) {
             totalCierreHtml = `
                 <div class="${claseEsperado} amount-num fs-6">${fmtARS.format(totalFisicoEsperado)}</div>
                 <small class="${totalFisicoEsperado < 0 ? 'text-danger fw-semibold' : 'text-success'} d-block" style="font-size: 0.72rem;">
-                    <i class="bi bi-lightning-charge me-1"></i>${totalFisicoEsperado < 0 ? 'Desfase Negativo' : 'Esperado en cajÃ³n'}
+                    <i class="bi bi-lightning-charge me-1"></i>${totalFisicoEsperado < 0 ? 'Desfase Negativo' : 'Esperado en cajón'}
                 </small>
                 <small class="text-muted d-block" style="font-size: 0.68rem;">Incluye fondo de cambio inicial</small>
             `;
@@ -462,7 +462,7 @@ function renderizarUltimosMovimientos(ventas, gastos) {
 
     if (ultimos5.length === 0) {
         if (typeof renderEmptyState === 'function') {
-            renderEmptyState('tablaUltimosMovimientos', 'bi-arrow-left-right', 'Sin movimientos registrados', 'Las transacciones recientes se reflejarÃ¡n aquÃ­.', '', 3);
+            renderEmptyState('tablaUltimosMovimientos', 'bi-arrow-left-right', 'Sin movimientos registrados', 'Las transacciones recientes se reflejarán aquí.', '', 3);
         } else {
             tbody.innerHTML = '<tr><td colspan="3" class="text-center p-4 text-muted">No hay movimientos recientes.</td></tr>';
         }
@@ -477,7 +477,7 @@ function renderizarUltimosMovimientos(ventas, gastos) {
         const icono = esVenta ? 'bi-cart-check-fill text-success' : 'bi-wallet2 text-danger';
         const badgeBg = esVenta ? 'bg-success bg-opacity-10' : 'bg-danger bg-opacity-10';
 
-        // CÃ³digo de colores financiero: Gasto con deducciÃ³n de caja en rojo fuerte
+        // Código de colores financiero: Gasto con deducción de caja en rojo fuerte
         const montoTexto = esVenta ? `+${fmtARS.format(m.monto)}` : `-${fmtARS.format(m.monto)}`;
         const montoClase = esVenta ? 'text-success fw-bold' : (m.deductFromBox ? 'text-danger fw-bold' : 'text-danger');
 
@@ -518,7 +518,7 @@ function renderizarUltimosMovimientos(ventas, gastos) {
 }
 
 // ===================================================================
-// GRÃFICO CENTRAL DE EVOLUCIÃ“N (CHART.JS)
+// GRÁFICO CENTRAL DE EVOLUCIÓN (CHART.JS)
 // ===================================================================
 async function cargarGraficoSemanal() {
     const canvas = document.getElementById('chartSemanal');
@@ -626,12 +626,12 @@ async function cargarGraficoSemanal() {
         });
 
     } catch (err) {
-        console.error("Error al renderizar grÃ¡fico semanal:", err);
+        console.error("Error al renderizar gráfico semanal:", err);
     }
 }
 
 // ===================================================================
-// TAB 2: ANÃLISIS DETALLADO (PRESETS & CONSULTA DE RANGO HISTÃ“RICO)
+// TAB 2: ANÁLISIS DETALLADO (PRESETS & CONSULTA DE RANGO HISTÓRICO)
 // ===================================================================
 function aplicarPresetFecha(preset) {
     const hoy = new Date();
@@ -692,7 +692,7 @@ async function consultarPorFechas() {
     const hastaVal = elHasta.value;
 
     if (!desdeVal || !hastaVal) {
-        return Swal.fire('AtenciÃ³n', 'Por favor selecciona ambas fechas (Desde y Hasta)', 'warning');
+        return Swal.fire('Atención', 'Por favor selecciona ambas fechas (Desde y Hasta)', 'warning');
     }
 
     if (desdeVal > hastaVal) {
@@ -700,20 +700,20 @@ async function consultarPorFechas() {
     }
 
     try {
-        // Consultas paralelas para el anÃ¡lisis detallado
+        // Consultas paralelas para el análisis detallado
         const [resBox, resVentasRango, resGastos] = await Promise.allSettled([
             apiFetch(`/sales/report/box?from=${desdeVal}&to=${hastaVal}`),
             apiFetch(`/sales?desde=${desdeVal}&hasta=${hastaVal}`),
             apiFetch('/expenses')
         ]);
 
-        // 1. MÃ©tricas de Reporte / Box (Fuente de Verdad Financiera - Flujo de Caja Puro)
+        // 1. Métricas de Reporte / Box (Fuente de Verdad Financiera - Flujo de Caja Puro)
         if (resBox.status === 'fulfilled' && resBox.value && resBox.value.ok) {
             const dataBox = await resBox.value.json();
 
             const f1 = desdeVal.split('-').reverse().join('/');
             const f2 = hastaVal.split('-').reverse().join('/');
-            const textoPeriodo = (f1 === f2) ? `Jornada del ${f1}` : `PerÃ­odo del ${f1} al ${f2}`;
+            const textoPeriodo = (f1 === f2) ? `Jornada del ${f1}` : `Período del ${f1} al ${f2}`;
 
             if (dataBox.todaySessions) {
                 renderizarTurnosCajaPeriodo(dataBox.todaySessions, textoPeriodo);
@@ -748,7 +748,7 @@ async function consultarPorFechas() {
             // 1. Saldo Digital Neto (Transferencias / QR)
             const saldoDigitalNeto = netTransfer;
 
-            // 2. Saldo FÃ­sico Real del ÃšLTIMO turno (evita duplicaciones por arrastre de fondos entre turnos)
+            // 2. Saldo Físico Real del ÚLTIMO turno (evita duplicaciones por arrastre de fondos entre turnos)
             let saldoFisicoReal = netCash; // 3. Fallback: si no hay turnos registrados, Efectivo Neto
 
             const listaTurnos = Array.isArray(dataBox.todaySessions) ? dataBox.todaySessions : [];
@@ -777,10 +777,10 @@ async function consultarPorFechas() {
                 }
             }
 
-            // 4. Suma e InyecciÃ³n: Liquidez Total = Saldo FÃ­sico Real (Ãšltimo Turno) + Saldo Digital Neto
+            // 4. Suma e Inyección: Liquidez Total = Saldo Físico Real (Último Turno) + Saldo Digital Neto
             const liquidezTotal = saldoFisicoReal + saldoDigitalNeto;
 
-            // Poblar mÃ©tricas principales (Fila 1)
+            // Poblar métricas principales (Fila 1)
             setElementText('txtLiquidezTotal', fmtARS.format(liquidezTotal));
             setElementText('txtRecaudacionMes', fmtARS.format(periodSales));
             setElementText('txtTotalGastosRango', fmtARS.format(totalGastosPeriodo));
@@ -795,19 +795,19 @@ async function consultarPorFechas() {
             setElementText('txtFiadosCobradosRango', `+${fmtARS.format(cashPayments)}`);
             setElementText('txtFiadoRango', fmtARS.format(creditSales));
 
-            // InyecciÃ³n del desglose detallado en Efectivo Caja:
+            // Inyección del desglose detallado en Efectivo Caja:
             const elDesgloseEfe = document.getElementById('desgloseEfectivoRango') || document.getElementById('countEfectivoRango');
             if (elDesgloseEfe) {
                 elDesgloseEfe.innerHTML = `<small class="text-muted d-block" style="font-size: 0.78rem;">Ventas: ${fmtARS.format(cashSales)} | Cobros Cta: ${fmtARS.format(cashPayments)} | Gastos: -${fmtARS.format(cashExpenses)}</small>`;
             }
 
-            // InyecciÃ³n del desglose detallado en Transferencias:
+            // Inyección del desglose detallado en Transferencias:
             const elDesgloseTra = document.getElementById('desgloseTransfRango') || document.getElementById('countTransfRango');
             if (elDesgloseTra) {
                 elDesgloseTra.innerHTML = `<small class="text-muted d-block" style="font-size: 0.78rem;">Ventas: ${fmtARS.format(transferSales)} | Cobros Cta: ${fmtARS.format(transferPayments)} | Gastos: -${fmtARS.format(transferExpenses)}</small>`;
             }
 
-            // InyecciÃ³n del desglose detallado en Fiados Cobrados:
+            // Inyección del desglose detallado en Fiados Cobrados:
             const elDesgloseFiados = document.getElementById('desgloseFiadosCobradosRango') || document.getElementById('countFiadosCobradosRango');
             if (elDesgloseFiados) {
                 elDesgloseFiados.innerHTML = `<small class="text-success-emphasis d-block fw-semibold" style="font-size: 0.78rem;"><i class="bi bi-check2-circle me-1"></i>Cobros Cta. Cte. ingresados</small>`;
@@ -854,7 +854,7 @@ function renderizarEgresosCategorias(gastos) {
     const NOMBRES_CAT = {
         'PROVEEDOR': 'Pago a Proveedor',
         'SERVICIOS': 'Servicios (Luz, Gas, Internet)',
-        'LOGISTICA': 'Fletes y LogÃ­stica',
+        'LOGISTICA': 'Fletes y Logística',
         'SUELDOS': 'Sueldos y Adelantos',
         'MANTENIMIENTO': 'Mantenimiento / Insumos',
         'CAJA_CHICA': 'Caja Chica',
@@ -904,7 +904,7 @@ function renderizarEgresosCategorias(gastos) {
 }
 
 // ===================================================================
-// ALERTAS DE INVENTARIO CRÃTICO
+// ALERTAS DE INVENTARIO CRÍTICO
 // ===================================================================
 async function cargarAlertasStock() {
     const container = document.getElementById('listaAlertasStock');
@@ -932,7 +932,7 @@ async function cargarAlertasStock() {
             container.innerHTML = `
                 <div class="text-center py-4">
                     <i class="bi bi-check-circle-fill fs-2 text-success opacity-75"></i>
-                    <p class="mt-2 mb-0 small text-muted">Stock en niveles Ã³ptimos.</p>
+                    <p class="mt-2 mb-0 small text-muted">Stock en niveles óptimos.</p>
                 </div>`;
             return;
         }
@@ -948,7 +948,7 @@ async function cargarAlertasStock() {
                     <span class="d-block fw-semibold text-dark small text-truncate">
                         ${escapeHTML(p.name || 'Producto')}
                     </span>
-                    <small class="text-muted" style="font-size: 0.72rem;">MÃ­nimo: ${minNum} u.</small>
+                    <small class="text-muted" style="font-size: 0.72rem;">Mínimo: ${minNum} u.</small>
                 </div>
                 <span class="badge ${esMuyCritico ? 'bg-danger text-white' : 'bg-warning-subtle text-warning-emphasis border border-warning-subtle'} rounded-pill px-2.5 py-1">
                     ${stockNum} u.
@@ -995,7 +995,7 @@ function inicializarTooltips() {
     }
 }
 
-// ExposiciÃ³n al scope global para eventos onclick/onchange en el DOM
+// Exposición al scope global para eventos onclick/onchange en el DOM
 window.aplicarPresetFecha = aplicarPresetFecha;
 window.consultarPorFechas = consultarPorFechas;
 window.inicializarTooltips = inicializarTooltips;

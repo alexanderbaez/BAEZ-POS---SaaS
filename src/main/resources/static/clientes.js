@@ -1,5 +1,5 @@
 ﻿/**
- * BÃEZ POS - GESTIÃ“N DE CLIENTES Y CUENTA CORRIENTE (LIBRETA)
+ * BÁEZ POS - GESTIÓN DE CLIENTES Y CUENTA CORRIENTE (LIBRETA)
  * Alexander Baez - 2026
  * Refactorizado: Seguridad XSS, Manejo defensivo de estado, soporte para pesables (isFractional) e interoperabilidad SaaS
  */
@@ -41,7 +41,7 @@ function formatCurrency(amount) {
 }
 
 /**
- * Formatea la cantidad considerando si el producto se vende por fracciÃ³n/peso o por unidad entera.
+ * Formatea la cantidad considerando si el producto se vende por fracción/peso o por unidad entera.
  */
 function formatQuantity(quantity, isFractional) {
     const qty = parseFloat(quantity) || 0;
@@ -56,7 +56,7 @@ function formatQuantity(quantity, isFractional) {
 }
 
 // ==========================================
-// 1. INICIALIZACIÃ“N
+// 1. INICIALIZACIÓN
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
     try {
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // Listener para filtros de bÃºsqueda dinÃ¡mica
+    // Listener para filtros de búsqueda dinámica
     const buscarInput = document.getElementById('buscarCliente');
     const filtroDeudores = document.getElementById('filtroDeudores');
 
@@ -91,7 +91,7 @@ async function cargarDatosEmpresa() {
 }
 
 // ==========================================
-// 2. LÃ“GICA Y CARGA DE CLIENTES (PAGINADA)
+// 2. LÓGICA Y CARGA DE CLIENTES (PAGINADA)
 // ==========================================
 
 async function cargarClientes(pagina = 0) {
@@ -156,7 +156,7 @@ function renderizarClientes(clientes) {
         tr.innerHTML = `
             <td class="ps-3">
                 <div class="fw-bold text-dark">${sanitizeHTML(c.name)}</div>
-                <small class="text-muted d-block" style="font-size: 0.75rem;">LÃ­mite: ${formatCurrency(c.creditLimit)}</small>
+                <small class="text-muted d-block" style="font-size: 0.75rem;">Límite: ${formatCurrency(c.creditLimit)}</small>
             </td>
             <td class="text-muted small d-none d-md-table-cell">${c.dniCuit ? sanitizeHTML(c.dniCuit) : '<span class="opacity-25">-</span>'}</td>
             <td class="d-none d-sm-table-cell">
@@ -229,7 +229,7 @@ function renderizarControlesPaginacion(totalItems, totalPaginas, inicio, fin) {
 
     let html = '';
 
-    // BotÃ³n Anterior
+    // Botón Anterior
     html += `
         <li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
             <button class="page-link" onclick="cambiarPaginaClientes(${paginaActual - 1})"><i class="bi bi-chevron-left"></i></button>
@@ -262,7 +262,7 @@ function renderizarControlesPaginacion(totalItems, totalPaginas, inicio, fin) {
         html += `<li class="page-item"><button class="page-link" onclick="cambiarPaginaClientes(${totalPaginas})">${totalPaginas}</button></li>`;
     }
 
-    // BotÃ³n Siguiente
+    // Botón Siguiente
     html += `
         <li class="page-item ${paginaActual === totalPaginas ? 'disabled' : ''}">
             <button class="page-link" onclick="cambiarPaginaClientes(${paginaActual + 1})"><i class="bi bi-chevron-right"></i></button>
@@ -354,7 +354,7 @@ async function guardarCliente() {
         creditLimit: parseFloat(document.getElementById('custLimite').value) || 0
     };
 
-    if (!data.name) return Swal.fire('AtenciÃ³n', 'El nombre del cliente es obligatorio', 'warning');
+    if (!data.name) return Swal.fire('Atención', 'El nombre del cliente es obligatorio', 'warning');
 
     const url = id ? `${API_CUSTOMERS}/${id}` : API_CUSTOMERS;
     const method = id ? 'PUT' : 'POST';
@@ -367,7 +367,7 @@ async function guardarCliente() {
 
         if (resp && resp.ok) {
             if (modalClienteInstance) modalClienteInstance.hide();
-            Swal.fire({ icon: 'success', title: 'Â¡Ã‰xito!', text: 'Cliente guardado correctamente.', timer: 1500, showConfirmButton: false });
+            Swal.fire({ icon: 'success', title: '¡Ã‰xito!', text: 'Cliente guardado correctamente.', timer: 1500, showConfirmButton: false });
             await cargarClientes();
         } else if (resp) {
             const errData = await resp.json().catch(() => ({}));
@@ -375,19 +375,19 @@ async function guardarCliente() {
         }
     } catch (err) {
         console.error("Error al guardar cliente:", err);
-        Swal.fire('Error', 'Error de conexiÃ³n con el servidor', 'error');
+        Swal.fire('Error', 'Error de conexión con el servidor', 'error');
     }
 }
 
 async function eliminarCliente(id, nombre) {
     const result = await Swal.fire({
-        title: 'Â¿Eliminar cliente?',
-        html: `Â¿EstÃ¡s seguro de que deseas eliminar a <b>${sanitizeHTML(nombre)}</b>?<br><small class="text-muted">Esta acciÃ³n no se puede deshacer.</small>`,
+        title: '¿Eliminar cliente?',
+        html: `¿Estás seguro de que deseas eliminar a <b>${sanitizeHTML(nombre)}</b>?<br><small class="text-muted">Esta acción no se puede deshacer.</small>`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#dc3545',
         cancelButtonColor: '#6c757d',
-        confirmButtonText: 'SÃ­, eliminar',
+        confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar',
         reverseButtons: true
     });
@@ -397,7 +397,7 @@ async function eliminarCliente(id, nombre) {
             const resp = await apiFetch(`${API_CUSTOMERS}/${id}`, { method: 'DELETE' });
 
             if (resp && resp.ok) {
-                Swal.fire({ icon: 'success', title: 'Â¡Eliminado!', text: 'El cliente ha sido eliminado.', timer: 1500, showConfirmButton: false });
+                Swal.fire({ icon: 'success', title: '¡Eliminado!', text: 'El cliente ha sido eliminado.', timer: 1500, showConfirmButton: false });
                 await cargarClientes();
             } else if (resp) {
                 const errData = await resp.json().catch(() => ({}));
@@ -405,7 +405,7 @@ async function eliminarCliente(id, nombre) {
             }
         } catch (err) {
             console.error("Error al eliminar cliente:", err);
-            Swal.fire('Error', 'OcurriÃ³ un problema de conexiÃ³n con el servidor.', 'error');
+            Swal.fire('Error', 'Ocurrió un problema de conexión con el servidor.', 'error');
         }
     }
 }
@@ -701,7 +701,7 @@ async function procesarFormularioCobro() {
 
     const monto = parseFloat(montoVal);
     if (isNaN(monto) || monto <= 0) {
-        return Swal.fire('AtenciÃ³n', 'Por favor ingresÃ¡ un monto vÃ¡lido mayor a $0', 'warning');
+        return Swal.fire('Atención', 'Por favor ingresá un monto válido mayor a $0', 'warning');
     }
 
     const btnConfirmar = document.getElementById('btnConfirmarCobro');
@@ -771,7 +771,7 @@ async function procesarFormularioCobro() {
         }
     } catch (err) {
         console.error("Error en cobro de libreta:", err);
-        Swal.fire('Error de red', 'OcurriÃ³ un fallo de conexiÃ³n al registrar el cobro.', 'error');
+        Swal.fire('Error de red', 'Ocurrió un fallo de conexión al registrar el cobro.', 'error');
     } finally {
         if (btnConfirmar) {
             btnConfirmar.disabled = false;
@@ -786,7 +786,7 @@ function registrarPago(id) {
 }
 
 // ==========================================
-// 6. UTILIDADES E INTEGRACIÃ“N CON WHATSAPP
+// 6. UTILIDADES E INTEGRACIÓN CON WHATSAPP
 // ==========================================
 
 function toggleDetalle(index) {
@@ -804,12 +804,12 @@ function toggleDetalle(index) {
 
 function compartirWhatsApp(nombreCliente, telefono, fecha, total, items = [], descuento = 0, recargo = 0, porcentajeRecargo = 0, subtotal = 0) {
     if (!telefono || telefono === "null" || telefono === "") {
-        return Swal.fire('AtenciÃ³n', 'El cliente no tiene un telÃ©fono registrado.', 'warning');
+        return Swal.fire('Atención', 'El cliente no tiene un teléfono registrado.', 'warning');
     }
 
     const local = DATOS_EMPRESA?.name?.toUpperCase() || "BAEZ POS";
     const direccion = DATOS_EMPRESA?.address || "";
-    const mensajePie = DATOS_EMPRESA?.ticketMessage || 'Â¡Muchas gracias por su compra!';
+    const mensajePie = DATOS_EMPRESA?.ticketMessage || '¡Muchas gracias por su compra!';
 
     const totalNum = parseFloat(total) || 0;
     const descNum = parseFloat(descuento) || 0;
@@ -854,7 +854,7 @@ function compartirWhatsApp(nombreCliente, telefono, fecha, total, items = [], de
     texto += `------------------------------------------\n\n`;
 
     texto += `ðŸ’¬ _${mensajePie}_\n\n`;
-    texto += `*Â¡Tu saldo ha sido actualizado en la libreta!*\n\n`;
+    texto += `*¡Tu saldo ha sido actualizado en la libreta!*\n\n`;
     texto += `âœ¨ _Generado por BaezPOS_`;
 
     const numLimpio = telefono.replace(/\D/g, '');
@@ -862,21 +862,21 @@ function compartirWhatsApp(nombreCliente, telefono, fecha, total, items = [], de
 }
 
 /**
- * EnvÃ­a recordatorio oficial de saldo pendiente por WhatsApp
+ * Envía recordatorio oficial de saldo pendiente por WhatsApp
  */
 function enviarRecordatorioWhatsApp(telefono, saldo, nombre) {
     if (!telefono || telefono === "null" || telefono === "") {
-        return Swal.fire('AtenciÃ³n', 'El cliente no tiene un nÃºmero de telÃ©fono registrado.', 'warning');
+        return Swal.fire('Atención', 'El cliente no tiene un número de teléfono registrado.', 'warning');
     }
     const numLimpio = String(telefono).replace(/\D/g, '');
     const saldoFormateado = (typeof formatCurrency === 'function' ? formatCurrency(saldo).replace('$', '').trim() : String(saldo).replace('$', '').trim());
     const nombreCliente = nombre ? String(nombre).trim() : 'estimado/a cliente';
-    const mensaje = "Hola " + nombreCliente + ", nos comunicamos para recordarte que tu saldo de cuenta corriente es de $" + saldoFormateado + ". Â¡Cualquier consulta estamos a tu disposiciÃ³n, muchas gracias!";
+    const mensaje = "Hola " + nombreCliente + ", nos comunicamos para recordarte que tu saldo de cuenta corriente es de $" + saldoFormateado + ". ¡Cualquier consulta estamos a tu disposición, muchas gracias!";
     const url = `https://wa.me/${numLimpio}?text=${encodeURIComponent(mensaje)}`;
     window.open(url, '_blank');
 }
 
-// ExposiciÃ³n explÃ­cita para compatibilidad HTML
+// Exposición explícita para compatibilidad HTML
 window.abrirModalEditar = abrirModalEditar;
 window.verHistorial = verHistorial;
 window.registrarPago = registrarPago;
