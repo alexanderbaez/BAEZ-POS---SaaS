@@ -41,7 +41,8 @@ public class AuthService {
 
     @Transactional
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
-        String cleanEmail = request.getEmail().trim().toLowerCase();
+        String cleanEmail = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
+        String cleanPassword = request.getPassword() != null ? request.getPassword().trim() : "";
 
         User user = userRepository.findByEmail(cleanEmail)
                 .orElseThrow(() -> new BadCredentialsException("Credenciales incorrectas. Verifique email y contraseña."));
@@ -50,22 +51,14 @@ public class AuthService {
             throw new BadRequestException("La cuenta de usuario se encuentra desactivada.");
         }
 
-        if (user.getPasswordResetAt() != null) {
-            LocalDateTime resetAt = user.getPasswordResetAt();
-            if (resetAt.plusMinutes(10).isBefore(LocalDateTime.now())) {
-                throw new BadCredentialsException("La contraseña temporal ha expirado. Solicite una nueva recuperación.");
-            }
-        }
-
-        // Dejamos que Spring Security maneje la autenticación de forma limpia
-        // sin envolverlo en un catch genérico que oculte posibles errores de configuración.
+        // Autenticación estándar y segura de Spring Security mediante BCryptPasswordEncoder
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(cleanEmail, request.getPassword())
+                new UsernamePasswordAuthenticationToken(cleanEmail, cleanPassword)
         );
 
+        // Si el usuario ingresó exitosamente usando una clave temporal, limpiamos el flag de reseteo de forma atómica
         if (user.getPasswordResetAt() != null) {
-            user.setPasswordResetAt(null);
-            userRepository.save(user);
+            userRepository.clearPasswordResetAt(user.getId(), LocalDateTime.now());
         }
 
         String jwtToken = jwtService.generateToken(user);
@@ -136,7 +129,7 @@ public class AuthService {
 
     @Transactional
     public void processForgotPassword(ForgotPasswordRequest request) {
-        String cleanEmail = request.getEmail().trim().toLowerCase();
+        String cleanEmail = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
         Optional<User> userOpt = userRepository.findByEmail(cleanEmail);
 
         if (userOpt.isEmpty()) {
@@ -149,6 +142,7 @@ public class AuthService {
         String encodedPassword = passwordEncoder.encode(temporaryPassword);
         LocalDateTime now = LocalDateTime.now();
 
+        // Se persiste de forma atómica la contraseña encriptada con BCrypt en la base de datos
         userRepository.updatePasswordAndResetAt(user.getId(), encodedPassword, now, now);
 
         try {
@@ -157,13 +151,15 @@ public class AuthService {
                     user.getName(),
                     temporaryPassword
             );
+            log.info("Clave temporal despachada exitosamente por correo a: {}", cleanEmail);
         } catch (Exception e) {
             log.error("Fallo en el despacho de clave temporal a {}: {}", cleanEmail, e.getMessage());
         }
     }
 
     private String generateRandomPassword(int length) {
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        // Caracteres legibles y sin ambigüedades visuales (sin 0/O, 1/l/I)
+        String chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
         SecureRandom random = new SecureRandom();
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < length; i++) {

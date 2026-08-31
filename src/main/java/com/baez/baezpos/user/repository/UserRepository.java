@@ -24,6 +24,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("UPDATE User u SET u.password = :password, u.passwordResetAt = :resetAt, u.updatedAt = :now, u.version = COALESCE(u.version, 0) + 1 WHERE u.id = :id")
     int updatePasswordAndResetAt(@Param("id") Long id, @Param("password") String password, @Param("resetAt") LocalDateTime resetAt, @Param("now") LocalDateTime now);
 
+    @Modifying
+    @Query("UPDATE User u SET u.passwordResetAt = NULL, u.updatedAt = :now WHERE u.id = :id")
+    int clearPasswordResetAt(@Param("id") Long id, @Param("now") LocalDateTime now);
+
     // ==========================================
     // BÚSQUEDAS FILTRADAS POR BAJA LÓGICA (active = true)
     // ==========================================
