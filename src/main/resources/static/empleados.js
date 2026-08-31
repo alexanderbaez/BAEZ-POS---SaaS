@@ -1,12 +1,12 @@
-/**
- * BÁEZ POS - MÓDULO DE EMPLEADOS (SaaS)
+﻿/**
+ * BÃEZ POS - MÃ“DULO DE EMPLEADOS (SaaS)
  * Alexander Baez - 2026
  */
 
 let modalForm = null;
 
 // ==========================================
-// 1. INICIALIZACIÓN
+// 1. INICIALIZACIÃ“N
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
     // Verificar si es ADMIN o SUPER_ADMIN
@@ -162,7 +162,7 @@ function renderizarControlesPaginacion(totalItems, totalPaginas, inicio, fin) {
 
     let html = '';
 
-    // Botón Anterior
+    // BotÃ³n Anterior
     html += `
         <li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
             <button class="page-link" onclick="cambiarPaginaEmpleados(${paginaActual - 1})"><i class="bi bi-chevron-left"></i></button>
@@ -195,7 +195,7 @@ function renderizarControlesPaginacion(totalItems, totalPaginas, inicio, fin) {
         html += `<li class="page-item"><button class="page-link" onclick="cambiarPaginaEmpleados(${totalPaginas})">${totalPaginas}</button></li>`;
     }
 
-    // Botón Siguiente
+    // BotÃ³n Siguiente
     html += `
         <li class="page-item ${paginaActual === totalPaginas ? 'disabled' : ''}">
             <button class="page-link" onclick="cambiarPaginaEmpleados(${paginaActual + 1})"><i class="bi bi-chevron-right"></i></button>
@@ -211,7 +211,7 @@ function cambiarPaginaEmpleados(nuevaPagina) {
 }
 
 // ==========================================
-// 3. GESTIÓN DE FORMULARIO (ALTAS Y EDICIONES)
+// 3. GESTIÃ“N DE FORMULARIO (ALTAS Y EDICIONES)
 // ==========================================
 const formEmpleado = document.getElementById('formEmpleado');
 if (formEmpleado) {
@@ -232,7 +232,7 @@ if (formEmpleado) {
         if (password) {
             payload.password = password;
         } else if (!isEditing) {
-            Swal.fire('Atención', 'La contraseña es obligatoria para registrar un nuevo usuario.', 'warning');
+            Swal.fire('AtenciÃ³n', 'La contraseÃ±a es obligatoria para registrar un nuevo usuario.', 'warning');
             return;
         }
 
@@ -271,8 +271,8 @@ if (formEmpleado) {
 
             if (res && res.ok) {
                 Swal.fire({
-                    title: '¡Éxito!',
-                    text: isEditing ? 'Empleado actualizado correctamente.' : 'Nuevo empleado creado con éxito.',
+                    title: 'Â¡Ã‰xito!',
+                    text: isEditing ? 'Empleado actualizado correctamente.' : 'Nuevo empleado creado con Ã©xito.',
                     icon: 'success',
                     timer: 1500,
                     showConfirmButton: false
@@ -289,23 +289,23 @@ if (formEmpleado) {
                     if (errText) errorMessage = errText;
                 }
 
-                if (errorMessage.toLowerCase().includes('límite de empleados') || errorMessage.toLowerCase().includes('limite de empleados')) {
+                if (errorMessage.toLowerCase().includes('lÃ­mite de empleados') || errorMessage.toLowerCase().includes('limite de empleados')) {
                     Swal.fire({
-                        title: 'Límite de Plan Alcanzado',
-                        text: 'Has alcanzado el límite de empleados de tu plan actual. Comunicate con soporte para hacer un upgrade.',
+                        title: 'LÃ­mite de Plan Alcanzado',
+                        text: 'Has alcanzado el lÃ­mite de empleados de tu plan actual. Comunicate con soporte para hacer un upgrade.',
                         icon: 'warning',
                         confirmButtonColor: '#0d6efd'
                     });
                 } else if (errorMessage.toLowerCase().includes('ya existe') || errorMessage.toLowerCase().includes('duplicate') || errorMessage.toLowerCase().includes('ya pertenece') || errorMessage.toLowerCase().includes('ya se encuentra registrado')) {
                     Swal.fire({
-                        title: 'Atención',
-                        text: `El correo ${payload.email} ya está registrado en el sistema.`,
+                        title: 'AtenciÃ³n',
+                        text: `El correo ${payload.email} ya estÃ¡ registrado en el sistema.`,
                         icon: 'warning',
                         confirmButtonColor: '#0d6efd'
                     });
                 } else {
                     Swal.fire({
-                        title: 'Atención',
+                        title: 'AtenciÃ³n',
                         text: errorMessage,
                         icon: 'warning',
                         confirmButtonColor: '#0d6efd'
@@ -315,7 +315,7 @@ if (formEmpleado) {
 
         } catch (e) {
             console.error("Error al guardar empleado:", e);
-            Swal.fire('Error', 'Ocurrió un error inesperado al conectar con el servidor.', 'error');
+            Swal.fire('Error', 'OcurriÃ³ un error inesperado al conectar con el servidor.', 'error');
         }
     });
 }
@@ -404,11 +404,11 @@ function abrirEdicion(user) {
     // 1. Asegurar visibilidad de opciones antes de asignar el valor
     ajustarOpcionesDeRolSegunPermisos(userRole);
 
-    // 2. Asignar correctamente el rol actual al select y aplicar regla de protección
+    // 2. Asignar correctamente el rol actual al select y aplicar regla de protecciÃ³n
     if (selectRol) {
         selectRol.value = userRole;
 
-        // Regla de Protección Admin: Bloquear degradación accidental
+        // Regla de ProtecciÃ³n Admin: Bloquear degradaciÃ³n accidental
         if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') {
             selectRol.disabled = true;
         } else {
@@ -427,7 +427,7 @@ function abrirEdicion(user) {
         switchAsignarPin.checked = hasPin;
     }
 
-    // 3. Ejecutar lógica visual correspondiente
+    // 3. Ejecutar lÃ³gica visual correspondiente
     actualizarVisibilidadPin();
 
     const smallHint = document.querySelector('#passwordContainer small');
@@ -476,7 +476,7 @@ if (modalElement) {
 }
 
 // ==========================================
-// 4. ELIMINACIÓN LÓGICA (DESACTIVAR)
+// 4. ELIMINACIÃ“N LÃ“GICA (DESACTIVAR)
 // ==========================================
 async function eliminarEmpleado(id, name, rol) {
     if (rol === 'ADMIN' && id === 1) {
@@ -485,13 +485,13 @@ async function eliminarEmpleado(id, name, rol) {
     }
 
     const { isConfirmed } = await Swal.fire({
-        title: `¿Desactivar a ${name}?`,
-        html: "El empleado perderá el acceso al sistema y no aparecerá en la lista de usuarios activos.",
+        title: `Â¿Desactivar a ${name}?`,
+        html: "El empleado perderÃ¡ el acceso al sistema y no aparecerÃ¡ en la lista de usuarios activos.",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#dc3545',
         cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Sí, eliminar',
+        confirmButtonText: 'SÃ­, eliminar',
         cancelButtonText: 'Cancelar'
     });
 
@@ -504,7 +504,7 @@ async function eliminarEmpleado(id, name, rol) {
 
                 Swal.fire({
                     icon: 'success',
-                    title: '¡Eliminado!',
+                    title: 'Â¡Eliminado!',
                     text: 'El empleado ha sido removido.',
                     timer: 1500,
                     showConfirmButton: false
@@ -516,11 +516,11 @@ async function eliminarEmpleado(id, name, rol) {
             }
         } catch (e) {
             console.error("Error al eliminar empleado:", e);
-            Swal.fire('Error', 'Problema de conexión con el servidor.', 'error');
+            Swal.fire('Error', 'Problema de conexiÃ³n con el servidor.', 'error');
         }
     }
 }
 
-// Exposición global
+// ExposiciÃ³n global
 window.abrirEdicion = abrirEdicion;
 window.eliminarEmpleado = eliminarEmpleado;

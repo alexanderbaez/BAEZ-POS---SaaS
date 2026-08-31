@@ -31,7 +31,7 @@ public class JwtService {
     @PostConstruct
     public void validateSecretKey() {
         if (secretKey == null || secretKey.trim().length() < 32) {
-            throw new IllegalStateException("La clave secreta JWT (application.security.jwt.secret-key) no está configurada o tiene menos de 32 caracteres.");
+            throw new IllegalStateException("La clave secreta JWT (application.security.jwt.secret-key) no estÃ¡ configurada o tiene menos de 32 caracteres.");
         }
     }
 

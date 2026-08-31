@@ -99,7 +99,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Orden no encontrada"));
 
         if (order.getStatus() != OrderStatus.PENDING) {
-            throw new IllegalStateException("Solo se pueden recibir órdenes en estado PENDING");
+            throw new IllegalStateException("Solo se pueden recibir Ã³rdenes en estado PENDING");
         }
 
         // Actualizar stock y costos
@@ -124,7 +124,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
             product.setCost(newCost);
             productRepository.save(product);
             
-            // Registrar/Actualizar relación en ProviderProduct
+            // Registrar/Actualizar relaciÃ³n en ProviderProduct
             ProviderProduct providerProduct = providerProductRepository
                     .findByCompanyIdAndProviderIdAndProductId(companyId, order.getProvider().getId(), product.getId())
                     .orElseGet(() -> ProviderProduct.builder()
@@ -160,7 +160,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Orden no encontrada"));
 
         if (order.getStatus() != OrderStatus.PENDING) {
-            throw new IllegalStateException("Solo se pueden cancelar órdenes en estado PENDING");
+            throw new IllegalStateException("Solo se pueden cancelar Ã³rdenes en estado PENDING");
         }
 
         order.setStatus(OrderStatus.CANCELED);
@@ -178,7 +178,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Orden no encontrada"));
 
         if (order.getStatus() == OrderStatus.RECEIVED) {
-            throw new IllegalStateException("No se pueden eliminar órdenes en estado RECEIVED");
+            throw new IllegalStateException("No se pueden eliminar Ã³rdenes en estado RECEIVED");
         }
 
         purchaseOrderItemRepository.deleteAll(order.getItems());
@@ -202,15 +202,17 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         StringBuilder detalle = new StringBuilder();
         detalle.append("Orden de Compra #").append(order.getId()).append("\n\n");
         for (PurchaseOrderItem item : order.getItems()) {
-            detalle.append("- ").append(item.getProduct().getName())
-                   .append(" | Cantidad: ").append(item.getQuantity())
+            java.math.BigDecimal q = item.getQuantity();
+            String qtyStr = (q.scale() > 0 && q.stripTrailingZeros().scale() <= 0) ? String.valueOf(q.intValue()) : q.stripTrailingZeros().toPlainString();
+            
+            detalle.append("- ").append(qtyStr).append(" x ").append(item.getProduct().getName())
                    .append(" | Costo Un.: $").append(item.getUnitCost())
                    .append(" | Subtotal: $").append(item.getSubtotal())
                    .append("\n");
         }
         detalle.append("\nTotal: $").append(order.getTotalAmount());
         
-        emailService.enviarMailPurchaseOrder(provider.getEmail(), provider.getBusinessName(), detalle.toString());
+        emailService.enviarMailPurchaseOrder(provider.getEmail(), provider.getBusinessName(), detalle.toString(), order.getCompany().getName());
     }
 
     @Override

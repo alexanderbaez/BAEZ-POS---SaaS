@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <link rel="icon" type="image/x-icon" href="/logo.ico">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BÁEZ POS | Panel Maestro de Administración</title>
+  <title>BÃEZ POS | Panel Maestro de AdministraciÃ³n</title>
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
@@ -180,10 +180,10 @@
   <div class="container-fluid px-0 px-md-2 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
     <div>
       <h3 class="fw-extrabold m-0 text-white d-flex align-items-center gap-2 fs-4 flex-wrap">
-        <span>BÁEZ</span> <span class="text-primary">POS</span>
+        <span>BÃEZ</span> <span class="text-primary">POS</span>
         <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fs-7 px-2 py-0.5 fw-bold">MASTER ADMIN</span>
       </h3>
-      <p class="text-light opacity-75 small m-0 mt-1">Panel de control centralizado y supervisión de red SaaS de alto rendimiento.</p>
+      <p class="text-light opacity-75 small m-0 mt-1">Panel de control centralizado y supervisiÃ³n de red SaaS de alto rendimiento.</p>
     </div>
 
     <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 gap-sm-3">
@@ -233,7 +233,7 @@
       <div class="card p-3 kpi-card" style="border-left-color: var(--warning);">
         <div class="d-flex justify-content-between align-items-center">
           <div>
-            <div class="kpi-label">Próximos a Vencer</div>
+            <div class="kpi-label">PrÃ³ximos a Vencer</div>
             <h3 id="kpiProntoVencer" class="text-warning">0</h3>
           </div>
           <div class="p-3 bg-warning bg-opacity-10 text-warning rounded-4">
@@ -257,7 +257,7 @@
     </div>
   </div>
 
-  <!-- SECCIÓN PRINCIPAL: FORMULARIO Y TABLA DE COMERCIOS -->
+  <!-- SECCIÃ“N PRINCIPAL: FORMULARIO Y TABLA DE COMERCIOS -->
   <div class="row g-4">
 
     <!-- Columna Izquierda: Formulario de Alta -->
@@ -277,25 +277,25 @@
               <input type="text" id="masterTaxId" class="form-control" placeholder="20-XXXXXXXX-9" required>
             </div>
             <div class="col-12 col-sm-6 col-lg-12 col-xl-6 mb-3">
-              <label class="form-label" for="masterTelefono">Teléfono</label>
+              <label class="form-label" for="masterTelefono">TelÃ©fono</label>
               <input type="text" id="masterTelefono" class="form-control" placeholder="1122334455" required>
             </div>
           </div>
           <div class="mb-3">
-            <label class="form-label" for="masterDireccion">Dirección</label>
+            <label class="form-label" for="masterDireccion">DirecciÃ³n</label>
             <input type="text" id="masterDireccion" class="form-control" placeholder="Av. Principal 123" required>
           </div>
           <div class="mb-3">
             <label class="form-label" for="masterAdminName">Nombre del Administrador</label>
-            <input type="text" id="masterAdminName" class="form-control" placeholder="Ej: Juan Pérez" required>
+            <input type="text" id="masterAdminName" class="form-control" placeholder="Ej: Juan PÃ©rez" required>
           </div>
           <div class="mb-3">
             <label class="form-label" for="masterEmail">Email Admin</label>
             <input type="email" id="masterEmail" class="form-control" placeholder="admin@comercio.com" autocomplete="username" required>
           </div>
           <div class="mb-3">
-            <label class="form-label" for="masterPass">Contraseña Inicial</label>
-            <input type="password" id="masterPass" class="form-control" placeholder="••••••••" autocomplete="new-password" required>
+            <label class="form-label" for="masterPass">ContraseÃ±a Inicial</label>
+            <input type="password" id="masterPass" class="form-control" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="new-password" required>
           </div>
           <div class="row g-2">
             <div class="col-12 col-sm-6 col-lg-12 col-xl-6 mb-3">
@@ -303,7 +303,7 @@
               <input type="number" id="masterAbono" class="form-control" placeholder="25000" step="500" required>
             </div>
             <div class="col-12 col-sm-6 col-lg-12 col-xl-6 mb-3">
-              <label class="form-label" for="masterMaxEmployees"><i class="bi bi-people me-1"></i> Límite Empleados</label>
+              <label class="form-label" for="masterMaxEmployees"><i class="bi bi-people me-1"></i> LÃ­mite Empleados</label>
               <input type="number" id="masterMaxEmployees" class="form-control" placeholder="1" min="1" value="1" required>
             </div>
             <div class="col-12 mb-3">
@@ -344,7 +344,7 @@
             </tr>
             </thead>
             <tbody id="tablaEmpresas">
-            <!-- Renderizado dinámico -->
+            <!-- Renderizado dinÃ¡mico -->
             </tbody>
           </table>
         </div>
@@ -353,13 +353,13 @@
 
   </div>
 
-  <!-- SECCIÓN INFERIOR: BITÁCORA / LOGS -->
+  <!-- SECCIÃ“N INFERIOR: BITÃCORA / LOGS -->
   <div class="row mt-4">
     <div class="col-12">
       <div class="card p-4">
         <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3 border-bottom pb-3 border-secondary border-opacity-15">
           <h5 class="fw-bold m-0 text-white d-flex align-items-center gap-2 fs-6">
-            <i class="bi bi-activity text-primary"></i> Bitácora General de Auditoría del Sistema
+            <i class="bi bi-activity text-primary"></i> BitÃ¡cora General de AuditorÃ­a del Sistema
           </h5>
           <button class="btn btn-sm btn-outline-secondary px-3 rounded-pill fw-bold text-white align-self-start align-self-sm-auto" onclick="cargarLogs()" title="Actualizar logs">
             <i class="bi bi-arrow-repeat me-1"></i> Actualizar Logs
@@ -370,24 +370,24 @@
             <thead>
             <tr>
               <th class="ps-3" style="width: 20%;">Fecha / Hora</th>
-              <th style="width: 15%;">Acción</th>
+              <th style="width: 15%;">AcciÃ³n</th>
               <th style="width: 20%;">Comercio</th>
-              <th style="width: 30%;">Descripción del Evento</th>
+              <th style="width: 30%;">DescripciÃ³n del Evento</th>
               <th class="text-end pe-3" style="width: 15%;">Usuario / Responsable</th>
             </tr>
             </thead>
             <tbody id="tablaLogsCompleta">
-            <tr><td colspan="5" class="text-center p-4 text-muted">Cargando bitácora del sistema...</td></tr>
+            <tr><td colspan="5" class="text-center p-4 text-muted">Cargando bitÃ¡cora del sistema...</td></tr>
             </tbody>
           </table>
         </div>
 
-        <!-- CONTENEDOR DE PAGINACIÓN DE LOGS -->
+        <!-- CONTENEDOR DE PAGINACIÃ“N DE LOGS -->
         <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 mt-3 pt-3 border-top border-secondary border-opacity-15">
           <small class="text-muted" id="infoPaginacionLogs">Mostrando 0 - 0 de 0 logs</small>
           <nav>
             <ul class="pagination pagination-sm m-0" id="paginacionLogs">
-              <!-- Se genera dinámicamente desde JS -->
+              <!-- Se genera dinÃ¡micamente desde JS -->
             </ul>
           </nav>
         </div>
@@ -397,7 +397,7 @@
 
 </div>
 
-<!-- Modal de Edición -->
+<!-- Modal de EdiciÃ³n -->
 <div class="modal fade" id="modalEditar" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content p-2">
@@ -421,15 +421,15 @@
             </div>
             <div class="col-12 col-md-6">
               <label class="form-label" for="editAdminName">Nombre del Administrador</label>
-              <input type="text" id="editAdminName" class="form-control" placeholder="Ej: Juan Pérez">
+              <input type="text" id="editAdminName" class="form-control" placeholder="Ej: Juan PÃ©rez">
             </div>
             <div class="col-12 col-md-6">
               <label class="form-label" for="editEmail">Email de Contacto</label>
               <input type="email" id="editEmail" class="form-control" autocomplete="username" required>
             </div>
             <div class="col-12 col-md-6">
-              <label class="form-label" for="editPass">Contraseña Nueva <small class="text-muted">(Dejar vacío si no cambia)</small></label>
-              <input type="password" id="editPass" class="form-control" placeholder="••••••••" autocomplete="new-password">
+              <label class="form-label" for="editPass">ContraseÃ±a Nueva <small class="text-muted">(Dejar vacÃ­o si no cambia)</small></label>
+              <input type="password" id="editPass" class="form-control" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="new-password">
             </div>
             <div class="col-12 col-md-6">
               <label class="form-label" for="editActive">Estado de Licencia</label>
@@ -443,7 +443,7 @@
               <input type="number" id="editMonthlyFee" class="form-control" step="500">
             </div>
             <div class="col-12 col-md-6">
-              <label class="form-label" for="editMaxEmployees"><i class="bi bi-people me-1"></i> Límite de Empleados</label>
+              <label class="form-label" for="editMaxEmployees"><i class="bi bi-people me-1"></i> LÃ­mite de Empleados</label>
               <input type="number" id="editMaxEmployees" class="form-control" min="1" value="1" required>
             </div>
             <div class="col-12 col-md-6">
@@ -451,11 +451,11 @@
               <input type="date" id="editVencimiento" class="form-control">
             </div>
             <div class="col-12 col-md-6">
-              <label class="form-label" for="editPhone">Teléfono / WhatsApp</label>
+              <label class="form-label" for="editPhone">TelÃ©fono / WhatsApp</label>
               <input type="text" id="editPhone" class="form-control">
             </div>
             <div class="col-12 col-md-6">
-              <label class="form-label" for="editAddress">Dirección</label>
+              <label class="form-label" for="editAddress">DirecciÃ³n</label>
               <input type="text" id="editAddress" class="form-control">
             </div>
             <div class="col-12">
@@ -499,7 +499,7 @@
           </div>
           <div class="col-12 col-md-4">
             <div class="p-3 rounded-3 bg-dark border border-secondary border-opacity-25">
-              <span class="text-muted small text-uppercase fw-bold">Última Conexión / Actividad</span>
+              <span class="text-muted small text-uppercase fw-bold">Ãšltima ConexiÃ³n / Actividad</span>
               <h4 id="detUltimaAct" class="text-warning mb-0 mt-1 fs-6">N/A</h4>
             </div>
           </div>
@@ -511,7 +511,7 @@
             <thead>
             <tr>
               <th>Fecha / Hora</th>
-              <th>Acción Realizada</th>
+              <th>AcciÃ³n Realizada</th>
               <th>Detalles</th>
               <th class="text-end">Usuario / Responsable</th>
             </tr>

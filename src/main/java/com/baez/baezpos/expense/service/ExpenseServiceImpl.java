@@ -42,7 +42,7 @@ public class ExpenseServiceImpl implements ExpenseService {
     public ExpenseResponseDTO createExpense(ExpenseRequestDTO dto) {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         if (companyId == null) {
-            throw new UnauthorizedException("No hay una sesión activa o el contexto de empresa es inválido.");
+            throw new UnauthorizedException("No hay una sesiÃ³n activa o el contexto de empresa es invÃ¡lido.");
         }
 
         Company company = companyRepository.findById(companyId)
@@ -52,12 +52,12 @@ public class ExpenseServiceImpl implements ExpenseService {
         boolean isTransferencia = (dto.paymentMethod() == PaymentMethod.TRANSFERENCIA);
         boolean deductFromBox = (isEfectivoCaja || isTransferencia) && (dto.deductFromBox() == null || dto.deductFromBox());
 
-        // Si descuenta de la caja física (efectivo), validamos saldo disponible antes de proceder
+        // Si descuenta de la caja fÃ­sica (efectivo), validamos saldo disponible antes de proceder
         if (deductFromBox && isEfectivoCaja) {
             cashRegisterService.validatePhysicalCashAvailability(companyId, dto.amount());
         }
 
-        // Si el método es CUENTA_CORRIENTE y existe un providerId, suma el monto a su currentBalance
+        // Si el mÃ©todo es CUENTA_CORRIENTE y existe un providerId, suma el monto a su currentBalance
         if (dto.paymentMethod() == PaymentMethod.CUENTA_CORRIENTE && dto.providerId() != null) {
             Provider provider = providerRepository.findByIdAndCompanyId(dto.providerId(), companyId)
                     .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado con ID: " + dto.providerId()));
@@ -92,12 +92,12 @@ public class ExpenseServiceImpl implements ExpenseService {
         expense.setCompany(company);
 
         Expense saved = expenseRepository.save(expense);
-        log.info("Empresa [{}]: Gasto registrado por $ {} - Cat: {} - Descuenta Caja: {} - Método: {}",
+        log.info("Empresa [{}]: Gasto registrado por $ {} - Cat: {} - Descuenta Caja: {} - MÃ©todo: {}",
                 companyId, saved.getAmount(), saved.getCategory(), saved.getDeductFromBox(), saved.getPaymentMethod());
 
         auditService.logAction(
                 "GASTO_CREADO",
-                String.format("Gasto ID [%d] registrado por $ %.2f (%s) - Categoría: %s - Método: %s",
+                String.format("Gasto ID [%d] registrado por $ %.2f (%s) - CategorÃ­a: %s - MÃ©todo: %s",
                         saved.getId(), saved.getAmount(), saved.getDescription(), saved.getCategory(), saved.getPaymentMethod()),
                 "INFO"
         );

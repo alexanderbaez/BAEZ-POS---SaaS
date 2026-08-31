@@ -174,11 +174,11 @@ public class ProviderServiceImpl implements ProviderService {
         }
         providerRepository.save(provider);
 
-        log.warn("Empresa [{}]: Proveedor [{}] '{}' dado de baja lógica", companyId, id, provider.getBusinessName());
+        log.warn("Empresa [{}]: Proveedor [{}] '{}' dado de baja lÃ³gica", companyId, id, provider.getBusinessName());
 
         auditService.logAction(
                 "PROVEEDOR_ELIMINADO",
-                String.format("Proveedor ID [%d] '%s' dado de baja lógica.", id, provider.getBusinessName()),
+                String.format("Proveedor ID [%d] '%s' dado de baja lÃ³gica.", id, provider.getBusinessName()),
                 "WARN"
         );
     }
@@ -197,7 +197,7 @@ public class ProviderServiceImpl implements ProviderService {
             throw new BadRequestException("El monto a abonar debe ser mayor a cero.");
         }
 
-        // Si el pago es en efectivo de caja y deduce, validamos que haya liquidez física disponible
+        // Si el pago es en efectivo de caja y deduce, validamos que haya liquidez fÃ­sica disponible
         boolean isEfectivoCaja = (dto.paymentMethod() == PaymentMethod.EFECTIVO_CAJA);
         boolean isTransferencia = (dto.paymentMethod() == PaymentMethod.TRANSFERENCIA);
         boolean deductFromBox = (isEfectivoCaja || isTransferencia) && (dto.deductFromBox() == null || dto.deductFromBox());
@@ -216,7 +216,7 @@ public class ProviderServiceImpl implements ProviderService {
         }
         Provider updatedProvider = providerRepository.save(provider);
 
-        // 2. Generar automáticamente un registro en Expense por ese abono
+        // 2. Generar automÃ¡ticamente un registro en Expense por ese abono
         String desc = "Abono / Pago a Proveedor: " + provider.getBusinessName();
         if (dto.reference() != null && !dto.reference().isBlank()) {
             desc += " - " + dto.reference().trim();
@@ -243,7 +243,7 @@ public class ProviderServiceImpl implements ProviderService {
 
         auditService.logAction(
                 "ABONO_PROVEEDOR",
-                String.format("Abono de $ %.2f a Proveedor ID [%d] '%s' registrado por método %s. Nuevo saldo: $ %.2f",
+                String.format("Abono de $ %.2f a Proveedor ID [%d] '%s' registrado por mÃ©todo %s. Nuevo saldo: $ %.2f",
                         dto.amount(), provider.getId(), provider.getBusinessName(), dto.paymentMethod(), newBalance),
                 "INFO"
         );

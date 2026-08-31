@@ -1,5 +1,5 @@
-/**
- * BÁEZ POS - PANEL MAESTRO SUPER ADMIN & SEGURIDAD SAAS
+﻿/**
+ * BÃEZ POS - PANEL MAESTRO SUPER ADMIN & SEGURIDAD SAAS
  */
 
 const API_BASE = '/super-admin/companies';
@@ -9,7 +9,7 @@ let modalEdicion = null;
 let modalMovimientos = null;
 let todasLasEmpresas = [];
 
-// Variables para control de paginación de Logs
+// Variables para control de paginaciÃ³n de Logs
 let todosLosLogs = [];
 let paginaActualLogs = 1;
 const LOGS_POR_PAGINA = 20;
@@ -51,7 +51,7 @@ async function extraerMensajeError(resp) {
         const contentType = resp.headers.get("content-type");
         if (contentType && contentType.includes("application/json")) {
             const data = await resp.json();
-            return data.message || data.error || 'Ocurrió un error en la solicitud.';
+            return data.message || data.error || 'OcurriÃ³ un error en la solicitud.';
         } else {
             const text = await resp.text();
             return text || `Error HTTP ${resp.status}`;
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const token = sessionStorage.getItem('baezpos_token');
 
     if (!token || (!rolActual.includes('SUPER_ADMIN') && !rolActual.includes('SUPERADMIN'))) {
-        console.error("Acceso denegado: Se requiere sesión activa de SUPER_ADMIN.");
+        console.error("Acceso denegado: Se requiere sesiÃ³n activa de SUPER_ADMIN.");
         window.location.href = 'login.html';
         return;
     }
@@ -115,7 +115,7 @@ function renderizarTabla(empresas) {
     if (!tbody) return;
 
     if (!empresas || empresas.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center p-4 text-muted">No hay comercios registrados aún.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center p-4 text-muted">No hay comercios registrados aÃºn.</td></tr>';
         return;
     }
 
@@ -172,7 +172,7 @@ function renderizarTabla(empresas) {
             <td>${badge}</td>
             <td class="text-end pe-3">
                 <div class="d-flex justify-content-end gap-1">
-                    <button class="btn-action bg-dark text-warning border border-warning border-opacity-25" title="Renovar +30 Días" data-action="renovar" data-id="${empresa.id}"><i class="bi bi-calendar-plus-fill"></i></button>
+                    <button class="btn-action bg-dark text-warning border border-warning border-opacity-25" title="Renovar +30 DÃ­as" data-action="renovar" data-id="${empresa.id}"><i class="bi bi-calendar-plus-fill"></i></button>
                     <button class="btn-action bg-dark text-success border border-success border-opacity-25" title="Ver Movimientos" data-action="movimientos" data-id="${empresa.id}" data-name="${escapeHTML(empresa.name)}"><i class="bi bi-eye-fill"></i></button>
                     <button class="btn-action bg-dark text-info border border-info border-opacity-25" title="Editar Comercio" data-action="editar" data-id="${empresa.id}"><i class="bi bi-pencil-fill"></i></button>
                     <button class="btn-action bg-dark text-success border border-success border-opacity-25" title="WhatsApp" data-action="whatsapp" data-phone="${cleanPhone}" data-name="${escapeHTML(empresa.name)}"><i class="bi bi-whatsapp"></i></button>
@@ -201,7 +201,7 @@ function renderizarTabla(empresas) {
         if (action === 'whatsapp') {
             const phone = btn.dataset.phone;
             const name = btn.dataset.name;
-            const msg = encodeURIComponent(`Hola ${name}, te contacto desde la administración central de BáezPOS...`);
+            const msg = encodeURIComponent(`Hola ${name}, te contacto desde la administraciÃ³n central de BÃ¡ezPOS...`);
             window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
         }
     };
@@ -213,29 +213,29 @@ async function renovarSuscripcion(id) {
 
     const confirmar = typeof Swal !== 'undefined'
         ? (await Swal.fire({
-            title: '¿Extender suscripción?',
-            text: `Se sumarán 30 días a la suscripción de "${empresa.name}".`,
+            title: 'Â¿Extender suscripciÃ³n?',
+            text: `Se sumarÃ¡n 30 dÃ­as a la suscripciÃ³n de "${empresa.name}".`,
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#10b981',
             cancelButtonColor: '#6b7280',
-            confirmButtonText: 'SÍ, RENOVAR',
+            confirmButtonText: 'SÃ, RENOVAR',
             cancelButtonText: 'Cancelar'
         })).isConfirmed
-        : confirm(`¿Extender suscripción de "${empresa.name}" en 30 días?`);
+        : confirm(`Â¿Extender suscripciÃ³n de "${empresa.name}" en 30 dÃ­as?`);
 
     if (confirmar) {
         try {
             const resp = await apiFetch(`${API_BASE}/${id}/extend`, { method: 'PATCH' });
             if (resp && resp.ok) {
-                if (typeof Swal !== 'undefined') Swal.fire('¡Renovado!', 'Suscripción extendida 30 días.', 'success');
+                if (typeof Swal !== 'undefined') Swal.fire('Â¡Renovado!', 'SuscripciÃ³n extendida 30 dÃ­as.', 'success');
                 cargarTodo();
             } else {
                 const msg = await extraerMensajeError(resp);
                 if (typeof Swal !== 'undefined') Swal.fire('Error', msg, 'error');
             }
         } catch (err) {
-            if (typeof Swal !== 'undefined') Swal.fire('Error', 'Fallo en la comunicación.', 'error');
+            if (typeof Swal !== 'undefined') Swal.fire('Error', 'Fallo en la comunicaciÃ³n.', 'error');
         }
     }
 }
@@ -308,7 +308,7 @@ if (formNueva) {
         const ownerEmail = getVal('masterEmail');
 
         if (!esEmailValido(ownerEmail)) {
-            if (typeof Swal !== 'undefined') Swal.fire('Email Inválido', 'Por favor, ingrese un correo válido.', 'warning');
+            if (typeof Swal !== 'undefined') Swal.fire('Email InvÃ¡lido', 'Por favor, ingrese un correo vÃ¡lido.', 'warning');
             return;
         }
 
@@ -339,7 +339,7 @@ if (formNueva) {
             });
 
             if (resp && resp.ok) {
-                if (typeof Swal !== 'undefined') Swal.fire('¡Registrado!', 'Comercio creado con éxito.', 'success');
+                if (typeof Swal !== 'undefined') Swal.fire('Â¡Registrado!', 'Comercio creado con Ã©xito.', 'success');
                 cargarTodo();
                 e.target.reset();
             } else {
@@ -386,7 +386,7 @@ if (formEdit) {
         const editAdminName = document.getElementById('editAdminName')?.value.trim();
 
         if (!esEmailValido(editEmail)) {
-            if (typeof Swal !== 'undefined') Swal.fire('Email Inválido', 'Por favor, ingrese un correo válido.', 'warning');
+            if (typeof Swal !== 'undefined') Swal.fire('Email InvÃ¡lido', 'Por favor, ingrese un correo vÃ¡lido.', 'warning');
             return;
         }
 
@@ -416,7 +416,7 @@ if (formEdit) {
 
             if (resp && resp.ok) {
                 modalEdicion.hide();
-                if (typeof Swal !== 'undefined') Swal.fire('¡Actualizado!', 'Datos guardados correctamente.', 'success');
+                if (typeof Swal !== 'undefined') Swal.fire('Â¡Actualizado!', 'Datos guardados correctamente.', 'success');
                 cargarTodo();
             } else {
                 const msg = await extraerMensajeError(resp);
@@ -428,11 +428,11 @@ if (formEdit) {
     });
 }
 
-// MOVIMIENTOS Y AUDITORÍA DE UN CLIENTE
+// MOVIMIENTOS Y AUDITORÃA DE UN CLIENTE
 async function verMovimientos(id, nombreComercio) {
     document.getElementById('lblClienteMov').innerText = nombreComercio;
-    document.getElementById('detTotalVentas').innerText = "—";
-    document.getElementById('detVolumen').innerText = "$ —";
+    document.getElementById('detTotalVentas').innerText = "â€”";
+    document.getElementById('detVolumen').innerText = "$ â€”";
     document.getElementById('detUltimaAct').innerText = "Cargando...";
 
     const tbodyMov = document.getElementById('tablaMovimientosCliente');
@@ -477,10 +477,10 @@ async function verMovimientos(id, nombreComercio) {
     }
 }
 
-// LOGS GLOBALES CON PAGINACIÓN DINÁMICA DE 20
+// LOGS GLOBALES CON PAGINACIÃ“N DINÃMICA DE 20
 async function cargarLogs() {
     try {
-        // Obtenemos los últimos 500 registros para permitir paginación fluida
+        // Obtenemos los Ãºltimos 500 registros para permitir paginaciÃ³n fluida
         const resp = await apiFetch(`${LOGS_BASE}?limit=500`);
         if (!resp || !resp.ok) return;
 
@@ -497,7 +497,7 @@ function renderizarTablaLogsPaginada() {
     if (!tbodyLogs) return;
 
     if (!todosLosLogs || todosLosLogs.length === 0) {
-        tbodyLogs.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-muted">No hay registros en la bitácora.</td></tr>';
+        tbodyLogs.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-muted">No hay registros en la bitÃ¡cora.</td></tr>';
         renderizarControlesPaginacionLogs(0);
         return;
     }
@@ -557,7 +557,7 @@ function renderizarControlesPaginacionLogs(totalPaginas, desde = 0, hasta = 0, t
 
     let html = '';
 
-    // Botón Anterior
+    // BotÃ³n Anterior
     html += `
         <li class="page-item ${paginaActualLogs === 1 ? 'disabled' : ''}">
             <button class="page-link bg-dark text-white border-secondary border-opacity-25" onclick="cambiarPaginaLogs(${paginaActualLogs - 1})">
@@ -566,7 +566,7 @@ function renderizarControlesPaginacionLogs(totalPaginas, desde = 0, hasta = 0, t
         </li>
     `;
 
-    // Generar números de página (1, 2, 3...)
+    // Generar nÃºmeros de pÃ¡gina (1, 2, 3...)
     for (let i = 1; i <= totalPaginas; i++) {
         const active = i === paginaActualLogs ? 'active bg-primary text-dark fw-bold border-primary' : 'bg-dark text-white border-secondary border-opacity-25';
         html += `
@@ -576,7 +576,7 @@ function renderizarControlesPaginacionLogs(totalPaginas, desde = 0, hasta = 0, t
         `;
     }
 
-    // Botón Siguiente
+    // BotÃ³n Siguiente
     html += `
         <li class="page-item ${paginaActualLogs === totalPaginas ? 'disabled' : ''}">
             <button class="page-link bg-dark text-white border-secondary border-opacity-25" onclick="cambiarPaginaLogs(${paginaActualLogs + 1})">
@@ -599,16 +599,16 @@ function cambiarPaginaLogs(nuevaPagina) {
 async function eliminarEmpresa(id) {
     const confirmar = typeof Swal !== 'undefined'
         ? (await Swal.fire({
-            title: '¿ESTÁS SEGURO?',
-            text: "Se desactivará el comercio y sus accesos asociados.",
+            title: 'Â¿ESTÃS SEGURO?',
+            text: "Se desactivarÃ¡ el comercio y sus accesos asociados.",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#f87171',
             cancelButtonColor: '#6b7280',
-            confirmButtonText: 'SÍ, ELIMINAR',
+            confirmButtonText: 'SÃ, ELIMINAR',
             cancelButtonText: 'Cancelar'
         })).isConfirmed
-        : confirm("¿ESTÁS SEGURO? Se desactivará el comercio.");
+        : confirm("Â¿ESTÃS SEGURO? Se desactivarÃ¡ el comercio.");
 
     if (confirmar) {
         await ejecutarEliminacion(id);
@@ -619,7 +619,7 @@ async function ejecutarEliminacion(id) {
     try {
         const resp = await apiFetch(`${API_BASE}/${id}`, { method: 'DELETE' });
         if (resp && resp.ok) {
-            if (typeof Swal !== 'undefined') Swal.fire('Eliminado', 'Comercio desactivado con éxito.', 'success');
+            if (typeof Swal !== 'undefined') Swal.fire('Eliminado', 'Comercio desactivado con Ã©xito.', 'success');
             cargarTodo();
         } else {
             const msg = await extraerMensajeError(resp);
@@ -646,7 +646,7 @@ function filtrarEmpresas(termino) {
     renderizarTabla(filtradas);
 }
 
-// Exposición global
+// ExposiciÃ³n global
 window.renovarSuscripcion = renovarSuscripcion;
 window.verMovimientos = verMovimientos;
 window.prepararEdicion = prepararEdicion;

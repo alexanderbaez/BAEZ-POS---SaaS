@@ -31,7 +31,7 @@ public interface CashRegisterSessionRepository extends JpaRepository<CashRegiste
     Optional<CashRegisterSession> findFirstByCompanyIdAndStatusOrderByIdDesc(Long companyId, CashSessionStatus status);
     boolean existsByCompanyIdAndStatus(Long companyId, CashSessionStatus status);
 
-    // Cuenta cuántas cajas se han abierto en el día de hoy para asignar la secuencia (1, 2, 3...)
+    // Cuenta cuÃ¡ntas cajas se han abierto en el dÃ­a de hoy para asignar la secuencia (1, 2, 3...)
     @Query("SELECT COUNT(s) FROM CashRegisterSession s WHERE s.company.id = :companyId AND s.openedAt BETWEEN :start AND :end")
     int countSessionsByCompanyAndDateRange(
             @Param("companyId") Long companyId,

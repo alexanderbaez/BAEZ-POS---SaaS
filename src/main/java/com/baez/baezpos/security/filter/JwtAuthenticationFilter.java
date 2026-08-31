@@ -78,7 +78,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             path.equals("/api/v1/admin/my-company/profile");
 
                     if (!userPrincipal.isCompanyAccessValid() && !isStatusOrAuthEndpoint) {
-                        sendJsonError(response, HttpServletResponse.SC_FORBIDDEN, "CUENTA_SUSPENDIDA", "Su suscripción se encuentra inhabilitada o vencida. Acceso no permitido.");
+                        sendJsonError(response, HttpServletResponse.SC_FORBIDDEN, "CUENTA_SUSPENDIDA", "Su suscripciÃ³n se encuentra inhabilitada o vencida. Acceso no permitido.");
                         return;
                     }
 

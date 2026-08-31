@@ -11,8 +11,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public record ExpenseRequestDTO(
-        @NotBlank(message = "La descripción del gasto es obligatoria.")
-        @Size(max = 255, message = "La descripción no puede superar los 255 caracteres.")
+        @NotBlank(message = "La descripciÃ³n del gasto es obligatoria.")
+        @Size(max = 255, message = "La descripciÃ³n no puede superar los 255 caracteres.")
         String description,
 
         @NotNull(message = "El monto del gasto es obligatorio.")
@@ -21,10 +21,10 @@ public record ExpenseRequestDTO(
 
         Boolean deductFromBox,
 
-        @NotNull(message = "La categoría del gasto es obligatoria.")
+        @NotNull(message = "La categorÃ­a del gasto es obligatoria.")
         ExpenseCategory category,
 
-        @NotNull(message = "El método de pago es obligatorio.")
+        @NotNull(message = "El mÃ©todo de pago es obligatorio.")
         PaymentMethod paymentMethod,
 
         @Size(max = 100, message = "La referencia no puede superar los 100 caracteres.")
@@ -32,7 +32,7 @@ public record ExpenseRequestDTO(
 
         Long providerId,
 
-        @Size(max = 50, message = "El número de comprobante/factura no puede superar los 50 caracteres.")
+        @Size(max = 50, message = "El nÃºmero de comprobante/factura no puede superar los 50 caracteres.")
         String invoiceNumber,
 
         LocalDateTime expenseDate

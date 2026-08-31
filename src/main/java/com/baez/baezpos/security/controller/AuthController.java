@@ -26,7 +26,7 @@ public class AuthController {
     public ResponseEntity<?> authenticate(
             @Valid @RequestBody AuthenticationRequest request
     ) {
-        log.info("Intento de autenticación para el usuario: {}", request.getEmail());
+        log.info("Intento de autenticaciÃ³n para el usuario: {}", request.getEmail());
         AuthenticationResponse response = authService.authenticate(request);
         return ResponseEntity.ok(response);
     }
@@ -48,6 +48,6 @@ public class AuthController {
             @Valid @RequestBody ForgotPasswordRequest request
     ) {
         authService.processForgotPassword(request);
-        return ResponseEntity.ok(Map.of("message", "Si la cuenta existe en nuestro sistema, recibirá un correo con las instrucciones de restablecimiento."));
+        return ResponseEntity.ok(Map.of("message", "Si la cuenta existe en nuestro sistema, recibirÃ¡ un correo con las instrucciones de restablecimiento."));
     }
 }

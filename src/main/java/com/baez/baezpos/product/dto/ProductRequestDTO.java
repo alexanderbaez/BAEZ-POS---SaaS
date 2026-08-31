@@ -14,7 +14,7 @@ public record ProductRequestDTO(
 
         String description,
 
-        @Size(max = 100, message = "El código de barras no puede superar los 100 caracteres")
+        @Size(max = 100, message = "El cÃ³digo de barras no puede superar los 100 caracteres")
         String barcode,
 
         @NotNull(message = "El costo es obligatorio")
@@ -28,10 +28,10 @@ public record ProductRequestDTO(
         @PositiveOrZero(message = "El stock no puede ser negativo")
         BigDecimal stock,
 
-        @PositiveOrZero(message = "El stock mínimo no puede ser negativo")
+        @PositiveOrZero(message = "El stock mÃ­nimo no puede ser negativo")
         BigDecimal minStock,
 
-        @NotNull(message = "Debe seleccionar una categoría")
+        @NotNull(message = "Debe seleccionar una categorÃ­a")
         Long categoryId,
 
         Boolean isFractional

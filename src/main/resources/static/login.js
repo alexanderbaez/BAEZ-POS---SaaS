@@ -1,14 +1,14 @@
-/**
- * BÁEZ POS - MÓDULO DE AUTENTICACIÓN Y LOGIN (SaaS)
+﻿/**
+ * BÃEZ POS - MÃ“DULO DE AUTENTICACIÃ“N Y LOGIN (SaaS)
  * Alexander Baez - 2026
  */
 
 let modalRecuperacionInstance;
 
-// 1. Verificación de Setup Inicial al cargar la página
+// 1. VerificaciÃ³n de Setup Inicial al cargar la pÃ¡gina
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        // Usa apiFetch para derivar automáticamente a Render/Localhost
+        // Usa apiFetch para derivar automÃ¡ticamente a Render/Localhost
         const res = await apiFetch('/auth/setup-status');
         if (res.ok) {
             const data = await res.json();
@@ -17,15 +17,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
     } catch (e) {
-        console.error("Error de conexión al verificar el estado inicial:", e);
+        console.error("Error de conexiÃ³n al verificar el estado inicial:", e);
     }
 });
 
-// 2. Manejo del Formulario de Autenticación
+// 2. Manejo del Formulario de AutenticaciÃ³n
 document.getElementById('loginForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
-    // Limpieza preventiva total de cualquier sesión previa
+    // Limpieza preventiva total de cualquier sesiÃ³n previa
     sessionStorage.clear();
     localStorage.clear();
 
@@ -42,7 +42,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
     btn.classList.add('disabled');
 
     try {
-        // Llamada segura vía apiFetch para apuntar al backend real mediante POST
+        // Llamada segura vÃ­a apiFetch para apuntar al backend real mediante POST
         const response = await apiFetch('/auth/authenticate', {
             method: 'POST',
             body: JSON.stringify({ email: email, password: password })
@@ -51,7 +51,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
         if (response.ok) {
             const data = await response.json();
 
-            // Normalización flexible y estricta del Rol
+            // NormalizaciÃ³n flexible y estricta del Rol
             let rawRole = "";
             if (Array.isArray(data.roles) && data.roles.length > 0) {
                 rawRole = data.roles[0];
@@ -62,7 +62,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
             let cleanRole = rawRole.replace('ROLE_', '').trim().toUpperCase();
             if (cleanRole === 'SUPERADMIN') cleanRole = 'SUPER_ADMIN';
 
-            // Almacenamiento volátil y seguro en SessionStorage
+            // Almacenamiento volÃ¡til y seguro en SessionStorage
             sessionStorage.setItem('baezpos_token', data.token);
             sessionStorage.setItem('baezpos_user_role', cleanRole);
             sessionStorage.setItem('baezpos_user_name', data.name || data.username || "Usuario");
@@ -81,9 +81,9 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
             sessionStorage.setItem('baezpos_tenant_active', isTenantActive ? 'true' : 'false');
             sessionStorage.setItem('baezpos_tenant_expiration', expirationDate);
 
-            messageContainer.innerHTML = `<div class="alert alert-success custom-alert mb-3"><i class="bi bi-check-circle me-2"></i>Iniciando sesión...</div>`;
+            messageContainer.innerHTML = `<div class="alert alert-success custom-alert mb-3"><i class="bi bi-check-circle me-2"></i>Iniciando sesiÃ³n...</div>`;
 
-            // Redirección controlada por rol
+            // RedirecciÃ³n controlada por rol
             setTimeout(() => {
                 if (cleanRole === 'SUPER_ADMIN') {
                     window.location.href = 'admin-maestro.html';
@@ -109,8 +109,8 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
             resetButton();
         }
     } catch (error) {
-        console.error("Error en la petición de autenticación:", error);
-        messageContainer.innerHTML = `<div class="alert alert-warning custom-alert mb-3"><i class="bi bi-wifi-off me-2"></i>Servidor de autenticación no disponible</div>`;
+        console.error("Error en la peticiÃ³n de autenticaciÃ³n:", error);
+        messageContainer.innerHTML = `<div class="alert alert-warning custom-alert mb-3"><i class="bi bi-wifi-off me-2"></i>Servidor de autenticaciÃ³n no disponible</div>`;
         resetButton();
     }
 });
@@ -125,7 +125,7 @@ function resetButton() {
     if (btn) btn.classList.remove('disabled');
 }
 
-// --- 3. RECUPERACIÓN DE CONTRASEÑA VÍA EMAIL (SOLO ADMIN) ---
+// --- 3. RECUPERACIÃ“N DE CONTRASEÃ‘A VÃA EMAIL (SOLO ADMIN) ---
 
 function abrirModalRecuperacion() {
     const modalEl = document.getElementById('modalRecuperacion');
@@ -157,7 +157,7 @@ async function solicitarRecuperacion() {
             msgRecup.innerHTML = `
                 <div class="alert alert-warning py-2 mb-3 d-flex align-items-center">
                     <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
-                    <span>Por favor ingresá un email válido.</span>
+                    <span>Por favor ingresÃ¡ un email vÃ¡lido.</span>
                 </div>`;
         }
         if (emailInput) emailInput.focus();
@@ -189,14 +189,14 @@ async function solicitarRecuperacion() {
         }
 
         if (response.ok) {
-            const successMsg = data.message || 'Se ha enviado una nueva contraseña temporal a tu correo electrónico.';
+            const successMsg = data.message || 'Se ha enviado una nueva contraseÃ±a temporal a tu correo electrÃ³nico.';
             
             if (msgRecup) {
                 msgRecup.innerHTML = `
                     <div class="alert alert-success py-3 mb-3 d-flex align-items-center">
                         <i class="bi bi-check-circle-fill me-2 fs-4 text-success"></i>
                         <div>
-                            <strong>¡Correo enviado!</strong><br>
+                            <strong>Â¡Correo enviado!</strong><br>
                             <span>${successMsg}</span>
                         </div>
                     </div>`;
@@ -205,8 +205,8 @@ async function solicitarRecuperacion() {
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
                     icon: 'success',
-                    title: '¡Correo Enviado!',
-                    text: 'Revisá tu bandeja de entrada (y spam). Te enviamos una contraseña provisoria.',
+                    title: 'Â¡Correo Enviado!',
+                    text: 'RevisÃ¡ tu bandeja de entrada (y spam). Te enviamos una contraseÃ±a provisoria.',
                     confirmButtonColor: '#2563eb',
                     timer: 5000
                 });
@@ -219,7 +219,7 @@ async function solicitarRecuperacion() {
             }, 3000);
 
         } else {
-            const errorMsg = data.message || 'No se encontró un usuario con ese correo o no se pudo procesar la solicitud.';
+            const errorMsg = data.message || 'No se encontrÃ³ un usuario con ese correo o no se pudo procesar la solicitud.';
             if (msgRecup) {
                 msgRecup.innerHTML = `
                     <div class="alert alert-danger py-2 mb-3 d-flex align-items-center">
@@ -231,23 +231,23 @@ async function solicitarRecuperacion() {
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
                     icon: 'error',
-                    title: 'Error de Recuperación',
+                    title: 'Error de RecuperaciÃ³n',
                     text: errorMsg,
                     confirmButtonColor: '#2563eb'
                 });
             }
         }
     } catch (e) {
-        console.error("Error al enviar solicitud de recuperación:", e);
+        console.error("Error al enviar solicitud de recuperaciÃ³n:", e);
         if (msgRecup) {
             msgRecup.innerHTML = `
                 <div class="alert alert-danger py-2 mb-3 d-flex align-items-center">
                     <i class="bi bi-wifi-off me-2 fs-5"></i>
-                    <span>Error de conexión con el servidor. Verificá tu red.</span>
+                    <span>Error de conexiÃ³n con el servidor. VerificÃ¡ tu red.</span>
                 </div>`;
         }
     } finally {
-        // Restaurar estado del botón
+        // Restaurar estado del botÃ³n
         if (txtBtn) txtBtn.classList.remove('d-none');
         if (loader) loader.classList.add('d-none');
         if (btn) {
@@ -260,7 +260,7 @@ async function solicitarRecuperacion() {
 // Alias para compatibilidad de llamadas
 const enviarRecuperacion = solicitarRecuperacion;
 
-// Listener para disparar recuperación con la tecla Enter en el input
+// Listener para disparar recuperaciÃ³n con la tecla Enter en el input
 document.addEventListener('DOMContentLoaded', () => {
     const emailRecupInput = document.getElementById('emailRecuperacion');
     if (emailRecupInput) {

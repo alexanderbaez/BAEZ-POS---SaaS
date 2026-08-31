@@ -24,7 +24,7 @@ public class CashRegisterSession extends TenantEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // NUEVO: Número correlativo diario (1, 2, 3...) reiniciado por día/tenant
+    // NUEVO: NÃºmero correlativo diario (1, 2, 3...) reiniciado por dÃ­a/tenant
     @Column(name = "session_number", nullable = false)
     @Builder.Default
     private Integer sessionNumber = 1;

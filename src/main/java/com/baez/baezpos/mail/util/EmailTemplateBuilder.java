@@ -3,8 +3,8 @@ package com.baez.baezpos.mail.util;
 import org.springframework.web.util.HtmlUtils;
 
 /**
- * Generador de plantillas de correo HTML profesionales, responsive y modulares para BÁEZ POS.
- * Diseñado con compatibilidad universal para clientes de correo (Gmail, Outlook, Apple Mail, etc.).
+ * Generador de plantillas de correo HTML profesionales, responsive y modulares para BÃƒÂEZ POS.
+ * DiseÃƒÂ±ado con compatibilidad universal para clientes de correo (Gmail, Outlook, Apple Mail, etc.).
  */
 public final class EmailTemplateBuilder {
 
@@ -12,7 +12,7 @@ public final class EmailTemplateBuilder {
     private static final String LOGIN_URL = "https://www.baezpos.com/login.html";
 
     private EmailTemplateBuilder() {
-        // Clase de utilidad estática
+        // Clase de utilidad estÃƒÂ¡tica
     }
 
     /**
@@ -29,7 +29,7 @@ public final class EmailTemplateBuilder {
                 Hola <strong style="color: #0f172a;">%s</strong>,
             </p>
             <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #475569;">
-                ¡Te damos la bienvenida a <strong>BÁEZ POS</strong>! Tu usuario para la empresa <strong style="color: #1e40af;">%s</strong> ha sido dado de alta exitosamente en la plataforma.
+                Ã‚Â¡Te damos la bienvenida a <strong>BÃƒÂEZ POS</strong>! Tu usuario para la empresa <strong style="color: #1e40af;">%s</strong> ha sido dado de alta exitosamente en la plataforma.
             </p>
 
             <!-- CARD DE CREDENCIALES -->
@@ -39,7 +39,7 @@ public final class EmailTemplateBuilder {
                         <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0">
                             <tr>
                                 <td style="padding-bottom: 12px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #1e40af;">
-                                    🔑 Tus Credenciales de Acceso
+                                    Ã°Å¸â€â€˜ Tus Credenciales de Acceso
                                 </td>
                             </tr>
                             <tr>
@@ -50,7 +50,7 @@ public final class EmailTemplateBuilder {
                             </tr>
                             <tr>
                                 <td style="padding: 6px 0; font-size: 14px; color: #475569;">
-                                    <strong style="color: #1e293b;">Contraseña Temporal:</strong>
+                                    <strong style="color: #1e293b;">ContraseÃƒÂ±a Temporal:</strong>
                                     <div style="margin-top: 6px;">
                                         <span style="display: inline-block; font-family: Consolas, Monaco, 'Courier New', monospace; font-size: 17px; font-weight: 700; color: #1e40af; background-color: #e0e7ff; padding: 6px 14px; border-radius: 6px; letter-spacing: 1px; border: 1px dashed #93c5fd;">
                                             %s
@@ -84,14 +84,14 @@ public final class EmailTemplateBuilder {
             <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f1f5f9; border-radius: 6px; margin-top: 20px;">
                 <tr>
                     <td style="padding: 14px 18px; font-size: 13px; color: #64748b; line-height: 1.5;">
-                        🛡️ <strong>Recomendación de Seguridad:</strong> Te sugerimos ingresar a la plataforma y actualizar tu contraseña de acceso desde el menú de perfil o configuración.
+                        Ã°Å¸â€ºÂ¡Ã¯Â¸Â <strong>RecomendaciÃƒÂ³n de Seguridad:</strong> Te sugerimos ingresar a la plataforma y actualizar tu contraseÃƒÂ±a de acceso desde el menÃƒÂº de perfil o configuraciÃƒÂ³n.
                     </td>
                 </tr>
             </table>
             """.formatted(safeUsuario, safeEmpresa, safeDestinatario, safePassword, LOGIN_URL);
 
         return renderPlantillaBase(
-                "¡Bienvenido a BáezPOS!",
+                "Ã‚Â¡Bienvenido a BÃƒÂ¡ezPOS!",
                 "Tu cuenta ha sido activada correctamente",
                 "#2563eb",
                 "#1e40af",
@@ -100,7 +100,7 @@ public final class EmailTemplateBuilder {
     }
 
     /**
-     * Correo de bienvenida para confirmación de cuenta sin contraseña provisoria.
+     * Correo de bienvenida para confirmaciÃƒÂ³n de cuenta sin contraseÃƒÂ±a provisoria.
      */
     public static String buildBienvenidaSinPassword(String nombreUsuario, String nombreEmpresa, String destinatario) {
         String safeUsuario = HtmlUtils.htmlEscape(nombreUsuario != null ? nombreUsuario : "Usuario");
@@ -112,17 +112,17 @@ public final class EmailTemplateBuilder {
                 Hola <strong style="color: #0f172a;">%s</strong>,
             </p>
             <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #475569;">
-                Tu usuario para la empresa <strong style="color: #1e40af;">%s</strong> ha sido vinculado exitosamente a <strong>BÁEZ POS</strong>.
+                Tu usuario para la empresa <strong style="color: #1e40af;">%s</strong> ha sido vinculado exitosamente a <strong>BÃƒÂEZ POS</strong>.
             </p>
 
-            <!-- CARD DE INFORMACIÓN DE CUENTA -->
+            <!-- CARD DE INFORMACIÃƒâ€œN DE CUENTA -->
             <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="margin: 24px 0; background-color: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #2563eb; border-radius: 8px; overflow: hidden;">
                 <tr>
                     <td style="padding: 20px;">
                         <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0">
                             <tr>
                                 <td style="padding-bottom: 8px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #1e40af;">
-                                    👤 Cuenta Vinculada
+                                    Ã°Å¸â€˜Â¤ Cuenta Vinculada
                                 </td>
                             </tr>
                             <tr>
@@ -137,7 +137,7 @@ public final class EmailTemplateBuilder {
             </table>
 
             <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #475569;">
-                Ya podés iniciar sesión utilizando la contraseña configurada previamente en tu registro.
+                Ya podÃƒÂ©s iniciar sesiÃƒÂ³n utilizando la contraseÃƒÂ±a configurada previamente en tu registro.
             </p>
 
             <!-- BOTON CTA PRINCIPAL -->
@@ -159,8 +159,8 @@ public final class EmailTemplateBuilder {
             """.formatted(safeUsuario, safeEmpresa, safeDestinatario, LOGIN_URL);
 
         return renderPlantillaBase(
-                "¡Bienvenido a BáezPOS!",
-                "Confirmación y alta de cuenta comercial",
+                "Ã‚Â¡Bienvenido a BÃƒÂ¡ezPOS!",
+                "ConfirmaciÃƒÂ³n y alta de cuenta comercial",
                 "#2563eb",
                 "#1e40af",
                 bodyContent
@@ -168,7 +168,7 @@ public final class EmailTemplateBuilder {
     }
 
     /**
-     * Correo de recuperación y restablecimiento de contraseña.
+     * Correo de recuperaciÃƒÂ³n y restablecimiento de contraseÃƒÂ±a.
      */
     public static String buildResetPassword(String nombreUsuario, String nuevaPassword) {
         String safeUsuario = HtmlUtils.htmlEscape(nombreUsuario != null ? nombreUsuario : "Usuario");
@@ -179,20 +179,20 @@ public final class EmailTemplateBuilder {
                 Hola <strong style="color: #0f172a;">%s</strong>,
             </p>
             <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #475569;">
-                Hemos recibido una solicitud para restablecer la contraseña de acceso a tu cuenta en <strong>BÁEZ POS</strong>.
+                Hemos recibido una solicitud para restablecer la contraseÃƒÂ±a de acceso a tu cuenta en <strong>BÃƒÂEZ POS</strong>.
             </p>
             <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #475569;">
                 Por razones de seguridad, hemos generado una <strong>nueva clave provisoria</strong> para que puedas ingresar de inmediato:
             </p>
 
-            <!-- CARD DE CONTRASEÑA PROVISORIA -->
+            <!-- CARD DE CONTRASEÃƒâ€˜A PROVISORIA -->
             <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="margin: 24px 0; background-color: #fef2f2; border: 1px solid #fee2e2; border-left: 4px solid #dc2626; border-radius: 8px; overflow: hidden;">
                 <tr>
                     <td style="padding: 20px;">
                         <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0">
                             <tr>
                                 <td style="padding-bottom: 8px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #b91c1c;">
-                                    🔒 Tu Clave Temporal de Acceso
+                                    Ã°Å¸â€â€™ Tu Clave Temporal de Acceso
                                 </td>
                             </tr>
                             <tr>
@@ -215,7 +215,7 @@ public final class EmailTemplateBuilder {
                             <tr>
                                 <td align="center" style="border-radius: 8px; background: linear-gradient(135deg, #dc2626 0%%, #b91c1c 100%%); box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);">
                                     <a href="%s" target="_blank" style="display: inline-block; padding: 14px 36px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px; letter-spacing: 0.3px;">
-                                        Restablecer Contraseña &rarr;
+                                        Restablecer ContraseÃƒÂ±a &rarr;
                                     </a>
                                 </td>
                             </tr>
@@ -228,15 +228,15 @@ public final class EmailTemplateBuilder {
             <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; margin-top: 20px;">
                 <tr>
                     <td style="padding: 14px 18px; font-size: 13px; color: #64748b; line-height: 1.5;">
-                        ⚠️ <strong>Importante:</strong> Al ingresar con esta clave, modifícala desde tu panel personal. Si no solicitaste este cambio, comunicate inmediatamente con el administrador de tu negocio.
+                        Ã¢Å¡Â Ã¯Â¸Â <strong>Importante:</strong> Al ingresar con esta clave, modifÃƒÂ­cala desde tu panel personal. Si no solicitaste este cambio, comunicate inmediatamente con el administrador de tu negocio.
                     </td>
                 </tr>
             </table>
             """.formatted(safeUsuario, safePassword, LOGIN_URL);
 
         return renderPlantillaBase(
-                "Restablecimiento de Contraseña",
-                "Recuperación y seguridad de tu cuenta",
+                "Restablecimiento de ContraseÃƒÂ±a",
+                "RecuperaciÃƒÂ³n y seguridad de tu cuenta",
                 "#dc2626",
                 "#991b1b",
                 bodyContent
@@ -244,17 +244,18 @@ public final class EmailTemplateBuilder {
     }
 
     /**
-     * Correo de notificación de nueva Orden de Compra.
+     * Correo de notificaciÃƒÂ³n de nueva Orden de Compra.
      */
-    public static String buildPurchaseOrder(String nombreProveedor, String detallePedido) {
+    public static String buildPurchaseOrder(String nombreProveedor, String detallePedido, String companyName) {
         String safeProveedor = HtmlUtils.htmlEscape(nombreProveedor != null ? nombreProveedor : "Proveedor");
+        String safeCompany = HtmlUtils.htmlEscape(companyName != null ? companyName : "Nuestra Empresa");
         
         String bodyContent = """
             <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.6; color: #334155;">
                 Hola <strong style="color: #0f172a;">%s</strong>,
             </p>
             <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #475569;">
-                Te enviamos una nueva <strong>Orden de Compra</strong> desde la plataforma BÁEZ POS.
+                Te enviamos una nueva <strong>Orden de Compra</strong> desde <strong style="color: #1e40af;">%s</strong>.
             </p>
             
             <!-- DETALLE DEL PEDIDO -->
@@ -264,7 +265,7 @@ public final class EmailTemplateBuilder {
                         <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0">
                             <tr>
                                 <td style="padding-bottom: 12px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #047857;">
-                                    📦 Detalle de la Orden
+                                    Ã°Å¸â€œÂ¦ Detalle de la Orden
                                 </td>
                             </tr>
                             <tr>
@@ -278,13 +279,14 @@ public final class EmailTemplateBuilder {
             </table>
 
             <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #475569;">
-                Aguardamos confirmación. ¡Muchas gracias!
+                Aguardamos confirmaciÃƒÂ³n. Ã‚Â¡Muchas gracias!<br>
+                <strong>Atte. Equipo de %s</strong>
             </p>
-            """.formatted(safeProveedor, detallePedido);
+            """.formatted(safeProveedor, safeCompany, detallePedido, safeCompany);
 
         return renderPlantillaBase(
                 "Nueva Orden de Compra",
-                "Detalle de pedido adjunto",
+                "Detalle de pedido adjunto de " + safeCompany,
                 "#10b981",
                 "#047857",
                 bodyContent
@@ -293,7 +295,7 @@ public final class EmailTemplateBuilder {
 
     /**
      * Estructura HTML base unificada: layout responsive en tablas (max-width 600px), fondo #f4f6f8,
-     * contenedor blanco #ffffff, tipografía elegante, cabecera corporativa y pie de página institucional.
+     * contenedor blanco #ffffff, tipografÃƒÂ­a elegante, cabecera corporativa y pie de pÃƒÂ¡gina institucional.
      */
     private static String renderPlantillaBase(String tituloEncabezado, String subtituloEncabezado, String colorPrimario, String colorSecundario, String cuerpoHtml) {
         return """
@@ -334,7 +336,7 @@ public final class EmailTemplateBuilder {
                                             <tr>
                                                 <td align="center" style="background-color: rgba(255, 255, 255, 0.18); padding: 6px 16px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.25);">
                                                     <span style="font-size: 13px; font-weight: 700; color: #ffffff; letter-spacing: 1.5px; text-transform: uppercase;">
-                                                        BÁEZ POS &bull; SaaS Cloud
+                                                        BÃƒÂEZ POS &bull; SaaS Cloud
                                                     </span>
                                                 </td>
                                             </tr>
@@ -355,17 +357,17 @@ public final class EmailTemplateBuilder {
                                     </td>
                                 </tr>
 
-                                <!-- PIE DE PÁGINA (FOOTER) -->
+                                <!-- PIE DE PÃƒÂGINA (FOOTER) -->
                                 <tr>
                                     <td align="center" style="background-color: #f8fafc; padding: 24px 30px; border-top: 1px solid #e2e8f0; text-align: center;">
                                         <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #475569;">
-                                            BÁEZ POS &mdash; Sistema de Punto de Venta y Gestión Comercial
+                                            BÃƒÂEZ POS &mdash; Sistema de Punto de Venta y GestiÃƒÂ³n Comercial
                                         </p>
                                         <p style="margin: 0 0 12px 0; font-size: 12px; color: #64748b;">
                                             Portal Oficial: <a href="%s" target="_blank" style="color: #2563eb; text-decoration: none; font-weight: 600;">www.baezpos.com</a>
                                         </p>
                                         <p style="margin: 0; font-size: 11px; color: #94a3b8; line-height: 1.4;">
-                                            Este es un correo automático de seguridad y notificación. Por favor no respondas a este mensaje.<br>&copy; 2026 BÁEZ POS. Todos los derechos reservados.
+                                            Este es un correo automÃƒÂ¡tico de seguridad y notificaciÃƒÂ³n. Por favor no respondas a este mensaje.<br>&copy; 2026 BÃƒÂEZ POS. Todos los derechos reservados.
                                         </p>
                                     </td>
                                 </tr>

@@ -1,12 +1,12 @@
-/**
+﻿/**
  * ============================================================================
- * BÁEZ POS - MÓDULO DE VENTAS Y CAJA (SaaS Multi-tenant)
+ * BÃEZ POS - MÃ“DULO DE VENTAS Y CAJA (SaaS Multi-tenant)
  * Alexander Baez - 2026
  * ============================================================================
  */
 
 // ==========================================
-// 1. ESTADO GLOBAL DE LA APLICACIÓN
+// 1. ESTADO GLOBAL DE LA APLICACIÃ“N
 // ==========================================
 let sistemaBloqueado = false;
 let mensajeTicketServidor = "";
@@ -32,7 +32,7 @@ let handlerClickFueraPesables = null;
 
 
 // ==========================================
-// 2. HELPERS Y UTILIDADES NUMÉRICAS
+// 2. HELPERS Y UTILIDADES NUMÃ‰RICAS
 // ==========================================
 function utilRedondearTresDecimales(numero) {
     return Math.round((numero + Number.EPSILON) * 1000) / 1000;
@@ -49,18 +49,18 @@ function utilFormatearMoneda(monto) {
 }
 
 /**
- * Controla el foco del buscador evitando desplegar el teclado en dispositivos móviles/táctiles.
+ * Controla el foco del buscador evitando desplegar el teclado en dispositivos mÃ³viles/tÃ¡ctiles.
  */
 function enfocarBuscadorInteligente() {
     const esMovil = window.innerWidth <= 991 || ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 
     if (esMovil) {
-        // En móviles, cerramos el teclado activo quitando el foco actual
+        // En mÃ³viles, cerramos el teclado activo quitando el foco actual
         if (document.activeElement && typeof document.activeElement.blur === 'function') {
             document.activeElement.blur();
         }
     } else {
-        // En PC/Escritorio, mantenemos el foco para escáneres de barras
+        // En PC/Escritorio, mantenemos el foco para escÃ¡neres de barras
         const buscador = document.getElementById('buscadorVenta');
         if (buscador) buscador.focus();
     }
@@ -68,7 +68,7 @@ function enfocarBuscadorInteligente() {
 
 
 // ==========================================
-// 3. CICLO DE VIDA E INICIALIZACIÓN (DOM)
+// 3. CICLO DE VIDA E INICIALIZACIÃ“N (DOM)
 // ==========================================
 document.addEventListener('DOMContentLoaded', async function inicializarModuloVentas() {
     await serviceCargarInfoEmpresa();
@@ -93,10 +93,10 @@ document.addEventListener('DOMContentLoaded', async function inicializarModuloVe
     inicializarListenersInterfaz();
     inicializarAtajosTecladoGlobales();
 
-    // Verificación inicial de caja al cargar el módulo
+    // VerificaciÃ³n inicial de caja al cargar el mÃ³dulo
     await verificarEstadoCaja();
 
-    // Actualizar contador y sincronizar ventas offline pendientes si hay conexión
+    // Actualizar contador y sincronizar ventas offline pendientes si hay conexiÃ³n
     if (typeof actualizarIndicadorVentasPendientes === 'function') {
         await actualizarIndicadorVentasPendientes();
     }
@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', async function inicializarModuloVe
 
 
 // ==========================================
-// 4. CONFIGURACIÓN DE LISTENERS E INTERFAZ
+// 4. CONFIGURACIÃ“N DE LISTENERS E INTERFAZ
 // ==========================================
 let debounceTimerBuscadorPos = null;
 
@@ -121,7 +121,7 @@ function inicializarBuscadorProductos() {
 
     if (!buscador) return;
 
-    // Foco condicional sólo si no estamos en pantalla táctil/móvil
+    // Foco condicional sÃ³lo si no estamos en pantalla tÃ¡ctil/mÃ³vil
     enfocarBuscadorInteligente();
 
     buscador.addEventListener('input', function handleInputBuscadorProductos(e) {
@@ -268,7 +268,7 @@ function inicializarAtajosTecladoGlobales() {
 
 
 // ==========================================
-// 5. SERVICIOS Y COMUNICACIÓN API
+// 5. SERVICIOS Y COMUNICACIÃ“N API
 // ==========================================
 async function serviceCargarInfoEmpresa() {
     try {
@@ -282,12 +282,12 @@ async function serviceCargarInfoEmpresa() {
             if (dataGuardada) DATOS_EMPRESA = JSON.parse(dataGuardada);
         }
     } catch (err) {
-        console.error("Error de conexión al cargar datos de empresa:", err);
+        console.error("Error de conexiÃ³n al cargar datos de empresa:", err);
     }
 }
 
 async function serviceCargarProductos() {
-    // La carga masiva se reemplazó por búsquedas indexadas y paginadas bajo demanda (/products/search)
+    // La carga masiva se reemplazÃ³ por bÃºsquedas indexadas y paginadas bajo demanda (/products/search)
     PRODUCTOS_DB = [];
 }
 
@@ -337,7 +337,7 @@ function uiRenderizarSugerenciasProductos(productos) {
     div.innerHTML = productos.map(function mapProductoItem(p) {
         const badgeColor = p.stock > 5 ? 'bg-light text-dark' : 'bg-danger';
         const categoriaHtml = p.categoryName ? ` | <i class="bi bi-tag small"></i> ${p.categoryName}` : '';
-        const descTexto = p.description || p.descripcion || 'Sin descripción';
+        const descTexto = p.description || p.descripcion || 'Sin descripciÃ³n';
         const precioFormateado = (p.price || 0).toFixed(2);
 
         return `
@@ -352,7 +352,7 @@ function uiRenderizarSugerenciasProductos(productos) {
                     <div class="text-muted small" style="font-style: italic; font-size: 0.8rem;">${descTexto}</div>
                     <small class="text-muted" style="font-size: 0.75rem;">
                         Stock: <span class="badge ${badgeColor}">${p.stock}</span>
-                        | Cód: ${p.barcode || 'S/C'}
+                        | CÃ³d: ${p.barcode || 'S/C'}
                         ${categoriaHtml}
                     </small>
                 </div>
@@ -368,7 +368,7 @@ function uiRenderizarSugerenciasProductos(productos) {
 
 
 // ==========================================
-// 7. LÓGICA DE NEGOCIO Y CARRITO
+// 7. LÃ“GICA DE NEGOCIO Y CARRITO
 // ==========================================
 function renderizarCarrito() {
     const body = document.getElementById('carritoBody');
@@ -466,27 +466,27 @@ function calcularVuelto() {
 }
 
 // ==========================================
-// 7.1 AUTORIZACIÓN POR PIN DE SUPERVISOR
+// 7.1 AUTORIZACIÃ“N POR PIN DE SUPERVISOR
 // ==========================================
-async function solicitarPinSupervisorSiEsVendedor(motivo = "realizar esta acción") {
+async function solicitarPinSupervisorSiEsVendedor(motivo = "realizar esta acciÃ³n") {
     const rawRole = (sessionStorage.getItem('baezpos_user_role') || 'VENDEDOR').toUpperCase().trim();
     const esAdminOSuper = (rawRole === 'ADMIN' || rawRole === 'SUPER_ADMIN' || rawRole === 'SUPERVISOR' || rawRole === 'OWNER' || rawRole === 'ADMINISTRADOR');
 
-    // Si ya es Admin o Supervisor, no requiere autorización
+    // Si ya es Admin o Supervisor, no requiere autorizaciÃ³n
     if (esAdminOSuper) {
         return true;
     }
 
     // Modal para solicitar PIN de Supervisor
     const { value: pin, isConfirmed } = await Swal.fire({
-        title: '<span class="fs-5 fw-bold text-dark">🔐 PIN de Supervisor Requerido</span>',
+        title: '<span class="fs-5 fw-bold text-dark">ðŸ” PIN de Supervisor Requerido</span>',
         html: `
-            <p class="text-muted small mb-3">Se requiere autorización de un Administrador o Supervisor para <strong>${motivo}</strong>.</p>
+            <p class="text-muted small mb-3">Se requiere autorizaciÃ³n de un Administrador o Supervisor para <strong>${motivo}</strong>.</p>
             <div class="mb-2">
                 <input type="password" id="swal-input-pin" class="form-control text-center fs-3 fw-bold tracking-widest" 
-                       maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="••••" autocomplete="off" style="letter-spacing: 0.5rem;">
+                       maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="â€¢â€¢â€¢â€¢" autocomplete="off" style="letter-spacing: 0.5rem;">
             </div>
-            <small class="text-muted" style="font-size: 0.75rem;">Ingrese el PIN de 4 a 6 dígitos</small>
+            <small class="text-muted" style="font-size: 0.75rem;">Ingrese el PIN de 4 a 6 dÃ­gitos</small>
         `,
         focusConfirm: false,
         showCancelButton: true,
@@ -503,7 +503,7 @@ async function solicitarPinSupervisorSiEsVendedor(motivo = "realizar esta acció
             const input = document.getElementById('swal-input-pin');
             const val = input ? input.value.trim() : '';
             if (!val || val.length < 4) {
-                Swal.showValidationMessage('Ingrese un PIN de al menos 4 dígitos');
+                Swal.showValidationMessage('Ingrese un PIN de al menos 4 dÃ­gitos');
                 return false;
             }
             return val;
@@ -521,7 +521,7 @@ async function solicitarPinSupervisorSiEsVendedor(motivo = "realizar esta acció
 
     try {
         Swal.fire({
-            title: 'Verificando autorización...',
+            title: 'Verificando autorizaciÃ³n...',
             allowOutsideClick: false,
             didOpen: () => Swal.showLoading()
         });
@@ -543,9 +543,9 @@ async function solicitarPinSupervisorSiEsVendedor(motivo = "realizar esta acció
             Swal.close();
             return true;
         } else {
-            console.error("Fallo de PIN:", data ? data.debug_message : "Respuesta inválida");
+            console.error("Fallo de PIN:", data ? data.debug_message : "Respuesta invÃ¡lida");
             if (sndError) sndError.play().catch(() => {});
-            await Swal.fire('Auditoría de PIN', 'Error interno: ' + (data && data.debug_message ? data.debug_message : 'PIN no autorizado'), 'error');
+            await Swal.fire('AuditorÃ­a de PIN', 'Error interno: ' + (data && data.debug_message ? data.debug_message : 'PIN no autorizado'), 'error');
             return false;
         }
     } catch (error) {
@@ -553,7 +553,7 @@ async function solicitarPinSupervisorSiEsVendedor(motivo = "realizar esta acció
         if (sndError) sndError.play().catch(() => {});
         await Swal.fire({
             icon: 'error',
-            title: 'Error de Validación',
+            title: 'Error de ValidaciÃ³n',
             text: 'No se pudo verificar el PIN de supervisor. Intente nuevamente.',
             confirmButtonColor: '#ef4444'
         });
@@ -574,8 +574,8 @@ async function cambiarCant(index, valor) {
         if (sndError) sndError.play().catch(function silencioso(){});
         Swal.fire({
             icon: 'info',
-            title: 'Límite alcanzado',
-            text: 'No hay más stock disponible',
+            title: 'LÃ­mite alcanzado',
+            text: 'No hay mÃ¡s stock disponible',
             toast: true,
             position: 'top-end',
             timer: 2000,
@@ -618,7 +618,7 @@ function setMetodo(metodo, el) {
         if (divCli) divCli.classList.remove('d-none');
         if (divVue) divVue.classList.add('d-none');
 
-        // En móviles no enfocamos automáticamente el input de cliente para evitar abrir el teclado
+        // En mÃ³viles no enfocamos automÃ¡ticamente el input de cliente para evitar abrir el teclado
         const esMovil = window.innerWidth <= 991 || ('ontouchstart' in window);
         if (!esMovil) {
             setTimeout(function enfocarClientePos() {
@@ -687,7 +687,7 @@ function seleccionarProducto(p) {
         Swal.fire({
             icon: 'warning',
             title: 'Sin Stock',
-            text: `No hay más unidades disponibles de ${p.name}`,
+            text: `No hay mÃ¡s unidades disponibles de ${p.name}`,
             toast: true,
             position: 'top-end',
             timer: 2500,
@@ -712,7 +712,7 @@ function seleccionarProducto(p) {
         renderizarCarrito();
     }
 
-    // Usar la función inteligente en lugar de `setTimeout` con `.focus()` directo
+    // Usar la funciÃ³n inteligente en lugar de `setTimeout` con `.focus()` directo
     enfocarBuscadorInteligente();
 }
 
@@ -760,8 +760,8 @@ function venderPorPesoOImporte(productoBase = null) {
     if (pesables.length === 0) {
         Swal.fire({
             icon: 'warning',
-            title: 'Atención',
-            text: 'No hay productos en el catálogo para venta fraccionada.',
+            title: 'AtenciÃ³n',
+            text: 'No hay productos en el catÃ¡logo para venta fraccionada.',
             confirmButtonColor: '#0d6efd'
         });
         return;
@@ -792,7 +792,7 @@ function venderPorPesoOImporte(productoBase = null) {
             const inputBusqueda = document.getElementById('pesableNombreBusqueda');
             const contenedorSugerencias = document.getElementById('sugerenciasPesables');
 
-            // Solo hacemos foco automático en el modal si no es un móvil
+            // Solo hacemos foco automÃ¡tico en el modal si no es un mÃ³vil
             const esMovil = window.innerWidth <= 991 || ('ontouchstart' in window);
             if (inputBusqueda && !esMovil) inputBusqueda.focus();
 
@@ -822,7 +822,7 @@ function venderPorPesoOImporte(productoBase = null) {
                                         btn.innerHTML = `
                                             <div class="text-start me-2">
                                                 <div class="fw-bold text-dark mb-0">${p.name.toUpperCase()}</div>
-                                                ${p.isFractional ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill" style="font-size:0.65rem;">⚖️ Pesable</span>' : ''}
+                                                ${p.isFractional ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill" style="font-size:0.65rem;">âš–ï¸ Pesable</span>' : ''}
                                             </div>
                                             <span class="badge bg-light text-dark border fw-bold fs-6">$${(p.price || 0).toFixed(2)}/Kg</span>
                                         `;
@@ -866,7 +866,7 @@ function abrirModalCalculoFraccionado(p) {
     if (salePrice <= 0) {
         Swal.fire({
             icon: 'warning',
-            title: 'Atención',
+            title: 'AtenciÃ³n',
             text: 'El producto debe tener un precio de venta mayor a 0 para calcular fraccionado.',
             confirmButtonColor: '#0d6efd'
         });
@@ -889,7 +889,7 @@ function abrirModalCalculoFraccionado(p) {
             confirmButton: 'btn btn-primary vfr-btn-confirm flex-fill fw-bold py-2 fs-6 shadow-sm',
             cancelButton: 'btn btn-outline-secondary vfr-btn-cancel py-2 fw-semibold'
         },
-        title: '', // Título nativo vacío para evitar huecos blancos
+        title: '', // TÃ­tulo nativo vacÃ­o para evitar huecos blancos
         html: `
             <style>
                 /* Contenedor Principal */
@@ -899,7 +899,7 @@ function abrirModalCalculoFraccionado(p) {
                     background: #ffffff;
                 }
 
-                /* Eliminar botones numéricos nativos */
+                /* Eliminar botones numÃ©ricos nativos */
                 .vfr-numeric-input::-webkit-outer-spin-button,
                 .vfr-numeric-input::-webkit-inner-spin-button {
                     -webkit-appearance: none;
@@ -982,7 +982,7 @@ function abrirModalCalculoFraccionado(p) {
                     line-height: 1.1;
                 }
 
-                /* Optimización Móvil en Acciones */
+                /* OptimizaciÃ³n MÃ³vil en Acciones */
                 @media (max-width: 576px) {
                     .vfr-actions-wrapper {
                         flex-direction: column-reverse;
@@ -999,7 +999,7 @@ function abrirModalCalculoFraccionado(p) {
                     <i class="bi bi-scale fs-5"></i>
                     <span class="fw-bold fs-6 mb-0">Venta Fraccionada</span>
                 </div>
-                <span class="badge bg-white text-primary fw-bold rounded-pill px-2 py-1" style="font-size: 0.7rem;">⚖️ GRANEL</span>
+                <span class="badge bg-white text-primary fw-bold rounded-pill px-2 py-1" style="font-size: 0.7rem;">âš–ï¸ GRANEL</span>
             </div>
 
             <!-- Cuerpo del Modal -->
@@ -1063,7 +1063,7 @@ function abrirModalCalculoFraccionado(p) {
             const esMovil = window.innerWidth <= 991 || ('ontouchstart' in window);
 
             if (inputPeso) {
-                // Solo enfocar en escritorio para no abrir teclado en móviles
+                // Solo enfocar en escritorio para no abrir teclado en mÃ³viles
                 if (!esMovil) inputPeso.focus();
 
                 inputPeso.addEventListener('input', function handleInputModoPeso() {
@@ -1124,7 +1124,7 @@ function abrirModalCalculoFraccionado(p) {
                 const inputPeso = document.getElementById('inputPesoCantidad');
                 cantidadFinal = parseFloat(inputPeso?.value) || 0;
                 if (cantidadFinal <= 0) {
-                    Swal.showValidationMessage('Ingresa un peso/cantidad válido mayor a 0');
+                    Swal.showValidationMessage('Ingresa un peso/cantidad vÃ¡lido mayor a 0');
                     return false;
                 }
             } else {
@@ -1140,7 +1140,7 @@ function abrirModalCalculoFraccionado(p) {
             cantidadFinal = utilRedondearTresDecimales(cantidadFinal);
 
             if (cantidadFinal <= 0) {
-                Swal.showValidationMessage('La cantidad calculada no es válida.');
+                Swal.showValidationMessage('La cantidad calculada no es vÃ¡lida.');
                 return false;
             }
 
@@ -1159,7 +1159,7 @@ function abrirModalCalculoFraccionado(p) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'Stock Insuficiente',
-                    text: `El stock actual es ${p.stock} Kg. Ya tenías ${cantActualEnCarrito} Kg en el carrito.`,
+                    text: `El stock actual es ${p.stock} Kg. Ya tenÃ­as ${cantActualEnCarrito} Kg en el carrito.`,
                     confirmButtonColor: '#0d6efd'
                 });
                 return;
@@ -1192,13 +1192,13 @@ function abrirModalCalculoFraccionado(p) {
 
 /**
  * ============================================================================
- * BÁEZ POS - MÓDULO DE VENTAS Y CAJA (Parte 2: Búsqueda, Cobro e Impresión)
+ * BÃEZ POS - MÃ“DULO DE VENTAS Y CAJA (Parte 2: BÃºsqueda, Cobro e ImpresiÃ³n)
  * Alexander Baez - 2026
  * ============================================================================
  */
 
 // ==========================================
-// 9. MOTOR DE BÚSQUEDA Y LECTORA DE CÓDIGOS
+// 9. MOTOR DE BÃšSQUEDA Y LECTORA DE CÃ“DIGOS
 // ==========================================
 async function buscarYAgregar(query) {
     if (!query) return;
@@ -1213,13 +1213,13 @@ async function buscarYAgregar(query) {
                 seleccionarProducto(productos[0]);
                 return;
             } else if (Array.isArray(productos) && productos.length > 1) {
-                // Múltiples resultados: mostrar sugerencias
+                // MÃºltiples resultados: mostrar sugerencias
                 uiRenderizarSugerenciasProductos(productos);
                 return;
             }
         }
     } catch (e) {
-        console.error("Error en búsqueda rápida:", e);
+        console.error("Error en bÃºsqueda rÃ¡pida:", e);
     }
 
     if (/^\d{7,14}$/.test(term)) {
@@ -1248,10 +1248,10 @@ async function serviceConsultarOpenFoodFacts(codigoBarras) {
 
             Swal.fire({
                 icon: 'info',
-                title: '¡Encontrado en la Red!',
-                html: `<b>${nombreFinalParaEnviar}</b><br><br>¿Cargar al sistema?`,
+                title: 'Â¡Encontrado en la Red!',
+                html: `<b>${nombreFinalParaEnviar}</b><br><br>Â¿Cargar al sistema?`,
                 showCancelButton: true,
-                confirmButtonText: 'Sí, ir a cargar'
+                confirmButtonText: 'SÃ­, ir a cargar'
             }).then(function handleConfirmarCargaExterna(result) {
                 if (result.isConfirmed) {
                     window.location.href = `productos.html?nuevoCodigo=${codigoBarras}&nuevoNombre=${encodeURIComponent(nombreFinalParaEnviar)}`;
@@ -1270,7 +1270,7 @@ function uiMostrarNotificacionProductoNoEncontrado(termino) {
     Swal.fire({
         icon: 'error',
         title: 'No encontrado',
-        text: `El código o producto "${termino}" no existe. ¿Cargar manual?`,
+        text: `El cÃ³digo o producto "${termino}" no existe. Â¿Cargar manual?`,
         showCancelButton: true,
         confirmButtonText: 'Cargar ahora'
     }).then(function handleConfirmarRedireccionManual(result) {
@@ -1281,7 +1281,7 @@ function uiMostrarNotificacionProductoNoEncontrado(termino) {
 }
 
 // ==========================================
-// 10. FINALIZACIÓN Y COBRO DE VENTAS
+// 10. FINALIZACIÃ“N Y COBRO DE VENTAS
 // ==========================================
 async function finalizarVenta() {
     const overlayBloqueo = document.getElementById('bloqueo-pos-overlay');
@@ -1296,7 +1296,7 @@ async function finalizarVenta() {
         Swal.fire({
             icon: 'warning',
             title: 'Caja Cerrada',
-            text: 'No hay una sesión de caja abierta. Debe abrir la caja para poder cobrar.',
+            text: 'No hay una sesiÃ³n de caja abierta. Debe abrir la caja para poder cobrar.',
             confirmButtonText: '<i class="bi bi-unlock-fill me-1"></i> Abrir Caja Ahora',
             confirmButtonColor: '#0d6efd',
             showCancelButton: true,
@@ -1307,9 +1307,9 @@ async function finalizarVenta() {
         return;
     }
 
-    // 2. Validación de Carrito
+    // 2. ValidaciÃ³n de Carrito
     if (!Array.isArray(CARRITO) || CARRITO.length === 0) {
-        Swal.fire('Carrito vacío', 'Agrega productos para cobrar', 'info');
+        Swal.fire('Carrito vacÃ­o', 'Agrega productos para cobrar', 'info');
         return;
     }
 
@@ -1320,7 +1320,7 @@ async function finalizarVenta() {
     const pagaCon = utilParsearMontoTextual(pagaConInputEl ? pagaConInputEl.value : '0');
 
     if (METODO_PAGO === 'EFECTIVO' && pagaCon < totalBase) {
-        Swal.fire('Atención', 'El monto recibido es insuficiente', 'warning');
+        Swal.fire('AtenciÃ³n', 'El monto recibido es insuficiente', 'warning');
         return;
     }
 
@@ -1330,12 +1330,12 @@ async function finalizarVenta() {
 
     if (METODO_PAGO === 'CUENTA_CORRIENTE') {
         if (!clienteSeleccionado || !clienteSeleccionado.id) {
-            Swal.fire('Atención', 'Debes seleccionar un cliente válido para vender a la libreta', 'warning');
+            Swal.fire('AtenciÃ³n', 'Debes seleccionar un cliente vÃ¡lido para vender a la libreta', 'warning');
             return;
         }
 
         const { value: recargoIngresado, isConfirmed } = await Swal.fire({
-            title: '📈 Recargo por Libreta',
+            title: 'ðŸ“ˆ Recargo por Libreta',
             html: `Monto base: <b>$${utilFormatearMoneda(totalBase)}</b><br><br>Ingresa el % de recargo:`,
             input: 'number',
             inputValue: 0,
@@ -1346,7 +1346,7 @@ async function finalizarVenta() {
             preConfirm: (value) => {
                 const val = parseFloat(value);
                 if (isNaN(val) || val < 0) {
-                    Swal.showValidationMessage('El porcentaje debe ser un número igual o mayor a 0');
+                    Swal.showValidationMessage('El porcentaje debe ser un nÃºmero igual o mayor a 0');
                     return false;
                 }
                 return val;
@@ -1365,8 +1365,8 @@ async function finalizarVenta() {
         if (clienteSeleccionado.creditLimit && saldoProyectado > clienteSeleccionado.creditLimit) {
             Swal.fire({
                 icon: 'error',
-                title: 'Límite de Crédito Excedido',
-                text: `El límite es $${utilFormatearMoneda(clienteSeleccionado.creditLimit)}. Deuda proyectada: $${utilFormatearMoneda(saldoProyectado)}`
+                title: 'LÃ­mite de CrÃ©dito Excedido',
+                text: `El lÃ­mite es $${utilFormatearMoneda(clienteSeleccionado.creditLimit)}. Deuda proyectada: $${utilFormatearMoneda(saldoProyectado)}`
             });
             return;
         }
@@ -1403,7 +1403,7 @@ async function finalizarVenta() {
     if (btnFinalizar) btnFinalizar.disabled = true;
 
     // ==========================================
-    // 10.1 ARQUITECTURA OFFLINE-FIRST: INTERCEPTACIÓN
+    // 10.1 ARQUITECTURA OFFLINE-FIRST: INTERCEPTACIÃ“N
     // ==========================================
     if (!navigator.onLine) {
         try {
@@ -1427,11 +1427,11 @@ async function finalizarVenta() {
 
             Swal.fire({
                 icon: 'success',
-                title: '¡Venta Guardada Offline!',
+                title: 'Â¡Venta Guardada Offline!',
                 html: `
                     <div class="text-center">
                         <div class="badge bg-warning text-dark fs-6 px-3 py-1.5 mb-2 rounded-pill shadow-sm">
-                            <i class="bi bi-wifi-off me-1"></i> Pendiente de Sincronización
+                            <i class="bi bi-wifi-off me-1"></i> Pendiente de SincronizaciÃ³n
                         </div>
                         <p class="text-secondary small mb-3">La venta ha sido registrada de forma segura en la memoria del dispositivo.</p>
                         <div class="d-flex flex-column gap-2 mt-2">
@@ -1512,8 +1512,8 @@ async function finalizarVenta() {
             if (res.status === 409) {
                 Swal.fire({
                     icon: 'warning',
-                    title: 'Transacción Concurrente',
-                    text: data.message || 'Transacción en curso por otro usuario. Por favor, reintente en un segundo.'
+                    title: 'TransacciÃ³n Concurrente',
+                    text: data.message || 'TransacciÃ³n en curso por otro usuario. Por favor, reintente en un segundo.'
                 });
                 return;
             }
@@ -1531,7 +1531,7 @@ async function finalizarVenta() {
 
         Swal.fire({
             icon: 'success',
-            title: '¡Venta Realizada!',
+            title: 'Â¡Venta Realizada!',
             html: `
                 <div class="text-center mb-3">
                     <p class="fs-5 fw-bold text-primary mb-1">${numTicketVisual}</p>
@@ -1585,7 +1585,7 @@ async function finalizarVenta() {
 
     } catch (err) {
         console.error("[SalesModule] Error al finalizar venta:", err);
-        // Si el fallo fue por corte súbito de conexión a internet, guardar offline
+        // Si el fallo fue por corte sÃºbito de conexiÃ³n a internet, guardar offline
         if (!navigator.onLine || err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError')) {
             try {
                 const offlineSaleId = (typeof savePendingSale === 'function')
@@ -1608,10 +1608,10 @@ async function finalizarVenta() {
 
                 Swal.fire({
                     icon: 'warning',
-                    title: 'Sin Conexión: Guardada Offline',
+                    title: 'Sin ConexiÃ³n: Guardada Offline',
                     html: `
-                        <p class="small text-secondary mb-1">Se interrumpió la conexión al servidor. La venta se almacenó localmente con éxito.</p>
-                        <div class="badge bg-warning text-dark fs-7 mb-3">Se sincronizará automáticamente</div>
+                        <p class="small text-secondary mb-1">Se interrumpiÃ³ la conexiÃ³n al servidor. La venta se almacenÃ³ localmente con Ã©xito.</p>
+                        <div class="badge bg-warning text-dark fs-7 mb-3">Se sincronizarÃ¡ automÃ¡ticamente</div>
                         <div class="d-flex flex-column gap-2 mt-2">
                             <button type="button" id="btnFallbackPrintTicket" class="btn btn-dark fw-bold py-2 rounded-3 w-100 shadow-sm">
                                 <i class="bi bi-receipt me-1"></i> Imprimir Ticket (80mm)
@@ -1654,7 +1654,7 @@ async function finalizarVenta() {
                 }
                 return;
             } catch (errFallback) {
-                console.error("[SalesModule] Falló respaldo offline:", errFallback);
+                console.error("[SalesModule] FallÃ³ respaldo offline:", errFallback);
             }
         }
 
@@ -1669,14 +1669,14 @@ async function finalizarVenta() {
 }
 
 // ==========================================
-// 10.2 SINCRONIZACIÓN DE VENTAS OFFLINE
+// 10.2 SINCRONIZACIÃ“N DE VENTAS OFFLINE
 // ==========================================
 let isSyncingSales = false;
 
 async function syncPendingSales() {
     if (isSyncingSales) return;
     if (!navigator.onLine) {
-        console.log('[Sync] No hay conexión a Internet para sincronizar ventas.');
+        console.log('[Sync] No hay conexiÃ³n a Internet para sincronizar ventas.');
         return;
     }
     if (typeof getPendingSales !== 'function') return;
@@ -1692,7 +1692,7 @@ async function syncPendingSales() {
         let syncedCount = 0;
         let failedCount = 0;
 
-        console.log(`[Sync] Iniciando sincronización de ${pendingSales.length} ventas offline...`);
+        console.log(`[Sync] Iniciando sincronizaciÃ³n de ${pendingSales.length} ventas offline...`);
 
         for (const sale of pendingSales) {
             try {
@@ -1738,7 +1738,7 @@ async function syncPendingSales() {
 
         if (syncedCount > 0) {
             if (typeof showSaasToast === 'function') {
-                showSaasToast('success', `¡${syncedCount} ${syncedCount === 1 ? 'venta offline sincronizada' : 'ventas offline sincronizadas'} con éxito!`);
+                showSaasToast('success', `Â¡${syncedCount} ${syncedCount === 1 ? 'venta offline sincronizada' : 'ventas offline sincronizadas'} con Ã©xito!`);
             } else if (typeof Swal !== 'undefined') {
                 Swal.fire({
                     toast: true,
@@ -1755,7 +1755,7 @@ async function syncPendingSales() {
             }
         }
     } catch (errSync) {
-        console.error('[Sync] Error general de sincronización:', errSync);
+        console.error('[Sync] Error general de sincronizaciÃ³n:', errSync);
         isSyncingSales = false;
     }
 }
@@ -1785,7 +1785,7 @@ window.actualizarIndicadorVentasPendientes = actualizarIndicadorVentasPendientes
 
 
 // ==========================================
-// 11. IMPRESIÓN DE TICKETS Y TICKETERA
+// 11. IMPRESIÃ“N DE TICKETS Y TICKETERA
 // ==========================================
 function generarPlantillaHTMLTicket(venta) {
     const infoEmpresa = (typeof DATOS_EMPRESA !== 'undefined' && DATOS_EMPRESA !== null) ? DATOS_EMPRESA : {};
@@ -1795,7 +1795,7 @@ function generarPlantillaHTMLTicket(venta) {
     const direccionLocal = venta.companyAddress || infoEmpresa.address || '';
     const telefonoLocal = venta.companyPhone || infoEmpresa.phone || '';
     const emailLocal = venta.companyEmail || infoEmpresa.email || '';
-    const mensajePie = venta.ticketMessage || infoEmpresa.ticketMessage || '¡Gracias por su compra!';
+    const mensajePie = venta.ticketMessage || infoEmpresa.ticketMessage || 'Â¡Gracias por su compra!';
 
     const cuitLocal = venta.companyCuit || infoEmpresa.taxId || infoEmpresa.cuit || '';
     const iibbLocal = venta.companyIibb || infoEmpresa.iibb || '';
@@ -1834,7 +1834,7 @@ function generarPlantillaHTMLTicket(venta) {
         const cuitLimpio = cuitLocal.replace(/\D/g, '');
         const cuitClienteLimpio = cuitCliente.replace(/\D/g, '');
 
-        // Extraemos el número secuencial del comprobante "0001-00000005" -> 5
+        // Extraemos el nÃºmero secuencial del comprobante "0001-00000005" -> 5
         const numeroComprobanteEntero = nroComprobante.includes('-')
             ? parseInt(nroComprobante.split('-')[1], 10)
             : (venta.numeroTicket || venta.id || 1);
@@ -1953,10 +1953,10 @@ function generarPlantillaHTMLTicket(venta) {
                         <div class="line"></div>
                         ${(venta.isOffline || (typeof venta.numeroTicket === 'string' && venta.numeroTicket.startsWith('OFF-')) || (typeof venta.nroComprobante === 'string' && venta.nroComprobante.startsWith('OFF-'))) ? `
                             <div style="background: #fef2f2; color: #b91c1c; border: 1.5px dashed #dc2626; padding: 4px; border-radius: 4px; font-weight: 900; font-size: 8pt; text-align: center; margin: 4px 0;">
-                                ⚠️ TICKET PENDIENTE DE SINCRONIZACIÓN
+                                âš ï¸ TICKET PENDIENTE DE SINCRONIZACIÃ“N
                             </div>
                         ` : ''}
-                        <div class="small-info"><strong>${tipoComprobante} N° ${nroComprobante}</strong></div>
+                        <div class="small-info"><strong>${tipoComprobante} NÂ° ${nroComprobante}</strong></div>
                         <div class="small-info">Fecha: ${fechaVenta}</div>
                         <div class="small-info">Cajero: ${cajeroNombre}</div>
                         <div class="small-info" style="text-align: left; margin-top: 4px;"><strong>A:</strong> ${nombreCliente} ${cuitCliente ? `(CUIT: ${cuitCliente})` : ''}</div>
@@ -1989,7 +1989,7 @@ function generarPlantillaHTMLTicket(venta) {
                     ${cae ? `
                         <div class="arca-container" style="border-top: 1px dashed #000; margin-top: 8px; padding-top: 6px; text-align: center;">
                             <div class="arca-logo" style="text-align: center; font-weight: 900; font-size: 10pt; letter-spacing: 2px;">ARCA / AFIP</div>
-                            <div class="small-info center" style="font-size: 7.5pt; margin-bottom: 4px; text-align: center;">Comprobante Autorizado Electrónicamente</div>
+                            <div class="small-info center" style="font-size: 7.5pt; margin-bottom: 4px; text-align: center;">Comprobante Autorizado ElectrÃ³nicamente</div>
                             <div style="text-align: center; margin: 6px 0;">
                                 <img src="https://quickchart.io/qr?text=${encodeURIComponent(qrText || `https://www.afip.gob.ar/fe/qr/?p=${btoa(JSON.stringify({ fecha: fechaVenta.split(' ')[0], cuit: Number(cuitLocal.replace(/\\D/g, '') || 301234559), ptoVta: 1, tipoCmp: tipoComprobante.includes('A') ? 1 : 11, nroCmp: 1, importe: totalFinal, tipoDocRec: 99, nroDocRec: 0, tipoCodAut: 'E', codAut: Number(cae) || 0 }))}`)}&size=120" style="width: 120px; height: 120px; display: inline-block;" alt="QR AFIP" />
                             </div>
@@ -2028,7 +2028,7 @@ function generarFacturaA4HTML(venta) {
     const direccionLocal = escapeHtml(venta.companyAddress || infoEmpresa.address || '');
     const telefonoLocal = escapeHtml(venta.companyPhone || infoEmpresa.phone || '');
     const emailLocal = escapeHtml(venta.companyEmail || infoEmpresa.email || '');
-    const mensajePie = escapeHtml(venta.ticketMessage || infoEmpresa.ticketMessage || '¡Gracias por su compra!');
+    const mensajePie = escapeHtml(venta.ticketMessage || infoEmpresa.ticketMessage || 'Â¡Gracias por su compra!');
 
     const cuitLocal = venta.companyCuit || infoEmpresa.taxId || infoEmpresa.cuit || '';
     const iibbLocal = venta.companyIibb || infoEmpresa.iibb || '';
@@ -2044,13 +2044,13 @@ function generarFacturaA4HTML(venta) {
 
     let letra = 'C';
     let codigoComprobante = 'COD. 011';
-    if (tipoComprobante.includes('FACTURA A') || tipoComprobante.includes('NOTA DE DÉBITO A') || tipoComprobante.includes('NOTA DE CRÉDITO A')) {
+    if (tipoComprobante.includes('FACTURA A') || tipoComprobante.includes('NOTA DE DÃ‰BITO A') || tipoComprobante.includes('NOTA DE CRÃ‰DITO A')) {
         letra = 'A';
         codigoComprobante = 'COD. 001';
-    } else if (tipoComprobante.includes('FACTURA B') || tipoComprobante.includes('NOTA DE DÉBITO B') || tipoComprobante.includes('NOTA DE CRÉDITO B')) {
+    } else if (tipoComprobante.includes('FACTURA B') || tipoComprobante.includes('NOTA DE DÃ‰BITO B') || tipoComprobante.includes('NOTA DE CRÃ‰DITO B')) {
         letra = 'B';
         codigoComprobante = 'COD. 006';
-    } else if (tipoComprobante.includes('FACTURA C') || tipoComprobante.includes('NOTA DE DÉBITO C') || tipoComprobante.includes('NOTA DE CRÉDITO C')) {
+    } else if (tipoComprobante.includes('FACTURA C') || tipoComprobante.includes('NOTA DE DÃ‰BITO C') || tipoComprobante.includes('NOTA DE CRÃ‰DITO C')) {
         letra = 'C';
         codigoComprobante = 'COD. 011';
     } else {
@@ -2355,8 +2355,8 @@ function generarFacturaA4HTML(venta) {
 
                     <div class="a4-col-comprobante">
                         <div class="a4-comp-titulo">${tipoComprobante}</div>
-                        <div class="a4-comp-numero">N° ${nroComprobante}</div>
-                        <div class="a4-line">Fecha de Emisión: <strong>${fechaVenta}</strong></div>
+                        <div class="a4-comp-numero">NÂ° ${nroComprobante}</div>
+                        <div class="a4-line">Fecha de EmisiÃ³n: <strong>${fechaVenta}</strong></div>
                         <div class="a4-line">CUIT: <strong>${cuitLocal || 'S/C'}</strong></div>
                         <div class="a4-line">Ingresos Brutos: <strong>${iibbLocal || 'Exento / S/C'}</strong></div>
                         <div class="a4-line">Inicio de Actividades: <strong>${inicioActividades || '-'}</strong></div>
@@ -2365,12 +2365,12 @@ function generarFacturaA4HTML(venta) {
 
                 <div class="a4-cliente-box">
                     <div class="a4-row-split">
-                        <div><strong>Razón Social / Cliente:</strong> ${nombreCliente}</div>
+                        <div><strong>RazÃ³n Social / Cliente:</strong> ${nombreCliente}</div>
                         <div><strong>CUIT / DNI:</strong> ${cuitCliente || 'Consumidor Final'}</div>
                     </div>
                     <div class="a4-row-split">
-                        <div><strong>Condición IVA:</strong> ${cuitCliente ? 'IVA Responsable Inscripto / Monotributo' : 'Consumidor Final'}</div>
-                        <div><strong>Condición de Venta:</strong> ${metodoPago}</div>
+                        <div><strong>CondiciÃ³n IVA:</strong> ${cuitCliente ? 'IVA Responsable Inscripto / Monotributo' : 'Consumidor Final'}</div>
+                        <div><strong>CondiciÃ³n de Venta:</strong> ${metodoPago}</div>
                         <div><strong>Cajero/a:</strong> ${cajeroNombre}</div>
                     </div>
                 </div>
@@ -2379,7 +2379,7 @@ function generarFacturaA4HTML(venta) {
                     <thead>
                         <tr>
                             <th style="width: 12%; text-align: center;">CANT.</th>
-                            <th style="width: 53%;">DESCRIPCIÓN</th>
+                            <th style="width: 53%;">DESCRIPCIÃ“N</th>
                             <th style="width: 17%; text-align: right;">P. UNITARIO</th>
                             <th style="width: 18%; text-align: right;">SUBTOTAL</th>
                         </tr>
@@ -2393,7 +2393,7 @@ function generarFacturaA4HTML(venta) {
                     <div class="a4-obs-box">
                         <strong>Observaciones / Leyenda:</strong><br>
                         ${mensajePie}<br>
-                        <span style="opacity: 0.7; font-size: 7.5pt; display: block; margin-top: 6px;">Documento generado a través de BÁEZ POS SaaS Platform.</span>
+                        <span style="opacity: 0.7; font-size: 7.5pt; display: block; margin-top: 6px;">Documento generado a travÃ©s de BÃEZ POS SaaS Platform.</span>
                     </div>
                     <div class="a4-totales-box">
                         ${descuentoMonto > 0 ? `
@@ -2421,10 +2421,10 @@ function generarFacturaA4HTML(venta) {
                             <img class="a4-qr-img" src="https://quickchart.io/qr?text=${encodeURIComponent(qrText || `https://www.afip.gob.ar/fe/qr/?p=${btoa(JSON.stringify({ fecha: fechaVenta.split(' ')[0], cuit: Number(cuitLocal.replace(/\\D/g, '') || 301234559), ptoVta: 1, tipoCmp: tipoComprobante.includes('A') ? 1 : 11, nroCmp: 1, importe: totalFinal, tipoDocRec: 99, nroDocRec: 0, tipoCodAut: 'E', codAut: Number(cae) || 0 }))}`)}&size=140" alt="QR AFIP" />
                         </div>
                         <div class="a4-cae-data">
-                            <div class="a4-cae-title">ARCA / AFIP - Comprobante Autorizado Electrónicamente</div>
-                            <div><strong>CAE N°:</strong> ${cae}</div>
+                            <div class="a4-cae-title">ARCA / AFIP - Comprobante Autorizado ElectrÃ³nicamente</div>
+                            <div><strong>CAE NÂ°:</strong> ${cae}</div>
                             <div><strong>Fecha de Vto. de CAE:</strong> ${caeVto}</div>
-                            <div style="font-size: 7.5pt; color: #475569; margin-top: 3px;">Comprobante oficial válido como factura comercial. Verifique su autenticidad escaneando el código QR.</div>
+                            <div style="font-size: 7.5pt; color: #475569; margin-top: 3px;">Comprobante oficial vÃ¡lido como factura comercial. Verifique su autenticidad escaneando el cÃ³digo QR.</div>
                         </div>
                     </div>
                 ` : ''}
@@ -2440,8 +2440,8 @@ function generarFacturaA4HTML(venta) {
 }
 
 /**
- * Motor de impresión nativo mediante CSS @media print y #print-section.
- * Sincroniza la carga de imágenes (ej. códigos QR) antes de llamar a window.print().
+ * Motor de impresiÃ³n nativo mediante CSS @media print y #print-section.
+ * Sincroniza la carga de imÃ¡genes (ej. cÃ³digos QR) antes de llamar a window.print().
  */
 function imprimirHTMLConIframe(htmlContent) {
     let printSection = document.getElementById('print-section');
@@ -2501,7 +2501,7 @@ function imprimirTicketLocal(venta) {
 
 function reimprimirUltimoTicket() {
     if (typeof ULTIMA_VENTA_EXITOSA === 'undefined' || !ULTIMA_VENTA_EXITOSA) {
-        Swal.fire('Atención', 'No hay ninguna venta reciente en esta sesión para reimprimir.', 'info');
+        Swal.fire('AtenciÃ³n', 'No hay ninguna venta reciente en esta sesiÃ³n para reimprimir.', 'info');
         return;
     }
     if (typeof imprimirTicket === 'function') {
@@ -2511,7 +2511,7 @@ function reimprimirUltimoTicket() {
 
 function reimprimirUltimaFacturaA4() {
     if (typeof ULTIMA_VENTA_EXITOSA === 'undefined' || !ULTIMA_VENTA_EXITOSA) {
-        Swal.fire('Atención', 'No hay ninguna venta reciente en esta sesión para reimprimir.', 'info');
+        Swal.fire('AtenciÃ³n', 'No hay ninguna venta reciente en esta sesiÃ³n para reimprimir.', 'info');
         return;
     }
     if (typeof imprimirFacturaA4 === 'function') {
@@ -2525,7 +2525,7 @@ function reimprimirUltimaFacturaA4() {
 document.addEventListener('keydown', function handleCapturaFocoGlobal(e) {
     if (typeof sistemaBloqueado !== 'undefined' && sistemaBloqueado) return;
 
-    // Si es un dispositivo táctil o móvil, ignoramos el autofocus por teclado global
+    // Si es un dispositivo tÃ¡ctil o mÃ³vil, ignoramos el autofocus por teclado global
     const esMovil = window.innerWidth <= 991 || ('ontouchstart' in window);
     if (esMovil) return;
 
@@ -2547,7 +2547,7 @@ document.addEventListener('keydown', function handleCapturaFocoGlobal(e) {
 // ==========================================
 
 /**
- * Función Auxiliar Segura para Formato Moneda
+ * FunciÃ³n Auxiliar Segura para Formato Moneda
  */
 function formatearMonedaSegura(monto) {
     if (typeof utilFormatearMoneda === 'function') {
@@ -2558,7 +2558,7 @@ function formatearMonedaSegura(monto) {
 }
 
 /**
- * Consulta al backend si existe una caja abierta para la sesión actual de forma segura.
+ * Consulta al backend si existe una caja abierta para la sesiÃ³n actual de forma segura.
  */
 async function verificarEstadoCaja() {
     try {
@@ -2580,16 +2580,16 @@ async function verificarEstadoCaja() {
             actualizarUICaja(false);
         }
     } catch (error) {
-        // Un 404 lanzado como error por apiFetch se intercepta aquí de forma pacífica
+        // Un 404 lanzado como error por apiFetch se intercepta aquÃ­ de forma pacÃ­fica
         // Sin bloquear la interfaz ni hacer bucles infinitos.
-        console.info("[CashRegister] Sesión sin caja abierta activa (estado normal).");
+        console.info("[CashRegister] SesiÃ³n sin caja abierta activa (estado normal).");
         SESION_CAJA_ACTIVA = null;
         actualizarUICaja(false);
     }
 }
 
 /**
- * Actualización de UI optimizada para Viewports Estrechos (UX Mobile-First)
+ * ActualizaciÃ³n de UI optimizada para Viewports Estrechos (UX Mobile-First)
  */
 function actualizarUICaja(estaAbierta) {
     const badge = document.getElementById('badgeEstadoCaja');
@@ -2600,7 +2600,7 @@ function actualizarUICaja(estaAbierta) {
     const btnFinalizar = document.getElementById('btnFinalizarVenta');
 
     if (estaAbierta && SESION_CAJA_ACTIVA) {
-        // En móviles ocultamos el badge secundario para evitar el colapso visual
+        // En mÃ³viles ocultamos el badge secundario para evitar el colapso visual
         if (badge) {
             badge.className = "badge bg-success-subtle text-success border border-success-subtle px-2 py-1.5 rounded-pill fs-7 d-none d-md-inline-flex align-items-center";
             badge.innerHTML = `<i class="bi bi-circle-fill text-success fs-8 me-1"></i> Abierta (#${SESION_CAJA_ACTIVA.id || '1'})`;
@@ -2608,7 +2608,7 @@ function actualizarUICaja(estaAbierta) {
 
         if (btnAbrir) btnAbrir.classList.add('d-none');
 
-        // Botón Cierre Limpio (No envuelve texto)
+        // BotÃ³n Cierre Limpio (No envuelve texto)
         if (btnCerrar) {
             btnCerrar.classList.remove('d-none');
             btnCerrar.className = "btn btn-outline-danger btn-sm rounded-pill px-2.5 py-1 fw-bold text-nowrap d-inline-flex align-items-center gap-1 shadow-sm fs-7";
@@ -2617,7 +2617,7 @@ function actualizarUICaja(estaAbierta) {
 
         if (inputBuscador) {
             inputBuscador.disabled = false;
-            inputBuscador.placeholder = "Escanea código o busca producto...";
+            inputBuscador.placeholder = "Escanea cÃ³digo o busca producto...";
         }
         if (btnFinalizar) btnFinalizar.disabled = false;
 
@@ -2630,7 +2630,7 @@ function actualizarUICaja(estaAbierta) {
 
         if (btnCerrar) btnCerrar.classList.add('d-none');
 
-        // Botón de Apertura Unificado: Evita saltos de línea con 'text-nowrap'
+        // BotÃ³n de Apertura Unificado: Evita saltos de lÃ­nea con 'text-nowrap'
         if (btnAbrir) {
             btnAbrir.classList.remove('d-none');
             btnAbrir.className = "btn btn-success btn-sm rounded-pill px-3 py-1.5 fw-bold text-nowrap d-inline-flex align-items-center gap-1.5 shadow-sm fs-7";
@@ -2639,7 +2639,7 @@ function actualizarUICaja(estaAbierta) {
 
         if (inputBuscador) {
             inputBuscador.disabled = true;
-            inputBuscador.placeholder = "🔒 Abra la caja para vender...";
+            inputBuscador.placeholder = "ðŸ”’ Abra la caja para vender...";
         }
         if (btnFinalizar) btnFinalizar.disabled = true;
     }
@@ -2650,19 +2650,19 @@ function actualizarUICaja(estaAbierta) {
  */
 async function modalAbrirCaja() {
     if (SESION_CAJA_ACTIVA) {
-        Swal.fire('Atención', 'Ya existe una sesión de caja abierta.', 'info');
+        Swal.fire('AtenciÃ³n', 'Ya existe una sesiÃ³n de caja abierta.', 'info');
         return;
     }
 
     const { value: formValues } = await Swal.fire({
-        title: '<span class="fs-5 fs-md-4">🚀 Apertura de Caja</span>',
+        title: '<span class="fs-5 fs-md-4">ðŸš€ Apertura de Caja</span>',
         customClass: {
             container: 'p-2 p-sm-3',
             popup: 'rounded-4 shadow-lg border-0 mw-100',
             htmlContainer: 'mx-0 my-2 px-1 px-sm-3 text-start'
         },
         html: `
-            <p class="text-muted small mb-3">Ingrese el monto inicial disponible en el cajón de dinero.</p>
+            <p class="text-muted small mb-3">Ingrese el monto inicial disponible en el cajÃ³n de dinero.</p>
 
             <div class="mb-3">
                 <label class="form-label small fw-bold text-secondary">Monto Inicial / Fondo ($)</label>
@@ -2698,7 +2698,7 @@ async function modalAbrirCaja() {
             const notas = elNotas ? elNotas.value.trim() : '';
 
             if (isNaN(monto) || monto < 0) {
-                Swal.showValidationMessage('Ingrese un monto inicial válido (mayor o igual a 0)');
+                Swal.showValidationMessage('Ingrese un monto inicial vÃ¡lido (mayor o igual a 0)');
                 return false;
             }
             return { initialAmount: monto, notes: notas };
@@ -2711,7 +2711,7 @@ async function modalAbrirCaja() {
 }
 
 /**
- * Procesa el envío de Apertura de Caja al servidor mediante apiFetch
+ * Procesa el envÃ­o de Apertura de Caja al servidor mediante apiFetch
  */
 async function ejecutarAperturaCaja(payload) {
     try {
@@ -2733,7 +2733,7 @@ async function ejecutarAperturaCaja(payload) {
 
         Swal.fire({
             icon: 'success',
-            title: '¡Caja Abierta!',
+            title: 'Â¡Caja Abierta!',
             text: 'Turno iniciado correctamente. Ya puede registrar ventas.',
             timer: 2000,
             showConfirmButton: false
@@ -2756,16 +2756,16 @@ async function ejecutarAperturaCaja(payload) {
 
 /**
  * Modal Responsive SweetAlert2 para CIERRE DE CAJA (Arqueo Ciego)
- * En el arqueo ciego, NO se muestra el dinero teórico al cajero.
+ * En el arqueo ciego, NO se muestra el dinero teÃ³rico al cajero.
  */
 async function modalCerrarCaja() {
     if (!SESION_CAJA_ACTIVA) {
-        Swal.fire('Atención', 'No hay ninguna sesión de caja activa para cerrar.', 'warning');
+        Swal.fire('AtenciÃ³n', 'No hay ninguna sesiÃ³n de caja activa para cerrar.', 'warning');
         return;
     }
 
     const { value: formValues } = await Swal.fire({
-        title: '<span class="fs-5 fw-bold text-dark">🔒 Cierre de Caja & Arqueo Ciego</span>',
+        title: '<span class="fs-5 fw-bold text-dark">ðŸ”’ Cierre de Caja & Arqueo Ciego</span>',
         width: 'min(480px, 94vw)',
         customClass: {
             container: 'p-2',
@@ -2777,19 +2777,19 @@ async function modalCerrarCaja() {
                 <div class="p-2.5 bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex mb-2">
                     <i class="bi bi-safe fs-2"></i>
                 </div>
-                <h6 class="fw-bold text-dark mb-1">Arqueo Físico del Cajón</h6>
-                <p class="text-muted small mb-0">Cuente el efectivo físico disponible en billetes y monedas.</p>
+                <h6 class="fw-bold text-dark mb-1">Arqueo FÃ­sico del CajÃ³n</h6>
+                <p class="text-muted small mb-0">Cuente el efectivo fÃ­sico disponible en billetes y monedas.</p>
             </div>
 
             <!-- Input Proporcionado de Monto Contado (Arqueo Ciego) -->
             <div class="mb-3">
-                <label class="form-label fw-bold text-dark small text-uppercase mb-2 text-center d-block">Efectivo Físico Contado *</label>
+                <label class="form-label fw-bold text-dark small text-uppercase mb-2 text-center d-block">Efectivo FÃ­sico Contado *</label>
                 <div class="input-group input-group-lg shadow-sm rounded-3 overflow-hidden border mx-auto" style="max-width: 300px;">
                     <span class="input-group-text bg-white border-0 text-success fw-bold fs-3 ps-3 pe-2">$</span>
                     <input id="swal-monto-declarado" type="number" step="0.01" inputmode="decimal" class="form-control form-control-lg border-0 fs-2 fw-bold text-dark text-center shadow-none amount-num" placeholder="0.00" autocomplete="off">
                 </div>
                 <div class="form-text text-muted text-center mt-1.5" style="font-size: 0.75rem;">
-                    <i class="bi bi-shield-lock me-1 text-primary"></i> El sistema auditará la diferencia contra el cálculo teórico tras confirmar.
+                    <i class="bi bi-shield-lock me-1 text-primary"></i> El sistema auditarÃ¡ la diferencia contra el cÃ¡lculo teÃ³rico tras confirmar.
                 </div>
             </div>
 
@@ -2820,7 +2820,7 @@ async function modalCerrarCaja() {
             const notas = elNotas ? elNotas.value.trim() : '';
 
             if (isNaN(montoDeclarado) || montoDeclarado < 0) {
-                Swal.showValidationMessage('Ingrese un monto físico contado válido');
+                Swal.showValidationMessage('Ingrese un monto fÃ­sico contado vÃ¡lido');
                 return false;
             }
             return { declaredAmount: montoDeclarado, notes: notas };
@@ -2833,7 +2833,7 @@ async function modalCerrarCaja() {
 }
 
 /**
- * Procesa el envío de Cierre de Caja al servidor mediante apiFetch y despliega el Informe Auditor
+ * Procesa el envÃ­o de Cierre de Caja al servidor mediante apiFetch y despliega el Informe Auditor
  */
 async function ejecutarCierreCaja(payload) {
     try {
@@ -2884,11 +2884,11 @@ async function mostrarResultadoArqueoModal(dto) {
     const gastosEfe = Math.abs(parseFloat(dto.totalExpenses ?? 0));
 
     let iconType = 'success';
-    let titleHeader = '¡Cierre de Caja Exitoso!';
+    let titleHeader = 'Â¡Cierre de Caja Exitoso!';
     let diffColorClass = 'text-success';
     let diffSign = '';
     let diffBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1.5 rounded-pill fw-semibold"><i class="bi bi-check-circle-fill me-1"></i>Caja Cuadrada (Exacto)</span>`;
-    let estadoTexto = 'El dinero físico coincide perfectamente con el cálculo del sistema.';
+    let estadoTexto = 'El dinero fÃ­sico coincide perfectamente con el cÃ¡lculo del sistema.';
 
     if (diferencia < -0.01) {
         iconType = 'warning';
@@ -2896,14 +2896,14 @@ async function mostrarResultadoArqueoModal(dto) {
         diffColorClass = 'text-danger';
         diffSign = '-';
         diffBadge = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-1.5 rounded-pill fw-semibold"><i class="bi bi-exclamation-triangle-fill me-1"></i>Faltante de Efectivo</span>`;
-        estadoTexto = 'Se detectó un faltante de dinero físico respecto al cálculo del sistema.';
+        estadoTexto = 'Se detectÃ³ un faltante de dinero fÃ­sico respecto al cÃ¡lculo del sistema.';
     } else if (diferencia > 0.01) {
         iconType = 'info';
         titleHeader = 'Cierre con SOBRANTE';
         diffColorClass = 'text-success';
         diffSign = '+';
         diffBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1.5 rounded-pill fw-semibold"><i class="bi bi-plus-circle-fill me-1"></i>Sobrante de Efectivo</span>`;
-        estadoTexto = 'Se registró más dinero físico que el calculado por el sistema.';
+        estadoTexto = 'Se registrÃ³ mÃ¡s dinero fÃ­sico que el calculado por el sistema.';
     }
 
     const resultado = await Swal.fire({
@@ -2921,21 +2921,21 @@ async function mostrarResultadoArqueoModal(dto) {
                 <p class="text-muted small mt-2 mb-0" style="font-size: 0.82rem;">${estadoTexto}</p>
             </div>
 
-            <!-- Resumen de Auditoría / Ticket Principal -->
+            <!-- Resumen de AuditorÃ­a / Ticket Principal -->
             <div class="card border rounded-3 bg-white shadow-sm mt-3 mb-3">
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                        <span class="text-secondary fw-semibold small">Efectivo Teórico (Sistema):</span>
+                        <span class="text-secondary fw-semibold small">Efectivo TeÃ³rico (Sistema):</span>
                         <span class="fw-bold text-dark fs-6 amount-num">$${formatearMonedaSegura(sistema)}</span>
                     </div>
                     <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                        <span class="text-secondary fw-semibold small">Efectivo Declarado (Físico):</span>
+                        <span class="text-secondary fw-semibold small">Efectivo Declarado (FÃ­sico):</span>
                         <span class="fw-bold text-dark fs-6 amount-num">$${formatearMonedaSegura(declarado)}</span>
                     </div>
                     <div class="d-flex justify-content-between align-items-center pt-2.5 pb-1">
                         <div>
                             <span class="fw-bold text-dark fs-5 d-block">Diferencia Final:</span>
-                            <small class="text-muted" style="font-size: 0.72rem;">(Físico Declarado vs Sistema)</small>
+                            <small class="text-muted" style="font-size: 0.72rem;">(FÃ­sico Declarado vs Sistema)</small>
                         </div>
                         <span class="fw-bold fs-4 ${diffColorClass} amount-num">
                             ${diffSign}$${formatearMonedaSegura(Math.abs(diferencia))}
@@ -2981,10 +2981,10 @@ async function mostrarResultadoArqueoModal(dto) {
 }
 
 /**
- * Genera el ticket térmico oficial de cierre de caja con desglose de Teórico, Declarado y Diferencia
+ * Genera el ticket tÃ©rmico oficial de cierre de caja con desglose de TeÃ³rico, Declarado y Diferencia
  */
 function imprimirTicketCierreCaja(dto) {
-    const empresa = DATOS_EMPRESA || { name: 'BÁEZ POS', address: '', phone: '', taxId: '' };
+    const empresa = DATOS_EMPRESA || { name: 'BÃEZ POS', address: '', phone: '', taxId: '' };
     const fechaCierre = dto.closedAt ? new Date(dto.closedAt).toLocaleString('es-AR') : new Date().toLocaleString('es-AR');
     const fechaApertura = dto.openedAt ? new Date(dto.openedAt).toLocaleString('es-AR') : '-';
     const cajero = dto.userName || sessionStorage.getItem('baezpos_user_name') || 'Admin';
@@ -3028,7 +3028,7 @@ function imprimirTicketCierreCaja(dto) {
         </head>
         <body>
             <div class="text-center">
-                <div class="fs-title">${(empresa.name || 'BÁEZ POS').toUpperCase()}</div>
+                <div class="fs-title">${(empresa.name || 'BÃEZ POS').toUpperCase()}</div>
                 <div>${empresa.address || ''}</div>
                 <div>CUIT: ${empresa.taxId || 'S/C'}</div>
                 <div class="divider"></div>
@@ -3045,7 +3045,7 @@ function imprimirTicketCierreCaja(dto) {
             <div class="row"><span>+ Cobranza Cta. Cte. (Efectivo):</span><span>$${formatearMonedaSegura(cobrosEfe)}</span></div>
             <div class="row"><span>- Gastos Efectivo:</span><span>-$${formatearMonedaSegura(gastosEfe)}</span></div>
             <div class="divider"></div>
-            <div class="row fw-bold"><span>EFECTIVO TEÓRICO:</span><span>$${formatearMonedaSegura(teorico)}</span></div>
+            <div class="row fw-bold"><span>EFECTIVO TEÃ“RICO:</span><span>$${formatearMonedaSegura(teorico)}</span></div>
             <div class="row fw-bold"><span>EFECTIVO DECLARADO:</span><span>$${formatearMonedaSegura(declarado)}</span></div>
             <div class="divider"></div>
             <div class="row fw-bold fs-lg"><span>${diffLabel}</span><span>${diffText}</span></div>
@@ -3062,7 +3062,7 @@ function imprimirTicketCierreCaja(dto) {
     imprimirHTMLConIframe(htmlTicket);
 }
 
-// Exposición global para interoperabilidad
+// ExposiciÃ³n global para interoperabilidad
 window.imprimirTicket = imprimirTicket;
 window.imprimirFacturaA4 = imprimirFacturaA4;
 window.generarPlantillaHTMLTicket = generarPlantillaHTMLTicket;

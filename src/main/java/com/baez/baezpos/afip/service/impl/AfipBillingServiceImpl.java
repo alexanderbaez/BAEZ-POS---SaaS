@@ -24,10 +24,10 @@ public class AfipBillingServiceImpl implements AfipBillingService {
         String env = company.getAfipEnvironment() != null ? company.getAfipEnvironment().toUpperCase().trim() : "HOMO";
         Integer posNumber = company.getPosNumber() != null ? company.getPosNumber() : 1;
 
-        log.info("[AFIP WSFEv1] Procesando comprobante fiscal electrónico para empresa '{}' (CUIT: {}) en entorno: {}", 
+        log.info("[AFIP WSFEv1] Procesando comprobante fiscal electrÃ³nico para empresa '{}' (CUIT: {}) en entorno: {}", 
                 company.getName(), company.getCuit(), env);
 
-        // Determinación del tipo de comprobante según condición IVA
+        // DeterminaciÃ³n del tipo de comprobante segÃºn condiciÃ³n IVA
         String condicionIva = company.getCondicionIva() != null ? company.getCondicionIva().toUpperCase() : "MONOTRIBUTO";
         String tipoComprobante = condicionIva.contains("RESPONSABLE INSCRIPTO") ? "FACTURA B" : "FACTURA C";
 
@@ -36,7 +36,7 @@ public class AfipBillingServiceImpl implements AfipBillingService {
         company.setLastTicketNumber(nextFiscalNumber);
         String invoiceNumber = String.format("%04d-%08d", posNumber, nextFiscalNumber);
 
-        // Generación de CAE simulado de 14 dígitos numéricos para entorno HOMO
+        // GeneraciÃ³n de CAE simulado de 14 dÃ­gitos numÃ©ricos para entorno HOMO
         long randomCaeNumber = ThreadLocalRandom.current().nextLong(10000000000000L, 99999999999999L);
         String simulatedCae = String.valueOf(randomCaeNumber);
         LocalDate expiration = LocalDate.now().plusDays(10);
@@ -49,7 +49,7 @@ public class AfipBillingServiceImpl implements AfipBillingService {
         sale.setInvoiceNumber(invoiceNumber);
         sale.setNroComprobante(invoiceNumber);
 
-        log.info("[AFIP Mock] CAE generado exitosamente: {} | Vencimiento: {} | Comprobante: {} N° {}", 
+        log.info("[AFIP Mock] CAE generado exitosamente: {} | Vencimiento: {} | Comprobante: {} NÂ° {}", 
                 simulatedCae, expiration, tipoComprobante, invoiceNumber);
     }
 }

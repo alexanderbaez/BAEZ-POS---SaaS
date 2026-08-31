@@ -22,5 +22,5 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
     Optional<Company> findByEmail(String email);
 
     List<Company> findByActiveTrue();
-    long countByActiveTrue(); // <--- Optimización de rendimiento para Stats
+    long countByActiveTrue(); // <--- OptimizaciÃ³n de rendimiento para Stats
 }

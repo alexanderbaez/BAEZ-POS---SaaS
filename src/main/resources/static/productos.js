@@ -1,8 +1,8 @@
-/**
- * BÁEZ POS - GESTIÓN DE INVENTARIO (SAAS MULTITENANT)
+﻿/**
+ * BÃEZ POS - GESTIÃ“N DE INVENTARIO (SAAS MULTITENANT)
  */
 
-// Rutas relativas del módulo
+// Rutas relativas del mÃ³dulo
 const ENDPOINT_PRODUCTS = '/products';
 const ENDPOINT_CATEGORIES = '/categories';
 
@@ -19,7 +19,7 @@ const fmtARS = new Intl.NumberFormat('es-AR', {
     minimumFractionDigits: 2
 });
 
-// Helper para generar un código de barras 100% numérico de 12 dígitos
+// Helper para generar un cÃ³digo de barras 100% numÃ©rico de 12 dÃ­gitos
 function generarCodigoInterno() {
     const timestamp = Date.now().toString().slice(-8);
     const random = Math.floor(100 + Math.random() * 900);
@@ -27,7 +27,7 @@ function generarCodigoInterno() {
 }
 
 // ==========================================
-// 1. INICIALIZACIÓN
+// 1. INICIALIZACIÃ“N
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
     listarProductos();
@@ -36,14 +36,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('formProducto');
     if (form) form.addEventListener('submit', guardarProducto);
 
-    // Eventos de búsqueda y filtrado
+    // Eventos de bÃºsqueda y filtrado
     const buscador = document.getElementById('buscador');
     const filtroCat = document.getElementById('filtroCategoria');
 
     if (buscador) buscador.addEventListener('input', filtrarProductos);
     if (filtroCat) filtroCat.addEventListener('change', filtrarProductos);
 
-    // Receptor de Scanner / Búsqueda Externa vía URL
+    // Receptor de Scanner / BÃºsqueda Externa vÃ­a URL
     const urlParams = new URLSearchParams(window.location.search);
     const nuevoCodigo = urlParams.get('nuevoCodigo');
     const nuevoNombre = urlParams.get('nuevoNombre');
@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 2. GESTIÓN DE CATEGORÍAS
+// 2. GESTIÃ“N DE CATEGORÃAS
 // ==========================================
 async function cargarCategorias() {
     try {
@@ -82,7 +82,7 @@ async function cargarCategorias() {
         const selectFiltro = document.getElementById('filtroCategoria');
 
         let options = '<option value="">Seleccionar...</option>';
-        let optionsFiltro = '<option value="">Todas las categorías</option>';
+        let optionsFiltro = '<option value="">Todas las categorÃ­as</option>';
 
         categorias.forEach(c => {
             const nameSeguro = (c.name || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -96,7 +96,7 @@ async function cargarCategorias() {
 
         return categorias;
     } catch (err) {
-        console.error("Error al cargar categorías SaaS:", err);
+        console.error("Error al cargar categorÃ­as SaaS:", err);
         return [];
     }
 }
@@ -106,7 +106,7 @@ async function abrirModalCategoria() {
 
     let listadoHtml = `
         <div class="list-group list-group-flush mb-3" style="max-height: 200px; overflow-y: auto;">
-            ${categorias.length === 0 ? '<div class="text-center p-3 text-muted">Sin categorías registradas</div>' : ''}
+            ${categorias.length === 0 ? '<div class="text-center p-3 text-muted">Sin categorÃ­as registradas</div>' : ''}
             ${categorias.map(c => {
                 const nameSeguro = (c.name || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
                 const nameEscapado = (c.name || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
@@ -121,15 +121,15 @@ async function abrirModalCategoria() {
             }).join('')}
         </div>
         <div class="p-3 bg-primary bg-opacity-10 rounded-4">
-            <label class="form-label fw-bold small text-primary">NUEVA / EDITAR CATEGORÍA</label>
+            <label class="form-label fw-bold small text-primary">NUEVA / EDITAR CATEGORÃA</label>
             <input type="hidden" id="editCatId" value="">
-            <input type="text" id="swalCatNombre" class="form-control mb-2" placeholder="Nombre de categoría">
+            <input type="text" id="swalCatNombre" class="form-control mb-2" placeholder="Nombre de categorÃ­a">
             <button class="btn btn-primary w-100 shadow-sm fw-bold" id="btnGuardarCat" onclick="guardarCategoria()">Confirmar Guardar</button>
         </div>
     `;
 
     Swal.fire({
-        title: 'Gestión de Categorías',
+        title: 'GestiÃ³n de CategorÃ­as',
         html: listadoHtml,
         showConfirmButton: false,
         showCloseButton: true,
@@ -156,7 +156,7 @@ async function guardarCategoria() {
     const nombreInput = document.getElementById('swalCatNombre');
     const nombre = nombreInput ? nombreInput.value.trim() : "";
 
-    if (!nombre) return Swal.fire('Atención', "Escribe un nombre para la categoría", 'warning');
+    if (!nombre) return Swal.fire('AtenciÃ³n', "Escribe un nombre para la categorÃ­a", 'warning');
 
     try {
         const url = id ? `${ENDPOINT_CATEGORIES}/${id}` : ENDPOINT_CATEGORIES;
@@ -179,20 +179,20 @@ async function guardarCategoria() {
             });
         } else if (res) {
             const errorData = await res.json().catch(() => ({}));
-            Swal.fire('Error', errorData.message || 'Error en la operación', 'error');
+            Swal.fire('Error', errorData.message || 'Error en la operaciÃ³n', 'error');
         }
     } catch (err) {
-        console.error("Error guardando categoría:", err);
+        console.error("Error guardando categorÃ­a:", err);
     }
 }
 
 async function eliminarCategoria(id) {
     const confirm = await Swal.fire({
-        title: '¿Eliminar categoría?',
-        text: "Si tiene productos asociados, no podrá eliminarse.",
+        title: 'Â¿Eliminar categorÃ­a?',
+        text: "Si tiene productos asociados, no podrÃ¡ eliminarse.",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Sí, borrar',
+        confirmButtonText: 'SÃ­, borrar',
         cancelButtonText: 'Cancelar'
     });
 
@@ -203,16 +203,16 @@ async function eliminarCategoria(id) {
                 await cargarCategorias();
                 abrirModalCategoria();
             } else {
-                Swal.fire('Error', 'La categoría tiene productos asociados o no existe.', 'error');
+                Swal.fire('Error', 'La categorÃ­a tiene productos asociados o no existe.', 'error');
             }
         } catch (err) {
-            console.error("Error al borrar categoría:", err);
+            console.error("Error al borrar categorÃ­a:", err);
         }
     }
 }
 
 // ==========================================
-// UTILS & HELPERS DE PRESENTACIÓN
+// UTILS & HELPERS DE PRESENTACIÃ“N
 // ==========================================
 function formatStockDisplay(stock, isFractional) {
     const val = parseFloat(stock) || 0;
@@ -228,7 +228,7 @@ function formatStockDisplay(stock, isFractional) {
 
 // ==========================================
 // ==========================================
-// 3. GESTIÓN DE PRODUCTOS Y PAGINACIÓN
+// 3. GESTIÃ“N DE PRODUCTOS Y PAGINACIÃ“N
 // ==========================================
 let totalPaginasBackend = 1;
 let totalElementosBackend = 0;
@@ -335,7 +335,7 @@ function renderizarTabla(lista) {
         tr.innerHTML = `
             <td class="ps-3">
                 <p class="product-name fw-bold mb-0">${nombreSeguro}</p>
-                <span class="product-code text-muted small"><i class="bi bi-barcode me-1"></i>${barcodeSeguro || 'Sin código'}</span>
+                <span class="product-code text-muted small"><i class="bi bi-barcode me-1"></i>${barcodeSeguro || 'Sin cÃ³digo'}</span>
             </td>
             <td class="d-none d-md-table-cell"><span class="badge bg-light text-dark border p-2 px-3 rounded-pill">${catName}</span></td>
             <td class="text-muted amount-num d-none d-lg-table-cell">${fmtARS.format(costo)}</td>
@@ -377,14 +377,14 @@ function renderizarControlesPaginacion(totalItems, totalPaginas, inicio, fin) {
 
     let html = '';
 
-    // Botón Anterior
+    // BotÃ³n Anterior
     html += `
         <li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
             <button class="page-link" onclick="cambiarPagina(${paginaActual - 1})"><i class="bi bi-chevron-left"></i></button>
         </li>
     `;
 
-    // Algoritmo de rango dinámico para evitar renderizar decenas de números
+    // Algoritmo de rango dinÃ¡mico para evitar renderizar decenas de nÃºmeros
     const maxPaginasVisibles = 5;
     let pagInicio = Math.max(1, paginaActual - Math.floor(maxPaginasVisibles / 2));
     let pagFin = Math.min(totalPaginas, pagInicio + maxPaginasVisibles - 1);
@@ -411,7 +411,7 @@ function renderizarControlesPaginacion(totalItems, totalPaginas, inicio, fin) {
         html += `<li class="page-item"><button class="page-link" onclick="cambiarPagina(${totalPaginas})">${totalPaginas}</button></li>`;
     }
 
-    // Botón Siguiente
+    // BotÃ³n Siguiente
     html += `
         <li class="page-item ${paginaActual === totalPaginas ? 'disabled' : ''}">
             <button class="page-link" onclick="cambiarPagina(${paginaActual + 1})"><i class="bi bi-chevron-right"></i></button>
@@ -425,7 +425,7 @@ function cambiarPagina(nuevaPagina) {
     if (nuevaPagina < 1 || nuevaPagina > totalPaginasBackend) return;
     const texto = (document.getElementById('buscador')?.value || '').trim();
     if (texto) {
-        // En modo búsqueda, mantener
+        // En modo bÃºsqueda, mantener
         return;
     }
     listarProductos(nuevaPagina - 1);
@@ -447,7 +447,7 @@ async function guardarProducto(e) {
     let barcode = document.getElementById('prodBarcode').value.trim();
 
     if (!nombre) return Swal.fire('Error', 'El nombre es obligatorio', 'warning');
-    if (!categoriaId) return Swal.fire('Error', 'Selecciona una categoría', 'warning');
+    if (!categoriaId) return Swal.fire('Error', 'Selecciona una categorÃ­a', 'warning');
 
     if (!barcode) {
         barcode = generarCodigoInterno();
@@ -455,7 +455,7 @@ async function guardarProducto(e) {
 
     const body = {
         name: nombre,
-        // Captura el valor del campo de descripción del modal
+        // Captura el valor del campo de descripciÃ³n del modal
         description: document.getElementById('prodDescripcion')?.value.trim() || "",
         barcode: barcode,
         cost: parseFloat(document.getElementById('prodCosto').value) || 0,
@@ -495,7 +495,7 @@ function prepararFormulario() {
     const form = document.getElementById('formProducto');
     if (form) form.reset();
     if (document.getElementById('prodId')) document.getElementById('prodId').value = '';
-    // Limpieza explícita del campo de descripción al crear un producto nuevo
+    // Limpieza explÃ­cita del campo de descripciÃ³n al crear un producto nuevo
     if (document.getElementById('prodDescripcion')) document.getElementById('prodDescripcion').value = '';
     if (document.getElementById('prodIsFractional')) document.getElementById('prodIsFractional').checked = false;
     if (document.getElementById('modalTitulo')) document.getElementById('modalTitulo').innerText = "Nuevo Producto";
@@ -510,7 +510,7 @@ function editarProducto(id) {
 
     if (document.getElementById('prodId')) document.getElementById('prodId').value = p.id;
     if (document.getElementById('prodNombre')) document.getElementById('prodNombre').value = p.name || '';
-    // Carga de la descripción existente en el formulario
+    // Carga de la descripciÃ³n existente en el formulario
     if (document.getElementById('prodDescripcion')) document.getElementById('prodDescripcion').value = p.description || '';
     if (document.getElementById('prodBarcode')) document.getElementById('prodBarcode').value = p.barcode || '';
     if (document.getElementById('prodCosto')) document.getElementById('prodCosto').value = p.cost || 0;
@@ -530,11 +530,11 @@ function editarProducto(id) {
 
 async function eliminarProducto(id) {
     const result = await Swal.fire({
-        title: '¿Mover a la papelera?',
-        text: "Podrás restaurarlo en cualquier momento.",
+        title: 'Â¿Mover a la papelera?',
+        text: "PodrÃ¡s restaurarlo en cualquier momento.",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Sí, borrar',
+        confirmButtonText: 'SÃ­, borrar',
         cancelButtonText: 'Cancelar'
     });
 
@@ -552,7 +552,7 @@ async function eliminarProducto(id) {
 }
 
 // ==========================================
-// 4. PAPELERA Y RESTAURACIÓN
+// 4. PAPELERA Y RESTAURACIÃ“N
 // ==========================================
 async function abrirPapelera() {
     try {
@@ -565,7 +565,7 @@ async function abrirPapelera() {
         tabla.innerHTML = '';
 
         if (!borrados || borrados.length === 0) {
-            tabla.innerHTML = '<tr><td colspan="2" class="text-center p-4 text-muted">La papelera está vacía</td></tr>';
+            tabla.innerHTML = '<tr><td colspan="2" class="text-center p-4 text-muted">La papelera estÃ¡ vacÃ­a</td></tr>';
         } else {
             const fragment = document.createDocumentFragment();
             borrados.forEach(p => {
@@ -632,11 +632,11 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ==========================================
-// 6. IMPRESIÓN DE ETIQUETA / TICKET MEJORADA
+// 6. IMPRESIÃ“N DE ETIQUETA / TICKET MEJORADA
 // ==========================================
 /**
- * Motor de impresión nativo mediante CSS @media print y #print-section.
- * Sincroniza la carga de imágenes antes de invocar window.print().
+ * Motor de impresiÃ³n nativo mediante CSS @media print y #print-section.
+ * Sincroniza la carga de imÃ¡genes antes de invocar window.print().
  */
 function imprimirHTMLConIframe(htmlContent) {
     let printSection = document.getElementById('print-section');
@@ -679,8 +679,8 @@ function imprimirHTMLConIframe(htmlContent) {
 }
 
 /**
- * Renderiza un código de barras CODE128 en un canvas en memoria y devuelve su DataURL (image/png).
- * Soporta rotación de 90° para impresión térmica vertical POS80 sin deformación de barras.
+ * Renderiza un cÃ³digo de barras CODE128 en un canvas en memoria y devuelve su DataURL (image/png).
+ * Soporta rotaciÃ³n de 90Â° para impresiÃ³n tÃ©rmica vertical POS80 sin deformaciÃ³n de barras.
  */
 function generarBarcodeDataURL(codigo, options = {}) {
     if (!codigo) return null;
@@ -716,7 +716,7 @@ function generarBarcodeDataURL(codigo, options = {}) {
 
         return canvas.toDataURL("image/png");
     } catch (e) {
-        console.error("Error generando código de barras CODE128:", e);
+        console.error("Error generando cÃ³digo de barras CODE128:", e);
         return null;
     }
 }
@@ -730,12 +730,12 @@ async function imprimirEtiquetaPos80(productoId) {
         return;
     }
 
-    // 1. Solicitud de cantidad dinámica
+    // 1. Solicitud de cantidad dinÃ¡mica
     let cantidad = 1;
     if (typeof Swal !== 'undefined') {
         const { value: cantInput } = await Swal.fire({
-            title: 'Impresión de Etiquetas POS80',
-            text: `¿Cuántas etiquetas de "${p.name}" deseas imprimir?`,
+            title: 'ImpresiÃ³n de Etiquetas POS80',
+            text: `Â¿CuÃ¡ntas etiquetas de "${p.name}" deseas imprimir?`,
             input: 'number',
             inputValue: 1,
             inputAttributes: { min: 1, max: 100, step: 1 },
@@ -764,11 +764,11 @@ async function imprimirEtiquetaPos80(productoId) {
             });
             listarProductos();
         } catch (err) {
-            console.error("Error al asignar código automático:", err);
+            console.error("Error al asignar cÃ³digo automÃ¡tico:", err);
         }
     }
 
-    // 2. Generar imagen del código de barras horizontal (sin rotar)
+    // 2. Generar imagen del cÃ³digo de barras horizontal (sin rotar)
     const barcodeImgData = generarBarcodeDataURL(barcodeParaImprimir, {
         width: 2.0,
         height: 48,
@@ -780,7 +780,7 @@ async function imprimirEtiquetaPos80(productoId) {
 
     if (!barcodeImgData) {
         if (typeof Swal !== 'undefined') {
-            Swal.fire('Error', 'No se pudo generar el código de barras gráfico.', 'error');
+            Swal.fire('Error', 'No se pudo generar el cÃ³digo de barras grÃ¡fico.', 'error');
         }
         return;
     }
@@ -790,7 +790,7 @@ async function imprimirEtiquetaPos80(productoId) {
     const precioFormateado = "$" + precioNum.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const nombreProd = (p.name || 'PRODUCTO').toUpperCase();
 
-    // 3. Instanciar jsPDF con dimensionamiento dinámico [80, altoEtiqueta * cantidad]
+    // 3. Instanciar jsPDF con dimensionamiento dinÃ¡mico [80, altoEtiqueta * cantidad]
     let JsPdfClass = null;
     if (window.jspdf && window.jspdf.jsPDF) {
         JsPdfClass = window.jspdf.jsPDF;
@@ -818,7 +818,7 @@ async function imprimirEtiquetaPos80(productoId) {
             pdf.setFontSize(12);
             pdf.text(precioFormateado, 40, yOffset + 17, { align: 'center' });
 
-            // Código de barras horizontal (X: 5mm, Y: ajustado al offset, Ancho: 70mm, Alto: 18mm)
+            // CÃ³digo de barras horizontal (X: 5mm, Y: ajustado al offset, Ancho: 70mm, Alto: 18mm)
             pdf.addImage(barcodeImgData, 'PNG', 5, yOffset + 20, 70, 18);
         }
 
@@ -899,13 +899,13 @@ async function imprimirEtiquetasMultiples(id) {
             });
             listarProductos();
         } catch (err) {
-            console.error("Error al asignar código automático:", err);
+            console.error("Error al asignar cÃ³digo automÃ¡tico:", err);
         }
     }
 
     const { value: cantidad } = await Swal.fire({
-        title: 'Impresión Masiva de Etiquetas',
-        text: `¿Cuántas etiquetas de "${p.name}" querés generar? (Página A4 completa = 24 etiquetas)`,
+        title: 'ImpresiÃ³n Masiva de Etiquetas',
+        text: `Â¿CuÃ¡ntas etiquetas de "${p.name}" querÃ©s generar? (PÃ¡gina A4 completa = 24 etiquetas)`,
         input: 'number',
         inputValue: 24,
         inputAttributes: {
@@ -921,7 +921,7 @@ async function imprimirEtiquetasMultiples(id) {
 
     if (!cantidad || cantidad <= 0) return;
 
-    // Código de barras horizontal estándar optimizado para celdas A4 de 62x33.5mm
+    // CÃ³digo de barras horizontal estÃ¡ndar optimizado para celdas A4 de 62x33.5mm
     const barcodeImgData = generarBarcodeDataURL(barcodeParaImprimir, {
         width: 2.0,
         height: 48,
@@ -933,7 +933,7 @@ async function imprimirEtiquetasMultiples(id) {
 
     if (!barcodeImgData) {
         if (typeof Swal !== 'undefined') {
-            Swal.fire('Error', 'No se pudo generar el código de barras gráfico.', 'error');
+            Swal.fire('Error', 'No se pudo generar el cÃ³digo de barras grÃ¡fico.', 'error');
         }
         return;
     }
@@ -1040,7 +1040,7 @@ async function imprimirEtiquetasMultiples(id) {
 }
 
 // ==========================================
-// 7. EXPOSICIÓN AL SCOPE GLOBAL
+// 7. EXPOSICIÃ“N AL SCOPE GLOBAL
 // ==========================================
 window.abrirModalCategoria = abrirModalCategoria;
 window.prepararEdicionCat = prepararEdicionCat;

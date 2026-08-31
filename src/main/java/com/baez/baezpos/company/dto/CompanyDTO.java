@@ -28,7 +28,7 @@ public class CompanyDTO {
     private String address;
     private String phone;
 
-    @Email(message = "Debe proporcionar una dirección de correo válida")
+    @Email(message = "Debe proporcionar una direcciÃ³n de correo vÃ¡lida")
     private String email;
 
     private LocalDate expirationDate;
@@ -38,7 +38,7 @@ public class CompanyDTO {
     private String ticketMessage;
     private String adminName;
     private String ownerName;
-    private String ownerPassword; // Se utiliza únicamente si el SuperAdmin la envía para resetear
+    private String ownerPassword; // Se utiliza Ãºnicamente si el SuperAdmin la envÃ­a para resetear
 
     // CAMPOS FISCALES (ARCA / AFIP)
     private Boolean hasTaxData;

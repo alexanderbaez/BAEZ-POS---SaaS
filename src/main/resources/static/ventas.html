@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -14,7 +14,7 @@
 </head>
 <body>
 
-<!-- Contenedor del Sidebar Dinámico (inyectado por sidebar.js) -->
+<!-- Contenedor del Sidebar DinÃ¡mico (inyectado por sidebar.js) -->
 <div id="sidebar-container"></div>
 
 <!-- Contenedor Principal -->
@@ -23,7 +23,7 @@
     <!-- Navbar Superior Responsivo -->
     <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom p-2 p-md-3 sticky-top shadow-sm">
         <div class="container-fluid p-0">
-            <!-- Botón de Menú con estilo Outline según diseño UI global -->
+            <!-- BotÃ³n de MenÃº con estilo Outline segÃºn diseÃ±o UI global -->
             <button type="button" id="sidebarCollapse" class="btn btn-outline-primary d-md-none me-2 rounded-3">
                 <i class="bi bi-list fs-5"></i>
             </button>
@@ -61,13 +61,13 @@
         </div>
     </nav>
 
-    <!-- Alerta Global de Suscripción -->
+    <!-- Alerta Global de SuscripciÃ³n -->
     <div id="alertaSuscripcion" class="w-100"></div>
 
     <div class="container-fluid p-2 p-md-4">
         <div class="row g-3">
 
-            <!-- PANEL IZQUIERDO: BÚSQUEDA Y CARRITO -->
+            <!-- PANEL IZQUIERDO: BÃšSQUEDA Y CARRITO -->
             <div class="col-12 col-lg-7 col-xl-8">
                 <div class="card card-pos p-3 p-md-4 shadow-sm">
 
@@ -77,7 +77,7 @@
                             <span class="input-group-text bg-white border-end-0 text-primary pe-1">
                                 <i class="bi bi-upc-scan fs-5"></i>
                             </span>
-                            <input type="text" id="buscadorVenta" class="form-control border-start-0 fs-6 fs-md-5 py-2 py-md-3" placeholder="Escanea código o busca producto..." autocomplete="off" inputmode="search" enterkeyhint="search">
+                            <input type="text" id="buscadorVenta" class="form-control border-start-0 fs-6 fs-md-5 py-2 py-md-3" placeholder="Escanea cÃ³digo o busca producto..." autocomplete="off" inputmode="search" enterkeyhint="search">
                         </div>
                         <div id="listaSugerencias" class="list-group position-absolute w-100 shadow-lg sugerencias-box"></div>
                     </div>
@@ -95,7 +95,7 @@
                             </tr>
                             </thead>
                             <tbody id="carritoBody">
-                            <!-- Contenido generado dinámicamente por ventas.js -->
+                            <!-- Contenido generado dinÃ¡micamente por ventas.js -->
                             </tbody>
                         </table>
                     </div>
@@ -118,7 +118,7 @@
                         <!-- Visualizador del Monto -->
                         <div class="total-display mb-3 text-break" id="totalVenta">$0.00</div>
 
-                        <!-- Sección de Descuentos -->
+                        <!-- SecciÃ³n de Descuentos -->
                         <div class="bg-light p-2.5 p-md-3 rounded-3 border mb-3">
                             <label class="small fw-bold text-secondary text-uppercase mb-1.5 d-block" style="font-size: 0.7rem;">Aplicar Descuento</label>
                             <div class="row g-2">
@@ -134,8 +134,8 @@
                             </div>
                         </div>
 
-                        <!-- Selección de Método de Pago -->
-                        <label class="small fw-bold mb-2 text-secondary text-uppercase" style="font-size: 0.7rem;">Método de Pago</label>
+                        <!-- SelecciÃ³n de MÃ©todo de Pago -->
+                        <label class="small fw-bold mb-2 text-secondary text-uppercase" style="font-size: 0.7rem;">MÃ©todo de Pago</label>
                         <div class="row g-2 mb-3">
                             <div class="col-4">
                                 <div id="btnEfectivo" class="metodo-pago active" onclick="setMetodo('EFECTIVO', this)">
@@ -186,7 +186,7 @@
                             </div>
                         </div>
 
-                        <!-- Panel Vuelto / Calculadora rápida -->
+                        <!-- Panel Vuelto / Calculadora rÃ¡pida -->
                         <div id="seccionVuelto" class="bg-light p-3 rounded-3 border mb-3 shadow-sm">
                             <div class="mb-2">
                                 <label class="small fw-bold text-secondary text-uppercase mb-1 d-block" style="font-size: 0.7rem;">Paga con:</label>
@@ -200,12 +200,12 @@
                                 <span class="h3 mb-0 fw-extrabold text-success" id="vueltoVenta">$0.00</span>
                             </div>
                             <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-3 py-2 fw-semibold" onclick="reimprimirUltimoTicket()">
-                                <i class="bi bi-printer me-1.5"></i> Reimprimir Último Ticket
+                                <i class="bi bi-printer me-1.5"></i> Reimprimir Ãšltimo Ticket
                             </button>
                         </div>
                     </div>
 
-                    <!-- Botón Acción Principal en Desktop/Tablet -->
+                    <!-- BotÃ³n AcciÃ³n Principal en Desktop/Tablet -->
                     <div class="mt-2 d-none d-md-block">
                         <button id="btnFinalizarVenta" class="btn btn-primary btn-lg w-100 py-3 fw-bold shadow-sm rounded-3" onclick="finalizarVenta()">
                             <i class="bi bi-check2-all me-2"></i>CONFIRMAR VENTA
@@ -243,7 +243,7 @@
                             <span class="input-group-text bg-light fw-bold">$</span>
                             <input type="number" step="0.01" min="0" id="montoInicialCaja" class="form-control fw-bold" placeholder="0.00" required autocomplete="off">
                         </div>
-                        <small class="text-muted">Ingrese el efectivo físico disponible en la caja al iniciar el turno.</small>
+                        <small class="text-muted">Ingrese el efectivo fÃ­sico disponible en la caja al iniciar el turno.</small>
                     </div>
                     <div class="d-grid gap-2 mt-4">
                         <button type="submit" id="btnConfirmarApertura" class="btn btn-primary btn-lg fw-bold">
@@ -267,25 +267,25 @@
                     </div>
                     <div>
                         <h5 class="modal-title fw-bold text-dark m-0 fs-6">Cierre y Arqueo de Caja</h5>
-                        <small class="text-muted" style="font-size: 0.75rem;">Arqueo Ciego del Cajón Físico</small>
+                        <small class="text-muted" style="font-size: 0.75rem;">Arqueo Ciego del CajÃ³n FÃ­sico</small>
                     </div>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
                 <div class="text-center mb-3">
-                    <p class="text-muted small mb-0">Cuente el efectivo físico total en billetes y monedas disponible en la caja.</p>
+                    <p class="text-muted small mb-0">Cuente el efectivo fÃ­sico total en billetes y monedas disponible en la caja.</p>
                 </div>
 
                 <form id="formCerrarCaja" onsubmit="modalCerrarCaja(); return false;">
                     <div class="mb-3">
-                        <label class="form-label text-dark fw-bold small text-uppercase mb-2 text-center d-block">Efectivo Físico Contado *</label>
+                        <label class="form-label text-dark fw-bold small text-uppercase mb-2 text-center d-block">Efectivo FÃ­sico Contado *</label>
                         <div class="input-group input-group-lg shadow-sm rounded-3 overflow-hidden border mx-auto" style="max-width: 300px;">
                             <span class="input-group-text bg-white border-0 text-success fw-bold fs-3 ps-3 pe-2">$</span>
                             <input type="number" step="0.01" min="0" id="montoFinalReal" class="form-control form-control-lg border-0 fs-2 fw-bold text-dark text-center shadow-none amount-num" placeholder="0.00" required autocomplete="off">
                         </div>
                         <small class="text-muted text-center d-block mt-1.5" style="font-size: 0.75rem;">
-                            <i class="bi bi-shield-lock me-1 text-primary"></i> El sistema calculará automáticamente la diferencia con el arqueo teórico tras confirmar.
+                            <i class="bi bi-shield-lock me-1 text-primary"></i> El sistema calcularÃ¡ automÃ¡ticamente la diferencia con el arqueo teÃ³rico tras confirmar.
                         </small>
                     </div>
 

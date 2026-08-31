@@ -43,7 +43,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     // ==========================================
 
     /**
-     * Gastos Deducibles pagados estrictamente con un Medio de Pago específico.
+     * Gastos Deducibles pagados estrictamente con un Medio de Pago especÃ­fico.
      * Utiliza el Enum com.baez.baezpos.shared.entity.PaymentMethod (EFECTIVO_CAJA, TRANSFERENCIA, TARJETA)
      */
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e " +
@@ -58,7 +58,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
             @Param("end") LocalDateTime end);
 
     /**
-     * Método directo para obtener Gastos Deducibles en EFECTIVO_CAJA.
+     * MÃ©todo directo para obtener Gastos Deducibles en EFECTIVO_CAJA.
      */
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e " +
             "WHERE e.company.id = :companyId " +

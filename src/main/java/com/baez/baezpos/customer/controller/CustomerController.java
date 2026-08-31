@@ -62,7 +62,7 @@ public class CustomerController {
             @Valid @RequestBody PaymentRequestDTO paymentDTO) {
 
         customerService.processCustomerPayment(id, paymentDTO.amount(), paymentDTO.method());
-        return ResponseEntity.ok(MessageResponseDTO.of("Pago registrado con éxito"));
+        return ResponseEntity.ok(MessageResponseDTO.of("Pago registrado con Ã©xito"));
     }
 
     @PutMapping("/{id}")

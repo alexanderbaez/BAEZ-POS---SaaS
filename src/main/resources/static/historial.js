@@ -1,5 +1,5 @@
-// ==========================================
-// 1. CONFIGURACIÓN Y VARIABLES GLOBALES
+﻿// ==========================================
+// 1. CONFIGURACIÃ“N Y VARIABLES GLOBALES
 // ==========================================
 let VENTA_SELECCIONADA = null;
 let VENTAS_GLOBALES = [];
@@ -11,7 +11,7 @@ let totalElementosBackend = 0;
 const LIMITE_POR_PAGINA = 20;
 
 // ==========================================
-// 2. INICIALIZACIÓN Y NORMALIZACIÓN DE FECHAS
+// 2. INICIALIZACIÃ“N Y NORMALIZACIÃ“N DE FECHAS
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
     const hoyLocal = new Date().toLocaleDateString('sv-SE'); // 'YYYY-MM-DD' local (AR)
@@ -48,7 +48,7 @@ async function cargarVentas(pagina = 0) {
     const hasta = hastaInput ? hastaInput.value : '';
 
     if (!desde || !hasta) {
-        return Swal.fire('Atención', 'Por favor selecciona el rango de fechas completo.', 'warning');
+        return Swal.fire('AtenciÃ³n', 'Por favor selecciona el rango de fechas completo.', 'warning');
     }
 
     try {
@@ -105,7 +105,7 @@ function renderizarControlesPaginacion(totalItems, totalPaginas, inicio, fin) {
 
     let html = '';
 
-    // Botón Anterior
+    // BotÃ³n Anterior
     html += `
         <li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
             <button class="page-link" onclick="cambiarPaginaHistorial(${paginaActual - 1})"><i class="bi bi-chevron-left"></i></button>
@@ -138,7 +138,7 @@ function renderizarControlesPaginacion(totalItems, totalPaginas, inicio, fin) {
         html += `<li class="page-item"><button class="page-link" onclick="cambiarPaginaHistorial(${totalPaginas})">${totalPaginas}</button></li>`;
     }
 
-    // Botón Siguiente
+    // BotÃ³n Siguiente
     html += `
         <li class="page-item ${paginaActual === totalPaginas ? 'disabled' : ''}">
             <button class="page-link" onclick="cambiarPaginaHistorial(${paginaActual + 1})"><i class="bi bi-chevron-right"></i></button>
@@ -180,11 +180,11 @@ function renderizarTabla(ventas) {
     tbody.innerHTML = '';
 
     if (!ventas || ventas.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center p-5 text-muted">No se encontraron ventas en este período.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center p-5 text-muted">No se encontraron ventas en este perÃ­odo.</td></tr>';
         return;
     }
 
-    // Ordenamiento numérico descendente
+    // Ordenamiento numÃ©rico descendente
     const ventasOrdenadas = [...ventas].sort((a, b) => {
         const numA = Number(a.numeroTicket || a.id) || 0;
         const numB = Number(b.numeroTicket || b.id) || 0;
@@ -286,20 +286,20 @@ function escapeHtml(str) {
 }
 
 // ==========================================
-// 5. LÓGICA DE ANULACIÓN
+// 5. LÃ“GICA DE ANULACIÃ“N
 // ==========================================
 async function confirmarAnulacion(id) {
     const venta = VENTAS_GLOBALES.find(v => v.id === id);
     const numTicketVisual = venta ? obtenerNumTicketVisual(venta) : `#${id}`;
 
     const result = await Swal.fire({
-        title: `¿Anular venta ${numTicketVisual}?`,
-        text: "El stock se reintegrará automáticamente y esta acción no se puede deshacer.",
+        title: `Â¿Anular venta ${numTicketVisual}?`,
+        text: "El stock se reintegrarÃ¡ automÃ¡ticamente y esta acciÃ³n no se puede deshacer.",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
         cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Sí, anular venta',
+        confirmButtonText: 'SÃ­, anular venta',
         cancelButtonText: 'Mantener'
     });
 
@@ -312,16 +312,16 @@ async function confirmarAnulacion(id) {
                 await cargarVentas();
             } else {
                 const errorData = await res.json();
-                Swal.fire('Error', errorData.message || 'No se pudo procesar la anulación', 'error');
+                Swal.fire('Error', errorData.message || 'No se pudo procesar la anulaciÃ³n', 'error');
             }
         } catch (err) {
-            Swal.fire('Error de red', 'No hay conexión con el servidor.', 'error');
+            Swal.fire('Error de red', 'No hay conexiÃ³n con el servidor.', 'error');
         }
     }
 }
 
 // ==========================================
-// HELPER GLOBAL DE FORMATEO DE CANTIDAD (ESTÁNDAR TICKET/HISTORIAL)
+// HELPER GLOBAL DE FORMATEO DE CANTIDAD (ESTÃNDAR TICKET/HISTORIAL)
 // ==========================================
 function fmtCantidadGlobal(item) {
     if (!item) return '1 un.';
@@ -428,7 +428,7 @@ function verDetalle(idVenta) {
 
     const modalElement = document.getElementById('modalDetalleVenta');
     if (modalElement) {
-        // Reutilización segura de la instancia de Bootstrap Modal
+        // ReutilizaciÃ³n segura de la instancia de Bootstrap Modal
         const modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
         modal.show();
     }
@@ -587,12 +587,12 @@ async function exportarPDF() {
     doc.setTextColor(15, 23, 42);
     doc.setFontSize(11);
     doc.setFont(undefined, 'bold');
-    doc.text("BALANCE DE AUDITORÍA CONTABLE:", 14, actualY);
+    doc.text("BALANCE DE AUDITORÃA CONTABLE:", 14, actualY);
 
     doc.setFont(undefined, 'normal');
     doc.setFontSize(9);
-    doc.text(`(+) Recaudación en Efectivo: $${totalEfectivo.toLocaleString('es-AR', {minimumFractionDigits: 2})}`, 14, actualY + 6);
-    doc.text(`(+) Recaudación Transferencias/Digital: $${totalTransferencia.toLocaleString('es-AR', {minimumFractionDigits: 2})}`, 14, actualY + 12);
+    doc.text(`(+) RecaudaciÃ³n en Efectivo: $${totalEfectivo.toLocaleString('es-AR', {minimumFractionDigits: 2})}`, 14, actualY + 6);
+    doc.text(`(+) RecaudaciÃ³n Transferencias/Digital: $${totalTransferencia.toLocaleString('es-AR', {minimumFractionDigits: 2})}`, 14, actualY + 12);
 
     doc.setTextColor(217, 119, 6);
     doc.text(`( ) Deuda Pendiente en Libreta: $${totalLibreta.toLocaleString('es-AR', {minimumFractionDigits: 2})} (incluye $${sumaRecargos.toLocaleString('es-AR', {minimumFractionDigits: 2})} de recargos)`, 14, actualY + 18);
@@ -612,7 +612,7 @@ async function exportarExcelPro() {
     const ventasAExportar = await obtenerVentasParaExportar();
 
     if (ventasAExportar.length === 0) {
-        return Swal.fire('Atención', 'No hay datos activos para exportar en el rango seleccionado.', 'info');
+        return Swal.fire('AtenciÃ³n', 'No hay datos activos para exportar en el rango seleccionado.', 'info');
     }
 
     let efe = 0, tra = 0, lib = 0, descTot = 0, recTot = 0;
@@ -638,17 +638,17 @@ async function exportarExcelPro() {
 
         if (items.length === 0) {
             dataExcel.push({
-                "N° Comprobante": numTicketVisual,
+                "NÂ° Comprobante": numTicketVisual,
                 "Fecha / Hora": fechaTexto,
                 "Cliente": clienteTexto,
                 "Producto": 'SIN DETALLE',
                 "Cantidad / Peso": '1 un.',
                 "Precio Unitario": totalVenta,
-                "Subtotal Ítem": totalVenta,
+                "Subtotal Ãtem": totalVenta,
                 "Descuento Venta": desc,
                 "Recargo Libreta": rec,
                 "Total Venta": totalVenta,
-                "Método de Pago": metodoTexto
+                "MÃ©todo de Pago": metodoTexto
             });
         } else {
             items.forEach((item, index) => {
@@ -656,19 +656,19 @@ async function exportarExcelPro() {
                 const prec = parseFloat(item.price || item.precio || 0);
                 const subt = item.subtotal !== undefined ? parseFloat(item.subtotal) : (cant * prec);
 
-                // Evitamos duplicar totales agregados por renglón de ítem
+                // Evitamos duplicar totales agregados por renglÃ³n de Ã­tem
                 dataExcel.push({
-                    "N° Comprobante": index === 0 ? numTicketVisual : "",
+                    "NÂ° Comprobante": index === 0 ? numTicketVisual : "",
                     "Fecha / Hora": index === 0 ? fechaTexto : "",
                     "Cliente": index === 0 ? clienteTexto : "",
                     "Producto": (item.productName || item.nombre || 'PRODUCTO').toUpperCase(),
                     "Cantidad / Peso": fmtCantidadGlobal(item),
                     "Precio Unitario": prec,
-                    "Subtotal Ítem": subt,
+                    "Subtotal Ãtem": subt,
                     "Descuento Venta": index === 0 ? desc : "",
                     "Recargo Libreta": index === 0 ? rec : "",
                     "Total Venta": index === 0 ? totalVenta : "",
-                    "Método de Pago": index === 0 ? metodoTexto : ""
+                    "MÃ©todo de Pago": index === 0 ? metodoTexto : ""
                 });
             });
         }
@@ -678,13 +678,13 @@ async function exportarExcelPro() {
     const fechaHasta = document.getElementById('fechaHasta')?.value || '';
 
     dataExcel.push({});
-    dataExcel.push({ "Producto": "--- RESUMEN DE AUDITORÍA DE CAJA ---" });
-    dataExcel.push({ "Producto": "TOTAL DESCUENTOS APLICADOS:", "Subtotal Ítem": descTot });
-    dataExcel.push({ "Producto": "TOTAL RECARGOS LIBRETA:", "Subtotal Ítem": recTot });
-    dataExcel.push({ "Producto": "TOTAL EFECTIVO (CAJA):", "Subtotal Ítem": efe });
-    dataExcel.push({ "Producto": "TOTAL TRANSFERENCIA (BANCO):", "Subtotal Ítem": tra });
-    dataExcel.push({ "Producto": "TOTAL LIBRETA (PENDIENTE DE COBRO):", "Subtotal Ítem": lib });
-    dataExcel.push({ "Producto": "TOTAL RECAUDACIÓN REAL EN CAJA (EFE + TRA):", "Subtotal Ítem": efe + tra });
+    dataExcel.push({ "Producto": "--- RESUMEN DE AUDITORÃA DE CAJA ---" });
+    dataExcel.push({ "Producto": "TOTAL DESCUENTOS APLICADOS:", "Subtotal Ãtem": descTot });
+    dataExcel.push({ "Producto": "TOTAL RECARGOS LIBRETA:", "Subtotal Ãtem": recTot });
+    dataExcel.push({ "Producto": "TOTAL EFECTIVO (CAJA):", "Subtotal Ãtem": efe });
+    dataExcel.push({ "Producto": "TOTAL TRANSFERENCIA (BANCO):", "Subtotal Ãtem": tra });
+    dataExcel.push({ "Producto": "TOTAL LIBRETA (PENDIENTE DE COBRO):", "Subtotal Ãtem": lib });
+    dataExcel.push({ "Producto": "TOTAL RECAUDACIÃ“N REAL EN CAJA (EFE + TRA):", "Subtotal Ãtem": efe + tra });
 
     const ws = XLSX.utils.json_to_sheet(dataExcel);
     ws['!cols'] = [
@@ -699,11 +699,11 @@ async function exportarExcelPro() {
 }
 
 // ==========================================
-// 9. REIMPRESIÓN DE TICKET TÉRMICO (58mm POS)
+// 9. REIMPRESIÃ“N DE TICKET TÃ‰RMICO (58mm POS)
 // ==========================================
 /**
- * Motor de impresión nativo mediante CSS @media print y #print-section.
- * Sincroniza la carga de imágenes (ej. códigos QR) antes de invocar window.print().
+ * Motor de impresiÃ³n nativo mediante CSS @media print y #print-section.
+ * Sincroniza la carga de imÃ¡genes (ej. cÃ³digos QR) antes de invocar window.print().
  */
 function imprimirHTMLConIframe(htmlContent) {
     let printSection = document.getElementById('print-section');
@@ -757,7 +757,7 @@ function reimprimirTicket() {
     const direccionLocal = escapeHtml(venta.companyAddress || infoEmpresa.address || '');
     const telefonoLocal = escapeHtml(venta.companyPhone || infoEmpresa.phone || '');
     const emailLocal = escapeHtml(venta.companyEmail || infoEmpresa.email || '');
-    const mensajePie = escapeHtml(venta.ticketMessage || infoEmpresa.ticketMessage || '¡Gracias por su compra!');
+    const mensajePie = escapeHtml(venta.ticketMessage || infoEmpresa.ticketMessage || 'Â¡Gracias por su compra!');
 
     const cuitLocal = venta.companyCuit || infoEmpresa.taxId || infoEmpresa.cuit || '';
     const iibbLocal = venta.companyIibb || infoEmpresa.iibb || '';
@@ -776,7 +776,7 @@ function reimprimirTicket() {
     const cae = venta.cae || '';
     const caeVto = venta.caeExpiration || venta.caeVto || '';
 
-    // Número de Comprobante / Ticket
+    // NÃºmero de Comprobante / Ticket
     const nroComprobante = venta.invoiceNumber || venta.nroComprobante || `00001-${String(venta.numeroTicket || venta.id || 1).padStart(8, '0')}`;
     const fechaVenta = venta.saleDate ? new Date(venta.saleDate).toLocaleString('es-AR') : new Date().toLocaleString('es-AR');
     const cajeroNombre = escapeHtml(venta.sellerName || venta.userName || venta.cashierName || 'Admin').toUpperCase();
@@ -855,7 +855,7 @@ function reimprimirTicket() {
         <!DOCTYPE html>
         <html>
             <head>
-                <title>Reimpresión Ticket #${venta.id || ''}</title>
+                <title>ReimpresiÃ³n Ticket #${venta.id || ''}</title>
                 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
                 <style>
                     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
@@ -916,8 +916,8 @@ function reimprimirTicket() {
                             </div>
                         ` : ''}
                         <div class="line"></div>
-                        <div class="watermark-reprint">DUPLICADO / REIMPRESIÓN</div>
-                        <div class="small-info"><strong>${tipoComprobante} N° ${nroComprobante}</strong></div>
+                        <div class="watermark-reprint">DUPLICADO / REIMPRESIÃ“N</div>
+                        <div class="small-info"><strong>${tipoComprobante} NÂ° ${nroComprobante}</strong></div>
                         <div class="small-info">Fecha: ${fechaVenta}</div>
                         <div class="small-info">Cajero: ${cajeroNombre}</div>
                         <div class="small-info" style="text-align: left; margin-top: 4px;"><strong>A:</strong> ${nombreCliente} ${cuitCliente ? `(CUIT: ${cuitCliente})` : ''}</div>
@@ -952,7 +952,7 @@ function reimprimirTicket() {
                     ${cae ? `
                         <div class="arca-container" style="border-top: 1px dashed #000; margin-top: 8px; padding-top: 6px; text-align: center;">
                             <div class="arca-logo" style="text-align: center; font-weight: 900; font-size: 10pt; letter-spacing: 2px;">ARCA / AFIP</div>
-                            <div class="small-info center" style="font-size: 7.5pt; margin-bottom: 4px; text-align: center;">Comprobante Autorizado Electrónicamente</div>
+                            <div class="small-info center" style="font-size: 7.5pt; margin-bottom: 4px; text-align: center;">Comprobante Autorizado ElectrÃ³nicamente</div>
                             <div style="text-align: center; margin: 6px 0;">
                                 <img src="https://quickchart.io/qr?text=${encodeURIComponent(qrText || `https://www.afip.gob.ar/fe/qr/?p=${btoa(JSON.stringify({ fecha: fechaVenta.split(' ')[0], cuit: Number(cuitLocal.replace(/\\D/g, '') || 301234559), ptoVta: 1, tipoCmp: tipoComprobante.includes('A') ? 1 : 11, nroCmp: 1, importe: totalFinal, tipoDocRec: 99, nroDocRec: 0, tipoCodAut: 'E', codAut: Number(cae) || 0 }))}`)}&size=120" style="width: 120px; height: 120px; display: inline-block;" alt="QR AFIP" />
                             </div>
@@ -989,7 +989,7 @@ function generarFacturaA4HTML(venta) {
     const direccionLocal = escapeHtml(venta.companyAddress || infoEmpresa.address || '');
     const telefonoLocal = escapeHtml(venta.companyPhone || infoEmpresa.phone || '');
     const emailLocal = escapeHtml(venta.companyEmail || infoEmpresa.email || '');
-    const mensajePie = escapeHtml(venta.ticketMessage || infoEmpresa.ticketMessage || '¡Gracias por su compra!');
+    const mensajePie = escapeHtml(venta.ticketMessage || infoEmpresa.ticketMessage || 'Â¡Gracias por su compra!');
 
     const cuitLocal = venta.companyCuit || infoEmpresa.taxId || infoEmpresa.cuit || '';
     const iibbLocal = venta.companyIibb || infoEmpresa.iibb || '';
@@ -1005,13 +1005,13 @@ function generarFacturaA4HTML(venta) {
 
     let letra = 'C';
     let codigoComprobante = 'COD. 011';
-    if (tipoComprobante.includes('FACTURA A') || tipoComprobante.includes('NOTA DE DÉBITO A') || tipoComprobante.includes('NOTA DE CRÉDITO A')) {
+    if (tipoComprobante.includes('FACTURA A') || tipoComprobante.includes('NOTA DE DÃ‰BITO A') || tipoComprobante.includes('NOTA DE CRÃ‰DITO A')) {
         letra = 'A';
         codigoComprobante = 'COD. 001';
-    } else if (tipoComprobante.includes('FACTURA B') || tipoComprobante.includes('NOTA DE DÉBITO B') || tipoComprobante.includes('NOTA DE CRÉDITO B')) {
+    } else if (tipoComprobante.includes('FACTURA B') || tipoComprobante.includes('NOTA DE DÃ‰BITO B') || tipoComprobante.includes('NOTA DE CRÃ‰DITO B')) {
         letra = 'B';
         codigoComprobante = 'COD. 006';
-    } else if (tipoComprobante.includes('FACTURA C') || tipoComprobante.includes('NOTA DE DÉBITO C') || tipoComprobante.includes('NOTA DE CRÉDITO C')) {
+    } else if (tipoComprobante.includes('FACTURA C') || tipoComprobante.includes('NOTA DE DÃ‰BITO C') || tipoComprobante.includes('NOTA DE CRÃ‰DITO C')) {
         letra = 'C';
         codigoComprobante = 'COD. 011';
     } else {
@@ -1316,8 +1316,8 @@ function generarFacturaA4HTML(venta) {
 
                     <div class="a4-col-comprobante">
                         <div class="a4-comp-titulo">${tipoComprobante}</div>
-                        <div class="a4-comp-numero">N° ${nroComprobante}</div>
-                        <div class="a4-line">Fecha de Emisión: <strong>${fechaVenta}</strong></div>
+                        <div class="a4-comp-numero">NÂ° ${nroComprobante}</div>
+                        <div class="a4-line">Fecha de EmisiÃ³n: <strong>${fechaVenta}</strong></div>
                         <div class="a4-line">CUIT: <strong>${cuitLocal || 'S/C'}</strong></div>
                         <div class="a4-line">Ingresos Brutos: <strong>${iibbLocal || 'Exento / S/C'}</strong></div>
                         <div class="a4-line">Inicio de Actividades: <strong>${inicioActividades || '-'}</strong></div>
@@ -1326,12 +1326,12 @@ function generarFacturaA4HTML(venta) {
 
                 <div class="a4-cliente-box">
                     <div class="a4-row-split">
-                        <div><strong>Razón Social / Cliente:</strong> ${nombreCliente}</div>
+                        <div><strong>RazÃ³n Social / Cliente:</strong> ${nombreCliente}</div>
                         <div><strong>CUIT / DNI:</strong> ${cuitCliente || 'Consumidor Final'}</div>
                     </div>
                     <div class="a4-row-split">
-                        <div><strong>Condición IVA:</strong> ${cuitCliente ? 'IVA Responsable Inscripto / Monotributo' : 'Consumidor Final'}</div>
-                        <div><strong>Condición de Venta:</strong> ${metodoPago}</div>
+                        <div><strong>CondiciÃ³n IVA:</strong> ${cuitCliente ? 'IVA Responsable Inscripto / Monotributo' : 'Consumidor Final'}</div>
+                        <div><strong>CondiciÃ³n de Venta:</strong> ${metodoPago}</div>
                         <div><strong>Cajero/a:</strong> ${cajeroNombre}</div>
                     </div>
                 </div>
@@ -1340,7 +1340,7 @@ function generarFacturaA4HTML(venta) {
                     <thead>
                         <tr>
                             <th style="width: 12%; text-align: center;">CANT.</th>
-                            <th style="width: 53%;">DESCRIPCIÓN</th>
+                            <th style="width: 53%;">DESCRIPCIÃ“N</th>
                             <th style="width: 17%; text-align: right;">P. UNITARIO</th>
                             <th style="width: 18%; text-align: right;">SUBTOTAL</th>
                         </tr>
@@ -1354,7 +1354,7 @@ function generarFacturaA4HTML(venta) {
                     <div class="a4-obs-box">
                         <strong>Observaciones / Leyenda:</strong><br>
                         ${mensajePie}<br>
-                        <span style="opacity: 0.7; font-size: 7.5pt; display: block; margin-top: 6px;">Documento generado a través de BÁEZ POS SaaS Platform.</span>
+                        <span style="opacity: 0.7; font-size: 7.5pt; display: block; margin-top: 6px;">Documento generado a travÃ©s de BÃEZ POS SaaS Platform.</span>
                     </div>
                     <div class="a4-totales-box">
                         ${descuentoMonto > 0 ? `
@@ -1382,10 +1382,10 @@ function generarFacturaA4HTML(venta) {
                             <img class="a4-qr-img" src="https://quickchart.io/qr?text=${encodeURIComponent(qrText || `https://www.afip.gob.ar/fe/qr/?p=${btoa(JSON.stringify({ fecha: fechaVenta.split(' ')[0], cuit: Number(cuitLocal.replace(/\\D/g, '') || 301234559), ptoVta: 1, tipoCmp: tipoComprobante.includes('A') ? 1 : 11, nroCmp: 1, importe: totalFinal, tipoDocRec: 99, nroDocRec: 0, tipoCodAut: 'E', codAut: Number(cae) || 0 }))}`)}&size=140" alt="QR AFIP" />
                         </div>
                         <div class="a4-cae-data">
-                            <div class="a4-cae-title">ARCA / AFIP - Comprobante Autorizado Electrónicamente</div>
-                            <div><strong>CAE N°:</strong> ${cae}</div>
+                            <div class="a4-cae-title">ARCA / AFIP - Comprobante Autorizado ElectrÃ³nicamente</div>
+                            <div><strong>CAE NÂ°:</strong> ${cae}</div>
                             <div><strong>Fecha de Vto. de CAE:</strong> ${caeVto}</div>
-                            <div style="font-size: 7.5pt; color: #475569; margin-top: 3px;">Comprobante oficial válido como factura comercial. Verifique su autenticidad escaneando el código QR.</div>
+                            <div style="font-size: 7.5pt; color: #475569; margin-top: 3px;">Comprobante oficial vÃ¡lido como factura comercial. Verifique su autenticidad escaneando el cÃ³digo QR.</div>
                         </div>
                     </div>
                 ` : ''}
@@ -1406,7 +1406,7 @@ function reimprimirFacturaA4() {
     imprimirHTMLConIframe(plantilla.html);
 }
 
-// Exposición global
+// ExposiciÃ³n global
 window.reimprimirTicket = reimprimirTicket;
 window.reimprimirFacturaA4 = reimprimirFacturaA4;
 window.generarFacturaA4HTML = generarFacturaA4HTML;
