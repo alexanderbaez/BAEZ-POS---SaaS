@@ -1,4 +1,4 @@
-﻿let proveedoresGlobales = [];
+let proveedoresGlobales = [];
 let debounceTimer = null;
 let modalProveedorInstance = null;
 let modalAbonoInstance = null;
@@ -739,6 +739,7 @@ if(inputBuscarProducto) {
                 if (res.ok) {
                     const productos = await res.json();
                     const divSugerencias = document.getElementById('listaSugerenciasProd');
+                    divSugerencias.className = 'list-group position-absolute w-100 bg-white border rounded shadow-lg z-index-3';
                     divSugerencias.innerHTML = '';
                     
                     if (productos.length === 0) {
@@ -747,7 +748,7 @@ if(inputBuscarProducto) {
                         productos.forEach(prod => {
                             const a = document.createElement('a');
                             a.href = "#";
-                            a.className = "list-group-item list-group-item-action d-flex justify-content-between align-items-center";
+                            a.className = "list-group-item list-group-item-action d-flex justify-content-between align-items-center p-2 cursor-pointer";
                             a.innerHTML = `
                                 <div>
                                     <span class="fw-bold d-block text-dark">${escapeHTML(prod.name)}</span>
@@ -831,8 +832,8 @@ function renderizarCarrito() {
                 </div>
             </td>
             <td>
-                <input type="number" step="1" min="1" class="form-control form-control-sm text-center bg-light border-0 fw-bold" 
-                       value="${item.quantity}" oninput="actualizarItemCarrito(${index}, 'quantity', this.value)">
+                <input type="number" class="form-control form-control-sm text-center" value="1" min="1" style="width: 70px;"
+                       oninput="actualizarItemCarrito(${index}, 'quantity', this.value)">
             </td>
             <td class="text-center"><span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-2 py-1"><i class="bi bi-arrow-up-right me-1"></i>${proyectado}</span></td>
             <td class="text-end fw-bold text-dark amount-num">${fmtARS.format(subtotal)}</td>
