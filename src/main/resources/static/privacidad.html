@@ -1001,91 +1001,16 @@
           <div class="legal-prose">
             <p><strong>7.1</strong> Para la prestación del Servicio, BÁEZ POS se apoya en los siguientes proveedores de infraestructura que actúan como Sub-procesadores de datos:</p>
 
-            <!-- Resend -->
-            <div class="processor-card">
-              <div class="processor-header">
-                <div class="processor-icon"><i class="bi bi-envelope-at"></i></div>
-                <div>
-                  <p class="processor-name">Resend Inc. â€” Correo Electrónico Transaccional</p>
-                  <p class="processor-role">Sub-procesador de comunicaciones</p>
-                </div>
-              </div>
-              <div class="legal-table-wrap">
-                <table class="legal-table">
-                  <tbody>
-                    <tr><td style="width:40%;"><strong>Función</strong></td><td>Envío de emails transaccionales del sistema</td></tr>
-                    <tr><td><strong>Datos transferidos</strong></td><td>Email del destinatario, nombre del usuario, nombre de la empresa, contenido del correo (incluyendo contraseñas temporales en correos de bienvenida/reset)</td></tr>
-                    <tr><td><strong>Tipos de correo</strong></td><td>Bienvenida con credenciales Â· Confirmación de cuenta Â· Restablecimiento de contraseña</td></tr>
-                    <tr><td><strong>País de procesamiento</strong></td><td>Estados Unidos de América</td></tr>
-                    <tr><td><strong>Política de privacidad</strong></td><td><a href="https://resend.com/legal/privacy-policy" target="_blank" rel="noopener">resend.com/legal/privacy-policy</a></td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Aiven -->
-            <div class="processor-card">
-              <div class="processor-header">
-                <div class="processor-icon"><i class="bi bi-server"></i></div>
-                <div>
-                  <p class="processor-name">Aiven Ltd. â€” Base de Datos MySQL en la Nube</p>
-                  <p class="processor-role">Sub-procesador de almacenamiento de datos</p>
-                </div>
-              </div>
-              <div class="legal-table-wrap">
-                <table class="legal-table">
-                  <tbody>
-                    <tr><td style="width:40%;"><strong>Función</strong></td><td>Almacenamiento y gestión de la base de datos relacional principal (MySQL 8.x)</td></tr>
-                    <tr><td><strong>Datos almacenados</strong></td><td>Todos los datos del sistema: usuarios, empresas, clientes, ventas, inventario, logs</td></tr>
-                    <tr><td><strong>País de procesamiento</strong></td><td>Variable según región configurada (UE y/o EE.UU.)</td></tr>
-                    <tr><td><strong>Política de privacidad</strong></td><td><a href="https://aiven.io/privacy" target="_blank" rel="noopener">aiven.io/privacy</a></td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- AWS Amplify -->
-            <div class="processor-card">
-              <div class="processor-header">
-                <div class="processor-icon"><i class="bi bi-globe2"></i></div>
-                <div>
-                  <p class="processor-name">Amazon Web Services (AWS Amplify) â€” Hosting del Frontend</p>
-                  <p class="processor-role">Sub-procesador de distribución de contenido</p>
-                </div>
-              </div>
-              <div class="legal-table-wrap">
-                <table class="legal-table">
-                  <tbody>
-                    <tr><td style="width:40%;"><strong>Función</strong></td><td>Hosting y distribución del frontend estático (HTML, JS, CSS)</td></tr>
-                    <tr><td><strong>Datos procesados</strong></td><td>No procesa datos personales directamente. Sirve archivos estáticos al navegador.</td></tr>
-                    <tr><td><strong>Dominios</strong></td><td>baezpos.com Â· www.baezpos.com Â· *.amplifyapp.com</td></tr>
-                    <tr><td><strong>País de procesamiento</strong></td><td>Estados Unidos de América</td></tr>
-                    <tr><td><strong>Política de privacidad</strong></td><td><a href="https://aws.amazon.com/privacy/" target="_blank" rel="noopener">aws.amazon.com/privacy</a></td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Render -->
-            <div class="processor-card">
-              <div class="processor-header">
-                <div class="processor-icon"><i class="bi bi-cpu"></i></div>
-                <div>
-                  <p class="processor-name">Render Inc. â€” Hosting del Backend (API REST)</p>
-                  <p class="processor-role">Sub-procesador de procesamiento de datos</p>
-                </div>
-              </div>
-              <div class="legal-table-wrap">
-                <table class="legal-table">
-                  <tbody>
-                    <tr><td style="width:40%;"><strong>Función</strong></td><td>Alojamiento y ejecución del servidor Spring Boot (API REST) en contenedor Docker</td></tr>
-                    <tr><td><strong>Datos procesados</strong></td><td>Todo el tráfico de datos en tránsito. Procesa pero no almacena datos persistentes.</td></tr>
-                    <tr><td><strong>Dominio</strong></td><td>*.onrender.com / api.baezpos.com</td></tr>
-                    <tr><td><strong>País de procesamiento</strong></td><td>Estados Unidos de América</td></tr>
-                    <tr><td><strong>Política de privacidad</strong></td><td><a href="https://render.com/privacy" target="_blank" rel="noopener">render.com/privacy</a></td></tr>
-                  </tbody>
-                </table>
-              </div>
+            <!-- Proveedores Genéricos de Infraestructura -->
+            <div class="legal-table-wrap">
+              <table class="legal-table">
+                <thead><tr><th>Tipo de Servicio</th><th>Función</th><th>País de Procesamiento</th></tr></thead>
+                <tbody>
+                  <tr><td><strong>Servicios de Almacenamiento y Base de Datos</strong></td><td>Alojamiento en la nube bajo estándares de seguridad internacional (ej. ISO 27001).</td><td>EE.UU. o Unión Europea</td></tr>
+                  <tr><td><strong>Servicios de Distribución de Contenido (Frontend)</strong></td><td>Hosting de archivos estáticos.</td><td>EE.UU. o Unión Europea</td></tr>
+                  <tr><td><strong>Servicio de Correos Transaccionales</strong></td><td>Envío automatizado de credenciales y alertas.</td><td>EE.UU. o Unión Europea</td></tr>
+                </tbody>
+              </table>
             </div>
 
             <!-- AFIP -->
@@ -1189,7 +1114,7 @@
             <h3 class="article-title">Incidentes de Seguridad</h3>
           </div>
           <div class="legal-prose">
-            <p><strong>11.1</strong> En caso de un incidente de seguridad que comprometa datos personales, el Proveedor se compromete a: detectar y contener el incidente, notificar al Administrador de Comercio afectado dentro de un plazo razonable, y comunicar la naturaleza del incidente, las categorías de datos afectadas y las medidas adoptadas.</p>
+            <p><strong>11.1</strong> En caso de un incidente de seguridad que comprometa datos personales, el Proveedor se compromete a: detectar y contener el incidente, notificar al Administrador de Comercio afectado dentro de las 72 horas hábiles tras la confirmación técnica, y comunicar la naturaleza del incidente, las categorías de datos afectadas y las medidas adoptadas.</p>
             <p><strong>11.2</strong> En caso de relevancia, el Proveedor informará a la <strong>Agencia de Acceso a la Información Pública (AAIP)</strong>, conforme al procedimiento establecido por la Disposición N.Â° 11/2006.</p>
           </div>
         </div>
