@@ -62,10 +62,14 @@ public class ExpenseServiceImpl implements ExpenseService {
             Provider provider = providerRepository.findByIdAndCompanyId(dto.providerId(), companyId)
                     .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado con ID: " + dto.providerId()));
 
+            int updated = providerRepository.addBalance(dto.providerId(), dto.amount());
+            if (updated == 0) {
+                throw new ResourceNotFoundException("Proveedor no encontrado o inactivo para actualizar saldo");
+            }
+            
+            // Calculamos en memoria para el log
             BigDecimal currentBal = (provider.getCurrentBalance() != null) ? provider.getCurrentBalance() : BigDecimal.ZERO;
             BigDecimal newBalance = currentBal.add(dto.amount());
-            provider.setCurrentBalance(newBalance);
-            providerRepository.save(provider);
 
             log.info("Empresa [{}]: Sumado $ {} a cuenta corriente del Proveedor [{}] '{}'. Nuevo saldo: $ {}",
                     companyId, dto.amount(), provider.getId(), provider.getBusinessName(), newBalance);

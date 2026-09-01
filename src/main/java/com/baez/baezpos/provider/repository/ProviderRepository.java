@@ -2,6 +2,7 @@ package com.baez.baezpos.provider.repository;
 
 import com.baez.baezpos.provider.entity.Provider;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -35,4 +36,12 @@ public interface ProviderRepository extends JpaRepository<Provider, Long> {
 
     @Query("SELECT COALESCE(SUM(p.currentBalance), 0) FROM Provider p WHERE p.company.id = :companyId AND p.active = true")
     BigDecimal sumAllBalancesByCompanyId(@Param("companyId") Long companyId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Provider p SET p.currentBalance = p.currentBalance - :amount WHERE p.id = :id")
+    int subtractBalance(@Param("id") Long id, @Param("amount") BigDecimal amount);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Provider p SET p.currentBalance = p.currentBalance + :amount WHERE p.id = :id")
+    int addBalance(@Param("id") Long id, @Param("amount") BigDecimal amount);
 }

@@ -108,15 +108,20 @@ public class CustomerServiceImpl implements CustomerService {
                 : customerRepository.findById(customerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado"));
 
+        int updated = 0;
         if ("DEBITO".equalsIgnoreCase(type)) {
-            customer.setCurrentBalance(customer.getCurrentBalance().add(amount));
+            updated = customerRepository.addBalance(customerId, amount);
         } else if ("CREDITO".equalsIgnoreCase(type)) {
-            customer.setCurrentBalance(customer.getCurrentBalance().subtract(amount));
+            updated = customerRepository.subtractBalance(customerId, amount);
         } else {
             throw new BadRequestException("Tipo de movimiento inválido: " + type);
         }
 
-        customerRepository.save(customer);
+        if (updated == 0) {
+            throw new ResourceNotFoundException("Cliente no encontrado o inactivo para actualizar saldo");
+        }
+
+        // Recuperar el cliente actualizado si se necesita (o continuar con el de la memoria que no tiene el saldo actualizado, no afecta a CustomerMovement)
 
         String methodToSave = (sale != null && sale.getPaymentMethod() != null)
                 ? sale.getPaymentMethod()

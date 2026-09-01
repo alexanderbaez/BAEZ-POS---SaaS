@@ -137,11 +137,16 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
             providerProductRepository.save(providerProduct);
         }
 
-        // Cargar a cuenta corriente del proveedor
+        // Cargar a cuenta corriente del proveedor (Atómico)
         Provider provider = order.getProvider();
+        int updated = providerRepository.addBalance(provider.getId(), order.getTotalAmount());
+        if (updated == 0) {
+            throw new ResourceNotFoundException("Proveedor no encontrado o inactivo para actualizar saldo");
+        }
+        
+        // Simular en memoria por si se lee posteriormente en la sesión actual
         BigDecimal currentBal = provider.getCurrentBalance() != null ? provider.getCurrentBalance() : BigDecimal.ZERO;
         provider.setCurrentBalance(currentBal.add(order.getTotalAmount()));
-        providerRepository.save(provider);
 
         // Actualizar estado de la orden
         order.setStatus(OrderStatus.RECEIVED);

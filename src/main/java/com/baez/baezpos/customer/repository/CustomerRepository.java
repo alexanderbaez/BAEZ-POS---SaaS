@@ -2,6 +2,7 @@ package com.baez.baezpos.customer.repository;
 
 import com.baez.baezpos.customer.entities.Customer;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -31,4 +32,12 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
     @Query("SELECT COALESCE(SUM(c.currentBalance), 0) FROM Customer c WHERE c.company.id = :companyId AND c.active = true")
     BigDecimal sumAllBalancesByCompanyId(@Param("companyId") Long companyId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Customer c SET c.currentBalance = c.currentBalance - :amount WHERE c.id = :id")
+    int subtractBalance(@Param("id") Long id, @Param("amount") BigDecimal amount);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Customer c SET c.currentBalance = c.currentBalance + :amount WHERE c.id = :id")
+    int addBalance(@Param("id") Long id, @Param("amount") BigDecimal amount);
 }

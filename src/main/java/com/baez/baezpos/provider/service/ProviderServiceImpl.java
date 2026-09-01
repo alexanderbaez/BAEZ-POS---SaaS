@@ -206,15 +206,16 @@ public class ProviderServiceImpl implements ProviderService {
             cashRegisterService.validatePhysicalCashAvailability(companyId, dto.amount());
         }
 
-        // 1. Restar el monto del currentBalance del proveedor
+        // 1. Restar el monto del currentBalance del proveedor de forma atómica
+        int updated = providerRepository.subtractBalance(id, dto.amount());
+        if (updated == 0) {
+            throw new ResourceNotFoundException("Proveedor no encontrado o inactivo para actualizar saldo");
+        }
+
+        // Para el log y DTO, simulamos el nuevo balance en memoria (sin guardarlo, ya se hizo en DB)
         BigDecimal currentBal = provider.getCurrentBalance() != null ? provider.getCurrentBalance() : BigDecimal.ZERO;
         BigDecimal newBalance = currentBal.subtract(dto.amount());
         provider.setCurrentBalance(newBalance);
-
-        if (provider.getVersion() == null) {
-            provider.setVersion(0L);
-        }
-        Provider updatedProvider = providerRepository.save(provider);
 
         // 2. Generar automáticamente un registro en Expense por ese abono
         String desc = "Abono / Pago a Proveedor: " + provider.getBusinessName();
@@ -248,7 +249,7 @@ public class ProviderServiceImpl implements ProviderService {
                 "INFO"
         );
 
-        return mapToDTO(updatedProvider);
+        return mapToDTO(provider);
     }
 
     private Long getRequiredCompanyId() {
