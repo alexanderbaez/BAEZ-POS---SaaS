@@ -168,6 +168,7 @@ function inicializarBuscadorProductos() {
             }
         } else if (e.key === 'Enter') {
             e.preventDefault();
+            clearTimeout(debounceTimerBuscadorPos);
             if (indiceSeleccionado > -1 && items[indiceSeleccionado]) {
                 items[indiceSeleccionado].click();
             } else {
@@ -237,18 +238,14 @@ function inicializarAtajosTecladoGlobales() {
     document.addEventListener('keydown', function handleAtajosGlobales(e) {
         if (sistemaBloqueado) return;
 
-        if (e.key === 'F12') {
+        if (e.key === 'F4') {
             e.preventDefault();
             if (typeof finalizarVenta === 'function') finalizarVenta();
         }
-        if (e.key === 'F4') {
-            e.preventDefault();
-            const p = document.getElementById('pagaCon');
-            if (p) p.focus();
-        }
         if (e.key === 'F2') {
             e.preventDefault();
-            cancelarVenta();
+            const buscador = document.getElementById('buscadorVenta');
+            if (buscador) buscador.focus();
         }
         if (e.key === 'Escape') {
             enfocarBuscadorInteligente();
@@ -261,7 +258,7 @@ function inicializarAtajosTecladoGlobales() {
         }
         if (e.key === 'F8') {
             e.preventDefault();
-            if (typeof agregarProductoManual === 'function') agregarProductoManual();
+            cancelarVenta();
         }
     });
 }
@@ -373,7 +370,7 @@ function uiRenderizarSugerenciasProductos(productos) {
 function renderizarCarrito() {
     const body = document.getElementById('carritoBody');
     if (!body) return;
-    body.innerHTML = '';
+    
     SUBTOTAL_VENTA = 0;
 
     // Persistencia continua en sessionStorage
@@ -382,6 +379,8 @@ function renderizarCarrito() {
     } else {
         sessionStorage.removeItem('baezpos_cart');
     }
+
+    const fragment = document.createDocumentFragment();
 
     CARRITO.forEach(function procesarItemCarrito(item, index) {
         const subtotal = item.price * item.cantidad;
@@ -395,8 +394,9 @@ function renderizarCarrito() {
 
         const pesableBadge = item.isFractional ? ' | <i class="bi bi-scale"></i> Pesable' : '';
 
-        body.innerHTML += `
-            <tr class="animate__animated animate__fadeIn">
+        const tr = document.createElement('tr');
+        tr.className = "animate__animated animate__fadeIn";
+        tr.innerHTML = `
                 <td>
                     <div class="fw-bold">${item.name}</div>
                     <small class="text-muted text-uppercase" style="font-size: 0.7rem;">${item.barcode || 'S/C'}${pesableBadge}</small>
@@ -415,8 +415,12 @@ function renderizarCarrito() {
                         <i class="bi bi-trash3 fs-6"></i>
                     </button>
                 </td>
-            </tr>`;
+        `;
+        fragment.appendChild(tr);
     });
+
+    body.innerHTML = '';
+    body.appendChild(fragment);
 
     const inputDesc = document.getElementById('inputDescuento');
     const tipoDesc = document.getElementById('tipoDescuento');
@@ -1900,7 +1904,7 @@ function generarPlantillaHTMLTicket(venta) {
                     body {
                         font-family: 'Inter', sans-serif;
                         width: 100%;
-                        max-width: 80mm;
+                        max-width: 100%;
                         padding: 4px;
                         margin: 0 auto;
                         color: #000000;
@@ -3006,14 +3010,14 @@ function imprimirTicketCierreCaja(dto) {
             <meta charset="utf-8">
             <title>Ticket de Cierre de Caja - #${dto.sessionNumber || 1}</title>
             <style>
-                @page { margin: 0; size: 80mm auto; }
+                @page { margin: 0; }
                 body {
                     font-family: 'Courier New', Courier, monospace;
                     font-size: 12px;
                     line-height: 1.3;
                     margin: 0;
                     padding: 10px;
-                    width: 280px;
+                    max-width: 100%;
                     color: #000;
                     background: #fff;
                 }
