@@ -8,7 +8,7 @@ let totalPaginasBackend = 1;
 let totalElementosBackend = 0;
 const LIMITE_POR_PAGINA = 20;
 
-// Formateador estÃ¡ndar de moneda local (ARS)
+// Formateador estándar de moneda local (ARS)
 const fmtARS = new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency: 'ARS',
@@ -42,7 +42,7 @@ function actualizarEstadoAbonoDeduct(metodo) {
     if (switchEl) switchEl.disabled = false;
     if (lbl) {
         if (metodo === 'EFECTIVO_CAJA' || metodo === 'EFECTIVO') {
-            lbl.textContent = "Descuenta billetes del cajÃ³n actual";
+            lbl.textContent = "Descuenta billetes del cajón actual";
         } else {
             lbl.textContent = "Descuenta del saldo bancario del negocio";
         }
@@ -99,7 +99,7 @@ async function cargarProveedores(pagina = 0) {
                 <tr>
                     <td colspan="6" class="text-center text-danger p-4">
                         <i class="bi bi-exclamation-triangle fs-4 d-block mb-2"></i>
-                        Error al cargar proveedores. Verifique su conexiÃ³n o sesiÃ³n.
+                        Error al cargar proveedores. Verifique su conexión o sesión.
                     </td>
                 </tr>`;
         }
@@ -117,7 +117,7 @@ function renderizarProveedores(lista) {
 
     if (!lista || lista.length === 0) {
         if (typeof renderEmptyState === 'function') {
-            renderEmptyState('tablaProveedores', 'bi-truck', 'Sin proveedores registrados', 'No se encontraron proveedores activos o coincidentes con la bÃºsqueda.', '<button class="btn btn-primary btn-sm fw-bold" onclick="abrirModalNuevoProveedor()"><i class="bi bi-truck me-1"></i>Nuevo Proveedor</button>', 6);
+            renderEmptyState('tablaProveedores', 'bi-truck', 'Sin proveedores registrados', 'No se encontraron proveedores activos o coincidentes con la búsqueda.', '<button class="btn btn-primary btn-sm fw-bold" onclick="abrirModalNuevoProveedor()"><i class="bi bi-truck me-1"></i>Nuevo Proveedor</button>', 6);
         } else {
             tbody.innerHTML = `
                 <tr>
@@ -141,7 +141,7 @@ function renderizarProveedores(lista) {
             ? `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger balance-badge">${fmtARS.format(saldo)}</span>`
             : `<span class="badge bg-success bg-opacity-10 text-success border border-success balance-badge">${fmtARS.format(saldo)}</span>`;
 
-        let telHtml = '<span class="text-muted small">Sin telÃ©fono</span>';
+        let telHtml = '<span class="text-muted small">Sin teléfono</span>';
         if (prov.phone) {
             const cleanPhone = prov.phone.replace(/\D/g, '');
             telHtml = `
@@ -222,7 +222,7 @@ function renderizarControlesPaginacion(totalItems, totalPaginas, inicio, fin) {
 
     let html = '';
 
-    // BotÃ³n Anterior
+    // Botón Anterior
     html += `
         <li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
             <button class="page-link" onclick="cambiarPaginaProveedores(${paginaActual - 1})"><i class="bi bi-chevron-left"></i></button>
@@ -255,7 +255,7 @@ function renderizarControlesPaginacion(totalItems, totalPaginas, inicio, fin) {
         html += `<li class="page-item"><button class="page-link" onclick="cambiarPaginaProveedores(${totalPaginas})">${totalPaginas}</button></li>`;
     }
 
-    // BotÃ³n Siguiente
+    // Botón Siguiente
     html += `
         <li class="page-item ${paginaActual === totalPaginas ? 'disabled' : ''}">
             <button class="page-link" onclick="cambiarPaginaProveedores(${paginaActual + 1})"><i class="bi bi-chevron-right"></i></button>
@@ -271,7 +271,7 @@ function cambiarPaginaProveedores(nuevaPagina) {
 }
 
 /**
- * Actualiza los contadores y mÃ©tricas de deuda
+ * Actualiza los contadores y métricas de deuda
  */
 function actualizarKPIs(lista) {
     const totalProveedores = totalElementosBackend || (lista ? lista.length : 0);
@@ -294,7 +294,7 @@ function actualizarKPIs(lista) {
 }
 
 /**
- * Filtro interactivo con bÃºsqueda reactiva
+ * Filtro interactivo con búsqueda reactiva
  */
 function filtrarProveedores() {
     clearTimeout(debounceTimer);
@@ -379,7 +379,7 @@ async function guardarProveedor() {
         return Swal.fire({
             icon: 'warning',
             title: 'Campo obligatorio',
-            text: 'Debe ingresar la RazÃ³n Social o Nombre del proveedor.',
+            text: 'Debe ingresar la Razón Social o Nombre del proveedor.',
             confirmButtonColor: '#2563eb'
         });
     }
@@ -418,7 +418,7 @@ async function guardarProveedor() {
                 toast: true,
                 position: 'top-end',
                 icon: 'success',
-                title: id ? 'Proveedor actualizado con Ã©xito' : 'Proveedor creado con Ã©xito',
+                title: id ? 'Proveedor actualizado con éxito' : 'Proveedor creado con éxito',
                 showConfirmButton: false,
                 timer: 2000,
                 timerProgressBar: true
@@ -427,7 +427,7 @@ async function guardarProveedor() {
             if (modalProveedorInstance) modalProveedorInstance.hide();
             cargarProveedores();
         } else {
-            let errMsg = 'OcurriÃ³ un error al guardar los datos del proveedor.';
+            let errMsg = 'Ocurrió un error al guardar los datos del proveedor.';
             try {
                 const errData = await res.json();
                 errMsg = errData.message || errData.error || errMsg;
@@ -445,20 +445,20 @@ async function guardarProveedor() {
 }
 
 /**
- * Baja lÃ³gica de un proveedor
+ * Baja lógica de un proveedor
  */
 async function eliminarProveedor(id) {
     const prov = proveedoresGlobales.find(p => p.id === id);
     const nombre = prov ? prov.businessName : `ID #${id}`;
 
     const confirmacion = await Swal.fire({
-        title: 'Â¿Dar de baja proveedor?',
-        text: `Se darÃ¡ de baja a "${nombre}". PodrÃ¡ reactivarse si es necesario.`,
+        title: '¿Dar de baja proveedor?',
+        text: `Se dará de baja a "${nombre}". Podrá reactivarse si es necesario.`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#ef4444',
         cancelButtonColor: '#6b7280',
-        confirmButtonText: 'SÃ­, dar de baja',
+        confirmButtonText: 'Sí, dar de baja',
         cancelButtonText: 'Cancelar'
     });
 
@@ -490,7 +490,7 @@ async function eliminarProveedor(id) {
 }
 
 /**
- * Abre el modal de abono para un proveedor especÃ­fico
+ * Abre el modal de abono para un proveedor específico
  */
 function abrirModalAbono(id) {
     const prov = proveedoresGlobales.find(p => p.id === id);
@@ -523,8 +523,8 @@ async function registrarAbono() {
     if (isNaN(monto) || monto <= 0) {
         return Swal.fire({
             icon: 'warning',
-            title: 'Monto invÃ¡lido',
-            text: 'Debe ingresar un monto vÃ¡lido mayor a cero para registrar el abono.',
+            title: 'Monto inválido',
+            text: 'Debe ingresar un monto válido mayor a cero para registrar el abono.',
             confirmButtonColor: '#16a34a'
         });
     }
@@ -552,15 +552,15 @@ async function registrarAbono() {
         if (res && res.ok) {
             const proveedorActualizado = await res.json();
             const nombreMetodo = (metodoPago === 'EFECTIVO_CAJA') ? 'Efectivo (Caja)' :
-                                 (metodoPago === 'EFECTIVO_CAJA_FUERTE') ? 'Efectivo (Caja Fuerte / DueÃ±o)' :
+                                 (metodoPago === 'EFECTIVO_CAJA_FUERTE') ? 'Efectivo (Caja Fuerte / Dueño)' :
                                  (metodoPago === 'TRANSFERENCIA') ? 'Transferencia' :
                                  (metodoPago === 'TARJETA') ? 'Tarjeta' : metodoPago;
 
             Swal.fire({
                 icon: 'success',
-                title: 'Â¡Abono registrado con Ã©xito!',
+                title: '¡Abono registrado con éxito!',
                 html: `
-                    <p class="mb-2">Se registrÃ³ el pago de <strong>${fmtARS.format(monto)}</strong> por <strong>${nombreMetodo}</strong>.</p>
+                    <p class="mb-2">Se registró el pago de <strong>${fmtARS.format(monto)}</strong> por <strong>${nombreMetodo}</strong>.</p>
                     <p class="text-muted small mb-0">Nuevo saldo deudor: <strong>${fmtARS.format(proveedorActualizado.currentBalance)}</strong></p>
                 `,
                 confirmButtonColor: '#16a34a'
@@ -602,7 +602,7 @@ function escapeHTML(str) {
     );
 }
 
-// Exportar funciones a Ã¡mbito global para invocaciones onclick del DOM
+// Exportar funciones a ámbito global para invocaciones onclick del DOM
 window.abrirModalNuevoProveedor = abrirModalNuevoProveedor;
 window.abrirModalEditar = abrirModalEditar;
 window.guardarProveedor = guardarProveedor;
@@ -612,12 +612,12 @@ window.registrarAbono = registrarAbono;
 window.filtrarProveedores = filtrarProveedores;
 
 /* ==========================================================
-   MÃ“DULO: Ã“RDENES DE COMPRA (FASE 2)
+   MÓDULO: ÓRDENES DE COMPRA (FASE 2)
    ========================================================== */
 let carritoOrden = [];
 let sugerenciasTimeout = null;
 
-// Cambiar Vista (PestaÃ±as)
+// Cambiar Vista (Pestañas)
 window.cambiarVista = function(vista) {
     if (vista === 'ordenes') {
         cargarOrdenes(0);
@@ -626,21 +626,21 @@ window.cambiarVista = function(vista) {
     }
 };
 
-// Cargar Ã“rdenes Paginadas
+// Cargar Órdenes Paginadas
 async function cargarOrdenes(pagina = 0) {
     const tbody = document.getElementById('tablaOrdenes');
     if (!tbody) return;
-    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-muted">Cargando Ã³rdenes...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-muted">Cargando órdenes...</td></tr>`;
     
     try {
         const res = await apiFetch(`/purchase-orders?page=${pagina}&size=20&sort=orderDate,desc`);
-        if (!res.ok) throw new Error("Error cargando historial de Ã³rdenes");
+        if (!res.ok) throw new Error("Error cargando historial de órdenes");
         const data = await res.json();
         
         const content = data.content || data;
         
         if (content.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-muted">No hay Ã³rdenes registradas.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-muted">No hay órdenes registradas.</td></tr>`;
             return;
         }
         
@@ -687,7 +687,7 @@ async function cargarOrdenes(pagina = 0) {
         
         if (data.totalElements !== undefined) {
             const infoPaginacion = document.getElementById('infoPaginacionOrdenes');
-            if(infoPaginacion) infoPaginacion.textContent = `Mostrando ${content.length} de ${data.totalElements} Ã³rdenes`;
+            if(infoPaginacion) infoPaginacion.textContent = `Mostrando ${content.length} de ${data.totalElements} órdenes`;
         }
         
     } catch (err) {
@@ -696,7 +696,7 @@ async function cargarOrdenes(pagina = 0) {
 }
 
 // Abrir Modal de Nueva Orden
-window.abrirmodalGenerarOrden = async function() {
+window.abrirModalGenerarOrden = async function() {
     carritoOrden = [];
     document.getElementById('selectProveedor').innerHTML = '<option value="">Seleccione un proveedor...</option>';
     document.getElementById('inputBuscarProducto').value = '';
@@ -721,7 +721,7 @@ window.abrirmodalGenerarOrden = async function() {
     modal.show();
 };
 
-// BÃºsqueda de Productos para el Carrito
+// Búsqueda de Productos para el Carrito
 const inputBuscarProducto = document.getElementById('inputBuscarProducto');
 if(inputBuscarProducto) {
     inputBuscarProducto.addEventListener('input', (e) => {
@@ -807,7 +807,7 @@ function renderizarCarrito() {
     let total = 0;
     
     if (carritoOrden.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-muted small">El carrito estÃ¡ vacÃ­o. Busque un producto para agregarlo.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-muted small">El carrito está vacío. Busque un producto para agregarlo.</td></tr>`;
         document.getElementById('totalOrdenBadge').textContent = fmtARS.format(0);
         return;
     }
@@ -853,11 +853,11 @@ function renderizarCarrito() {
 window.generarOrdenCompra = async function() {
     const providerId = document.getElementById('selectProveedor').value;
     if (!providerId) {
-        return Swal.fire("AtenciÃ³n", "Debe seleccionar un proveedor", "warning");
+        return Swal.fire("Atención", "Debe seleccionar un proveedor", "warning");
     }
     
     if (carritoOrden.length === 0) {
-        return Swal.fire("AtenciÃ³n", "El carrito no puede estar vacÃ­o", "warning");
+        return Swal.fire("Atención", "El carrito no puede estar vacío", "warning");
     }
     
     const payload = {
@@ -884,7 +884,7 @@ window.generarOrdenCompra = async function() {
             Swal.fire({
                 icon: 'success',
                 title: 'Orden Generada',
-                text: 'La orden fue registrada con Ã©xito. Â¿Deseas enviarla al proveedor?',
+                text: 'La orden fue registrada con éxito. ¿Deseas enviarla al proveedor?',
                 showCancelButton: true,
                 confirmButtonText: '<i class="bi bi-whatsapp"></i> WhatsApp',
                 cancelButtonText: '<i class="bi bi-envelope"></i> Email',
@@ -905,12 +905,12 @@ window.generarOrdenCompra = async function() {
                         }
                     } catch(e) {}
                     
-                    let wmsg = `Hola ${providerName}, te envÃ­o un pedido desde *${companyName}*:\n\n`;
+                    let wmsg = `Hola ${providerName}, te envío un pedido desde *${companyName}*:\n\n`;
                     carritoOrden.forEach(i => {
                         const qtyStr = (i.quantity % 1 === 0) ? i.quantity.toString() : i.quantity.toString();
                         wmsg += `- ${qtyStr} x ${i.productName}\n`;
                     });
-                    wmsg += `\nAguardo confirmaciÃ³n. Â¡Muchas gracias!`;
+                    wmsg += `\nAguardo confirmación. ¡Muchas gracias!`;
                     
                     const wlink = `https://wa.me/?text=${encodeURIComponent(wmsg)}`;
                     window.open(wlink, '_blank');
@@ -925,60 +925,60 @@ window.generarOrdenCompra = async function() {
             Swal.fire("Error", err.message || "No se pudo generar la orden", "error");
         }
     } catch (err) {
-        Swal.fire("Error", "OcurriÃ³ un error al generar la orden", "error");
+        Swal.fire("Error", "Ocurrió un error al generar la orden", "error");
     }
 };
 
 window.recibirOrden = async function(id) {
     const confirm = await Swal.fire({
-        title: 'Â¿Recibir mercaderÃ­a?',
-        text: 'Esto sumarÃ¡ el stock de forma automÃ¡tica y cargarÃ¡ el saldo a la deuda del proveedor. Esta acciÃ³n es irreversible.',
+        title: '¿Recibir mercadería?',
+        text: 'Esto sumará el stock de forma automática y cargará el saldo a la deuda del proveedor. Esta acción es irreversible.',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#16a34a',
         cancelButtonColor: '#d33',
-        confirmButtonText: 'SÃ­, recibir'
+        confirmButtonText: 'Sí, recibir'
     });
     
     if (confirm.isConfirmed) {
         try {
             const res = await apiFetch(`/purchase-orders/${id}/receive`, { method: 'PUT' });
             if (res.ok) {
-                Swal.fire('Â¡Recibido!', 'El stock fue actualizado y la cuenta corriente ajustada.', 'success');
+                Swal.fire('¡Recibido!', 'El stock fue actualizado y la cuenta corriente ajustada.', 'success');
                 cargarOrdenes(0);
             } else {
                 const err = await res.json();
-                Swal.fire('Error', err.message || 'No se pudo procesar la recepciÃ³n.', 'error');
+                Swal.fire('Error', err.message || 'No se pudo procesar la recepción.', 'error');
             }
         } catch (err) {
-            Swal.fire('Error', 'Fallo de conexiÃ³n.', 'error');
+            Swal.fire('Error', 'Fallo de conexión.', 'error');
         }
     }
 };
 
 window.cancelarOrden = async function(id) {
     const confirm = await Swal.fire({
-        title: 'Â¿Cancelar orden?',
-        text: 'La orden se marcarÃ¡ como cancelada y no tendrÃ¡ efectos contables ni de stock.',
+        title: '¿Cancelar orden?',
+        text: 'La orden se marcará como cancelada y no tendrá efectos contables ni de stock.',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
         cancelButtonColor: '#6c757d',
-        confirmButtonText: 'SÃ­, cancelar'
+        confirmButtonText: 'Sí, cancelar'
     });
     
     if (confirm.isConfirmed) {
         try {
             const res = await apiFetch(`/purchase-orders/${id}/cancel`, { method: 'PUT' });
             if (res.ok) {
-                Swal.fire('Â¡Cancelada!', 'La orden fue cancelada exitosamente.', 'success');
+                Swal.fire('¡Cancelada!', 'La orden fue cancelada exitosamente.', 'success');
                 cargarOrdenes(0);
             } else {
                 const err = await res.json();
                 Swal.fire('Error', err.message || 'No se pudo cancelar.', 'error');
             }
         } catch (err) {
-            Swal.fire('Error', 'Fallo de conexiÃ³n.', 'error');
+            Swal.fire('Error', 'Fallo de conexión.', 'error');
         }
     }
 };
@@ -991,20 +991,20 @@ window.enviarOrdenEmail = async function(id) {
             Swal.fire('Enviado', 'La orden fue enviada por correo exitosamente.', 'success');
         } else {
             const err = await res.json();
-            Swal.fire('AtenciÃ³n', err.message || 'No se pudo enviar el correo', 'error');
+            Swal.fire('Atención', err.message || 'No se pudo enviar el correo', 'error');
         }
     } catch (e) {
-        Swal.fire('Error', 'Fallo en el envÃ­o', 'error');
+        Swal.fire('Error', 'Fallo en el envío', 'error');
     }
 };
 
 window.eliminarOrden = async function(id) {
     const confirm = await Swal.fire({ 
-        title: 'Â¿Eliminar Orden?', 
-        text: 'Esta acciÃ³n no se puede deshacer.', 
+        title: '¿Eliminar Orden?', 
+        text: 'Esta acción no se puede deshacer.', 
         icon: 'warning', 
         showCancelButton: true, 
-        confirmButtonText: 'SÃ­, eliminar', 
+        confirmButtonText: 'Sí, eliminar', 
         cancelButtonText: 'Cancelar', 
         confirmButtonColor: '#dc2626' 
     });
@@ -1017,7 +1017,7 @@ window.eliminarOrden = async function(id) {
                 cargarOrdenes(0);
             } else {
                 const err = await res.json();
-                Swal.fire('AtenciÃ³n', err.message || 'No se pudo eliminar la orden', 'error');
+                Swal.fire('Atención', err.message || 'No se pudo eliminar la orden', 'error');
             }
         } catch (e) {
             Swal.fire('Error', 'No se pudo procesar la solicitud', 'error');
