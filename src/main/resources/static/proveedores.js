@@ -89,9 +89,7 @@ async function cargarProveedores(pagina = 0) {
         renderizarProveedores(proveedoresGlobales);
         actualizarKPIs(proveedoresGlobales);
 
-        const inicio = (paginaActual - 1) * LIMITE_POR_PAGINA;
-        const fin = inicio + proveedoresGlobales.length;
-        renderizarControlesPaginacion(totalElementosBackend, totalPaginasBackend, inicio, fin);
+        renderizarPaginacion(data);
     } catch (err) {
         console.error("Error al cargar proveedores:", err);
         if (tbody) {
@@ -202,63 +200,30 @@ function renderizarProveedores(lista) {
     tbody.appendChild(fragment);
 }
 
-function renderizarControlesPaginacion(totalItems, totalPaginas, inicio, fin) {
-    const infoText = document.getElementById('infoPaginacion');
+function renderizarPaginacion(data) {
     const contenedor = document.getElementById('paginacionContenedor');
-
-    if (infoText) {
-        if (totalItems === 0) {
-            infoText.innerText = "Mostrando 0 proveedores";
-        } else {
-            const limiteSuperior = fin > totalItems ? totalItems : fin;
-            infoText.innerText = `Mostrando ${inicio + 1} - ${limiteSuperior} de ${totalItems} proveedores`;
-        }
-    }
-
     if (!contenedor) return;
     contenedor.innerHTML = '';
 
-    if (totalPaginas <= 1) return;
+    if (!data || data.totalPages === undefined) return;
+
+    const isFirst = data.first;
+    const isLast = data.last;
+    const currentPage = data.number;
 
     let html = '';
 
     // Botón Anterior
     html += `
-        <li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
-            <button class="page-link" onclick="cambiarPaginaProveedores(${paginaActual - 1})"><i class="bi bi-chevron-left"></i></button>
+        <li class="page-item ${isFirst ? 'disabled' : ''}">
+            <button class="page-link" onclick="cambiarPaginaProveedores(${currentPage})">Anterior</button>
         </li>
     `;
 
-    const maxPaginasVisibles = 5;
-    let pagInicio = Math.max(1, paginaActual - Math.floor(maxPaginasVisibles / 2));
-    let pagFin = Math.min(totalPaginas, pagInicio + maxPaginasVisibles - 1);
-
-    if (pagFin - pagInicio + 1 < maxPaginasVisibles) {
-        pagInicio = Math.max(1, pagFin - maxPaginasVisibles + 1);
-    }
-
-    if (pagInicio > 1) {
-        html += `<li class="page-item"><button class="page-link" onclick="cambiarPaginaProveedores(1)">1</button></li>`;
-        if (pagInicio > 2) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-    }
-
-    for (let i = pagInicio; i <= pagFin; i++) {
-        html += `
-            <li class="page-item ${i === paginaActual ? 'active' : ''}">
-                <button class="page-link" onclick="cambiarPaginaProveedores(${i})">${i}</button>
-            </li>
-        `;
-    }
-
-    if (pagFin < totalPaginas) {
-        if (pagFin < totalPaginas - 1) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-        html += `<li class="page-item"><button class="page-link" onclick="cambiarPaginaProveedores(${totalPaginas})">${totalPaginas}</button></li>`;
-    }
-
     // Botón Siguiente
     html += `
-        <li class="page-item ${paginaActual === totalPaginas ? 'disabled' : ''}">
-            <button class="page-link" onclick="cambiarPaginaProveedores(${paginaActual + 1})"><i class="bi bi-chevron-right"></i></button>
+        <li class="page-item ${isLast ? 'disabled' : ''}">
+            <button class="page-link" onclick="cambiarPaginaProveedores(${currentPage + 2})">Siguiente</button>
         </li>
     `;
 
@@ -327,7 +292,7 @@ function filtrarProveedores() {
             totalElementosBackend = lista.length;
 
             renderizarProveedores(proveedoresGlobales);
-            renderizarControlesPaginacion(totalElementosBackend, totalPaginasBackend, 0, proveedoresGlobales.length);
+            renderizarPaginacion(data);
         } catch (err) {
             console.error("Error buscando proveedores:", err);
         }

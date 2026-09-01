@@ -1,4 +1,4 @@
-﻿// ==========================================
+// ==========================================
 // 1. CONFIGURACIÓN Y VARIABLES GLOBALES
 // ==========================================
 let VENTA_SELECCIONADA = null;
@@ -77,7 +77,7 @@ async function cargarVentas(pagina = 0) {
 
         VENTAS_GLOBALES = lista;
         cargarVentasFiltradas();
-        renderizarControlesPaginacion(totalElementosBackend, totalPaginasBackend, pagina * LIMITE_POR_PAGINA + 1, pagina * LIMITE_POR_PAGINA + lista.length);
+        renderizarPaginacion(data);
         await cargarResumenGlobal(desde, hasta);
     } catch (err) {
         console.error("Error al mapear historial:", err);
@@ -85,63 +85,30 @@ async function cargarVentas(pagina = 0) {
     }
 }
 
-function renderizarControlesPaginacion(totalItems, totalPaginas, inicio, fin) {
-    const infoText = document.getElementById('infoPaginacion');
+function renderizarPaginacion(data) {
     const contenedor = document.getElementById('paginacionContenedor');
-
-    if (infoText) {
-        if (totalItems === 0) {
-            infoText.innerText = "Mostrando 0 comprobantes";
-        } else {
-            const limiteSuperior = fin > totalItems ? totalItems : fin;
-            infoText.innerText = `Mostrando ${inicio + 1} - ${limiteSuperior} de ${totalItems} comprobantes`;
-        }
-    }
-
     if (!contenedor) return;
     contenedor.innerHTML = '';
 
-    if (totalPaginas <= 1) return;
+    if (!data || data.totalPages === undefined) return;
+
+    const isFirst = data.first;
+    const isLast = data.last;
+    const currentPage = data.number;
 
     let html = '';
 
     // Botón Anterior
     html += `
-        <li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
-            <button class="page-link" onclick="cambiarPaginaHistorial(${paginaActual - 1})"><i class="bi bi-chevron-left"></i></button>
+        <li class="page-item ${isFirst ? 'disabled' : ''}">
+            <button class="page-link" onclick="cambiarPaginaHistorial(${currentPage})">Anterior</button>
         </li>
     `;
 
-    const maxPaginasVisibles = 5;
-    let pagInicio = Math.max(1, paginaActual - Math.floor(maxPaginasVisibles / 2));
-    let pagFin = Math.min(totalPaginas, pagInicio + maxPaginasVisibles - 1);
-
-    if (pagFin - pagInicio + 1 < maxPaginasVisibles) {
-        pagInicio = Math.max(1, pagFin - maxPaginasVisibles + 1);
-    }
-
-    if (pagInicio > 1) {
-        html += `<li class="page-item"><button class="page-link" onclick="cambiarPaginaHistorial(1)">1</button></li>`;
-        if (pagInicio > 2) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-    }
-
-    for (let i = pagInicio; i <= pagFin; i++) {
-        html += `
-            <li class="page-item ${i === paginaActual ? 'active' : ''}">
-                <button class="page-link" onclick="cambiarPaginaHistorial(${i})">${i}</button>
-            </li>
-        `;
-    }
-
-    if (pagFin < totalPaginas) {
-        if (pagFin < totalPaginas - 1) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-        html += `<li class="page-item"><button class="page-link" onclick="cambiarPaginaHistorial(${totalPaginas})">${totalPaginas}</button></li>`;
-    }
-
     // Botón Siguiente
     html += `
-        <li class="page-item ${paginaActual === totalPaginas ? 'disabled' : ''}">
-            <button class="page-link" onclick="cambiarPaginaHistorial(${paginaActual + 1})"><i class="bi bi-chevron-right"></i></button>
+        <li class="page-item ${isLast ? 'disabled' : ''}">
+            <button class="page-link" onclick="cambiarPaginaHistorial(${currentPage + 2})">Siguiente</button>
         </li>
     `;
 
