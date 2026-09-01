@@ -824,12 +824,15 @@ function renderizarCarrito() {
             <td class="ps-3"><span class="fw-semibold text-dark">${escapeHTML(item.productName)}</span></td>
             <td><span class="badge bg-secondary">${item.currentStock || 0}</span></td>
             <td>
-                <input type="number" step="0.01" min="0" class="form-control form-control-sm text-end bg-light border-0 fw-bold" 
-                       value="${item.unitCost}" onchange="actualizarItemCarrito(${index}, 'unitCost', this.value)">
+                <div class="input-group input-group-sm flex-nowrap">
+                    <span class="input-group-text bg-light border-0 text-muted">$</span>
+                    <input type="number" step="0.01" min="0" class="form-control text-end bg-light border-0 fw-bold px-1" 
+                           value="${item.unitCost}" oninput="actualizarItemCarrito(${index}, 'unitCost', this.value)">
+                </div>
             </td>
             <td>
-                <input type="number" step="0.01" min="0.01" class="form-control form-control-sm text-end bg-light border-0 fw-bold" 
-                       value="${item.quantity}" onchange="actualizarItemCarrito(${index}, 'quantity', this.value)">
+                <input type="number" step="1" min="1" class="form-control form-control-sm text-center bg-light border-0 fw-bold" 
+                       value="${item.quantity}" oninput="actualizarItemCarrito(${index}, 'quantity', this.value)">
             </td>
             <td class="text-center"><span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-2 py-1"><i class="bi bi-arrow-up-right me-1"></i>${proyectado}</span></td>
             <td class="text-end fw-bold text-dark amount-num">${fmtARS.format(subtotal)}</td>
