@@ -673,46 +673,46 @@ async function exportarExcelPro() {
  * Sincroniza la carga de imágenes (ej. códigos QR) antes de invocar window.print().
  */
 function imprimirHTMLConIframe(htmlContent) {
-    let printSection = document.getElementById('print-section');
-    if (!printSection) {
-        printSection = document.createElement('div');
-        printSection.id = 'print-section';
-        document.body.appendChild(printSection);
-    }
-    printSection.innerHTML = htmlContent;
+    const printFrame = document.createElement('iframe');
+    printFrame.style.display = 'none';
+    document.body.appendChild(printFrame);
 
-    const images = Array.from(printSection.querySelectorAll('img'));
-    const pendingImages = images.filter(img => !img.complete);
+    printFrame.contentDocument.write(htmlContent);
+    printFrame.contentDocument.close();
 
     const ejecutarImpresion = () => {
         try {
-            window.print();
+            printFrame.contentWindow.focus();
+            printFrame.contentWindow.print();
         } finally {
             setTimeout(() => {
-                if (printSection) printSection.innerHTML = '';
+                printFrame.remove();
             }, 1000);
         }
     };
 
+    const images = Array.from(printFrame.contentDocument.querySelectorAll('img'));
+    const pendingImages = images.filter(img => !img.complete);
+
     if (pendingImages.length === 0) {
         ejecutarImpresion();
     } else {
-        const imagePromises = pendingImages.map(img => {
-            return new Promise(resolve => {
-                img.onload = () => resolve();
-                img.onerror = () => resolve();
-            });
+        let loaded = 0;
+        const checkDone = () => {
+            loaded++;
+            if (loaded === pendingImages.length) ejecutarImpresion();
+        };
+        pendingImages.forEach(img => {
+            img.onload = checkDone;
+            img.onerror = checkDone;
         });
-
-        const timeoutPromise = new Promise(resolve => setTimeout(resolve, 1500));
-
-        Promise.race([Promise.all(imagePromises), timeoutPromise]).then(() => {
-            ejecutarImpresion();
-        });
+        setTimeout(() => {
+            if (loaded < pendingImages.length) ejecutarImpresion();
+        }, 1500);
     }
 }
 
-function reimprimirTicket() {
+function reimprimirTicket(tipoFormato = 'POS') {
     if (!VENTA_SELECCIONADA) return;
 
     const venta = VENTA_SELECCIONADA;
@@ -827,11 +827,11 @@ function reimprimirTicket() {
                 <style>
                     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
                     @page { margin: 0; size: auto; }
-                    body {
+                    body.layout-ticket {
                         font-family: 'Inter', sans-serif;
                         width: 100%;
-                        max-width: 80mm;
-                        padding: 4px;
+                        ${tipoFormato === 'A4' ? '' : 'max-width: 80mm;'}
+                        padding: ${tipoFormato === 'A4' ? '20px' : '4px'};
                         margin: 0 auto;
                         color: #000000;
                         background: #ffffff;

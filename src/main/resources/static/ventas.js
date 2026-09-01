@@ -1458,13 +1458,13 @@ async function finalizarVenta() {
                     const bA4 = document.getElementById('btnOffPrintA4');
                     if (bTicket) {
                         bTicket.addEventListener('click', () => {
-                            imprimirTicket(offlineSaleData);
+                            imprimirTicket(offlineSaleData, 'POS');
                             Swal.close();
                         });
                     }
                     if (bA4) {
                         bA4.addEventListener('click', () => {
-                            imprimirFacturaA4(offlineSaleData);
+                            imprimirTicket(offlineSaleData, 'A4');
                             Swal.close();
                         });
                     }
@@ -1560,13 +1560,13 @@ async function finalizarVenta() {
                 const bA4 = document.getElementById('btnSalePrintA4');
                 if (bTicket) {
                     bTicket.addEventListener('click', () => {
-                        imprimirTicket(data);
+                        imprimirTicket(data, 'POS');
                         Swal.close();
                     });
                 }
                 if (bA4) {
                     bA4.addEventListener('click', () => {
-                        imprimirFacturaA4(data);
+                        imprimirTicket(data, 'A4');
                         Swal.close();
                     });
                 }
@@ -1635,13 +1635,13 @@ async function finalizarVenta() {
                         const bA4 = document.getElementById('btnFallbackPrintA4');
                         if (bTicket) {
                             bTicket.addEventListener('click', () => {
-                                imprimirTicket(offlineSaleData);
+                                imprimirTicket(offlineSaleData, 'POS');
                                 Swal.close();
                             });
                         }
                         if (bA4) {
                             bA4.addEventListener('click', () => {
-                                imprimirFacturaA4(offlineSaleData);
+                                imprimirTicket(offlineSaleData, 'A4');
                                 Swal.close();
                             });
                         }
@@ -1791,7 +1791,7 @@ window.actualizarIndicadorVentasPendientes = actualizarIndicadorVentasPendientes
 // ==========================================
 // 11. IMPRESIÓN DE TICKETS Y TICKETERA
 // ==========================================
-function generarPlantillaHTMLTicket(venta) {
+function generarPlantillaHTMLTicket(venta, tipoFormato = 'POS') {
     const infoEmpresa = (typeof DATOS_EMPRESA !== 'undefined' && DATOS_EMPRESA !== null) ? DATOS_EMPRESA : {};
     const fiscalActivo = String(venta.isFiscal !== undefined ? venta.isFiscal : infoEmpresa.hasTaxData) === "true";
 
@@ -1904,8 +1904,8 @@ function generarPlantillaHTMLTicket(venta) {
                     body {
                         font-family: 'Inter', sans-serif;
                         width: 100%;
-                        max-width: 100%;
-                        padding: 4px;
+                        ${tipoFormato === 'A4' ? '' : 'max-width: 100%;'}
+                        padding: ${tipoFormato === 'A4' ? '20px' : '4px'};
                         margin: 0 auto;
                         color: #000000;
                         background: #ffffff;
@@ -2443,64 +2443,56 @@ function generarFacturaA4HTML(venta) {
     };
 }
 
-/**
- * Motor de impresión nativo mediante CSS @media print y #print-section.
- * Sincroniza la carga de imágenes (ej. códigos QR) antes de llamar a window.print().
- */
-function imprimirHTMLConIframe(htmlContent) {
-    let printSection = document.getElementById('print-section');
-    if (!printSection) {
-        printSection = document.createElement('div');
-        printSection.id = 'print-section';
-        document.body.appendChild(printSection);
-    }
-    printSection.innerHTML = htmlContent;
+function imprimirTicket(venta, tipoFormato = 'POS') {
+    if (!venta) return;
+    const plantilla = generarPlantillaHTMLTicket(venta, tipoFormato);
+    const htmlContent = plantilla.html || plantilla;
 
-    const images = Array.from(printSection.querySelectorAll('img'));
-    const pendingImages = images.filter(img => !img.complete);
+    const printFrame = document.createElement('iframe');
+    printFrame.style.display = 'none';
+    document.body.appendChild(printFrame);
+
+    printFrame.contentDocument.write(htmlContent);
+    printFrame.contentDocument.close();
 
     const ejecutarImpresion = () => {
         try {
-            window.print();
+            printFrame.contentWindow.focus();
+            printFrame.contentWindow.print();
         } finally {
             setTimeout(() => {
-                if (printSection) printSection.innerHTML = '';
+                printFrame.remove();
             }, 1000);
         }
     };
 
+    const images = Array.from(printFrame.contentDocument.querySelectorAll('img'));
+    const pendingImages = images.filter(img => !img.complete);
+
     if (pendingImages.length === 0) {
         ejecutarImpresion();
     } else {
-        const imagePromises = pendingImages.map(img => {
-            return new Promise(resolve => {
-                img.onload = () => resolve();
-                img.onerror = () => resolve();
-            });
+        let loaded = 0;
+        const checkDone = () => {
+            loaded++;
+            if (loaded === pendingImages.length) ejecutarImpresion();
+        };
+        pendingImages.forEach(img => {
+            img.onload = checkDone;
+            img.onerror = checkDone;
         });
-
-        const timeoutPromise = new Promise(resolve => setTimeout(resolve, 1500));
-
-        Promise.race([Promise.all(imagePromises), timeoutPromise]).then(() => {
-            ejecutarImpresion();
-        });
+        setTimeout(() => {
+            if (loaded < pendingImages.length) ejecutarImpresion();
+        }, 1500);
     }
 }
 
-function imprimirTicket(venta) {
-    if (!venta) return;
-    const plantilla = generarPlantillaHTMLTicket(venta);
-    imprimirHTMLConIframe(plantilla.html);
-}
-
 function imprimirFacturaA4(venta) {
-    if (!venta) return;
-    const plantilla = generarFacturaA4HTML(venta);
-    imprimirHTMLConIframe(plantilla.html);
+    imprimirTicket(venta, 'A4');
 }
 
 function imprimirTicketLocal(venta) {
-    imprimirTicket(venta);
+    imprimirTicket(venta, 'POS');
 }
 
 function reimprimirUltimoTicket() {
