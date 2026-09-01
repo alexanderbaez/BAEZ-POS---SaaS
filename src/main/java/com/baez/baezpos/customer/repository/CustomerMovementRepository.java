@@ -1,7 +1,6 @@
 package com.baez.baezpos.customer.repository;
 
 import com.baez.baezpos.customer.entities.CustomerMovement;
-import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,10 +14,8 @@ import java.util.Optional;
 @Repository
 public interface CustomerMovementRepository extends JpaRepository<CustomerMovement, Long> {
 
-    @EntityGraph(attributePaths = {"sale", "sale.items", "sale.items.product"})
     List<CustomerMovement> findByCustomerIdAndCustomerCompanyIdOrderByIdDesc(Long customerId, Long companyId);
 
-    @EntityGraph(attributePaths = {"sale", "sale.items", "sale.items.product"})
     List<CustomerMovement> findByCustomerIdOrderByIdDesc(Long customerId);
 
     @Query("SELECT COALESCE(SUM(cm.amount), 0) FROM CustomerMovement cm " +

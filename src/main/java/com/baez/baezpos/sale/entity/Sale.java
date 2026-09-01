@@ -3,6 +3,8 @@ package com.baez.baezpos.sale.entity;
 import com.baez.baezpos.shared.entity.TenantEntity;
 import com.baez.baezpos.user.entity.User;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
@@ -42,6 +44,7 @@ public class Sale extends TenantEntity {
 
     @Builder.Default
     @OneToMany(mappedBy = "sale", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @Fetch(FetchMode.SUBSELECT)
     private List<SaleItem> items = new ArrayList<>();
 
     @Column(name = "payment_method", nullable = false, length = 30)
