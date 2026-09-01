@@ -811,11 +811,7 @@ window.actualizarItemCarrito = function(index, campo, valor, inputElement) {
             
             // Actualizar Proyección
             const colProy = tr.querySelector('.col-proyectado');
-            if (colProy) colProy.innerHTML = `<i class="bi bi-arrow-up-right me-1"></i>${proyectado}`;
-            
-            // Actualizar Subtotal Fila
-            const colSubt = tr.querySelector('.col-subtotal');
-            if (colSubt) colSubt.textContent = fmtARS.format(subtotal);
+            if (colProy) colProy.innerHTML = `<small class="text-muted mb-1">Actual: ${item.currentStock || 0}</small><span class="badge bg-success-subtle text-success border border-success-subtle w-auto">Final: ${proyectado}</span>`;
             
             // Actualizar Total General
             let total = 0;
@@ -832,7 +828,7 @@ function renderizarCarrito() {
     let total = 0;
     
     if (carritoOrden.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-muted small">El carrito está vacío. Busque un producto para agregarlo.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center p-5 text-muted small"><i class="bi bi-inbox fs-3 d-block mb-2 text-secondary"></i> El carrito está vacío. Busque un producto para agregarlo.</td></tr>`;
         document.getElementById('totalOrdenBadge').textContent = fmtARS.format(0);
         return;
     }
@@ -845,9 +841,9 @@ function renderizarCarrito() {
         const proyectado = (item.currentStock || 0) + item.quantity;
         
         const tr = document.createElement('tr');
+        tr.className = "border-bottom";
         tr.innerHTML = `
             <td class="ps-3"><span class="fw-semibold text-dark">${escapeHTML(item.productName)}</span></td>
-            <td><span class="badge bg-secondary">${item.currentStock || 0}</span></td>
             <td>
                 <div class="input-group input-group-sm flex-nowrap">
                     <span class="input-group-text bg-light border-0 text-muted">$</span>
@@ -859,10 +855,14 @@ function renderizarCarrito() {
                 <input type="number" class="form-control form-control-sm text-center" value="${item.quantity}" min="1" style="width: 70px;"
                        oninput="actualizarItemCarrito(${index}, 'quantity', this.value, this)">
             </td>
-            <td class="text-center"><span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-2 py-1 col-proyectado"><i class="bi bi-arrow-up-right me-1"></i>${proyectado}</span></td>
-            <td class="text-end fw-bold text-dark amount-num col-subtotal">${fmtARS.format(subtotal)}</td>
-            <td class="text-end pe-3">
-                <button class="btn btn-sm btn-outline-danger border-0" onclick="eliminarItemCarrito(${index})">
+            <td>
+                <div class="d-flex flex-column lh-1 col-proyectado">
+                    <small class="text-muted mb-1">Actual: ${item.currentStock || 0}</small>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle w-auto">Final: ${proyectado}</span>
+                </div>
+            </td>
+            <td>
+                <button class="btn btn-outline-danger btn-sm border-0 w-100 d-flex justify-content-center" onclick="eliminarItemCarrito(${index})">
                     <i class="bi bi-trash"></i>
                 </button>
             </td>

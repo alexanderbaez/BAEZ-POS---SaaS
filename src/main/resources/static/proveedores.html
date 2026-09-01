@@ -200,7 +200,7 @@
           <form id="formProveedor" onsubmit="event.preventDefault(); guardarProveedor();">
             <input type="hidden" id="provId">
             <div class="mb-3">
-              <label class="small fw-bold text-muted mb-1">RazÃ³n Social / Nombre Comercial *</label>
+              <label class="small fw-bold text-muted mb-1">Razón Social / Nombre Comercial *</label>
               <input type="text" id="provBusinessName" class="form-control bg-light border-0 p-2" placeholder="Ej: Distribuidora Central S.R.L." required>
             </div>
             <div class="row">
@@ -209,18 +209,18 @@
                 <input type="text" id="provTaxId" class="form-control bg-light border-0 p-2" placeholder="Ej: 30-12345678-9">
               </div>
               <div class="col-12 col-md-6 mb-3">
-                <label class="small fw-bold text-muted mb-1">TelÃ©fono</label>
+                <label class="small fw-bold text-muted mb-1">Teléfono</label>
                 <input type="tel" id="provPhone" class="form-control bg-light border-0 p-2" placeholder="Ej: 2641234567">
               </div>
             </div>
             <div class="mb-3">
-              <label class="small fw-bold text-muted mb-1">Correo ElectrÃ³nico</label>
+              <label class="small fw-bold text-muted mb-1">Correo Electrónico</label>
               <input type="email" id="provEmail" class="form-control bg-light border-0 p-2" placeholder="proveedor@email.com">
             </div>
             <div class="mb-2" id="divSaldoInicial">
               <label class="small fw-bold text-muted mb-1">Saldo Adeudado Inicial ($ ARS)</label>
               <input type="number" inputmode="decimal" step="0.01" id="provCurrentBalance" class="form-control bg-light border-0 p-2 fw-bold text-danger amount-num" value="0.00">
-              <small class="text-muted" style="font-size: 0.75rem;">Si ya posees una deuda anterior con este proveedor, ingrÃ©sala aquÃ­.</small>
+              <small class="text-muted" style="font-size: 0.75rem;">Si ya posees una deuda anterior con este proveedor, ingrésala aquí.</small>
             </div>
           </form>
         </div>
@@ -350,30 +350,28 @@
               <label class="small fw-bold text-muted mb-2"><i class="bi bi-3-circle me-1"></i> Detalle y Proyección de la Orden</label>
               
               <div class="table-responsive border rounded-3 mb-3 shadow-sm" style="max-height: 350px; overflow-y: auto; overflow-x: hidden;">
-                <table class="table table-hover table-sm align-middle mb-0">
+                <table class="table table-borderless table-hover align-middle mb-0">
                   <thead class="table-light">
                     <tr class="text-muted text-uppercase" style="font-size: 0.75rem;">
-                      <th class="ps-3 border-0 py-2 position-sticky top-0 bg-white z-2" style="width: 25%;">Producto</th>
-                      <th class="border-0 py-2 text-center position-sticky top-0 bg-white z-2" style="width: 10%;">Stock</th>
-                      <th class="border-0 py-2 text-end position-sticky top-0 bg-white z-2" style="width: 20%;">Costo Un. ($)</th>
-                      <th class="border-0 py-2 text-center position-sticky top-0 bg-white z-2" style="width: 12%;">Cant.</th>
-                      <th class="border-0 text-center py-2 position-sticky top-0 bg-white z-2" style="width: 13%;">PROYECCIÓN</th>
-                      <th class="border-0 text-end py-2 pe-3 position-sticky top-0 bg-white z-2" style="width: 15%;">Subtotal</th>
-                      <th class="border-0 text-end py-2 position-sticky top-0 bg-white z-2" style="width: 5%;"></th>
+                      <th class="ps-3 border-0 py-2 position-sticky top-0 bg-white z-2" style="width: 30%;">Producto</th>
+                      <th class="border-0 py-2 text-end position-sticky top-0 bg-white z-2" style="width: 25%;">Costo Un. ($)</th>
+                      <th class="border-0 py-2 text-center position-sticky top-0 bg-white z-2" style="width: 15%;">Cant.</th>
+                      <th class="border-0 text-center py-2 position-sticky top-0 bg-white z-2" style="width: 20%;">STOCK RESULTANTE</th>
+                      <th class="border-0 text-center py-2 position-sticky top-0 bg-white z-2" style="width: 10%;">Acciones</th>
                     </tr>
                   </thead>
                   <tbody id="carritoBody">
-                    <tr><td colspan="7" class="text-center p-5 text-muted small"><i class="bi bi-inbox fs-3 d-block mb-2 text-secondary"></i> El carrito está vacío. Busque un producto para agregarlo.</td></tr>
+                    <tr><td colspan="5" class="text-center p-5 text-muted small"><i class="bi bi-inbox fs-3 d-block mb-2 text-secondary"></i> El carrito está vacío. Busque un producto para agregarlo.</td></tr>
                   </tbody>
                 </table>
               </div>
 
               <!-- Bloque de Resumen Destacado -->
-              <div class="bg-primary-subtle text-primary border border-primary-subtle rounded-3 p-3 mt-auto d-flex justify-content-between align-items-center">
+              <div class="bg-primary text-white rounded-3 shadow-sm p-3 mt-auto d-flex justify-content-between align-items-center">
                 <div class="fw-bold text-uppercase small">
-                  <i class="bi bi-calculator me-1"></i> Total de la Orden
+                  <i class="bi bi-calculator me-1"></i> TOTAL DE LA ORDEN
                 </div>
-                <h3 class="fw-bold m-0 amount-num" id="totalOrdenBadge">$0,00</h3>
+                <h3 class="fw-bold m-0 amount-num fs-3" id="totalOrdenBadge">$0,00</h3>
               </div>
             </div>
           </div>
