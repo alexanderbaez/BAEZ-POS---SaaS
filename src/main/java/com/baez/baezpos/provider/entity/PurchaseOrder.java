@@ -12,7 +12,8 @@ import java.util.List;
 
 @Entity
 @Table(name = "purchase_orders", indexes = {
-        @Index(name = "idx_purchase_orders_company", columnList = "company_id")
+        @Index(name = "idx_purchase_orders_company", columnList = "company_id"),
+        @Index(name = "idx_po_company_created", columnList = "company_id, created_at DESC")
 })
 @Getter
 @Setter

@@ -14,9 +14,12 @@ import java.time.Duration;
 import java.util.TimeZone;
 import java.util.concurrent.Executor;
 
+import org.springframework.cache.annotation.EnableCaching;
+
 @SpringBootApplication
 @EnableJpaAuditing
 @EnableAsync
+@EnableCaching
 public class BaezposApplication {
 
 	@PostConstruct

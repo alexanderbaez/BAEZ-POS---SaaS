@@ -11,6 +11,8 @@ import com.baez.baezpos.security.util.SecurityUtils;
 import com.baez.baezpos.shared.exception.BadRequestException;
 import com.baez.baezpos.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +28,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "tenant_categories", key = "T(com.baez.baezpos.security.util.SecurityUtils).getCurrentCompanyId()")
     public CategoryResponseDTO createCategory(CategoryRequestDTO dto) {
         Long companyId = requireCompanyContext();
         String categoryName = dto.name().trim();
@@ -53,6 +56,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "tenant_categories", key = "T(com.baez.baezpos.security.util.SecurityUtils).getCurrentCompanyId()")
     public List<CategoryResponseDTO> getAllCategories() {
         Long companyId = requireCompanyContext();
         return categoryRepository.findByCompanyIdAndActiveTrue(companyId).stream()
@@ -71,6 +75,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "tenant_categories", key = "T(com.baez.baezpos.security.util.SecurityUtils).getCurrentCompanyId()")
     public CategoryResponseDTO updateCategory(Long id, CategoryRequestDTO dto) {
         Long companyId = requireCompanyContext();
         Category category = categoryRepository.findByIdAndCompanyId(id, companyId)
@@ -87,6 +92,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "tenant_categories", key = "T(com.baez.baezpos.security.util.SecurityUtils).getCurrentCompanyId()")
     public void deleteCategory(Long id) {
         Long companyId = requireCompanyContext();
         Category category = categoryRepository.findByIdAndCompanyId(id, companyId)
@@ -108,6 +114,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "tenant_categories", key = "T(com.baez.baezpos.security.util.SecurityUtils).getCurrentCompanyId()")
     public CategoryResponseDTO activateCategory(Long id) {
         Long companyId = requireCompanyContext();
         Category category = categoryRepository.findByIdAndCompanyId(id, companyId)

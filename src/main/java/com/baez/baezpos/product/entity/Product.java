@@ -17,7 +17,8 @@ import java.math.BigDecimal;
                 @Index(name = "idx_products_company_active", columnList = "company_id, active"),
                 @Index(name = "idx_products_company_category", columnList = "company_id, category_id"),
                 @Index(name = "idx_products_company_name", columnList = "company_id, name"),
-                @Index(name = "idx_products_company_barcode", columnList = "company_id, barcode")
+                @Index(name = "idx_products_company_barcode", columnList = "company_id, barcode"),
+                @Index(name = "idx_product_company_created", columnList = "company_id, created_at DESC")
         })
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor

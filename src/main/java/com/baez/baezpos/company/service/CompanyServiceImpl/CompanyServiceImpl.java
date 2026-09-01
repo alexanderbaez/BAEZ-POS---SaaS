@@ -18,6 +18,8 @@ import com.baez.baezpos.security.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,12 +51,14 @@ public class CompanyServiceImpl implements CompanyService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "tenant_profile", key = "T(com.baez.baezpos.security.util.SecurityUtils).getCurrentCompanyId()")
     public CompanyDTO getAuthenticatedCompany() {
         return convertToDTOClient(getAuthenticatedCompanyEntity());
     }
 
     @Override
     @Transactional
+    @CacheEvict(value = "tenant_profile", key = "T(com.baez.baezpos.security.util.SecurityUtils).getCurrentCompanyId()")
     public CompanyDTO updateAuthenticatedCompany(CompanyDTO dto) {
         Company company = getAuthenticatedCompanyEntity();
         String nombreAntiguo = company.getName();

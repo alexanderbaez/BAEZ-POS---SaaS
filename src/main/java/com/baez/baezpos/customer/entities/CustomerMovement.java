@@ -12,7 +12,8 @@ import java.math.BigDecimal;
 @Entity
 @Table(name = "customer_movements", indexes = {
         @Index(name = "idx_customer_movements_customer", columnList = "customer_id"),
-        @Index(name = "idx_customer_movements_session", columnList = "cash_register_session_id")
+        @Index(name = "idx_customer_movements_session", columnList = "cash_register_session_id"),
+        @Index(name = "idx_cm_customer_created", columnList = "customer_id, created_at DESC")
 })
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
