@@ -827,7 +827,7 @@ function renderizarCarrito() {
             <td>
                 <div class="input-group input-group-sm flex-nowrap">
                     <span class="input-group-text bg-light border-0 text-muted">$</span>
-                    <input type="number" step="0.01" min="0" class="form-control text-end bg-light border-0 fw-bold px-1" 
+                    <input type="number" class="form-control form-control-sm text-center" style="min-width: 90px; width: 100%;"
                            value="${item.unitCost}" oninput="actualizarItemCarrito(${index}, 'unitCost', this.value)">
                 </div>
             </td>
