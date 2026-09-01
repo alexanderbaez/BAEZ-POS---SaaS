@@ -47,19 +47,17 @@
         </button>
       </div>
     </div>
-      </div>
-    </div>
 
     <!-- Contenedor unificado para pestañas y contenido -->
     <div class="card shadow-sm border-0 p-4 mb-4">
     <ul class="nav nav-tabs mb-4 border-bottom" id="proveedorTabs" role="tablist">
       <li class="nav-item" role="presentation">
-        <button class="nav-link active fw-bold text-dark px-4" id="tab-directorio" data-bs-toggle="tab" data-bs-target="#vistaProveedores" type="button" role="tab" onclick="cambiarVista('proveedores')">
+        <button class="nav-link active fw-bold text-dark px-4" id="tabDirectorio" data-bs-toggle="tab" data-bs-target="#vistaProveedores" type="button" role="tab" onclick="cambiarVista('proveedores')">
           <i class="bi bi-person-lines-fill me-2"></i>Directorio
         </button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link fw-bold text-secondary px-4" id="tab-ordenes" data-bs-toggle="tab" data-bs-target="#vistaOrdenes" type="button" role="tab" onclick="cambiarVista('ordenes')">
+        <button class="nav-link fw-bold text-secondary px-4" id="tabOrdenesCompra" data-bs-toggle="tab" data-bs-target="#vistaOrdenes" type="button" role="tab" onclick="cambiarVista('ordenes')">
           <i class="bi bi-cart3 me-2"></i>Órdenes de Compra
         </button>
       </li>
@@ -137,7 +135,6 @@
           <tr><td colspan="6" class="text-center p-4 text-muted">Cargando proveedores...</td></tr>
           </tbody>
         </table>
-      </div>
       </div>
       <div class="card-footer bg-white border-0 py-3 px-4 d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
         <span class="text-muted small" id="infoPaginacion">Mostrando 0 proveedores</span>
@@ -315,7 +312,7 @@
 </div>
 
   <!-- Modal Nueva Orden de Compra -->
-  <div class="modal fade" id="modalNuevaOrden" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal fade" id="modalGenerarOrden" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 1100px;">
       <div class="modal-content border-0 shadow-lg">
         <div class="modal-header border-0 p-4 pb-3">
@@ -330,7 +327,7 @@
               <div class="bg-light border-0 p-3 rounded-3 h-100">
                 <div class="mb-4">
                   <label class="small fw-bold text-muted mb-2"><i class="bi bi-1-circle me-1"></i> Seleccionar Proveedor *</label>
-                  <select id="ordenProveedorId" class="form-select border-0 shadow-sm p-3" required>
+                  <select id="selectProveedor" class="form-select border-0 shadow-sm p-3" required>
                     <option value="">Seleccione un proveedor...</option>
                   </select>
                 </div>
@@ -339,7 +336,7 @@
                   <label class="small fw-bold text-muted mb-2"><i class="bi bi-2-circle me-1"></i> Buscar Producto al Catálogo</label>
                   <div class="input-group shadow-sm">
                     <span class="input-group-text bg-white border-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" id="ordenBuscarProd" class="form-control border-0 p-3" placeholder="Buscar por nombre o código...">
+                    <input type="text" id="inputBuscarProducto" class="form-control border-0 p-3" placeholder="Buscar por nombre o código...">
                   </div>
                   <div class="list-group mt-2 shadow shadow-sm d-none position-absolute w-100 z-3" id="listaSugerenciasProd" style="max-height: 250px; overflow-y: auto;">
                     <!-- Sugerencias dinámicas -->
@@ -376,7 +373,7 @@
                 <div class="fw-bold text-uppercase small">
                   <i class="bi bi-calculator me-1"></i> Total de la Orden
                 </div>
-                <h3 class="fw-bold m-0 amount-num" id="carritoTotal">$0,00</h3>
+                <h3 class="fw-bold m-0 amount-num" id="totalOrdenBadge">$0,00</h3>
               </div>
             </div>
           </div>
