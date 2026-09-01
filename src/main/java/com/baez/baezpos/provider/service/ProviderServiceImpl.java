@@ -39,15 +39,7 @@ public class ProviderServiceImpl implements ProviderService {
     private final CashRegisterService cashRegisterService;
     private final AuditService auditService;
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<ProviderResponseDTO> getAll() {
-        Long companyId = getRequiredCompanyId();
-        return providerRepository.findByCompanyIdAndActiveTrueOrderByIdDesc(companyId)
-                .stream()
-                .map(this::mapToDTO)
-                .toList();
-    }
+
 
     @Override
     @Transactional(readOnly = true)
@@ -68,18 +60,7 @@ public class ProviderServiceImpl implements ProviderService {
         return mapToDTO(provider);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<ProviderResponseDTO> search(String query) {
-        Long companyId = getRequiredCompanyId();
-        if (query == null || query.trim().isEmpty()) {
-            return getAll();
-        }
-        return providerRepository.searchProvidersByCompanyId(query.trim(), companyId)
-                .stream()
-                .map(this::mapToDTO)
-                .toList();
-    }
+
 
     @Override
     @Transactional(readOnly = true)

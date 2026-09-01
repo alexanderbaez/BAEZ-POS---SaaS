@@ -15,7 +15,6 @@ import java.util.Optional;
 @Repository
 public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
-    List<Expense> findByCompanyIdOrderByExpenseDateDesc(Long companyId);
 
     org.springframework.data.domain.Page<Expense> findByCompanyId(Long companyId, org.springframework.data.domain.Pageable pageable);
 

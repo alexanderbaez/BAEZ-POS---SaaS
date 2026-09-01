@@ -11,13 +11,13 @@ import java.util.List;
 
 public interface ProviderService {
 
-    List<ProviderResponseDTO> getAll();
+
 
     Page<ProviderResponseDTO> getAll(Pageable pageable);
 
     ProviderResponseDTO getById(Long id);
 
-    List<ProviderResponseDTO> search(String query);
+
 
     Page<ProviderResponseDTO> search(String query, Pageable pageable);
 

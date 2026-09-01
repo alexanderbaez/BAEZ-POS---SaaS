@@ -14,21 +14,11 @@ import java.util.Optional;
 @Repository
 public interface ProviderRepository extends JpaRepository<Provider, Long> {
 
-    List<Provider> findByCompanyId(Long companyId);
-
-    List<Provider> findByCompanyIdAndActiveTrueOrderByIdDesc(Long companyId);
-
-    List<Provider> findByCompanyIdAndActiveTrue(Long companyId);
-
     org.springframework.data.domain.Page<Provider> findByCompanyIdAndActiveTrue(Long companyId, org.springframework.data.domain.Pageable pageable);
 
     Optional<Provider> findByIdAndCompanyId(Long id, Long companyId);
 
     Optional<Provider> findByIdAndCompanyIdAndActiveTrue(Long id, Long companyId);
-
-    @Query("SELECT p FROM Provider p WHERE p.company.id = :companyId AND p.active = true AND " +
-            "(LOWER(p.businessName) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.taxId) LIKE LOWER(CONCAT('%', :query, '%')))")
-    List<Provider> searchProvidersByCompanyId(@Param("query") String query, @Param("companyId") Long companyId);
 
     @Query("SELECT p FROM Provider p WHERE p.company.id = :companyId AND p.active = true AND " +
             "(LOWER(p.businessName) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.taxId) LIKE LOWER(CONCAT('%', :query, '%')))")

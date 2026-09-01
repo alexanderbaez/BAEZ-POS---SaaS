@@ -109,19 +109,7 @@ public class ExpenseServiceImpl implements ExpenseService {
         return mapToDTO(saved);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<ExpenseResponseDTO> getAllExpenses() {
-        Long companyId = SecurityUtils.getCurrentCompanyId();
-        if (companyId == null) {
-            throw new UnauthorizedException("Acceso denegado: Contexto de empresa no identificado.");
-        }
 
-        return expenseRepository.findByCompanyIdOrderByExpenseDateDesc(companyId)
-                .stream()
-                .map(this::mapToDTO)
-                .toList();
-    }
 
     @Override
     @Transactional(readOnly = true)
