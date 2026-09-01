@@ -19,7 +19,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        // Normalizaci\u00F3n defensiva: garantiza b\u00FAsqueda insensible a may\u00FAsculas/espacios
+        // Normalización defensiva: garantiza búsqueda insensible a mayúsculas/espacios
         // independientemente del origen del token o del AuthenticationManager.
         String normalizedEmail = (email != null) ? email.trim().toLowerCase() : "";
         User user = userRepository.findByEmail(normalizedEmail)

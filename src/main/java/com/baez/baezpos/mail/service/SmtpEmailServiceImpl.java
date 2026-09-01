@@ -25,19 +25,19 @@ public class SmtpEmailServiceImpl implements EmailService {
     @Value("${resend.api.key:}")
     private String resendApiKey;
 
-    @Value("${app.mail.from:B\u00C3\u0192\u00C2\u0081EZ POS <onboarding@resend.dev>}")
+    @Value("${app.mail.from:BAEZ POS <onboarding@resend.dev>}")
     private String mailFrom;
 
     private static final String RESEND_API_URL = "https://api.resend.com/emails";
 
     private void enviarCorreoInterno(String destinatario, String asunto, String contenidoHtml) {
         if (destinatario == null || destinatario.isBlank()) {
-            log.warn("[EmailService] Env\u00EDo cancelado: Destinatario nulo o vac\u00EDo.");
+            log.warn("[EmailService] Envío cancelado: Destinatario nulo o vacío.");
             return;
         }
 
         if (resendApiKey == null || resendApiKey.isBlank()) {
-            log.error("[EmailService] RESEND_API_KEY no est\u00C3\u0192\u00A1 configurada en las variables de entorno. Correo no enviado a: {}", destinatario);
+            log.error("[EmailService] RESEND_API_KEY no está configurada en las variables de entorno. Correo no enviado a: {}", destinatario);
             safeAuditLog("EMAIL_ERROR", "RESEND_API_KEY no configurada. Destinatario: " + destinatario, "ERROR");
             return;
         }
@@ -58,15 +58,15 @@ public class SmtpEmailServiceImpl implements EmailService {
             ResponseEntity<String> response = restTemplate.postForEntity(RESEND_API_URL, entity, String.class);
 
             if (response.getStatusCode().is2xxSuccessful()) {
-                log.info("[EmailService] Correo enviado exitosamente v\u00EDa Resend HTTP API a: {}", destinatario);
-                safeAuditLog("EMAIL_ENVIADO", "Correo enviado v\u00EDa Resend a: " + destinatario + " | Asunto: " + asunto, "INFO");
+                log.info("[EmailService] Correo enviado exitosamente vía Resend HTTP API a: {}", destinatario);
+                safeAuditLog("EMAIL_ENVIADO", "Correo enviado vía Resend a: " + destinatario + " | Asunto: " + asunto, "INFO");
             } else {
                 log.error("[EmailService] Respuesta no exitosa de Resend API para {}: Status={}, Body={}", destinatario, response.getStatusCode(), response.getBody());
                 safeAuditLog("EMAIL_ERROR", "Error Resend API (HTTP " + response.getStatusCode() + ") para: " + destinatario, "ERROR");
             }
 
         } catch (Exception e) {
-            log.error("[EmailService] Excepci\u00F3n al despachar correo v\u00EDa Resend API para {}: {}", destinatario, e.getMessage(), e);
+            log.error("[EmailService] Excepción al despachar correo vía Resend API para {}: {}", destinatario, e.getMessage(), e);
             safeAuditLog("EMAIL_ERROR", "Fallo HTTP Resend: " + e.getMessage() + " | Destinatario: " + destinatario, "ERROR");
         }
     }
@@ -75,7 +75,7 @@ public class SmtpEmailServiceImpl implements EmailService {
         try {
             auditService.logAction(action, details, level);
         } catch (Exception ex) {
-            log.warn("[EmailService] No se pudo persistir auditor\u00EDa en hilo as\u00EDncrono: {}", ex.getMessage());
+            log.warn("[EmailService] No se pudo persistir auditoría en hilo asíncrono: {}", ex.getMessage());
         }
     }
 
@@ -83,7 +83,7 @@ public class SmtpEmailServiceImpl implements EmailService {
     @Async("taskExecutor")
     public void enviarMailBienvenida(String destinatario, String nombreEmpresa, String nombreUsuario, String passwordTemporal) {
         log.info("[EmailService] Despachando correo de bienvenida con credenciales a: {}", destinatario);
-        String asunto = "\u00C3\u201A\u00A1Bienvenido a B\u00C3\u0192\u00C2\u0081EZ POS! - Credenciales de acceso";
+        String asunto = "¡Bienvenido a BAEZ POS! - Credenciales de acceso";
         String html = EmailTemplateBuilder.buildBienvenidaConPassword(nombreUsuario, nombreEmpresa, destinatario, passwordTemporal);
         enviarCorreoInterno(destinatario, asunto, html);
     }
@@ -91,8 +91,8 @@ public class SmtpEmailServiceImpl implements EmailService {
     @Override
     @Async("taskExecutor")
     public void enviarMailBienvenida(String destinatario, String nombreUsuario, String nombreEmpresa) {
-        log.info("[EmailService] Despachando confirmaci\u00F3n de cuenta a: {}", destinatario);
-        String asunto = "\u00C3\u201A\u00A1Bienvenido a B\u00C3\u0192\u00C2\u0081EZ POS! - Confirmaci\u00F3n de cuenta";
+        log.info("[EmailService] Despachando confirmación de cuenta a: {}", destinatario);
+        String asunto = "¡Bienvenido a BAEZ POS! - Confirmación de cuenta";
         String html = EmailTemplateBuilder.buildBienvenidaSinPassword(nombreUsuario, nombreEmpresa, destinatario);
         enviarCorreoInterno(destinatario, asunto, html);
     }
@@ -100,8 +100,8 @@ public class SmtpEmailServiceImpl implements EmailService {
     @Override
     @Async("taskExecutor")
     public void enviarMailResetPassword(String destinatario, String nombreUsuario, String nuevaPassword) {
-        log.info("[EmailService] Despachando restablecimiento de contrase\u00F1a a: {}", destinatario);
-        String asunto = "B\u00C3\u0192 EZ POS - Restablecimiento de Contrase\u00F1a";
+        log.info("[EmailService] Despachando restablecimiento de contraseña a: {}", destinatario);
+        String asunto = "BAEZ POS - Restablecimiento de Contraseña";
         String html = EmailTemplateBuilder.buildResetPassword(nombreUsuario, nuevaPassword);
         enviarCorreoInterno(destinatario, asunto, html);
     }

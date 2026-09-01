@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
   <link rel="icon" type="image/x-icon" href="/logo.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BÁEZ POS - Control Profesional de Gastos</title>
+    <title>BAEZ POS - Control Profesional de Gastos</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
@@ -230,13 +230,13 @@
                         <!-- SECCIÓN DINÁMICA DE PROVEEDOR (visible cuando Categoría = PROVEEDOR) -->
                         <div class="row g-3 mb-4 d-none" id="seccionProveedor">
                             <div class="col-12 col-md-6">
-                                <label class="form-label text-primary fw-bold small text-uppercase mb-2"><i class="bi bi-truck me-1"></i>Proveedor Asignado *</label>
+                                <label class="form-label text-dark fw-bold small text-uppercase mb-2"><i class="bi bi-shop me-1 text-primary"></i> Proveedor / Acreedor</label>
                                 <select id="provGasto" class="form-select form-select-lg border-primary bg-primary bg-opacity-10 rounded-3">
                                     <option value="">-- Seleccionar Proveedor --</option>
                                 </select>
                             </div>
                             <div class="col-12 col-md-6">
-                                <label class="form-label text-dark fw-bold small text-uppercase mb-2"><i class="bi bi-file-earmark-text me-1"></i>NÂ° Factura / Remito Proveedor</label>
+                                <label class="form-label text-dark fw-bold small text-uppercase mb-2"><i class="bi bi-file-earmark-text me-1"></i>Nº Factura / Remito Proveedor</label>
                                 <input type="text" id="nroFacturaGasto" class="form-control form-control-lg rounded-3 border" placeholder="Ej: FC-A-0001-00045678">
                             </div>
                         </div>
@@ -249,8 +249,8 @@
 
                         <!-- Referencia Adicional -->
                         <div class="mb-4">
-                            <label class="form-label text-dark fw-bold small text-uppercase mb-1">NÂ° Comprobante / Referencia Adicional (Opcional)</label>
-                            <input type="text" id="refComprobante" class="form-control p-2.5 rounded-3 bg-light border" placeholder="Ej: Recibo NÂ° 98124, Ticket fiscal...">
+                            <label class="form-label text-dark fw-bold small text-uppercase mb-1">Nº Comprobante</label>
+                            <input type="text" id="refComprobante" class="form-control p-2.5 rounded-3 bg-light border-0 text-dark fw-bold shadow-sm" placeholder="Ej: F-1234, TKT-99">
                         </div>
 
                         <!-- TOGGLE CAJA CHICA DINÁMICO -->

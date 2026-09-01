@@ -32,7 +32,7 @@ public class CategoryServiceImpl implements CategoryService {
 
         categoryRepository.findByNameAndCompanyId(categoryName, companyId).ifPresent(c -> {
             if (c.getActive()) {
-                throw new BadRequestException("Ya existe una categor\u00EDa activa con el nombre '" + categoryName + "'");
+                throw new BadRequestException("Ya existe una categoría activa con el nombre '" + categoryName + "'");
             }
         });
 
@@ -46,7 +46,7 @@ public class CategoryServiceImpl implements CategoryService {
                 .build();
 
         Category saved = categoryRepository.save(newCategory);
-        auditService.logAction("CREACION_CATEGORIA", "Categor\u00EDa creada: " + saved.getName(), "INFO");
+        auditService.logAction("CREACION_CATEGORIA", "Categoría creada: " + saved.getName(), "INFO");
 
         return mapToResponseDTO(saved);
     }
@@ -65,7 +65,7 @@ public class CategoryServiceImpl implements CategoryService {
     public CategoryResponseDTO getCategoryById(Long id) {
         Long companyId = requireCompanyContext();
         Category category = categoryRepository.findByIdAndCompanyId(id, companyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Categor\u00EDa no encontrada en su empresa"));
+                .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada en su empresa"));
         return mapToResponseDTO(category);
     }
 
@@ -74,13 +74,13 @@ public class CategoryServiceImpl implements CategoryService {
     public CategoryResponseDTO updateCategory(Long id, CategoryRequestDTO dto) {
         Long companyId = requireCompanyContext();
         Category category = categoryRepository.findByIdAndCompanyId(id, companyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Categor\u00EDa no encontrada en su empresa"));
+                .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada en su empresa"));
 
         category.setName(dto.name().trim());
         category.setDescription(dto.description());
 
         Category updated = categoryRepository.save(category);
-        auditService.logAction("ACTUALIZACION_CATEGORIA", "Categor\u00EDa actualizada ID: " + id, "INFO");
+        auditService.logAction("ACTUALIZACION_CATEGORIA", "Categoría actualizada ID: " + id, "INFO");
 
         return mapToResponseDTO(updated);
     }
@@ -90,11 +90,11 @@ public class CategoryServiceImpl implements CategoryService {
     public void deleteCategory(Long id) {
         Long companyId = requireCompanyContext();
         Category category = categoryRepository.findByIdAndCompanyId(id, companyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Categor\u00EDa no encontrada en su empresa"));
+                .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada en su empresa"));
 
         category.setActive(false);
         categoryRepository.save(category);
-        auditService.logAction("ELIMINACION_CATEGORIA", "Categor\u00EDa desactivada: " + category.getName(), "WARN");
+        auditService.logAction("ELIMINACION_CATEGORIA", "Categoría desactivada: " + category.getName(), "WARN");
     }
 
     @Override
@@ -111,11 +111,11 @@ public class CategoryServiceImpl implements CategoryService {
     public CategoryResponseDTO activateCategory(Long id) {
         Long companyId = requireCompanyContext();
         Category category = categoryRepository.findByIdAndCompanyId(id, companyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Categor\u00EDa no encontrada en su empresa"));
+                .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada en su empresa"));
 
         category.setActive(true);
         Category saved = categoryRepository.save(category);
-        auditService.logAction("ACTIVACION_CATEGORIA", "Categor\u00EDa reactivada: " + category.getName(), "INFO");
+        auditService.logAction("ACTIVACION_CATEGORIA", "Categoría reactivada: " + category.getName(), "INFO");
 
         return mapToResponseDTO(saved);
     }
@@ -123,7 +123,7 @@ public class CategoryServiceImpl implements CategoryService {
     private Long requireCompanyContext() {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         if (companyId == null) {
-            throw new BadRequestException("Acceso denegado: Operaci\u00F3n requiere un contexto de empresa v\u00E1lido.");
+            throw new BadRequestException("Acceso denegado: Operación requiere un contexto de empresa válido.");
         }
         return companyId;
     }

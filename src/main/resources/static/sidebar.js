@@ -182,10 +182,7 @@
                     </div>
                 </div>
 
-                <a href="#" id="btnDarkModeToggle" class="nav-link-custom text-warning">
-                  <i id="darkModeIcon" class="bi bi-sun me-3 fs-5"></i> <span id="darkModeText">Modo Oscuro</span>
-                </a>
-                <a href="#" id="btnCerrarSesion" class="nav-link-custom text-danger mt-2">
+                <a href="#" id="btnCerrarSesion" class="nav-link-custom text-danger">
                   <i class="bi bi-box-arrow-left me-3 fs-5"></i> Cerrar Sesión
                 </a>
               </div>
@@ -356,52 +353,4 @@ function escapeHTML(str) {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
 }
-// ==========================================================================
-// DARK MODE LOGIC
-// ==========================================================================
-function initDarkMode() {
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-        document.documentElement.classList.add('dark');
-        document.body.classList.add('dark');
-        updateDarkModeIcon(true);
-    } else {
-        document.documentElement.classList.remove('dark');
-        document.body.classList.remove('dark');
-        updateDarkModeIcon(false);
-    }
-}
 
-function toggleDarkMode() {
-    const isDark = document.documentElement.classList.toggle('dark');
-    document.body.classList.toggle('dark');
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    updateDarkModeIcon(isDark);
-}
-
-function updateDarkModeIcon(isDark) {
-    const icon = document.getElementById('darkModeIcon');
-    const text = document.getElementById('darkModeText');
-    if (icon && text) {
-        if (isDark) {
-            icon.className = 'bi bi-moon-stars me-3 fs-5';
-            text.textContent = 'Modo Claro';
-        } else {
-            icon.className = 'bi bi-sun me-3 fs-5';
-            text.textContent = 'Modo Oscuro';
-        }
-    }
-}
-
-document.addEventListener('click', (e) => {
-    const btnDarkMode = e.target.closest('#btnDarkModeToggle');
-    if (btnDarkMode) {
-        e.preventDefault();
-        toggleDarkMode();
-    }
-});
-
-// Run init right away
-initDarkMode();

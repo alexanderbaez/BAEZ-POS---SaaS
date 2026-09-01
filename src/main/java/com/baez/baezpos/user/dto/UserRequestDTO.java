@@ -10,7 +10,7 @@ public class UserRequestDTO {
     @NotBlank(message = "El nombre es obligatorio")
     private String name;
 
-    @Email(message = "Debe ser un email v\u00E1lido")
+    @Email(message = "Debe ser un email válido")
     @NotBlank(message = "El email es obligatorio")
     private String email;
 
@@ -18,5 +18,5 @@ public class UserRequestDTO {
 
     private Role role;
 
-    private String securityPin; // PIN num\u00E9rico opcional (4-6 d\u00EDgitos)
+    private String securityPin; // PIN numérico opcional (4-6 dígitos)
 }

@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ForgotPasswordRequest {
 
-    @Email(message = "Formato de email inv\u00E1lido")
+    @Email(message = "Formato de email inválido")
     @NotBlank(message = "El email es obligatorio")
     private String email;
 }

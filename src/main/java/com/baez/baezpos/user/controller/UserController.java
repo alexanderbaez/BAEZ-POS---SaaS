@@ -64,11 +64,11 @@ public class UserController {
     public ResponseEntity<MessageResponseDTO> updatePassword(@RequestBody Map<String, String> request) {
         String newPassword = request.get("newPassword");
         if (newPassword == null || newPassword.isBlank()) {
-            throw new IllegalArgumentException("La nueva contrase\u00F1a no puede estar vac\u00EDa.");
+            throw new IllegalArgumentException("La nueva contraseña no puede estar vacía.");
         }
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         userService.updatePasswordOnly(email, newPassword);
-        return ResponseEntity.ok(MessageResponseDTO.of("Contrase\u00F1a actualizada correctamente"));
+        return ResponseEntity.ok(MessageResponseDTO.of("Contraseña actualizada correctamente"));
     }
 
     @PostMapping("/validate-pin")
@@ -76,7 +76,7 @@ public class UserController {
     public ResponseEntity<Map<String, Object>> validatePin(@RequestBody Map<String, String> payload) {
         String pin = payload != null ? payload.get("pin") : null;
         if (pin == null || pin.trim().isEmpty()) {
-            return ResponseEntity.ok(Map.of("valid", false, "debug_message", "AUDIT_ERROR: PIN recibido vac\u00EDo o nulo."));
+            return ResponseEntity.ok(Map.of("valid", false, "debug_message", "AUDIT_ERROR: PIN recibido vacío o nulo."));
         }
         String auditResult = userService.validateSupervisorPin(pin.trim());
         boolean isValid = "OK".equals(auditResult);

@@ -24,10 +24,10 @@ public class AfipBillingServiceImpl implements AfipBillingService {
         String env = company.getAfipEnvironment() != null ? company.getAfipEnvironment().toUpperCase().trim() : "HOMO";
         Integer posNumber = company.getPosNumber() != null ? company.getPosNumber() : 1;
 
-        log.info("[AFIP WSFEv1] Procesando comprobante fiscal electr\u00F3nico para empresa '{}' (CUIT: {}) en entorno: {}", 
+        log.info("[AFIP WSFEv1] Procesando comprobante fiscal electrónico para empresa '{}' (CUIT: {}) en entorno: {}", 
                 company.getName(), company.getCuit(), env);
 
-        // Determinaci\u00F3n del tipo de comprobante seg\u00FAn condici\u00F3n IVA
+        // Determinación del tipo de comprobante según condición IVA
         String condicionIva = company.getCondicionIva() != null ? company.getCondicionIva().toUpperCase() : "MONOTRIBUTO";
         String tipoComprobante = condicionIva.contains("RESPONSABLE INSCRIPTO") ? "FACTURA B" : "FACTURA C";
 
@@ -36,7 +36,7 @@ public class AfipBillingServiceImpl implements AfipBillingService {
         company.setLastTicketNumber(nextFiscalNumber);
         String invoiceNumber = String.format("%04d-%08d", posNumber, nextFiscalNumber);
 
-        // Generaci\u00F3n de CAE simulado de 14 d\u00EDgitos num\u00E9ricos para entorno HOMO
+        // Generación de CAE simulado de 14 dígitos numéricos para entorno HOMO
         long randomCaeNumber = ThreadLocalRandom.current().nextLong(10000000000000L, 99999999999999L);
         String simulatedCae = String.valueOf(randomCaeNumber);
         LocalDate expiration = LocalDate.now().plusDays(10);
@@ -49,7 +49,7 @@ public class AfipBillingServiceImpl implements AfipBillingService {
         sale.setInvoiceNumber(invoiceNumber);
         sale.setNroComprobante(invoiceNumber);
 
-        log.info("[AFIP Mock] CAE generado exitosamente: {} | Vencimiento: {} | Comprobante: {} N\u00B0 {}", 
+        log.info("[AFIP Mock] CAE generado exitosamente: {} | Vencimiento: {} | Comprobante: {} Nº {}", 
                 simulatedCae, expiration, tipoComprobante, invoiceNumber);
     }
 }

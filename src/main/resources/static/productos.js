@@ -1,5 +1,5 @@
-﻿/**
- * BÁEZ POS - GESTIÓN DE INVENTARIO (SAAS MULTITENANT)
+/**
+ * BAEZ POS - GESTIÓN DE INVENTARIO (SAAS MULTITENANT)
  */
 
 // Rutas relativas del módulo
@@ -680,7 +680,7 @@ function imprimirHTMLConIframe(htmlContent) {
 
 /**
  * Renderiza un código de barras CODE128 en un canvas en memoria y devuelve su DataURL (image/png).
- * Soporta rotación de 90Â° para impresión térmica vertical POS80 sin deformación de barras.
+ * Soporta rotación de 90° para impresión térmica vertical POS80 sin deformación de barras.
  */
 function generarBarcodeDataURL(codigo, options = {}) {
     if (!codigo) return null;

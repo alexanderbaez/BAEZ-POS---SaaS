@@ -25,16 +25,16 @@ public class MasterRegistrationRequest {
     private Integer maxEmployees;
     private LocalDate expirationDate;
 
-    // --- DATOS DEL DUE\u00D1O (ADMIN) ---
+    // --- DATOS DEL DUEÑO (ADMIN) ---
     private String adminName;
     private String ownerName;
 
-    @NotBlank(message = "El correo del due\u00F1o es obligatorio")
-    @Email(message = "El correo del due\u00F1o debe ser una direcci\u00F3n de email v\u00E1lida")
+    @NotBlank(message = "El correo del dueño es obligatorio")
+    @Email(message = "El correo del dueño debe ser una dirección de email válida")
     private String ownerEmail;
 
-    @NotBlank(message = "La contrase\u00F1a inicial es obligatoria")
-    @Size(min = 6, message = "La contrase\u00F1a debe tener al menos 6 caracteres")
+    @NotBlank(message = "La contraseña inicial es obligatoria")
+    @Size(min = 6, message = "La contraseña debe tener al menos 6 caracteres")
     private String ownerPassword;
 
     public String getEffectiveAdminName() {

@@ -113,7 +113,7 @@ public class CustomerServiceImpl implements CustomerService {
         } else if ("CREDITO".equalsIgnoreCase(type)) {
             customer.setCurrentBalance(customer.getCurrentBalance().subtract(amount));
         } else {
-            throw new BadRequestException("Tipo de movimiento inv\u00E1lido: " + type);
+            throw new BadRequestException("Tipo de movimiento inválido: " + type);
         }
 
         customerRepository.save(customer);
@@ -249,13 +249,13 @@ public class CustomerServiceImpl implements CustomerService {
             throw new BadRequestException("El monto a pagar debe ser mayor a cero.");
         }
         if (method == null || method.trim().isBlank()) {
-            throw new BadRequestException("El m\u00E9todo de pago (EFECTIVO, TRANSFERENCIA, etc.) es obligatorio.");
+            throw new BadRequestException("El método de pago (EFECTIVO, TRANSFERENCIA, etc.) es obligatorio.");
         }
 
         Long companyId = requireCompanyContext();
         String validMethod = method.trim().toUpperCase();
 
-        // Si existe una Sesi\u00F3n de Caja abierta para la empresa / usuario logueado
+        // Si existe una Sesión de Caja abierta para la empresa / usuario logueado
         CashRegisterSession activeSession = cashRegisterSessionRepository
                 .findFirstByCompanyIdAndStatusOrderByIdDesc(companyId, CashSessionStatus.OPEN)
                 .orElse(null);
@@ -291,7 +291,7 @@ public class CustomerServiceImpl implements CustomerService {
     private Long requireCompanyContext() {
         Long companyId = SecurityUtils.getCurrentCompanyId();
         if (companyId == null) {
-            throw new BadRequestException("Acceso denegado: Se requiere contexto de empresa v\u00E1lido.");
+            throw new BadRequestException("Acceso denegado: Se requiere contexto de empresa válido.");
         }
         return companyId;
     }

@@ -8,13 +8,13 @@ import java.util.List;
 import java.util.Map;
 
 public interface CompanyService {
-    // Gesti\u00F3n de la Empresa
+    // Gestión de la Empresa
     CompanyDTO getAuthenticatedCompany();
     CompanyDTO updateAuthenticatedCompany(CompanyDTO dto);
     Map<String, Object> verificarEstadoSuscripcionAutenticada();
     void validarAcceso(Long companyId);
 
-    // Gesti\u00F3n de sus Cajeros (Empleados)
+    // Gestión de sus Cajeros (Empleados)
     List<UserResponseDTO> getMyEmployees();
     UserResponseDTO createEmployee(UserRequestDTO dto);
     UserResponseDTO updateEmployee(Long id, UserRequestDTO dto);

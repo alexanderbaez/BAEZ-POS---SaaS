@@ -45,18 +45,18 @@ public class AuthService {
         String rawPassword = request.getPassword() != null ? request.getPassword() : "";
 
         User user = userRepository.findByEmail(cleanEmail)
-                .orElseThrow(() -> new BadCredentialsException("Credenciales incorrectas. Verifique email y contrase\u00F1a."));
+                .orElseThrow(() -> new BadCredentialsException("Credenciales incorrectas. Verifique email y contraseña."));
 
         if (!Boolean.TRUE.equals(user.getActive())) {
             throw new BadRequestException("La cuenta de usuario se encuentra desactivada.");
         }
 
-        // Autenticaci\u00F3n est\u00E1ndar y segura de Spring Security mediante BCryptPasswordEncoder
+        // Autenticación estándar y segura de Spring Security mediante BCryptPasswordEncoder
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(cleanEmail, rawPassword)
         );
 
-        // Si el usuario ingres\u00F3 exitosamente usando una clave temporal, limpiamos el flag de reseteo de forma at\u00F3mica
+        // Si el usuario ingresó exitosamente usando una clave temporal, limpiamos el flag de reseteo de forma atómica
         if (user.getPasswordResetAt() != null) {
             userRepository.clearPasswordResetAt(user.getId(), LocalDateTime.now());
         }
@@ -133,23 +133,23 @@ public class AuthService {
         Optional<User> userOpt = userRepository.findByEmail(cleanEmail);
 
         if (userOpt.isEmpty()) {
-            log.warn("Solicitud de restablecimiento de contrase\u00F1a para correo no registrado: {}", cleanEmail);
+            log.warn("Solicitud de restablecimiento de contraseña para correo no registrado: {}", cleanEmail);
             return;
         }
 
         User user = userOpt.get();
         LocalDateTime now = LocalDateTime.now();
 
-        // Anti-Spam: Cooldown de 2 minutos para evitar r\u00E1fagas de correos
+        // Anti-Spam: Cooldown de 2 minutos para evitar ráfagas de correos
         if (user.getPasswordResetAt() != null && user.getPasswordResetAt().isAfter(now.minusMinutes(2))) {
-            log.warn("Bloqueo de seguridad: Intento de recuperaci\u00F3n masivo detectado para {}", cleanEmail);
-            throw new BadRequestException("Ya enviamos un correo recientemente. Revis\u00E1 tu bandeja de entrada o esper\u00E1 2 minutos para volver a intentar.");
+            log.warn("Bloqueo de seguridad: Intento de recuperación masivo detectado para {}", cleanEmail);
+            throw new BadRequestException("Ya enviamos un correo recientemente. Revisá tu bandeja de entrada o esperá 2 minutos para volver a intentar.");
         }
 
         String temporaryPassword = generateRandomPassword(8);
         String encodedPassword = passwordEncoder.encode(temporaryPassword);
 
-        // Se persiste de forma at\u00F3mica la contrase\u00F1a encriptada con BCrypt en la base de datos
+        // Se persiste de forma atómica la contraseña encriptada con BCrypt en la base de datos
         userRepository.updatePasswordAndResetAt(user.getId(), encodedPassword, now, now);
 
         try {

@@ -1,0 +1,6 @@
+﻿
+Path                                                                                                LineNumber Line    
+----                                                                                                ---------- ----    
+C:\PROGRAMACION\PROYECTOS\BAEZ-POS---SaaS\src\main\java\com\baez\baezpos\sale\dto\BoxReportDTO.java         14      ...
+
+

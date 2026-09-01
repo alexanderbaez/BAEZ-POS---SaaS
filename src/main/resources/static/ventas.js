@@ -1,6 +1,6 @@
-﻿/**
+/**
  * ============================================================================
- * BÁEZ POS - MÓDULO DE VENTAS Y CAJA (SaaS Multi-tenant)
+ * BAEZ POS - MÓDULO DE VENTAS Y CAJA (SaaS Multi-tenant)
  * Alexander Baez - 2026
  * ============================================================================
  */
@@ -32,7 +32,7 @@ let handlerClickFueraPesables = null;
 
 
 // ==========================================
-// 2. HELPERS Y UTILIDADES NUMÃ‰RICAS
+// 2. HELPERS Y UTILIDADES NUMÉRICAS
 // ==========================================
 function utilRedondearTresDecimales(numero) {
     return Math.round((numero + Number.EPSILON) * 1000) / 1000;
@@ -479,12 +479,12 @@ async function solicitarPinSupervisorSiEsVendedor(motivo = "realizar esta acció
 
     // Modal para solicitar PIN de Supervisor
     const { value: pin, isConfirmed } = await Swal.fire({
-        title: '<span class="fs-5 fw-bold text-dark">ðŸ” PIN de Supervisor Requerido</span>',
+        title: '<span class="fs-5 fw-bold text-dark">🔐 PIN de Supervisor Requerido</span>',
         html: `
             <p class="text-muted small mb-3">Se requiere autorización de un Administrador o Supervisor para <strong>${motivo}</strong>.</p>
             <div class="mb-2">
                 <input type="password" id="swal-input-pin" class="form-control text-center fs-3 fw-bold tracking-widest" 
-                       maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="â€¢â€¢â€¢â€¢" autocomplete="off" style="letter-spacing: 0.5rem;">
+                       maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="••••" autocomplete="off" style="letter-spacing: 0.5rem;">
             </div>
             <small class="text-muted" style="font-size: 0.75rem;">Ingrese el PIN de 4 a 6 dígitos</small>
         `,
@@ -822,7 +822,7 @@ function venderPorPesoOImporte(productoBase = null) {
                                         btn.innerHTML = `
                                             <div class="text-start me-2">
                                                 <div class="fw-bold text-dark mb-0">${p.name.toUpperCase()}</div>
-                                                ${p.isFractional ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill" style="font-size:0.65rem;">âš–ï¸ Pesable</span>' : ''}
+                                                ${p.isFractional ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill" style="font-size:0.65rem;">⚖️ Pesable</span>' : ''}
                                             </div>
                                             <span class="badge bg-light text-dark border fw-bold fs-6">$${(p.price || 0).toFixed(2)}/Kg</span>
                                         `;
@@ -999,7 +999,7 @@ function abrirModalCalculoFraccionado(p) {
                     <i class="bi bi-scale fs-5"></i>
                     <span class="fw-bold fs-6 mb-0">Venta Fraccionada</span>
                 </div>
-                <span class="badge bg-white text-primary fw-bold rounded-pill px-2 py-1" style="font-size: 0.7rem;">âš–ï¸ GRANEL</span>
+                <span class="badge bg-white text-primary fw-bold rounded-pill px-2 py-1" style="font-size: 0.7rem;">⚖️ GRANEL</span>
             </div>
 
             <!-- Cuerpo del Modal -->
@@ -1192,7 +1192,7 @@ function abrirModalCalculoFraccionado(p) {
 
 /**
  * ============================================================================
- * BÁEZ POS - MÓDULO DE VENTAS Y CAJA (Parte 2: Búsqueda, Cobro e Impresión)
+ * BAEZ POS - MÓDULO DE VENTAS Y CAJA (Parte 2: Búsqueda, Cobro e Impresión)
  * Alexander Baez - 2026
  * ============================================================================
  */
@@ -1335,7 +1335,7 @@ async function finalizarVenta() {
         }
 
         const { value: recargoIngresado, isConfirmed } = await Swal.fire({
-            title: 'ðŸ“ˆ Recargo por Libreta',
+            title: '📈 Recargo por Libreta',
             html: `Monto base: <b>$${utilFormatearMoneda(totalBase)}</b><br><br>Ingresa el % de recargo:`,
             input: 'number',
             inputValue: 0,
@@ -1953,10 +1953,10 @@ function generarPlantillaHTMLTicket(venta) {
                         <div class="line"></div>
                         ${(venta.isOffline || (typeof venta.numeroTicket === 'string' && venta.numeroTicket.startsWith('OFF-')) || (typeof venta.nroComprobante === 'string' && venta.nroComprobante.startsWith('OFF-'))) ? `
                             <div style="background: #fef2f2; color: #b91c1c; border: 1.5px dashed #dc2626; padding: 4px; border-radius: 4px; font-weight: 900; font-size: 8pt; text-align: center; margin: 4px 0;">
-                                âš ï¸ TICKET PENDIENTE DE SINCRONIZACIÓN
+                                ⚠️ TICKET PENDIENTE DE SINCRONIZACIÓN
                             </div>
                         ` : ''}
-                        <div class="small-info"><strong>${tipoComprobante} NÂ° ${nroComprobante}</strong></div>
+                        <div class="small-info"><strong>${tipoComprobante} Nº ${nroComprobante}</strong></div>
                         <div class="small-info">Fecha: ${fechaVenta}</div>
                         <div class="small-info">Cajero: ${cajeroNombre}</div>
                         <div class="small-info" style="text-align: left; margin-top: 4px;"><strong>A:</strong> ${nombreCliente} ${cuitCliente ? `(CUIT: ${cuitCliente})` : ''}</div>
@@ -2044,13 +2044,13 @@ function generarFacturaA4HTML(venta) {
 
     let letra = 'C';
     let codigoComprobante = 'COD. 011';
-    if (tipoComprobante.includes('FACTURA A') || tipoComprobante.includes('NOTA DE DÃ‰BITO A') || tipoComprobante.includes('NOTA DE CRÃ‰DITO A')) {
+    if (tipoComprobante.includes('FACTURA A') || tipoComprobante.includes('NOTA DE DÉBITO A') || tipoComprobante.includes('TICKET FACTURA A')) {
         letra = 'A';
         codigoComprobante = 'COD. 001';
-    } else if (tipoComprobante.includes('FACTURA B') || tipoComprobante.includes('NOTA DE DÃ‰BITO B') || tipoComprobante.includes('NOTA DE CRÃ‰DITO B')) {
+    } else if (tipoComprobante.includes('FACTURA B') || tipoComprobante.includes('NOTA DE DÉBITO B') || tipoComprobante.includes('TICKET FACTURA B')) {
         letra = 'B';
         codigoComprobante = 'COD. 006';
-    } else if (tipoComprobante.includes('FACTURA C') || tipoComprobante.includes('NOTA DE DÃ‰BITO C') || tipoComprobante.includes('NOTA DE CRÃ‰DITO C')) {
+    } else if (tipoComprobante.includes('FACTURA C') || tipoComprobante.includes('NOTA DE DÉBITO C') || tipoComprobante.includes('TICKET FACTURA C')) {
         letra = 'C';
         codigoComprobante = 'COD. 011';
     } else {
@@ -2355,7 +2355,7 @@ function generarFacturaA4HTML(venta) {
 
                     <div class="a4-col-comprobante">
                         <div class="a4-comp-titulo">${tipoComprobante}</div>
-                        <div class="a4-comp-numero">NÂ° ${nroComprobante}</div>
+                        <div class="a4-comp-numero">Nº ${nroComprobante}</div>
                         <div class="a4-line">Fecha de Emisión: <strong>${fechaVenta}</strong></div>
                         <div class="a4-line">CUIT: <strong>${cuitLocal || 'S/C'}</strong></div>
                         <div class="a4-line">Ingresos Brutos: <strong>${iibbLocal || 'Exento / S/C'}</strong></div>
@@ -2422,7 +2422,7 @@ function generarFacturaA4HTML(venta) {
                         </div>
                         <div class="a4-cae-data">
                             <div class="a4-cae-title">ARCA / AFIP - Comprobante Autorizado Electrónicamente</div>
-                            <div><strong>CAE NÂ°:</strong> ${cae}</div>
+                            <div><strong>CAE Nº:</strong> ${cae}</div>
                             <div><strong>Fecha de Vto. de CAE:</strong> ${caeVto}</div>
                             <div style="font-size: 7.5pt; color: #475569; margin-top: 3px;">Comprobante oficial válido como factura comercial. Verifique su autenticidad escaneando el código QR.</div>
                         </div>
@@ -2639,7 +2639,7 @@ function actualizarUICaja(estaAbierta) {
 
         if (inputBuscador) {
             inputBuscador.disabled = true;
-            inputBuscador.placeholder = "ðŸ”’ Abra la caja para vender...";
+            inputBuscador.placeholder = "🔒 Abra la caja para vender...";
         }
         if (btnFinalizar) btnFinalizar.disabled = true;
     }
@@ -2655,7 +2655,7 @@ async function modalAbrirCaja() {
     }
 
     const { value: formValues } = await Swal.fire({
-        title: '<span class="fs-5 fs-md-4">ðŸš€ Apertura de Caja</span>',
+        title: '<span class="fs-5 fs-md-4">🚀 Apertura de Caja</span>',
         customClass: {
             container: 'p-2 p-sm-3',
             popup: 'rounded-4 shadow-lg border-0 mw-100',
@@ -2765,7 +2765,7 @@ async function modalCerrarCaja() {
     }
 
     const { value: formValues } = await Swal.fire({
-        title: '<span class="fs-5 fw-bold text-dark">ðŸ”’ Cierre de Caja & Arqueo Ciego</span>',
+        title: '<span class="fs-5 fw-bold text-dark">🔒 Cierre de Caja & Arqueo Ciego</span>',
         width: 'min(480px, 94vw)',
         customClass: {
             container: 'p-2',
@@ -2984,7 +2984,7 @@ async function mostrarResultadoArqueoModal(dto) {
  * Genera el ticket térmico oficial de cierre de caja con desglose de Teórico, Declarado y Diferencia
  */
 function imprimirTicketCierreCaja(dto) {
-    const empresa = DATOS_EMPRESA || { name: 'BÁEZ POS', address: '', phone: '', taxId: '' };
+    const empresa = DATOS_EMPRESA || { name: 'BAEZ POS', address: '', phone: '', taxId: '' };
     const fechaCierre = dto.closedAt ? new Date(dto.closedAt).toLocaleString('es-AR') : new Date().toLocaleString('es-AR');
     const fechaApertura = dto.openedAt ? new Date(dto.openedAt).toLocaleString('es-AR') : '-';
     const cajero = dto.userName || sessionStorage.getItem('baezpos_user_name') || 'Admin';
@@ -3028,7 +3028,7 @@ function imprimirTicketCierreCaja(dto) {
         </head>
         <body>
             <div class="text-center">
-                <div class="fs-title">${(empresa.name || 'BÁEZ POS').toUpperCase()}</div>
+                <div class="fs-title">${(empresa.name || 'BAEZ POS').toUpperCase()}</div>
                 <div>${empresa.address || ''}</div>
                 <div>CUIT: ${empresa.taxId || 'S/C'}</div>
                 <div class="divider"></div>

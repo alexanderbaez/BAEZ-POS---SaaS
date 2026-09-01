@@ -1,5 +1,5 @@
-﻿/**
- * BÁEZ POS - GESTIÓN DE CLIENTES Y CUENTA CORRIENTE (LIBRETA)
+/**
+ * BAEZ POS - GESTIÓN DE CLIENTES Y CUENTA CORRIENTE (LIBRETA)
  * Alexander Baez - 2026
  * Refactorizado: Seguridad XSS, Manejo defensivo de estado, soporte para pesables (isFractional) e interoperabilidad SaaS
  */
@@ -367,7 +367,7 @@ async function guardarCliente() {
 
         if (resp && resp.ok) {
             if (modalClienteInstance) modalClienteInstance.hide();
-            Swal.fire({ icon: 'success', title: '¡Ã‰xito!', text: 'Cliente guardado correctamente.', timer: 1500, showConfirmButton: false });
+            Swal.fire({ icon: 'success', title: '¡Éxito!', text: 'Cliente guardado correctamente.', timer: 2000, showConfirmButton: false });
             await cargarClientes();
         } else if (resp) {
             const errData = await resp.json().catch(() => ({}));
@@ -816,10 +816,13 @@ function compartirWhatsApp(nombreCliente, telefono, fecha, total, items = [], de
     const recNum = parseFloat(recargo) || 0;
     const subtotalNum = parseFloat(subtotal) || 0;
 
-    let texto = `â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”“\n`;
-    texto += `  ðŸª  *${local}*\n`;
-    if (direccion) texto += `  ðŸ“  _${direccion}_\n`;
-    texto += `â”—â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”›\n\n`;
+    let texto = `=====================\n`;
+    texto += `BAEZ POS\n`;
+    texto += `TICKET DE PAGO\n`;
+    texto += `=====================\n\n`;
+    texto += `  ðŸ ª  *${local}*\n`;
+    if (direccion) texto += `  ðŸ“   _${direccion}_\n`;
+    texto += `â”—â” â” â” â” â” â” â” â” â” â” â” â” â” â” â” â” â” â” â” â” â”›\n\n`;
 
     texto += `*ðŸ§¾ COMPROBANTE DE COMPRA*\n`;
     texto += `------------------------------------------\n`;
@@ -834,8 +837,7 @@ function compartirWhatsApp(nombreCliente, telefono, fecha, total, items = [], de
             const sub = i.subtotal !== undefined ? parseFloat(i.subtotal) : ((parseFloat(i.price) || 0) * (parseFloat(i.quantity) || 1));
             const cantidadFormateada = formatQuantity(i.quantity, i.isFractional);
 
-            texto += `â–ªï¸ ${cantidadFormateada} ${(i.productName || i.nombre || 'Producto').toUpperCase()}\n`;
-            texto += `      Subtotal: *${formatCurrency(sub)}*\n`;
+            texto += `- ${cantidadFormateada} ${(i.productName || i.nombre || 'Producto').toUpperCase()} $${(i.subtotal || 0).toFixed(2)}\n`;
         });
         texto += `------------------------------------------\n`;
         if (subtotalNum > 0) {
@@ -855,7 +857,7 @@ function compartirWhatsApp(nombreCliente, telefono, fecha, total, items = [], de
 
     texto += `ðŸ’¬ _${mensajePie}_\n\n`;
     texto += `*¡Tu saldo ha sido actualizado en la libreta!*\n\n`;
-    texto += `âœ¨ _Generado por BaezPOS_`;
+    texto += `\n_Generado por BAEZ POS_`;
 
     const numLimpio = telefono.replace(/\D/g, '');
     window.open(`https://wa.me/${numLimpio}?text=${encodeURIComponent(texto)}`, '_blank');
