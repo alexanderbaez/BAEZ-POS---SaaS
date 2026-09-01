@@ -4,6 +4,8 @@ import com.baez.baezpos.sale.dto.BoxReportDTO;
 import com.baez.baezpos.sale.dto.ChartDataDTO;
 import com.baez.baezpos.sale.dto.SaleRequestDTO;
 import com.baez.baezpos.sale.dto.SaleResponseDTO;
+import com.baez.baezpos.sale.entity.Sale;
+import com.baez.baezpos.company.entity.Company;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,4 +22,8 @@ public interface SaleService {
     void cancelSale(Long saleId);
     List<SaleResponseDTO> getSalesByDateRange(LocalDate desde, LocalDate hasta);
     Page<SaleResponseDTO> getSalesByDateRange(LocalDate desde, LocalDate hasta, Pageable pageable);
+    
+    // Métodos internos para desacople de transacciones
+    Sale persistSaleAndStock(SaleRequestDTO saleDTO, Long userId, Long companyId);
+    void updateSaleWithFiscalData(Sale sale, Company company);
 }

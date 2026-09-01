@@ -63,10 +63,37 @@ public class SaleServiceImpl implements SaleService {
     private final CashRegisterSessionRepository cashRegisterSessionRepository;
     private final com.baez.baezpos.afip.service.AfipBillingService afipBillingService;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    @org.springframework.context.annotation.Lazy
+    private SaleService self;
+
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public SaleResponseDTO createSale(SaleRequestDTO saleDTO, Long userId) {
         Long companyId = requireCompanyContext();
+
+        // 1. Fase Transaccional 1: Persistir Venta y Stock (Libera la BD rapido)
+        Sale savedSale = self.persistSaleAndStock(saleDTO, userId, companyId);
+
+        // 2. Fase de Red/IO Externa: AFIP (Totalmente FUERA de la transacción)
+        if (saleDTO.shouldEmitInvoice()) {
+            Company company = companyRepository.findById(companyId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Empresa asociada no encontrada"));
+            try {
+                afipBillingService.processFiscalSale(savedSale, company);
+            } catch (Exception e) {
+                log.error("Error de I/O AFIP: {}", e.getMessage());
+            }
+
+            // 3. Fase Transaccional 2: Actualizar la Venta con datos AFIP en transacción nueva
+            self.updateSaleWithFiscalData(savedSale, company);
+        }
+
+        return mapToResponseDTO(savedSale);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Sale persistSaleAndStock(SaleRequestDTO saleDTO, Long userId, Long companyId) {
 
         if (saleDTO.items() == null || saleDTO.items().isEmpty()) {
             throw new BadRequestException("La venta debe contener al menos un producto.");
@@ -156,9 +183,7 @@ public class SaleServiceImpl implements SaleService {
         // ==========================================
         // EMISIÓN FISCAL AFIP WSFEv1
         // ==========================================
-        if (saleDTO.shouldEmitInvoice()) {
-            afipBillingService.processFiscalSale(sale, company);
-        } else {
+        if (!saleDTO.shouldEmitInvoice()) {
             companyRepository.incrementLastTicketNumber(companyId);
             Long siguienteNumeroTicket = (company.getLastTicketNumber() != null ? company.getLastTicketNumber() : 0L) + 1L;
             String nroComprobanteFormateado = String.format("00001-%08d", siguienteNumeroTicket);
@@ -197,13 +222,27 @@ public class SaleServiceImpl implements SaleService {
             log.error("Error al registrar auditoria de la venta #{}: {}", savedSale.getNroComprobante(), e.getMessage());
         }
 
-        // MED-03: write-last \u2014 addBalance se ejecuta al final, garantizando que la venta,
-        // el inventario y la cuenta corriente ya estén confirmados antes de actualizar el saldo de caja.
         if (!"CUENTA_CORRIENTE".equals(paymentMethodClean)) {
             cashRegisterSessionRepository.addBalance(activeSession.getId(), savedSale.getTotal());
         }
+        return savedSale;
+    }
 
-        return mapToResponseDTO(savedSale);
+    @Override
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void updateSaleWithFiscalData(Sale sale, Company company) {
+        saleRepository.save(sale);
+        companyRepository.save(company); // Porque afipBillingService actualiza el lastTicketNumber en memoria
+        
+        try {
+            auditService.logAction(
+                    "FACTURA_EMITIDA",
+                    "Ticket #" + sale.getNroComprobante() + " autorizado por AFIP con CAE " + sale.getCae(),
+                    "INFO"
+            );
+        } catch (Exception e) {
+            log.error("Error al registrar auditoria de AFIP: {}", e.getMessage());
+        }
     }
 
     private void handleCreditSale(Long customerId, Sale savedSale, Long companyId) {
