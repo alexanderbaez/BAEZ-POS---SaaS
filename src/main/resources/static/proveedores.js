@@ -795,12 +795,36 @@ window.eliminarItemCarrito = function(index) {
     renderizarCarrito();
 };
 
-window.actualizarItemCarrito = function(index, campo, valor) {
+window.actualizarItemCarrito = function(index, campo, valor, inputElement) {
     const val = parseFloat(valor);
     if (!isNaN(val) && val >= 0) {
         carritoOrden[index][campo] = val;
     }
-    renderizarCarrito();
+    
+    // Actualización dinámica sin re-render completo
+    if (inputElement) {
+        const tr = inputElement.closest('tr');
+        if (tr) {
+            const item = carritoOrden[index];
+            const subtotal = item.quantity * item.unitCost;
+            const proyectado = (item.currentStock || 0) + item.quantity;
+            
+            // Actualizar Proyección
+            const colProy = tr.querySelector('.col-proyectado');
+            if (colProy) colProy.innerHTML = `<i class="bi bi-arrow-up-right me-1"></i>${proyectado}`;
+            
+            // Actualizar Subtotal Fila
+            const colSubt = tr.querySelector('.col-subtotal');
+            if (colSubt) colSubt.textContent = fmtARS.format(subtotal);
+            
+            // Actualizar Total General
+            let total = 0;
+            carritoOrden.forEach(i => total += (i.quantity * i.unitCost));
+            document.getElementById('totalOrdenBadge').textContent = fmtARS.format(total);
+        }
+    } else {
+        renderizarCarrito(); // Fallback por seguridad
+    }
 };
 
 function renderizarCarrito() {
@@ -828,15 +852,15 @@ function renderizarCarrito() {
                 <div class="input-group input-group-sm flex-nowrap">
                     <span class="input-group-text bg-light border-0 text-muted">$</span>
                     <input type="number" class="form-control form-control-sm text-center" style="min-width: 90px; width: 100%;"
-                           value="${item.unitCost}" oninput="actualizarItemCarrito(${index}, 'unitCost', this.value)">
+                           value="${item.unitCost}" oninput="actualizarItemCarrito(${index}, 'unitCost', this.value, this)">
                 </div>
             </td>
             <td>
-                <input type="number" class="form-control form-control-sm text-center" value="1" min="1" style="width: 70px;"
-                       oninput="actualizarItemCarrito(${index}, 'quantity', this.value)">
+                <input type="number" class="form-control form-control-sm text-center" value="${item.quantity}" min="1" style="width: 70px;"
+                       oninput="actualizarItemCarrito(${index}, 'quantity', this.value, this)">
             </td>
-            <td class="text-center"><span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-2 py-1"><i class="bi bi-arrow-up-right me-1"></i>${proyectado}</span></td>
-            <td class="text-end fw-bold text-dark amount-num">${fmtARS.format(subtotal)}</td>
+            <td class="text-center"><span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-2 py-1 col-proyectado"><i class="bi bi-arrow-up-right me-1"></i>${proyectado}</span></td>
+            <td class="text-end fw-bold text-dark amount-num col-subtotal">${fmtARS.format(subtotal)}</td>
             <td class="text-end pe-3">
                 <button class="btn btn-sm btn-outline-danger border-0" onclick="eliminarItemCarrito(${index})">
                     <i class="bi bi-trash"></i>
