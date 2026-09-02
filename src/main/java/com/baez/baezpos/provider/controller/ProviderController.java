@@ -1,5 +1,7 @@
 package com.baez.baezpos.provider.controller;
 
+import com.baez.baezpos.expense.dto.ExpenseResponseDTO;
+import com.baez.baezpos.expense.service.ExpenseService;
 import com.baez.baezpos.provider.dto.ProviderPaymentRequestDTO;
 import com.baez.baezpos.provider.dto.ProviderRequestDTO;
 import com.baez.baezpos.provider.dto.ProviderResponseDTO;
@@ -24,6 +26,7 @@ import java.util.Map;
 public class ProviderController {
 
     private final ProviderService providerService;
+    private final ExpenseService expenseService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'SUPER_ADMIN')")
@@ -77,6 +80,16 @@ public class ProviderController {
     @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'SUPER_ADMIN')")
     public ResponseEntity<ProviderResponseDTO> recalculateBalance(@PathVariable Long id) {
         return ResponseEntity.ok(providerService.recalcularYDevolver(id));
+    }
+
+    @GetMapping("/{id}/payments")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'SUPER_ADMIN')")
+    public ResponseEntity<Page<ExpenseResponseDTO>> getPayments(
+            @PathVariable Long id,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate desde,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate hasta,
+            @PageableDefault(size = 50, sort = "expenseDate", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(expenseService.getAllExpenses(id, desde, hasta, pageable));
     }
 
     @PostMapping("/recalculate-all")

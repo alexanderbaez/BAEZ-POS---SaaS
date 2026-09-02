@@ -180,6 +180,11 @@ function renderizarProveedores(lista) {
                             onclick="abrirModalAbono(${prov.id})">
                         <i class="bi bi-cash-stack me-1"></i> Pagar
                     </button>
+                    <button class="btn btn-sm btn-outline-secondary px-2 py-1 fw-semibold d-inline-flex align-items-center" 
+                            title="Ver Pagos" 
+                            onclick="abrirModalHistorialPagos(${prov.id}, '${escapeHTML(prov.businessName)}')">
+                        <i class="bi bi-clock-history me-1"></i> Ver Pagos
+                    </button>
                     <button class="btn-action text-primary" 
                             title="Editar Proveedor" 
                             onclick="abrirModalEditar(${prov.id})">
@@ -632,6 +637,8 @@ async function cargarOrdenes(pagina = 0) {
                 btnEliminar = `<button class="btn btn-sm btn-outline-danger mx-1" onclick="eliminarOrden(${orden.id})" title="Eliminar Orden"><i class="bi bi-trash"></i></button>`;
             }
 
+            const btnDetalle = `<button class="btn btn-sm btn-outline-primary mx-1" onclick="abrirModalDetalleOrden(${orden.id})" title="Ver Detalle"><i class="bi bi-eye"></i></button>`;
+
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td class="ps-3"><span class="fw-semibold text-dark">${fechaFormateada}</span></td>
@@ -639,6 +646,7 @@ async function cargarOrdenes(pagina = 0) {
                 <td>${badgeEstado}</td>
                 <td class="text-end fw-bold text-dark amount-num">${fmtARS.format(orden.totalAmount)}</td>
                 <td class="text-end pe-3">
+                    ${btnDetalle}
                     ${btnRecibir}
                     ${btnCancelar}
                     ${btnEliminar}
@@ -1012,5 +1020,174 @@ window.eliminarOrden = async function(id) {
         } catch (e) {
             Swal.fire('Error', 'No se pudo procesar la solicitud', 'error');
         }
+    }
+};
+
+// ==========================================
+// 8. HISTORIAL ESPECÍFICO DE PAGOS A PROVEEDORES
+// ==========================================
+window.abrirModalHistorialPagos = async function(providerId, providerName) {
+    const subtitulo = document.getElementById('historialPagosSubtitulo');
+    const tbody = document.getElementById('tablaHistorialPagos');
+    const totalEl = document.getElementById('historialPagosTotal');
+    
+    if (subtitulo) subtitulo.textContent = `Proveedor: ${providerName}`;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando pagos...</td></tr>`;
+    if (totalEl) totalEl.textContent = '$0,00';
+
+    const modalEl = document.getElementById('modalHistorialPagos');
+    if (modalEl) {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
+
+    try {
+        const res = await apiFetch(`/providers/${providerId}/payments?size=100&sort=expenseDate,desc`);
+        if (!res.ok) throw new Error("Error al consultar el historial de pagos");
+
+        const data = await res.json();
+        const pagos = data.content || (Array.isArray(data) ? data : []);
+
+        if (pagos.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-4">
+                        <i class="bi bi-receipt-cutoff fs-3 d-block mb-1 text-secondary"></i>
+                        No se registraron pagos ni abonos para este proveedor.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        let sumaTotal = 0;
+        let html = '';
+
+        pagos.forEach(p => {
+            const monto = parseFloat(p.amount) || 0;
+            sumaTotal += monto;
+
+            const fechaObj = new Date(p.date || p.expenseDate);
+            const fechaFormateada = isNaN(fechaObj.getTime()) ? '-' : (fechaObj.toLocaleDateString('es-AR') + ' ' + fechaObj.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }));
+
+            const medioPago = p.paymentMethod || 'EFECTIVO';
+            let badgeMedio = `<span class="badge bg-light text-dark border">${escapeHTML(medioPago)}</span>`;
+            if (medioPago.includes('EFECTIVO')) {
+                badgeMedio = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25"><i class="bi bi-cash me-1"></i>Efectivo</span>`;
+            } else if (medioPago.includes('TRANSFERENCIA')) {
+                badgeMedio = `<span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25"><i class="bi bi-bank me-1"></i>Transferencia</span>`;
+            } else if (medioPago.includes('DEBITO') || medioPago.includes('TARJETA')) {
+                badgeMedio = `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25"><i class="bi bi-credit-card me-1"></i>Tarjeta</span>`;
+            }
+
+            const refText = [p.invoiceNumber ? `Fac: ${p.invoiceNumber}` : '', p.reference].filter(Boolean).join(' - ') || '-';
+
+            html += `
+                <tr>
+                    <td class="ps-3 py-3 text-muted">${fechaFormateada}</td>
+                    <td class="py-3 fw-semibold text-dark">${escapeHTML(p.description || 'Pago a proveedor')}</td>
+                    <td class="py-3">${badgeMedio}</td>
+                    <td class="py-3 text-muted small">${escapeHTML(refText)}</td>
+                    <td class="pe-3 py-3 text-end fw-bold text-success font-monospace">+${fmtARS.format(monto)}</td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = html;
+        if (totalEl) totalEl.textContent = fmtARS.format(sumaTotal);
+
+    } catch (err) {
+        console.error("Error al cargar pagos del proveedor:", err);
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-danger">Error: ${err.message}</td></tr>`;
+    }
+};
+
+// ==========================================
+// 9. DETALLE COMPLETO DE ORDEN DE COMPRA (MODAL)
+// ==========================================
+window.abrirModalDetalleOrden = async function(ordenId) {
+    const titulo = document.getElementById('detalleOrdenTitulo');
+    const subtitulo = document.getElementById('detalleOrdenSubtitulo');
+    const metaContainer = document.getElementById('detalleOrdenMeta');
+    const tbody = document.getElementById('tablaDetalleOrdenItems');
+    const totalEl = document.getElementById('detalleOrdenTotal');
+
+    if (titulo) titulo.innerHTML = `<i class="bi bi-cart-check text-white"></i> Orden de Compra #${ordenId}`;
+    if (subtitulo) subtitulo.textContent = 'Cargando detalle de la orden...';
+    if (metaContainer) metaContainer.innerHTML = '';
+    if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando productos...</td></tr>`;
+    if (totalEl) totalEl.textContent = '$0,00';
+
+    const modalEl = document.getElementById('modalDetalleOrden');
+    if (modalEl) {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
+
+    try {
+        const res = await apiFetch(`/purchase-orders/${ordenId}`);
+        if (!res.ok) throw new Error("Error al consultar el detalle de la orden");
+
+        const orden = await res.json();
+
+        if (subtitulo) subtitulo.textContent = `Proveedor: ${orden.providerName || 'N/A'}`;
+
+        const fechaObj = new Date(orden.orderDate);
+        const fechaEmision = isNaN(fechaObj.getTime()) ? '-' : (fechaObj.toLocaleDateString('es-AR') + ' ' + fechaObj.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }));
+
+        let badgeEstado = '';
+        if (orden.status === 'PENDING') {
+            badgeEstado = `<span class="badge bg-warning bg-opacity-25 text-warning-emphasis border border-warning px-2.5 py-1.5"><i class="bi bi-clock me-1"></i>Pendiente</span>`;
+        } else if (orden.status === 'RECEIVED') {
+            badgeEstado = `<span class="badge bg-success bg-opacity-25 text-success-emphasis border border-success px-2.5 py-1.5"><i class="bi bi-check2-circle me-1"></i>Recibido</span>`;
+        } else if (orden.status === 'CANCELED') {
+            badgeEstado = `<span class="badge bg-danger bg-opacity-25 text-danger-emphasis border border-danger px-2.5 py-1.5"><i class="bi bi-x-circle me-1"></i>Cancelado</span>`;
+        }
+
+        let fechaRecepcionHtml = '';
+        if (orden.receptionDate) {
+            const recObj = new Date(orden.receptionDate);
+            const fechaRec = isNaN(recObj.getTime()) ? '-' : (recObj.toLocaleDateString('es-AR') + ' ' + recObj.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }));
+            fechaRecepcionHtml = `<div class="small"><span class="text-muted fw-semibold">Recepción:</span> <strong class="text-dark">${fechaRec}</strong></div>`;
+        }
+
+        if (metaContainer) {
+            metaContainer.innerHTML = `
+                <div class="d-flex align-items-center gap-3">
+                    <div class="small"><span class="text-muted fw-semibold">Proveedor:</span> <strong class="text-dark">${escapeHTML(orden.providerName || 'N/A')}</strong></div>
+                    <div class="small"><span class="text-muted fw-semibold">Emisión:</span> <strong class="text-dark">${fechaEmision}</strong></div>
+                    ${fechaRecepcionHtml}
+                </div>
+                <div>${badgeEstado}</div>
+            `;
+        }
+
+        const items = orden.items || [];
+        if (items.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-muted">La orden no contiene productos desglosados.</td></tr>`;
+        } else {
+            let html = '';
+            items.forEach(item => {
+                const subtotal = parseFloat(item.subtotal) || ((parseFloat(item.quantity) || 0) * (parseFloat(item.unitCost) || 0));
+                const barcode = item.productBarcode ? `<span class="badge bg-light text-secondary font-monospace border">${escapeHTML(item.productBarcode)}</span>` : '<span class="text-muted">-</span>';
+
+                html += `
+                    <tr>
+                        <td class="ps-3 py-3">${barcode}</td>
+                        <td class="py-3 fw-bold text-dark">${escapeHTML(item.productName || 'Producto')}</td>
+                        <td class="py-3 text-center fw-bold">${parseFloat(item.quantity || 0)}</td>
+                        <td class="py-3 text-end font-monospace">${fmtARS.format(item.unitCost || 0)}</td>
+                        <td class="pe-3 py-3 text-end fw-bold text-dark font-monospace">${fmtARS.format(subtotal)}</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        if (totalEl) totalEl.textContent = fmtARS.format(orden.totalAmount || 0);
+
+    } catch (err) {
+        console.error("Error al cargar detalle de la orden:", err);
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-danger">Error: ${err.message}</td></tr>`;
     }
 };

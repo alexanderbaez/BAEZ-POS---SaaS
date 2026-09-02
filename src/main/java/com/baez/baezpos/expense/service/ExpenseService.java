@@ -10,6 +10,9 @@ import java.util.List;
 public interface ExpenseService {
     ExpenseResponseDTO createExpense(ExpenseRequestDTO dto);
 
-    org.springframework.data.domain.Page<ExpenseResponseDTO> getAllExpenses(java.time.LocalDate desde, java.time.LocalDate hasta, org.springframework.data.domain.Pageable pageable);
+    org.springframework.data.domain.Page<ExpenseResponseDTO> getAllExpenses(Long providerId, java.time.LocalDate desde, java.time.LocalDate hasta, org.springframework.data.domain.Pageable pageable);
+    default org.springframework.data.domain.Page<ExpenseResponseDTO> getAllExpenses(java.time.LocalDate desde, java.time.LocalDate hasta, org.springframework.data.domain.Pageable pageable) {
+        return getAllExpenses(null, desde, hasta, pageable);
+    }
     void deleteExpense(Long id);
 }

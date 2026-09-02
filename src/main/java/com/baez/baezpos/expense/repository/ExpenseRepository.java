@@ -22,6 +22,10 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
     org.springframework.data.domain.Page<Expense> findByCompanyIdAndExpenseDateBetweenOrderByExpenseDateDesc(Long companyId, LocalDateTime start, LocalDateTime end, org.springframework.data.domain.Pageable pageable);
 
+    org.springframework.data.domain.Page<Expense> findByCompanyIdAndProviderIdOrderByExpenseDateDesc(Long companyId, Long providerId, org.springframework.data.domain.Pageable pageable);
+
+    org.springframework.data.domain.Page<Expense> findByCompanyIdAndProviderIdAndExpenseDateBetweenOrderByExpenseDateDesc(Long companyId, Long providerId, LocalDateTime start, LocalDateTime end, org.springframework.data.domain.Pageable pageable);
+
     Optional<Expense> findByIdAndCompanyId(Long id, Long companyId);
 
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE e.company.id = :companyId AND e.expenseDate BETWEEN :start AND :end")
