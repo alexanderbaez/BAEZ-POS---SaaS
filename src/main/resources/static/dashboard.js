@@ -829,14 +829,16 @@ async function consultarPorFechas() {
             if (elDesgloseFia) {
                 const countCredit = dataBox.periodCreditCount ?? 0;
                 elDesgloseFia.innerHTML = `<small class="text-muted d-block" style="font-size: 0.78rem;">${countCredit} a cuenta corriente</small>`;
+            }
+
             if (dataBox.expensesByCategory) {
                 renderizarEgresosCategoriasDTO(dataBox.expensesByCategory);
             }
         }
 
-        const f1 = desdeVal.split('-').reverse().join('/');
-        const f2 = hastaVal.split('-').reverse().join('/');
-        setElementText('lblRangoActivo', `Datos auditados del ${f1} al ${f2}`);
+        const lblF1 = desdeVal.split('-').reverse().join('/');
+        const lblF2 = hastaVal.split('-').reverse().join('/');
+        setElementText('lblRangoActivo', `Datos auditados del ${lblF1} al ${lblF2}`);
 
     } catch (err) {
         console.error("Error al consultar datos detallados:", err);
