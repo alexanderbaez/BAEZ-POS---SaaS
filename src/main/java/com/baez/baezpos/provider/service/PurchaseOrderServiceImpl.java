@@ -104,7 +104,8 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
         // Actualizar stock y costos
         for (PurchaseOrderItem item : order.getItems()) {
-            Product product = item.getProduct();
+            Product product = productRepository.findByIdAndCompanyId(item.getProduct().getId(), companyId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado o inactivo para actualizar stock"));
             
             // Actualizar stock de inventario
             BigDecimal currentStock = product.getStock() != null ? product.getStock() : BigDecimal.ZERO;
@@ -138,8 +139,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         }
 
         // Cargar a cuenta corriente del proveedor (Atómico)
-        Provider provider = providerRepository.findByIdAndCompanyId(order.getProvider().getId(), companyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado o inactivo para actualizar saldo"));
+        Provider provider = order.getProvider();
         
         BigDecimal currentBal = provider.getCurrentBalance() != null ? provider.getCurrentBalance() : BigDecimal.ZERO;
         provider.setCurrentBalance(currentBal.add(order.getTotalAmount()));
