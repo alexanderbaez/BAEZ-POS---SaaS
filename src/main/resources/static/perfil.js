@@ -1,4 +1,4 @@
-﻿/**
+/**
  * BÁEZ POS - PERFIL DE LA EMPRESA & CONFIGURACIÓN (SaaS)
  * Alexander Baez - 2026
  */
@@ -263,7 +263,7 @@ function aplicarEstadoFiscal(activo) {
     if (previewBloque) previewBloque.style.display = activo ? 'block' : 'none';
     if (previewPie) previewPie.style.display = activo ? 'block' : 'none';
     if (previewTipo) {
-        previewTipo.innerText = activo ? 'FACTURA C NÂ° 00001-00001234' : 'TICKET NO FISCAL';
+        previewTipo.innerHTML = activo ? 'FACTURA C N&deg; 00001-00001234' : 'TICKET NO FISCAL';
     }
 
     const inputsFiscales = ['empIibb', 'empInicioAct', 'empIva'];

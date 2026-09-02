@@ -977,8 +977,10 @@ body.login-page {
   #print-section:has(.layout-ticket),
   #print-section:not(.layout-a4):not(:has(.layout-a4)) {
     width: 100% !important;
-    max-width: 80mm !important;
-    padding: 4mm !important;
+    max-width: 76mm !important;
+    box-sizing: border-box !important;
+    margin: 0 auto !important;
+    padding: 0 2mm !important;
     font-size: 9pt;
   }
 

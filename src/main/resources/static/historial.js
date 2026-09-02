@@ -605,7 +605,7 @@ async function exportarExcelPro() {
 
         if (items.length === 0) {
             dataExcel.push({
-                "NÂ° Comprobante": numTicketVisual,
+                "Nro. Comprobante": numTicketVisual,
                 "Fecha / Hora": fechaTexto,
                 "Cliente": clienteTexto,
                 "Producto": 'SIN DETALLE',
@@ -625,7 +625,7 @@ async function exportarExcelPro() {
 
                 // Evitamos duplicar totales agregados por renglón de ítem
                 dataExcel.push({
-                    "NÂ° Comprobante": index === 0 ? numTicketVisual : "",
+                    "Nro. Comprobante": index === 0 ? numTicketVisual : "",
                     "Fecha / Hora": index === 0 ? fechaTexto : "",
                     "Cliente": index === 0 ? clienteTexto : "",
                     "Producto": (item.productName || item.nombre || 'PRODUCTO').toUpperCase(),
@@ -827,16 +827,24 @@ function reimprimirTicket(tipoFormato = 'POS') {
                 <style>
                     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
                     @page { margin: 0; size: auto; }
+                    * { box-sizing: border-box; }
                     body.layout-ticket {
                         font-family: 'Inter', sans-serif;
                         width: 100%;
-                        ${tipoFormato === 'A4' ? '' : 'max-width: 80mm;'}
-                        padding: ${tipoFormato === 'A4' ? '20px' : '4px'};
                         margin: 0 auto;
+                        padding: 0;
                         color: #000000;
                         background: #ffffff;
                         line-height: 1.25;
                         font-size: 9pt;
+                        box-sizing: border-box;
+                    }
+                    .layout-ticket {
+                        width: 100%;
+                        max-width: 76mm;
+                        box-sizing: border-box;
+                        margin: 0 auto;
+                        padding: 0 2mm;
                     }
                     .center { text-align: center; }
                     .ticket-header { border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; }
@@ -845,13 +853,13 @@ function reimprimirTicket(tipoFormato = 'POS') {
                     .business-name { font-weight: 900; font-size: 12pt; margin: 2px 0; text-transform: uppercase; letter-spacing: -0.2px; }
                     .small-info { font-size: 8.5pt; color: #000; margin: 1.5px 0; }
                     .fiscal-header { font-size: 8pt; color: #000; text-align: left; background: #f8fafc; padding: 4px 6px; border-radius: 4px; margin-top: 4px; border: 1px solid #e2e8f0; }
-                    .item-row { display: flex; justify-content: space-between; align-items: flex-start; font-size: 8.5pt; margin-bottom: 4px; word-break: break-word; }
-                    .item-qty-name { font-weight: 700; text-transform: uppercase; flex: 1; padding-right: 6px; }
-                    .item-price { font-weight: 700; white-space: nowrap; }
+                    .item-row { display: flex; justify-content: space-between; align-items: flex-start; font-size: 8.5pt; margin-bottom: 4px; word-break: break-word; gap: 4px; }
+                    .item-qty-name { font-weight: 700; text-transform: uppercase; flex: 1 1 auto; min-width: 0; padding-right: 4px; }
+                    .item-price { font-weight: 700; white-space: nowrap; flex: 0 0 auto; text-align: right; }
                     .line { border-top: 1px dashed #000; margin: 6px 0; }
-                    .total-container { border-top: 2px solid #000; margin-top: 6px; padding-top: 6px; display: flex; justify-content: space-between; align-items: center; }
-                    .total-label { font-weight: 900; font-size: 12pt; }
-                    .total-amount { font-weight: 900; font-size: 12pt; color: #000; }
+                    .total-container { border-top: 2px solid #000; margin-top: 6px; padding-top: 6px; display: flex; justify-content: space-between; align-items: center; gap: 4px; }
+                    .total-label { font-weight: 900; font-size: 12pt; flex: 1 1 auto; }
+                    .total-amount { font-weight: 900; font-size: 12pt; color: #000; flex: 0 0 auto; white-space: nowrap; text-align: right; }
                     .arca-container { border-top: 1px solid #000; margin-top: 8px; padding-top: 6px; text-align: center; }
                     .arca-logo { font-weight: 900; font-size: 10pt; letter-spacing: 2px; }
                     .cae-info { font-size: 8pt; font-weight: 700; text-align: left; }
@@ -884,7 +892,7 @@ function reimprimirTicket(tipoFormato = 'POS') {
                         ` : ''}
                         <div class="line"></div>
                         <div class="watermark-reprint">DUPLICADO / REIMPRESIÓN</div>
-                        <div class="small-info"><strong>${tipoComprobante} NÂ° ${nroComprobante}</strong></div>
+                        <div class="small-info"><strong>${tipoComprobante} N&deg; ${nroComprobante}</strong></div>
                         <div class="small-info">Fecha: ${fechaVenta}</div>
                         <div class="small-info">Cajero: ${cajeroNombre}</div>
                         <div class="small-info" style="text-align: left; margin-top: 4px;"><strong>A:</strong> ${nombreCliente} ${cuitCliente ? `(CUIT: ${cuitCliente})` : ''}</div>
@@ -1283,7 +1291,7 @@ function generarFacturaA4HTML(venta) {
 
                     <div class="a4-col-comprobante">
                         <div class="a4-comp-titulo">${tipoComprobante}</div>
-                        <div class="a4-comp-numero">NÂ° ${nroComprobante}</div>
+                        <div class="a4-comp-numero">N&deg; ${nroComprobante}</div>
                         <div class="a4-line">Fecha de Emisión: <strong>${fechaVenta}</strong></div>
                         <div class="a4-line">CUIT: <strong>${cuitLocal || 'S/C'}</strong></div>
                         <div class="a4-line">Ingresos Brutos: <strong>${iibbLocal || 'Exento / S/C'}</strong></div>
@@ -1350,7 +1358,7 @@ function generarFacturaA4HTML(venta) {
                         </div>
                         <div class="a4-cae-data">
                             <div class="a4-cae-title">ARCA / AFIP - Comprobante Autorizado Electrónicamente</div>
-                            <div><strong>CAE NÂ°:</strong> ${cae}</div>
+                            <div><strong>CAE N&deg;:</strong> ${cae}</div>
                             <div><strong>Fecha de Vto. de CAE:</strong> ${caeVto}</div>
                             <div style="font-size: 7.5pt; color: #475569; margin-top: 3px;">Comprobante oficial válido como factura comercial. Verifique su autenticidad escaneando el código QR.</div>
                         </div>

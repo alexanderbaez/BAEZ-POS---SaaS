@@ -180,33 +180,46 @@ function inicializarBuscadorProductos() {
     });
 }
 
+let debounceTimerCliente = null;
+
 function inicializarBuscadorClientes() {
     const buscadorCli = document.getElementById('buscarClientePos');
     if (!buscadorCli) return;
 
-    buscadorCli.addEventListener('input', async function handleInputBuscadorClientes(e) {
+    buscadorCli.addEventListener('input', function handleInputBuscadorClientes(e) {
         if (sistemaBloqueado) return;
         const term = e.target.value.trim();
         const sugCli = document.getElementById('sugerenciasClientes');
         if (!sugCli) return;
 
+        clearTimeout(debounceTimerCliente);
+
         if (term.length < 2) {
             sugCli.style.display = 'none';
+            sugCli.innerHTML = '';
             return;
         }
 
-        try {
-            const res = await apiFetch('/customers');
-            if (!res || !res.ok) return;
+        debounceTimerCliente = setTimeout(async function ejecutarBusquedaCliente() {
+            try {
+                const res = await apiFetch(`/customers/search?q=${encodeURIComponent(term)}&size=10`);
+                if (!res || !res.ok) return;
 
-            const todos = await res.json();
-            const filtrados = todos.filter(function filtrarClientes(c) {
-                return c.name.toLowerCase().includes(term.toLowerCase());
-            }).slice(0, 5);
+                const data = await res.json();
+                const lista = Array.isArray(data.content) ? data.content : (Array.isArray(data) ? data : []);
 
-            uiRenderizarSugerenciasClientes(filtrados, sugCli);
-        } catch (err) {
-            console.error("Error buscando clientes:", err);
+                uiRenderizarSugerenciasClientes(lista, sugCli);
+            } catch (err) {
+                console.error("Error buscando clientes:", err);
+            }
+        }, 250);
+    });
+
+    // Cerrar sugerencias si se hace clic fuera del buscador o de la lista
+    document.addEventListener('click', function handleClicFueraClientes(e) {
+        const sugCli = document.getElementById('sugerenciasClientes');
+        if (sugCli && !sugCli.contains(e.target) && e.target !== buscadorCli) {
+            sugCli.style.display = 'none';
         }
     });
 }
@@ -304,22 +317,52 @@ function uiActualizarFocoSugerencia(items) {
 }
 
 function uiRenderizarSugerenciasClientes(filtrados, elementoContenedor) {
-    elementoContenedor.innerHTML = filtrados.map(function mapClienteItem(c) {
-        const balance = c.currentBalance || 0;
-        const limit = c.creditLimit || 0;
-        const colorClase = balance >= limit ? 'text-danger' : 'text-success';
+    if (!elementoContenedor) return;
+    elementoContenedor.innerHTML = '';
 
-        return `
-            <button type="button" class="list-group-item list-group-item-action small" onclick='seleccionarCliente(${JSON.stringify(c)})'>
-                <div class="d-flex justify-content-between">
-                    <span>${c.name}</span>
-                    <span class="${colorClase} fw-bold">$${balance.toFixed(2)}</span>
-                </div>
-            </button>
+    if (!filtrados || filtrados.length === 0) {
+        elementoContenedor.innerHTML = `
+            <div class="list-group-item small text-muted text-center py-2">
+                Sin clientes encontrados
+            </div>
         `;
-    }).join('');
+        elementoContenedor.style.display = 'block';
+        return;
+    }
 
-    elementoContenedor.style.display = filtrados.length > 0 ? 'block' : 'none';
+    const fragment = document.createDocumentFragment();
+
+    filtrados.forEach(function mapClienteItem(c) {
+        const balance = parseFloat(c.currentBalance) || 0;
+        const limit = parseFloat(c.creditLimit) || 0;
+        const tieneDeuda = balance > 0;
+        const colorClase = tieneDeuda ? 'text-danger fw-bold' : 'text-success';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'list-group-item list-group-item-action small py-2';
+        btn.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="fw-semibold text-dark">${escapeHtml(c.name || 'Cliente')}</span>
+                    ${c.cuit ? `<small class="text-muted d-block" style="font-size: 0.72rem;">CUIT/DNI: ${escapeHtml(c.cuit)}</small>` : ''}
+                </div>
+                <div class="text-end">
+                    <span class="${colorClase}">$${balance.toFixed(2)}</span>
+                    ${limit > 0 ? `<small class="text-muted d-block" style="font-size: 0.7rem;">Lím: $${limit.toFixed(0)}</small>` : ''}
+                </div>
+            </div>
+        `;
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            seleccionarCliente(c);
+        });
+        fragment.appendChild(btn);
+    });
+
+    elementoContenedor.appendChild(fragment);
+    elementoContenedor.style.display = 'block';
 }
 
 function uiRenderizarSugerenciasProductos(productos) {
@@ -1792,6 +1835,9 @@ window.actualizarIndicadorVentasPendientes = actualizarIndicadorVentasPendientes
 // 11. IMPRESIÓN DE TICKETS Y TICKETERA
 // ==========================================
 function generarPlantillaHTMLTicket(venta, tipoFormato = 'POS') {
+    if (tipoFormato === 'A4') {
+        return generarFacturaA4HTML(venta);
+    }
     const infoEmpresa = (typeof DATOS_EMPRESA !== 'undefined' && DATOS_EMPRESA !== null) ? DATOS_EMPRESA : {};
     const fiscalActivo = String(venta.isFiscal !== undefined ? venta.isFiscal : infoEmpresa.hasTaxData) === "true";
 
@@ -1901,16 +1947,24 @@ function generarPlantillaHTMLTicket(venta, tipoFormato = 'POS') {
                 <style>
                     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
                     @page { margin: 0; size: auto; }
+                    * { box-sizing: border-box; }
                     body {
                         font-family: 'Inter', sans-serif;
                         width: 100%;
-                        ${tipoFormato === 'A4' ? '' : 'max-width: 100%;'}
-                        padding: ${tipoFormato === 'A4' ? '20px' : '4px'};
                         margin: 0 auto;
+                        padding: 0;
                         color: #000000;
                         background: #ffffff;
                         line-height: 1.25;
                         font-size: 9pt;
+                        box-sizing: border-box;
+                    }
+                    .layout-ticket {
+                        width: 100%;
+                        max-width: 76mm;
+                        box-sizing: border-box;
+                        margin: 0 auto;
+                        padding: 0 2mm;
                     }
                     .center { text-align: center; }
                     .ticket-header { border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; }
@@ -1919,13 +1973,13 @@ function generarPlantillaHTMLTicket(venta, tipoFormato = 'POS') {
                     .business-name { font-weight: 900; font-size: 12pt; margin: 2px 0; text-transform: uppercase; letter-spacing: -0.2px; }
                     .small-info { font-size: 8.5pt; color: #000; margin: 1.5px 0; }
                     .fiscal-header { font-size: 8pt; color: #000; text-align: left; background: #f8fafc; padding: 4px 6px; border-radius: 4px; margin-top: 4px; border: 1px solid #e2e8f0; }
-                    .item-row { display: flex; justify-content: space-between; align-items: flex-start; font-size: 8.5pt; margin-bottom: 4px; word-break: break-word; }
-                    .item-qty-name { font-weight: 700; text-transform: uppercase; flex: 1; padding-right: 6px; }
-                    .item-price { font-weight: 700; white-space: nowrap; }
+                    .item-row { display: flex; justify-content: space-between; align-items: flex-start; font-size: 8.5pt; margin-bottom: 4px; word-break: break-word; gap: 4px; }
+                    .item-qty-name { font-weight: 700; text-transform: uppercase; flex: 1 1 auto; min-width: 0; padding-right: 4px; }
+                    .item-price { font-weight: 700; white-space: nowrap; flex: 0 0 auto; text-align: right; }
                     .line { border-top: 1px dashed #000; margin: 6px 0; }
-                    .total-container { border-top: 2px solid #000; margin-top: 6px; padding-top: 6px; display: flex; justify-content: space-between; align-items: center; }
-                    .total-label { font-weight: 900; font-size: 12pt; }
-                    .total-amount { font-weight: 900; font-size: 12pt; color: #000; }
+                    .total-container { border-top: 2px solid #000; margin-top: 6px; padding-top: 6px; display: flex; justify-content: space-between; align-items: center; gap: 4px; }
+                    .total-label { font-weight: 900; font-size: 12pt; flex: 1 1 auto; }
+                    .total-amount { font-weight: 900; font-size: 12pt; color: #000; flex: 0 0 auto; white-space: nowrap; text-align: right; }
                     .arca-container { border-top: 1px solid #000; margin-top: 8px; padding-top: 6px; text-align: center; }
                     .arca-logo { font-weight: 900; font-size: 10pt; letter-spacing: 2px; }
                     .cae-info { font-size: 8pt; font-weight: 700; text-align: left; }
@@ -1960,7 +2014,7 @@ function generarPlantillaHTMLTicket(venta, tipoFormato = 'POS') {
                                 ⚠️ TICKET PENDIENTE DE SINCRONIZACIÓN
                             </div>
                         ` : ''}
-                        <div class="small-info"><strong>${tipoComprobante} Nº ${nroComprobante}</strong></div>
+                        <div class="small-info"><strong>${tipoComprobante} N&deg; ${nroComprobante}</strong></div>
                         <div class="small-info">Fecha: ${fechaVenta}</div>
                         <div class="small-info">Cajero: ${cajeroNombre}</div>
                         <div class="small-info" style="text-align: left; margin-top: 4px;"><strong>A:</strong> ${nombreCliente} ${cuitCliente ? `(CUIT: ${cuitCliente})` : ''}</div>
@@ -2359,7 +2413,7 @@ function generarFacturaA4HTML(venta) {
 
                     <div class="a4-col-comprobante">
                         <div class="a4-comp-titulo">${tipoComprobante}</div>
-                        <div class="a4-comp-numero">Nº ${nroComprobante}</div>
+                        <div class="a4-comp-numero">N&deg; ${nroComprobante}</div>
                         <div class="a4-line">Fecha de Emisión: <strong>${fechaVenta}</strong></div>
                         <div class="a4-line">CUIT: <strong>${cuitLocal || 'S/C'}</strong></div>
                         <div class="a4-line">Ingresos Brutos: <strong>${iibbLocal || 'Exento / S/C'}</strong></div>
@@ -2426,7 +2480,7 @@ function generarFacturaA4HTML(venta) {
                         </div>
                         <div class="a4-cae-data">
                             <div class="a4-cae-title">ARCA / AFIP - Comprobante Autorizado Electrónicamente</div>
-                            <div><strong>CAE Nº:</strong> ${cae}</div>
+                            <div><strong>CAE N&deg;:</strong> ${cae}</div>
                             <div><strong>Fecha de Vto. de CAE:</strong> ${caeVto}</div>
                             <div style="font-size: 7.5pt; color: #475569; margin-top: 3px;">Comprobante oficial válido como factura comercial. Verifique su autenticidad escaneando el código QR.</div>
                         </div>
@@ -2445,7 +2499,9 @@ function generarFacturaA4HTML(venta) {
 
 function imprimirTicket(venta, tipoFormato = 'POS') {
     if (!venta) return;
-    const plantilla = generarPlantillaHTMLTicket(venta, tipoFormato);
+    const plantilla = (tipoFormato === 'A4')
+        ? generarFacturaA4HTML(venta)
+        : generarPlantillaHTMLTicket(venta, tipoFormato);
     const htmlContent = plantilla.html || plantilla;
 
     const printFrame = document.createElement('iframe');
