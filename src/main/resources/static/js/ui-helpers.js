@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ==========================================================================
  * BÁEZ POS - UI HELPERS GLOBALES (SaaS Premium Suite)
  * Alexander Baez - 2026
@@ -280,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
 
-        activeModal.style.transform = \	ranslate(\px, \px)\;
+        activeModal.style.transform = `translate(${dx}px, ${dy}px)`;
     });
 
     document.addEventListener('mouseup', () => {

@@ -168,9 +168,10 @@ async function cargarKpisYTablas() {
         });
 
         let gananciaNeta = totalVentasMes - totalGastosMes;
+        let dataBoxMes = null;
 
         if (resBoxMes.status === 'fulfilled' && resBoxMes.value && resBoxMes.value.ok) {
-            const dataBoxMes = await resBoxMes.value.json();
+            dataBoxMes = await resBoxMes.value.json();
             if (dataBoxMes.periodSales !== undefined) {
                 totalVentasMes = parseFloat(dataBoxMes.periodSales) || 0;
             }
@@ -828,12 +829,6 @@ async function consultarPorFechas() {
             if (elDesgloseFia) {
                 const countCredit = dataBox.periodCreditCount ?? 0;
                 elDesgloseFia.innerHTML = `<small class="text-muted d-block" style="font-size: 0.78rem;">${countCredit} a cuenta corriente</small>`;
-            }
-        }
-
-        // 3. Egresos en el Rango Clasificados (Desde el Backend)
-        if (resBox.status === 'fulfilled' && resBox.value && resBox.value.ok) {
-            const dataBox = await resBox.value.json();
             if (dataBox.expensesByCategory) {
                 renderizarEgresosCategoriasDTO(dataBox.expensesByCategory);
             }
