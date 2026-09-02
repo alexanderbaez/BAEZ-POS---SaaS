@@ -25,13 +25,13 @@ public class ExpenseController {
     private final ExpenseService expenseService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'CAJERO')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'SUPER_ADMIN', 'GERENTE', 'CAJERO')")
     public ResponseEntity<ExpenseResponseDTO> create(@Valid @RequestBody ExpenseRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(expenseService.createExpense(dto));
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'CAJERO')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'SUPER_ADMIN', 'GERENTE', 'CAJERO')")
     public ResponseEntity<Page<ExpenseResponseDTO>> list(
             @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate desde,
             @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate hasta,
@@ -40,7 +40,7 @@ public class ExpenseController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'GERENTE')")
     public ResponseEntity<Map<String, String>> delete(@PathVariable Long id) {
         expenseService.deleteExpense(id);
         return ResponseEntity.ok(Map.of("message", "Gasto eliminado correctamente"));

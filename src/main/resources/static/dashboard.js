@@ -115,7 +115,6 @@ async function cargarKpisYTablas() {
         const [resBoxMes, resVentas, resGastos, resProveedores] = await Promise.allSettled([
             apiFetch(`/sales/report/box?from=${desdeStr}&to=${hastaStr}`),
             apiFetch(`/sales?desde=${desdeStr}&hasta=${hastaStr}`),
-            apiFetch(`/sales?desde=${desdeStr}&hasta=${hastaStr}&size=1000`),
             apiFetch('/expenses?size=1000'),
             apiFetch('/providers?size=1000')
         ]);
@@ -242,13 +241,23 @@ function renderizarTopProductos(ventas) {
             const nombre = item.productName || item.nombre || item.title || 'Producto';
             const cantidad = parseFloat(item.quantity) || 0;
             const subtotal = parseFloat(item.subtotal) || (cantidad * (parseFloat(item.price) || 0));
+            const unitRaw = item.unitType || item.unitOfMeasure || item.unitMeasure || item.unidad || '';
+            const isFrac = Boolean(item.isFractional);
 
             if (!mapaProductos.has(nombre)) {
-                mapaProductos.set(nombre, { nombre, cantidad: 0, total: 0 });
+                mapaProductos.set(nombre, {
+                    nombre,
+                    cantidad: 0,
+                    total: 0,
+                    unitType: unitRaw,
+                    isFractional: isFrac
+                });
             }
             const prod = mapaProductos.get(nombre);
             prod.cantidad += cantidad;
             prod.total += subtotal;
+            if (!prod.unitType && unitRaw) prod.unitType = unitRaw;
+            if (isFrac) prod.isFractional = true;
         });
     });
 
@@ -270,6 +279,11 @@ function renderizarTopProductos(ventas) {
 
     listaOrdenada.forEach((p, idx) => {
         const tr = document.createElement('tr');
+        const unitLabel = obtenerUnidadMedidaLabel(p.unitType, p.isFractional);
+        const cantTexto = (p.cantidad % 1 !== 0)
+            ? p.cantidad.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 3 })
+            : p.cantidad.toLocaleString('es-AR');
+
         tr.innerHTML = `
             <td class="ps-3">
                 <div class="d-flex align-items-center">
@@ -281,7 +295,7 @@ function renderizarTopProductos(ventas) {
             </td>
             <td class="text-center">
                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 fw-bold">
-                    ${p.cantidad.toLocaleString('es-AR')} u.
+                    ${cantTexto} ${unitLabel}
                 </span>
             </td>
             <td class="text-end pe-3 fw-bold text-dark amount-num">
@@ -292,6 +306,22 @@ function renderizarTopProductos(ventas) {
     });
 
     tbody.appendChild(fragment);
+}
+
+function obtenerUnidadMedidaLabel(unit, isFractional) {
+    if (!unit && isFractional) return 'kg';
+    if (!unit) return 'u.';
+    const u = String(unit).trim().toUpperCase();
+    if (u === 'KG' || u === 'KILOGRAMO' || u === 'KILOGRAMOS' || u === 'KGS') {
+        return 'kg';
+    }
+    if (u === 'LITRO' || u === 'LITROS' || u === 'L' || u === 'LT' || u === 'LTS') {
+        return 'L';
+    }
+    if (u === 'UNIDAD' || u === 'UN' || u === 'U' || u === 'U.') {
+        return 'u.';
+    }
+    return 'u.';
 }
 
 function renderizarTurnosCajaPeriodo(sessions, rangoTexto) {
@@ -437,39 +467,50 @@ function renderizarUltimosMovimientos(ventas, gastos) {
 
     const movimientos = [];
 
-    // Normalizar ventas
+    // Normalizar ventas (excluir anuladas y canceladas)
     (ventas || []).forEach(v => {
-        const fechaRaw = v.saleDate || v.created_at || v.createdAt || new Date();
-        const fechaObj = parsearFechaLocal(fechaRaw) || new Date();
+        if (v.canceled || v.status === 'ANULADA') return;
+        const fechaRaw = v.saleDate || v.date || v.createdAt || v.created_at;
+        const fechaObj = parsearFechaLocal(fechaRaw) || (fechaRaw ? new Date(fechaRaw) : null);
+        if (!fechaObj || isNaN(fechaObj.getTime())) return;
+
+        const monto = parseFloat(v.total ?? v.amount ?? v.monto ?? 0);
+        const comprobante = v.nroComprobante || v.invoiceNumber || (v.numeroTicket ? `Ticket #${v.numeroTicket}` : `Venta #${v.id}`);
+
         movimientos.push({
             tipo: 'VENTA',
             id: v.id,
-            concepto: v.nroComprobante || (v.numeroTicket ? `Ticket #${v.numeroTicket}` : `Venta #${v.id}`),
+            concepto: comprobante,
             fecha: fechaObj,
             metodo: (v.paymentMethod || 'EFECTIVO').replace(/_/g, ' '),
-            monto: parseFloat(v.total) || 0,
+            monto: monto,
             deductFromBox: false
         });
     });
 
     // Normalizar gastos
     (gastos || []).forEach(g => {
-        const fechaRaw = g.date || new Date();
-        const fechaObj = parsearFechaLocal(fechaRaw) || new Date();
+        const fechaRaw = g.date || g.expenseDate || g.createdAt || g.created_at;
+        const fechaObj = parsearFechaLocal(fechaRaw) || (fechaRaw ? new Date(fechaRaw) : null);
+        if (!fechaObj || isNaN(fechaObj.getTime())) return;
+
+        const monto = parseFloat(g.amount ?? g.total ?? g.monto ?? 0);
         const esDeducible = Boolean(g.deductFromBox) && (g.paymentMethod === 'EFECTIVO_CAJA' || g.paymentMethod === 'EFECTIVO');
+
         movimientos.push({
             tipo: 'GASTO',
             id: g.id,
-            concepto: g.description || 'Egreso operativo',
+            concepto: g.description || g.concepto || 'Egreso operativo',
             fecha: fechaObj,
             metodo: (g.paymentMethod || 'EFECTIVO_CAJA').replace(/_/g, ' '),
-            monto: parseFloat(g.amount) || 0,
+            monto: monto,
             deductFromBox: esDeducible
         });
     });
 
+    // Ordenar cronológicamente descendente (más recientes primero)
     const ultimos5 = movimientos
-        .sort((a, b) => b.fecha - a.fecha)
+        .sort((a, b) => b.fecha.getTime() - a.fecha.getTime())
         .slice(0, 5);
 
     if (ultimos5.length === 0) {
@@ -489,8 +530,8 @@ function renderizarUltimosMovimientos(ventas, gastos) {
         const icono = esVenta ? 'bi-cart-check-fill text-success' : 'bi-wallet2 text-danger';
         const badgeBg = esVenta ? 'bg-success bg-opacity-10' : 'bg-danger bg-opacity-10';
 
-        // Código de colores financiero: Gasto con deducción de caja en rojo fuerte
-        const montoTexto = esVenta ? `+${fmtARS.format(m.monto)}` : `-${fmtARS.format(m.monto)}`;
+        // Las ventas deben sumar en verde (+ $X) y los gastos restar en rojo (- $X)
+        const montoTexto = esVenta ? `+ ${fmtARS.format(m.monto)}` : `- ${fmtARS.format(m.monto)}`;
         const montoClase = esVenta ? 'text-success fw-bold' : (m.deductFromBox ? 'text-danger fw-bold' : 'text-danger');
 
         const horaFormateada = formatHoraAR(m.fecha);
