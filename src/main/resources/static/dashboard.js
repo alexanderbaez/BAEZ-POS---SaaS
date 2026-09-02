@@ -1,4 +1,4 @@
-﻿/**
+/**
  * BÁEZ POS - SAAS DASHBOARD (Vista Gerencial & Análisis Detallado)
  * Alexander Baez - 2026
  */
@@ -115,26 +115,27 @@ async function cargarKpisYTablas() {
         const [resBoxMes, resVentas, resGastos, resProveedores] = await Promise.allSettled([
             apiFetch(`/sales/report/box?from=${desdeStr}&to=${hastaStr}`),
             apiFetch(`/sales?desde=${desdeStr}&hasta=${hastaStr}`),
-            apiFetch('/expenses'),
-            apiFetch('/providers')
+            apiFetch(`/sales?desde=${desdeStr}&hasta=${hastaStr}&size=1000`),
+            apiFetch('/expenses?size=1000'),
+            apiFetch('/providers?size=1000')
         ]);
 
         let listaVentas = [];
         if (resVentas.status === 'fulfilled' && resVentas.value && resVentas.value.ok) {
-            listaVentas = await resVentas.value.json();
-            if (!Array.isArray(listaVentas)) listaVentas = [];
+            const data = await resVentas.value.json();
+            listaVentas = Array.isArray(data) ? data : (data.content || []);
         }
 
         let listaGastos = [];
         if (resGastos.status === 'fulfilled' && resGastos.value && resGastos.value.ok) {
-            listaGastos = await resGastos.value.json();
-            if (!Array.isArray(listaGastos)) listaGastos = [];
+            const data = await resGastos.value.json();
+            listaGastos = Array.isArray(data) ? data : (data.content || []);
         }
 
         let listaProveedores = [];
         if (resProveedores.status === 'fulfilled' && resProveedores.value && resProveedores.value.ok) {
-            listaProveedores = await resProveedores.value.json();
-            if (!Array.isArray(listaProveedores)) listaProveedores = [];
+            const data = await resProveedores.value.json();
+            listaProveedores = Array.isArray(data) ? data : (data.content || []);
         }
 
         // --- FILTRAR VENTAS ACTIVAS DEL MES ---
@@ -704,7 +705,7 @@ async function consultarPorFechas() {
         const [resBox, resVentasRango, resGastos] = await Promise.allSettled([
             apiFetch(`/sales/report/box?from=${desdeVal}&to=${hastaVal}`),
             apiFetch(`/sales?desde=${desdeVal}&hasta=${hastaVal}`),
-            apiFetch('/expenses')
+            apiFetch('/expenses?size=1000')
         ]);
 
         // 1. Métricas de Reporte / Box (Fuente de Verdad Financiera - Flujo de Caja Puro)

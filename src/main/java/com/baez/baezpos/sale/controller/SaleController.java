@@ -41,8 +41,8 @@ public class SaleController {
     public ResponseEntity<List<SaleResponseDTO>> list(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
-        if (desde == null) desde = LocalDate.now();
-        if (hasta == null) hasta = LocalDate.now();
+        if (desde == null) desde = LocalDate.now(java.time.ZoneId.of("America/Argentina/Buenos_Aires"));
+        if (hasta == null) hasta = LocalDate.now(java.time.ZoneId.of("America/Argentina/Buenos_Aires"));
         return ResponseEntity.ok(saleService.getSalesByDateRange(desde, hasta));
     }
 

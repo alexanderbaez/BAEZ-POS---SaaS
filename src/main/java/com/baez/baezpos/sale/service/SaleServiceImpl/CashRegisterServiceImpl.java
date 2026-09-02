@@ -61,8 +61,8 @@ public class CashRegisterServiceImpl implements CashRegisterService {
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa asociada no encontrada"));
 
         // LÓGICA DE SECUENCIA DIARIA POR TENANT (Reinicia cada día a 1)
-        LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
-        LocalDateTime endOfToday = LocalDate.now().atTime(LocalTime.MAX);
+        LocalDateTime startOfToday = LocalDate.now(java.time.ZoneId.of("America/Argentina/Buenos_Aires")).atStartOfDay();
+        LocalDateTime endOfToday = LocalDate.now(java.time.ZoneId.of("America/Argentina/Buenos_Aires")).atTime(LocalTime.MAX);
         int todayCount = cashRegisterSessionRepository.countSessionsByCompanyAndDateRange(companyId, startOfToday, endOfToday);
         int nextSessionNumber = todayCount + 1;
 

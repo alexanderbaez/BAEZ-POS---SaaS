@@ -293,8 +293,8 @@ public class SaleServiceImpl implements SaleService {
     public BoxReportDTO getBoxReport(String period, LocalDate from, LocalDate to) {
         Long companyId = requireCompanyContext();
 
-        LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
-        LocalDateTime endOfToday = LocalDate.now().atTime(LocalTime.MAX);
+        LocalDateTime startOfToday = LocalDate.now(java.time.ZoneId.of("America/Argentina/Buenos_Aires")).atStartOfDay();
+        LocalDateTime endOfToday = LocalDate.now(java.time.ZoneId.of("America/Argentina/Buenos_Aires")).atTime(LocalTime.MAX);
 
         LocalDateTime startRange = (from != null) ? from.atStartOfDay() : startOfToday;
         LocalDateTime endRange = (to != null) ? to.atTime(LocalTime.MAX) : endOfToday;
@@ -610,7 +610,7 @@ public class SaleServiceImpl implements SaleService {
     @Transactional(readOnly = true)
     public List<ChartDataDTO> getSalesChartData() {
         Long companyId = requireCompanyContext();
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(java.time.ZoneId.of("America/Argentina/Buenos_Aires"));
         Map<LocalDate, BigDecimal> last7Days = new LinkedHashMap<>();
 
         for (int i = 6; i >= 0; i--) {
@@ -702,8 +702,8 @@ public class SaleServiceImpl implements SaleService {
     @Transactional(readOnly = true)
     public Page<SaleResponseDTO> getSalesByDateRange(LocalDate desde, LocalDate hasta, Pageable pageable) {
         Long companyId = requireCompanyContext();
-        LocalDateTime start = (desde != null) ? desde.atStartOfDay() : LocalDate.now().minusMonths(1).atStartOfDay();
-        LocalDateTime end = (hasta != null) ? hasta.atTime(LocalTime.MAX) : LocalDate.now().atTime(LocalTime.MAX);
+        LocalDateTime start = (desde != null) ? desde.atStartOfDay() : LocalDate.now(java.time.ZoneId.of("America/Argentina/Buenos_Aires")).minusMonths(1).atStartOfDay();
+        LocalDateTime end = (hasta != null) ? hasta.atTime(LocalTime.MAX) : LocalDate.now(java.time.ZoneId.of("America/Argentina/Buenos_Aires")).atTime(LocalTime.MAX);
 
         Page<Sale> sales = saleRepository.findByCompanyIdAndSaleDateBetweenOrderBySaleDateDesc(companyId, start, end, pageable);
 
