@@ -456,7 +456,10 @@ async function verHistorial(id, nombre, telefono) {
         CLIENTE_ACTUAL = { id, nombre, telefono };
 
         const titEl = document.getElementById('historialTitulo');
-        if (titEl) titEl.innerHTML = `<i class="bi bi-journal-bookmark-fill text-primary"></i> Libreta: ${nombre.toUpperCase()}`;
+        if (titEl) {
+            titEl.className = 'fw-bold m-0 d-flex align-items-center gap-2 text-white';
+            titEl.innerHTML = `<i class="bi bi-journal-bookmark-fill text-white"></i> Libreta: ${sanitizeHTML(nombre.toUpperCase())}`;
+        }
 
         renderizarTablaMovimientos();
 
