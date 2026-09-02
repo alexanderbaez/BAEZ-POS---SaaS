@@ -68,4 +68,13 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
             @Param("companyId") Long companyId,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end);
+
+    @Query("SELECT new com.baez.baezpos.expense.dto.ExpenseCategorySummaryDTO(CAST(e.category AS string), COUNT(e), SUM(e.amount)) " +
+            "FROM Expense e " +
+            "WHERE e.company.id = :companyId AND e.expenseDate BETWEEN :start AND :end " +
+            "GROUP BY e.category")
+    List<com.baez.baezpos.expense.dto.ExpenseCategorySummaryDTO> sumExpensesByCategory(
+            @Param("companyId") Long companyId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
 }

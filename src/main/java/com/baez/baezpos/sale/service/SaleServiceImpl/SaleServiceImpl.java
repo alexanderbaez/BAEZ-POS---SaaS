@@ -15,6 +15,7 @@ import com.baez.baezpos.inventory.service.InventoryService.InventoryService;
 import com.baez.baezpos.log.service.AuditService;
 import com.baez.baezpos.product.entity.Product;
 import com.baez.baezpos.product.repository.ProductRepository;
+import com.baez.baezpos.provider.repository.ProviderRepository;
 import com.baez.baezpos.sale.dto.*;
 import com.baez.baezpos.sale.entity.CashRegisterSession;
 import com.baez.baezpos.sale.entity.CashSessionStatus;
@@ -59,6 +60,7 @@ public class SaleServiceImpl implements SaleService {
     private final CustomerMovementRepository customerMovementRepository;
     private final CompanyRepository companyRepository;
     private final ExpenseRepository expenseRepository;
+    private final ProviderRepository providerRepository;
     private final AuditService auditService;
     private final CashRegisterSessionRepository cashRegisterSessionRepository;
     private final com.baez.baezpos.afip.service.AfipBillingService afipBillingService;
@@ -500,6 +502,14 @@ public class SaleServiceImpl implements SaleService {
         // Total Transferencia = Ventas Directas Transferencia + Pagos Cta. Cte. Transferencia - Gastos Transferencia
         BigDecimal periodNetTransfer = periodTransferSales.add(periodCustomerPaymentsTransfer).subtract(periodExpensesTransfer);
 
+        Long providersWithDebt = providerRepository.countProvidersWithDebtByCompanyId(companyId);
+        if (providersWithDebt == null) providersWithDebt = 0L;
+
+        BigDecimal totalProviderDebt = providerRepository.sumTotalDebtByCompanyId(companyId);
+        if (totalProviderDebt == null) totalProviderDebt = BigDecimal.ZERO;
+
+        List<com.baez.baezpos.expense.dto.ExpenseCategorySummaryDTO> expensesByCategory = expenseRepository.sumExpensesByCategory(companyId, startRange, endRange);
+
         return new BoxReportDTO(
                 activeInitialAmount,
                 directCashSalesToday,
@@ -536,7 +546,10 @@ public class SaleServiceImpl implements SaleService {
                 periodExpensesTransfer,
                 periodNetCash,
                 periodNetTransfer,
-                todaySessions
+                todaySessions,
+                providersWithDebt,
+                totalProviderDebt,
+                expensesByCategory
         );
     }
 

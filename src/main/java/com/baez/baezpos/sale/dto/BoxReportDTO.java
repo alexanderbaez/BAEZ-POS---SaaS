@@ -50,5 +50,12 @@ public record BoxReportDTO(
         BigDecimal periodNetTransfer,
 
         // === AUDITORÍA DE TURNOS Y MULTI-CAJA DEL DÍA ===
-        List<CashSessionResponseDTO> todaySessions
+        List<CashSessionResponseDTO> todaySessions,
+
+        // === MÉTRICAS DE PROVEEDORES ===
+        Long providersWithDebt,
+        BigDecimal totalProviderDebt,
+
+        // === DESGLOSE DE EGRESOS POR CATEGORÍA ===
+        List<com.baez.baezpos.expense.dto.ExpenseCategorySummaryDTO> expensesByCategory
 ) {}

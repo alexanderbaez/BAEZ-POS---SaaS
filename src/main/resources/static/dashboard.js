@@ -127,15 +127,19 @@ async function cargarKpisYTablas() {
         }
 
         let listaGastos = [];
+        let totalEgresosCount = 0;
         if (resGastos.status === 'fulfilled' && resGastos.value && resGastos.value.ok) {
             const data = await resGastos.value.json();
             listaGastos = Array.isArray(data) ? data : (data.content || []);
+            totalEgresosCount = data.totalElements !== undefined ? data.totalElements : listaGastos.length;
         }
 
         let listaProveedores = [];
+        let totalProveedoresCount = 0;
         if (resProveedores.status === 'fulfilled' && resProveedores.value && resProveedores.value.ok) {
             const data = await resProveedores.value.json();
             listaProveedores = Array.isArray(data) ? data : (data.content || []);
+            totalProveedoresCount = data.totalElements !== undefined ? data.totalElements : listaProveedores.length;
         }
 
         // --- FILTRAR VENTAS ACTIVAS DEL MES ---
@@ -152,8 +156,9 @@ async function cargarKpisYTablas() {
         const mesActual = ahora.getMonth();
         const anioActual = ahora.getFullYear();
         const gastosMes = listaGastos.filter(g => {
-            if (!g.expenseDate) return false;
-            const fechaG = new Date(g.expenseDate);
+            const fechaVal = g.date || g.expenseDate;
+            if (!fechaVal) return false;
+            const fechaG = new Date(fechaVal);
             return fechaG.getMonth() === mesActual && fechaG.getFullYear() === anioActual;
         });
 
@@ -180,20 +185,25 @@ async function cargarKpisYTablas() {
         // --- DEUDA PROVEEDORES ---
         let totalDeudaProveedores = 0;
         let proveedoresConDeuda = 0;
-        listaProveedores.forEach(p => {
-            const saldo = parseFloat(p.currentBalance) || 0;
-            if (saldo > 0) {
-                totalDeudaProveedores += saldo;
-                proveedoresConDeuda++;
-            }
-        });
+        if (dataBoxMes && dataBoxMes.totalProviderDebt !== undefined) {
+            totalDeudaProveedores = parseFloat(dataBoxMes.totalProviderDebt) || 0;
+            proveedoresConDeuda = parseInt(dataBoxMes.providersWithDebt) || 0;
+        } else {
+            listaProveedores.forEach(p => {
+                const saldo = parseFloat(p.currentBalance) || 0;
+                if (saldo > 0) {
+                    totalDeudaProveedores += saldo;
+                    proveedoresConDeuda++;
+                }
+            });
+        }
 
         // --- ACTUALIZAR DOM KPIS GERENCIAL ---
         setElementText('kpiVentasMes', fmtARS.format(totalVentasMes));
         setElementText('kpiVentasCount', `${ventasActivasMes.length} operaciones este mes`);
 
         setElementText('kpiGastosMes', fmtARS.format(totalGastosMes));
-        setElementText('kpiGastosCount', `${gastosMes.length} egresos este mes`);
+        setElementText('kpiGastosCount', `${totalEgresosCount} egresos este mes`);
 
         const gananciaEl = document.getElementById('kpiGananciaNeta');
         if (gananciaEl) {
@@ -208,7 +218,7 @@ async function cargarKpisYTablas() {
         }
 
         setElementText('kpiDeudaProveedores', fmtARS.format(totalDeudaProveedores));
-        setElementText('kpiProveedoresCount', `${proveedoresConDeuda} con saldo pendiente`);
+        setElementText('kpiProveedoresCount', `${proveedoresConDeuda > 0 ? proveedoresConDeuda : totalProveedoresCount} con saldo pendiente`);
 
         // --- RENDERIZAR TABLAS GERENCIALES ---
         renderizarTopProductos(ventasActivasMes);
@@ -821,19 +831,12 @@ async function consultarPorFechas() {
             }
         }
 
-        // 3. Egresos en el Rango Clasificados
-        if (resGastos.status === 'fulfilled' && resGastos.value && resGastos.value.ok) {
-            const todosGastos = await resGastos.value.json();
-            const desdeDate = new Date(desdeVal + 'T00:00:00');
-            const hastaDate = new Date(hastaVal + 'T23:59:59');
-
-            const gastosFiltrados = (Array.isArray(todosGastos) ? todosGastos : []).filter(g => {
-                if (!g.date) return false;
-                const fg = new Date(g.date);
-                return fg >= desdeDate && fg <= hastaDate;
-            });
-
-            renderizarEgresosCategorias(gastosFiltrados);
+        // 3. Egresos en el Rango Clasificados (Desde el Backend)
+        if (resBox.status === 'fulfilled' && resBox.value && resBox.value.ok) {
+            const dataBox = await resBox.value.json();
+            if (dataBox.expensesByCategory) {
+                renderizarEgresosCategoriasDTO(dataBox.expensesByCategory);
+            }
         }
 
         const f1 = desdeVal.split('-').reverse().join('/');
@@ -843,6 +846,53 @@ async function consultarPorFechas() {
     } catch (err) {
         console.error("Error al consultar datos detallados:", err);
     }
+}
+
+function renderizarEgresosCategoriasDTO(categorias) {
+    const tbody = document.getElementById('tablaEgresosCategorias');
+    if (!tbody) return;
+
+    let totalEgresos = 0;
+    const NOMBRES_CAT = {
+        'PROVEEDOR': 'Pago a Proveedor',
+        'SERVICIOS': 'Servicios (Luz, Gas, Internet)',
+        'LOGISTICA': 'Fletes y Logística',
+        'SUELDOS': 'Sueldos y Adelantos',
+        'MANTENIMIENTO': 'Mantenimiento / Insumos',
+        'CAJA_CHICA': 'Caja Chica',
+        'VARIOS_RETIRO': 'Retiros / Gastos Varios'
+    };
+
+    categorias.forEach(c => {
+        totalEgresos += parseFloat(c.total) || 0;
+    });
+
+    setElementText('txtTotalEgresosRango', fmtARS.format(totalEgresos));
+
+    const listaOrdenada = [...categorias].sort((a, b) => parseFloat(b.total) - parseFloat(a.total));
+
+    if (listaOrdenada.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center p-3 text-muted">Sin egresos registrados en este rango.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+
+    listaOrdenada.forEach(c => {
+        const catNombre = NOMBRES_CAT[c.category] || c.category.replace(/_/g, ' ');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="ps-3 fw-semibold text-dark">${escapeHTML(catNombre)}</td>
+            <td class="text-center">
+                <span class="badge bg-light text-secondary border px-2 py-1">${c.count}</span>
+            </td>
+            <td class="text-end pe-3 fw-bold text-danger amount-num">-${fmtARS.format(parseFloat(c.total))}</td>
+        `;
+        fragment.appendChild(tr);
+    });
+
+    tbody.appendChild(fragment);
 }
 
 function renderizarEgresosCategorias(gastos) {
