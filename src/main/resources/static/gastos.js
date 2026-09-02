@@ -15,12 +15,18 @@ const fmtARS = new Intl.NumberFormat('es-AR', {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-    cargarGastos();
+    const hoy = new Date().toISOString().split('T')[0];
+    const fechaDesde = document.getElementById('fechaDesde');
+    const fechaHasta = document.getElementById('fechaHasta');
+    if (fechaDesde) fechaDesde.value = hoy;
+    if (fechaHasta) fechaHasta.value = hoy;
+
+    cargarGastos(0);
     cargarProveedoresParaSelect();
 
     const inputFecha = document.getElementById('fechaGasto');
     if (inputFecha && !inputFecha.value) {
-        inputFecha.value = new Date().toISOString().split('T')[0];
+        inputFecha.value = hoy;
     }
 
     const formGasto = document.getElementById('formGasto');
@@ -63,6 +69,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (filtroCategoria) filtroCategoria.addEventListener('change', aplicarFiltros);
     if (filtroMetodo) filtroMetodo.addEventListener('change', aplicarFiltros);
+    if (fechaDesde) fechaDesde.addEventListener('change', () => cargarGastos(0));
+    if (fechaHasta) fechaHasta.addEventListener('change', () => cargarGastos(0));
 });
 
 /**
@@ -260,6 +268,11 @@ function aplicarFiltros() {
 }
 
 function limpiarFiltros() {
+    const hoy = new Date().toISOString().split('T')[0];
+    const fechaDesde = document.getElementById('fechaDesde');
+    const fechaHasta = document.getElementById('fechaHasta');
+    if (fechaDesde) fechaDesde.value = hoy;
+    if (fechaHasta) fechaHasta.value = hoy;
     if (document.getElementById('filtroTexto')) document.getElementById('filtroTexto').value = '';
     if (document.getElementById('filtroCategoria')) document.getElementById('filtroCategoria').value = '';
     if (document.getElementById('filtroMetodoPago')) document.getElementById('filtroMetodoPago').value = '';
@@ -345,8 +358,8 @@ function renderizarGastos(gastos) {
                 badgeCaja = '<span class="badge bg-light text-secondary border border-secondary-subtle ms-1" style="font-size: 10px;" title="Fondos de Caja Fuerte / Fuera de caja física"><i class="bi bi-safe me-1"></i>Caja Fuerte</span>';
             } else if (esEfectivoCaja) {
                 badgeCaja = '<span class="badge bg-light text-secondary border border-secondary-subtle ms-1" style="font-size: 10px;" title="Restado del efectivo físico en caja"><i class="bi bi-cash me-1"></i>Descuenta Caja</span>';
-            } else if (g.paymentMethod === 'TRANSFERENCIA') {
-                badgeCaja = '<span class="badge bg-light text-secondary border border-secondary-subtle ms-1" style="font-size: 10px;" title="Pago por Transferencia Bancaria / QR"><i class="bi bi-bank me-1"></i>Digital / Banco</span>';
+            } else if (g.paymentMethod === 'TRANSFERENCIA' || g.paymentMethod === 'TARJETA') {
+                badgeCaja = '<span class="badge bg-light text-primary border border-primary-subtle ms-1" style="font-size: 10px;" title="Descuenta del saldo bancario o cuenta digital"><i class="bi bi-bank me-1"></i>Descuenta Cta. Digital</span>';
             }
         }
 
