@@ -44,7 +44,21 @@ public interface CustomerMovementRepository extends JpaRepository<CustomerMoveme
     /**
      * MED-04: Versión con tenant-scope obligatorio.
      * Navega Customer.company.id para garantizar que el movimiento pertenece
-     * a la misma empresa del usuario autenticado \u2014 defense in depth en anulación de ventas.
+     * a la misma empresa del usuario autenticado — defense in depth en anulación de ventas.
      */
     Optional<CustomerMovement> findFirstBySaleIdAndCustomerCompanyId(Long saleId, Long companyId);
+
+    @Query("SELECT cm FROM CustomerMovement cm JOIN FETCH cm.customer c " +
+           "WHERE c.company.id = :companyId AND cm.type = 'CREDITO' " +
+           "ORDER BY cm.createdAt DESC")
+    List<CustomerMovement> findRecentPaymentsByCompanyId(@Param("companyId") Long companyId, org.springframework.data.domain.Pageable pageable);
+
+    @Query("SELECT cm FROM CustomerMovement cm JOIN FETCH cm.customer c " +
+           "WHERE c.company.id = :companyId AND cm.type = 'CREDITO' " +
+           "AND cm.createdAt BETWEEN :start AND :end " +
+           "ORDER BY cm.createdAt DESC")
+    List<CustomerMovement> findPaymentsByCompanyIdAndDateRange(@Param("companyId") Long companyId,
+                                                               @Param("start") LocalDateTime start,
+                                                               @Param("end") LocalDateTime end,
+                                                               org.springframework.data.domain.Pageable pageable);
 }

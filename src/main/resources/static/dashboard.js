@@ -41,9 +41,45 @@ const dtFormatHora = new Intl.DateTimeFormat('es-AR', {
 
 function parsearFechaLocal(val) {
     if (!val) return null;
-    if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+    if (val instanceof Date) return (!isNaN(val.getTime()) && val.getTime() > 0) ? val : null;
+
+    // Formato Array [año, mes, día, hora, min, seg] común en serializadores LocalDateTime
+    if (Array.isArray(val) && val.length >= 3) {
+        const d = new Date(val[0], val[1] - 1, val[2], val[3] || 0, val[4] || 0, val[5] || 0);
+        return (!isNaN(d.getTime()) && d.getTime() > 0) ? d : null;
+    }
+
+    // Timestamp numérico
+    if (typeof val === 'number') {
+        const d = new Date(val);
+        return (!isNaN(d.getTime()) && d.getTime() > 0) ? d : null;
+    }
+
+    if (typeof val === 'string') {
+        val = val.trim();
+        if (/^\d+$/.test(val)) {
+            const d = new Date(parseInt(val, 10));
+            return (!isNaN(d.getTime()) && d.getTime() > 0) ? d : null;
+        }
+
+        // Formato fecha pura YYYY-MM-DD: crear fecha local sin desfase UTC
+        if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+            const parts = val.split('-');
+            const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), 0, 0, 0);
+            return (!isNaN(d.getTime()) && d.getTime() > 0) ? d : null;
+        }
+
+        // String con espacio en lugar de T: "YYYY-MM-DD HH:mm:ss"
+        if (val.includes(' ') && !val.includes('T')) {
+            val = val.replace(' ', 'T');
+        }
+
+        const d = new Date(val);
+        return (!isNaN(d.getTime()) && d.getTime() > 0) ? d : null;
+    }
+
     const d = new Date(val);
-    return isNaN(d.getTime()) ? null : d;
+    return (!isNaN(d.getTime()) && d.getTime() > 0) ? d : null;
 }
 
 function formatHoraAR(val) {
@@ -112,11 +148,12 @@ async function cargarKpisYTablas() {
     const hastaStr = formatInputDate(ultimoDiaMes);
 
     try {
-        const [resBoxMes, resVentas, resGastos, resProveedores] = await Promise.allSettled([
+        const [resBoxMes, resVentas, resGastos, resProveedores, resPagos] = await Promise.allSettled([
             apiFetch(`/sales/report/box?from=${desdeStr}&to=${hastaStr}`),
             apiFetch(`/sales?desde=${desdeStr}&hasta=${hastaStr}`),
             apiFetch('/expenses?size=1000'),
-            apiFetch('/providers?size=1000')
+            apiFetch('/providers?size=1000'),
+            apiFetch(`/customers/payments?desde=${desdeStr}&hasta=${hastaStr}&size=100`)
         ]);
 
         let listaVentas = [];
@@ -139,6 +176,12 @@ async function cargarKpisYTablas() {
             const data = await resProveedores.value.json();
             listaProveedores = Array.isArray(data) ? data : (data.content || []);
             totalProveedoresCount = data.totalElements !== undefined ? data.totalElements : listaProveedores.length;
+        }
+
+        let listaPagos = [];
+        if (resPagos.status === 'fulfilled' && resPagos.value && resPagos.value.ok) {
+            const data = await resPagos.value.json();
+            listaPagos = Array.isArray(data) ? data : (data.content || []);
         }
 
         // --- FILTRAR VENTAS ACTIVAS DEL MES ---
@@ -222,7 +265,7 @@ async function cargarKpisYTablas() {
 
         // --- RENDERIZAR TABLAS GERENCIALES ---
         renderizarTopProductos(ventasActivasMes);
-        renderizarUltimosMovimientos(listaVentas, listaGastos);
+        renderizarUltimosMovimientos(listaVentas, listaGastos, listaPagos);
 
     } catch (err) {
         console.error("Error cargando KPIs gerenciales:", err);
@@ -461,7 +504,7 @@ function renderizarTurnosCajaPeriodo(sessions, rangoTexto) {
     tbody.appendChild(fragment);
 }
 
-function renderizarUltimosMovimientos(ventas, gastos) {
+function renderizarUltimosMovimientos(ventas, gastos, pagos = []) {
     const tbody = document.getElementById('tablaUltimosMovimientos');
     if (!tbody) return;
 
@@ -471,8 +514,8 @@ function renderizarUltimosMovimientos(ventas, gastos) {
     (ventas || []).forEach(v => {
         if (v.canceled || v.status === 'ANULADA') return;
         const fechaRaw = v.saleDate || v.date || v.createdAt || v.created_at;
-        const fechaObj = parsearFechaLocal(fechaRaw) || (fechaRaw ? new Date(fechaRaw) : null);
-        if (!fechaObj || isNaN(fechaObj.getTime())) return;
+        const fechaObj = parsearFechaLocal(fechaRaw);
+        if (!fechaObj || isNaN(fechaObj.getTime()) || fechaObj.getTime() <= 0) return;
 
         const monto = parseFloat(v.total ?? v.amount ?? v.monto ?? 0);
         const comprobante = v.nroComprobante || v.invoiceNumber || (v.numeroTicket ? `Ticket #${v.numeroTicket}` : `Venta #${v.id}`);
@@ -491,8 +534,8 @@ function renderizarUltimosMovimientos(ventas, gastos) {
     // Normalizar gastos
     (gastos || []).forEach(g => {
         const fechaRaw = g.date || g.expenseDate || g.createdAt || g.created_at;
-        const fechaObj = parsearFechaLocal(fechaRaw) || (fechaRaw ? new Date(fechaRaw) : null);
-        if (!fechaObj || isNaN(fechaObj.getTime())) return;
+        const fechaObj = parsearFechaLocal(fechaRaw);
+        if (!fechaObj || isNaN(fechaObj.getTime()) || fechaObj.getTime() <= 0) return;
 
         const monto = parseFloat(g.amount ?? g.total ?? g.monto ?? 0);
         const esDeducible = Boolean(g.deductFromBox) && (g.paymentMethod === 'EFECTIVO_CAJA' || g.paymentMethod === 'EFECTIVO');
@@ -508,8 +551,30 @@ function renderizarUltimosMovimientos(ventas, gastos) {
         });
     });
 
-    // Ordenar cronológicamente descendente (más recientes primero)
+    // Normalizar cobros / pagos de cuentas corrientes
+    (pagos || []).forEach(p => {
+        const fechaRaw = p.date || p.createdAt || p.fecha;
+        const fechaObj = parsearFechaLocal(fechaRaw);
+        if (!fechaObj || isNaN(fechaObj.getTime()) || fechaObj.getTime() <= 0) return;
+
+        const monto = parseFloat(p.amount ?? p.monto ?? p.total ?? 0);
+        const nombreCliente = p.customerName || p.clienteNombre || p.cliente || 'Cliente';
+        const concepto = `Cobro Cta. Cte. - ${nombreCliente}`;
+
+        movimientos.push({
+            tipo: 'PAGO_CLIENTE',
+            id: p.id,
+            concepto: concepto,
+            fecha: fechaObj,
+            metodo: (p.paymentMethod || 'EFECTIVO').replace(/_/g, ' '),
+            monto: monto,
+            deductFromBox: false
+        });
+    });
+
+    // Filtrar fechas válidas (>0) y ordenar cronológicamente descendente estricto (más recientes primero)
     const ultimos5 = movimientos
+        .filter(m => m.fecha instanceof Date && !isNaN(m.fecha.getTime()) && m.fecha.getTime() > 0)
         .sort((a, b) => b.fecha.getTime() - a.fecha.getTime())
         .slice(0, 5);
 
@@ -527,18 +592,32 @@ function renderizarUltimosMovimientos(ventas, gastos) {
 
     ultimos5.forEach(m => {
         const esVenta = m.tipo === 'VENTA';
-        const icono = esVenta ? 'bi-cart-check-fill text-success' : 'bi-wallet2 text-danger';
-        const badgeBg = esVenta ? 'bg-success bg-opacity-10' : 'bg-danger bg-opacity-10';
+        const esPago = m.tipo === 'PAGO_CLIENTE';
+        const esIngreso = esVenta || esPago;
 
-        // Las ventas deben sumar en verde (+ $X) y los gastos restar en rojo (- $X)
-        const montoTexto = esVenta ? `+ ${fmtARS.format(m.monto)}` : `- ${fmtARS.format(m.monto)}`;
-        const montoClase = esVenta ? 'text-success fw-bold' : (m.deductFromBox ? 'text-danger fw-bold' : 'text-danger');
+        let icono = 'bi-cart-check-fill text-success';
+        let badgeBg = 'bg-success bg-opacity-10';
+        if (esPago) {
+            icono = 'bi-check2-circle text-primary';
+            badgeBg = 'bg-primary bg-opacity-10';
+        } else if (!esVenta) {
+            icono = 'bi-wallet2 text-danger';
+            badgeBg = 'bg-danger bg-opacity-10';
+        }
+
+        // Ingresos (Ventas y Cobros Cta. Cte.) suman en verde (+ $X), Gastos restan en rojo (- $X)
+        const montoTexto = esIngreso ? `+ ${fmtARS.format(m.monto)}` : `- ${fmtARS.format(m.monto)}`;
+        const montoClase = esIngreso ? 'text-success fw-bold' : (m.deductFromBox ? 'text-danger fw-bold' : 'text-danger');
 
         const horaFormateada = formatHoraAR(m.fecha);
         const diaFormateado = formatFechaCortaAR(m.fecha);
 
-        const badgeBoxDeduct = (!esVenta && m.deductFromBox)
+        const badgeBoxDeduct = (!esIngreso && m.deductFromBox)
             ? '<span class="badge bg-danger text-white ms-1" style="font-size: 0.65rem;">Caja</span>'
+            : '';
+
+        const badgeTipo = esPago
+            ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1" style="font-size: 0.65rem;">Cobro</span>'
             : '';
 
         const tr = document.createElement('tr');
@@ -559,6 +638,7 @@ function renderizarUltimosMovimientos(ventas, gastos) {
                     ${escapeHTML(m.metodo)}
                 </span>
                 ${badgeBoxDeduct}
+                ${badgeTipo}
             </td>
             <td class="text-end pe-3 ${montoClase} amount-num">
                 ${montoTexto}

@@ -17,6 +17,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import com.baez.baezpos.customer.dto.CustomerPaymentResponseDTO;
+import org.springframework.format.annotation.DateTimeFormat;
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -47,6 +50,15 @@ public class CustomerController {
             @RequestParam(required = false) String q,
             @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
         return ResponseEntity.ok(customerService.searchCustomers(q, pageable));
+    }
+
+    @GetMapping("/payments")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'SUPER_ADMIN')")
+    public ResponseEntity<List<CustomerPaymentResponseDTO>> getPayments(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
+            @PageableDefault(size = 50) Pageable pageable) {
+        return ResponseEntity.ok(customerService.getPayments(desde, hasta, pageable));
     }
 
     @GetMapping("/{id}/movements")

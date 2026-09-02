@@ -12,6 +12,9 @@ import org.springframework.data.domain.Pageable;
 import java.math.BigDecimal;
 import java.util.List;
 
+import com.baez.baezpos.customer.dto.CustomerPaymentResponseDTO;
+import java.time.LocalDate;
+
 public interface CustomerService {
     List<CustomerResponseDTO> getAll();
     Page<CustomerResponseDTO> getAll(Pageable pageable);
@@ -24,4 +27,5 @@ public interface CustomerService {
     void updateBalance(Long customerId, BigDecimal amount, String type, String description, Sale sale, String paymentMethod, CashRegisterSession cashRegisterSession);
     void processCustomerPayment(Long id, BigDecimal amount, String method);
     void deleteCustomer(Long id);
+    List<CustomerPaymentResponseDTO> getPayments(LocalDate desde, LocalDate hasta, Pageable pageable);
 }

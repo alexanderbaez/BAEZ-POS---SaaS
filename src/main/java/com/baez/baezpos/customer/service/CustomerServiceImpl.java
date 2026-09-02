@@ -3,10 +3,14 @@ package com.baez.baezpos.customer.service;
 import com.baez.baezpos.company.entity.Company;
 import com.baez.baezpos.company.repository.CompanyRepository;
 import com.baez.baezpos.customer.dto.CustomerMovementDTO;
+import com.baez.baezpos.customer.dto.CustomerPaymentResponseDTO;
 import com.baez.baezpos.customer.dto.CustomerRequestDTO;
 import com.baez.baezpos.customer.dto.CustomerResponseDTO;
 import com.baez.baezpos.customer.entities.Customer;
 import com.baez.baezpos.customer.entities.CustomerMovement;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import com.baez.baezpos.customer.repository.CustomerMovementRepository;
 import com.baez.baezpos.customer.repository.CustomerRepository;
 import com.baez.baezpos.log.service.AuditService;
@@ -299,6 +303,31 @@ public class CustomerServiceImpl implements CustomerService {
             throw new BadRequestException("Acceso denegado: Se requiere contexto de empresa válido.");
         }
         return companyId;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CustomerPaymentResponseDTO> getPayments(LocalDate desde, LocalDate hasta, Pageable pageable) {
+        Long companyId = requireCompanyContext();
+
+        List<CustomerMovement> movements;
+        if (desde != null && hasta != null) {
+            LocalDateTime start = desde.atStartOfDay();
+            LocalDateTime end = hasta.atTime(LocalTime.MAX);
+            movements = customerMovementRepository.findPaymentsByCompanyIdAndDateRange(companyId, start, end, pageable);
+        } else {
+            movements = customerMovementRepository.findRecentPaymentsByCompanyId(companyId, pageable);
+        }
+
+        return movements.stream().map(cm -> new CustomerPaymentResponseDTO(
+                cm.getId(),
+                cm.getCustomer() != null ? cm.getCustomer().getId() : null,
+                cm.getCustomer() != null ? cm.getCustomer().getName() : "Cliente",
+                cm.getAmount(),
+                cm.getPaymentMethod() != null ? cm.getPaymentMethod() : "EFECTIVO",
+                cm.getDescription(),
+                cm.getCreatedAt()
+        )).toList();
     }
 
     private CustomerResponseDTO mapToDTO(Customer c) {
