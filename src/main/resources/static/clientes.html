@@ -239,13 +239,19 @@
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content border-0 shadow-lg overflow-hidden">
         <!-- Cabecera del Modal -->
-        <div class="modal-header bg-dark text-white p-3 p-md-4 d-flex justify-content-between align-items-center">
-          <div>
-            <h5 class="fw-bold m-0" id="historialTitulo">Libreta de Cliente</h5>
-            <small class="text-white-50" id="historialSubtitulo"></small>
+        <div class="modal-header bg-dark text-white p-3 p-md-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <div class="d-flex align-items-center gap-3">
+            <div>
+              <h5 class="fw-bold m-0 d-flex align-items-center gap-2" id="historialTitulo">
+                <i class="bi bi-journal-bookmark-fill text-primary"></i> Libreta de Cliente
+              </h5>
+              <div id="historialBadgeContenedor" class="mt-2">
+                <span id="historialSubtitulo" class="badge rounded-pill px-3 py-1.5 fs-6 fw-bold"></span>
+              </div>
+            </div>
           </div>
-          <div class="d-flex align-items-center gap-2">
-            <button type="button" id="btnWhatsappModal" class="btn btn-sm btn-success fw-bold d-none align-items-center gap-1.5 shadow-sm" style="background-color: #25D366; border-color: #25D366;" title="Enviar recordatorio de saldo por WhatsApp">
+          <div class="d-flex align-items-center gap-2 ms-auto">
+            <button type="button" id="btnWhatsappModal" class="btn btn-sm btn-success fw-bold d-none align-items-center gap-1.5 shadow-sm px-3 py-1.5 rounded-pill" style="background-color: #25D366; border-color: #25D366;" title="Enviar recordatorio de saldo por WhatsApp">
               <i class="fab fa-whatsapp fs-5 text-white"></i> <span class="d-none d-sm-inline">Recordatorio WhatsApp</span>
             </button>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -253,19 +259,25 @@
         </div>
 
         <!-- Filtros por Fecha -->
-        <div class="bg-light border-bottom p-3">
-          <div class="row g-2 align-items-center">
-            <div class="col-6 col-md-4">
-              <label class="small fw-bold text-muted d-block mb-1">Desde:</label>
-              <input type="date" id="filtroFechaDesde" class="form-control form-control-sm border shadow-none" onchange="aplicarFiltroFechas()">
+        <div class="p-3 bg-white border-bottom">
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 p-2.5 bg-light rounded-3 border">
+            <div class="d-flex flex-wrap align-items-center gap-3 flex-grow-1">
+              <div class="d-flex align-items-center gap-1.5">
+                <label for="filtroFechaDesde" class="small fw-bold text-secondary text-uppercase mb-0 text-nowrap" style="font-size: 0.75rem;">
+                  <i class="bi bi-calendar3 me-1"></i>Desde:
+                </label>
+                <input type="date" id="filtroFechaDesde" class="form-control form-control-sm border shadow-none bg-white rounded-2" style="max-width: 155px;" onchange="aplicarFiltroFechas()">
+              </div>
+              <div class="d-flex align-items-center gap-1.5">
+                <label for="filtroFechaHasta" class="small fw-bold text-secondary text-uppercase mb-0 text-nowrap" style="font-size: 0.75rem;">
+                  <i class="bi bi-calendar3 me-1"></i>Hasta:
+                </label>
+                <input type="date" id="filtroFechaHasta" class="form-control form-control-sm border shadow-none bg-white rounded-2" style="max-width: 155px;" onchange="aplicarFiltroFechas()">
+              </div>
             </div>
-            <div class="col-6 col-md-4">
-              <label class="small fw-bold text-muted d-block mb-1">Hasta:</label>
-              <input type="date" id="filtroFechaHasta" class="form-control form-control-sm border shadow-none" onchange="aplicarFiltroFechas()">
-            </div>
-            <div class="col-12 col-md-4 d-flex gap-2 align-items-end pt-1 pt-md-3">
-              <button class="btn btn-sm btn-outline-primary w-100 fw-bold" onclick="limpiarFiltroFechas()">
-                <i class="bi bi-calendar-check me-1"></i> Ver Todo
+            <div>
+              <button class="btn btn-sm btn-outline-secondary px-3 py-1.5 fw-bold rounded-2 text-nowrap shadow-none d-inline-flex align-items-center gap-1.5" onclick="limpiarFiltroFechas()">
+                <i class="bi bi-calendar2-range"></i> Ver Todo
               </button>
             </div>
           </div>
@@ -275,13 +287,13 @@
         <div class="modal-body p-0">
           <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-              <thead class="bg-light small text-uppercase">
+              <thead class="bg-light text-secondary text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">
               <tr>
-                <th class="ps-3">Fecha</th>
-                <th>Concepto / Productos</th>
-                <th class="text-end d-none d-sm-table-cell">Debe (+)</th>
-                <th class="text-end d-none d-sm-table-cell">Haber (-)</th>
-                <th class="pe-3 text-end">Saldo</th>
+                <th class="ps-3 py-3">Fecha</th>
+                <th class="py-3">Concepto / Productos</th>
+                <th class="text-end py-3">Debe (+)</th>
+                <th class="text-end py-3">Haber (-)</th>
+                <th class="pe-3 text-end py-3">Saldo</th>
               </tr>
               </thead>
               <tbody id="listaMovimientos" class="small"></tbody>

@@ -41,6 +41,32 @@ function formatCurrency(amount) {
 }
 
 /**
+ * Obtiene el nombre del comercio desde DATOS_EMPRESA, sesión o DOM.
+ */
+function obtenerNombreNegocio() {
+    if (DATOS_EMPRESA && DATOS_EMPRESA.name) {
+        return DATOS_EMPRESA.name.trim();
+    }
+    try {
+        const storedUser = localStorage.getItem('currentUser');
+        if (storedUser) {
+            const parsed = JSON.parse(storedUser);
+            if (parsed.companyName) return parsed.companyName.trim();
+            if (parsed.company?.name) return parsed.company.name.trim();
+        }
+    } catch (e) {}
+    try {
+        const sessionComp = sessionStorage.getItem('companyName');
+        if (sessionComp && sessionComp.trim() !== '') return sessionComp.trim();
+    } catch (e) {}
+    const domComp = document.getElementById('companyName') || document.getElementById('companyNameNav');
+    if (domComp && domComp.textContent && domComp.textContent.trim() !== '') {
+        return domComp.textContent.trim();
+    }
+    return "BaezPOS";
+}
+
+/**
  * Formatea la cantidad considerando si el producto se vende por fracción/peso o por unidad entera.
  */
 function formatQuantity(quantity, isFractional) {
@@ -416,6 +442,13 @@ async function eliminarCliente(id, nombre) {
 
 async function verHistorial(id, nombre, telefono) {
     try {
+        // Inicializar inputs de fecha con la fecha actual (Hoy) antes de disparar la consulta
+        const hoy = new Date().toISOString().split('T')[0];
+        const inputDesde = document.getElementById('filtroFechaDesde');
+        const inputHasta = document.getElementById('filtroFechaHasta');
+        if (inputDesde) inputDesde.value = hoy;
+        if (inputHasta) inputHasta.value = hoy;
+
         const resp = await apiFetch(`${API_CUSTOMERS}/${id}/movements`);
         if (!resp || !resp.ok) throw new Error("Error al obtener movimientos");
 
@@ -423,10 +456,7 @@ async function verHistorial(id, nombre, telefono) {
         CLIENTE_ACTUAL = { id, nombre, telefono };
 
         const titEl = document.getElementById('historialTitulo');
-        if (titEl) titEl.textContent = `Libreta: ${nombre.toUpperCase()}`;
-
-        if (document.getElementById('filtroFechaDesde')) document.getElementById('filtroFechaDesde').value = '';
-        if (document.getElementById('filtroFechaHasta')) document.getElementById('filtroFechaHasta').value = '';
+        if (titEl) titEl.innerHTML = `<i class="bi bi-journal-bookmark-fill text-primary"></i> Libreta: ${nombre.toUpperCase()}`;
 
         renderizarTablaMovimientos();
 
@@ -441,6 +471,9 @@ async function verHistorial(id, nombre, telefono) {
         Swal.fire('Error', 'No se pudieron cargar los movimientos.', 'error');
     }
 }
+
+const abrirModalDetallesCliente = verHistorial;
+window.abrirModalDetallesCliente = abrirModalDetallesCliente;
 
 function aplicarFiltroFechas() { renderizarTablaMovimientos(); }
 function limpiarFiltroFechas() {
@@ -491,8 +524,13 @@ function renderizarTablaMovimientos() {
         tbody.innerHTML = `
             <tr>
                 <td colspan="5" class="text-center text-muted py-4">
-                    <i class="bi bi-calendar-x fs-3 d-block mb-1"></i>
+                    <i class="bi bi-calendar-x fs-3 d-block mb-1 text-secondary"></i>
                     No se encontraron movimientos para el rango seleccionado.
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-outline-primary fw-bold" onclick="limpiarFiltroFechas()">
+                            <i class="bi bi-calendar-check me-1"></i> Ver Todo el Historial
+                        </button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -521,8 +559,8 @@ function renderizarTablaMovimientos() {
             }
 
             const icono = esVenta
-                ? '<i class="bi bi-receipt text-primary me-2"></i>'
-                : '<i class="bi bi-cash-stack text-success me-2"></i>';
+                ? '<i class="bi bi-receipt text-primary me-2 fs-6"></i>'
+                : '<i class="bi bi-cash-stack text-success me-2 fs-6"></i>';
 
             let badgesAdicionales = '';
             if (esVenta) {
@@ -530,26 +568,36 @@ function renderizarTablaMovimientos() {
                 if (recargo > 0) badgesAdicionales += `<span class="badge bg-warning-subtle text-warning-emphasis ms-1" style="font-size: 0.65rem;">RECARGO +${formatCurrency(recargo)}</span>`;
             }
 
+            const badgeDebe = esVenta
+                ? `<span class="badge rounded-pill bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2.5 py-1.5 fw-bold font-monospace">+${formatCurrency(montoFinal)}</span>`
+                : '<span class="text-muted small">-</span>';
+
+            const badgeHaber = !esVenta
+                ? `<span class="badge rounded-pill bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1.5 fw-bold font-monospace">-${formatCurrency(montoFinal)}</span>`
+                : '<span class="text-muted small">-</span>';
+
+            const badgeSaldo = `<span class="badge rounded-pill ${m.saldoMomentaneo > 0 ? 'bg-secondary bg-opacity-10 text-dark border' : (m.saldoMomentaneo < 0 ? 'bg-info bg-opacity-10 text-info border border-info border-opacity-25' : 'bg-success bg-opacity-10 text-success border border-success border-opacity-25')} px-2.5 py-1.5 fw-bold font-monospace">${formatCurrency(m.saldoMomentaneo)}</span>`;
+
             const trPrincipal = document.createElement('tr');
             trPrincipal.className = 'align-middle';
             trPrincipal.style.cursor = esVenta ? 'pointer' : 'default';
             if (esVenta) trPrincipal.onclick = () => toggleDetalle(idx);
 
             trPrincipal.innerHTML = `
-                <td class="ps-4 text-muted" style="font-size: 0.75rem;">${fecha}</td>
-                <td>
+                <td class="ps-3 py-3 text-muted" style="font-size: 0.78rem;">${fecha}</td>
+                <td class="py-3">
                     <div class="d-flex align-items-center">
                         ${icono}
                         <div>
-                            <span class="${esVenta ? 'text-dark' : 'text-success fw-bold'}">${sanitizeHTML(m.description || (esVenta ? 'Venta' : 'Pago de Libreta'))}</span>
+                            <span class="${esVenta ? 'text-dark fw-semibold' : 'text-success fw-bold'}">${sanitizeHTML(m.description || (esVenta ? 'Venta' : 'Pago de Libreta'))}</span>
                             ${badgesAdicionales}
                         </div>
                         ${esVenta ? `<i id="icon-${idx}" class="bi bi-chevron-down ms-2 text-primary small"></i>` : ''}
                     </div>
                 </td>
-                <td class="text-end text-danger fw-bold">${esVenta ? '+' + formatCurrency(montoFinal) : ''}</td>
-                <td class="text-end text-success fw-bold">${!esVenta ? '-' + formatCurrency(montoFinal) : ''}</td>
-                <td class="pe-4 text-end fw-bold text-secondary">${formatCurrency(m.saldoMomentaneo)}</td>
+                <td class="text-end py-3">${badgeDebe}</td>
+                <td class="text-end py-3">${badgeHaber}</td>
+                <td class="pe-3 text-end py-3">${badgeSaldo}</td>
             `;
 
             tbody.appendChild(trPrincipal);
@@ -634,7 +682,16 @@ function renderizarTablaMovimientos() {
 
     const subEl = document.getElementById('historialSubtitulo');
     if (subEl) {
-        subEl.textContent = `Deuda Total Actual: ${formatCurrency(saldoAcumulado)}`;
+        if (saldoAcumulado > 0) {
+            subEl.className = 'badge rounded-pill bg-danger bg-opacity-25 text-danger-emphasis border border-danger border-opacity-50 px-3 py-1.5 fs-6 fw-bold shadow-sm';
+            subEl.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1.5 text-danger"></i> Deuda Total Actual: <span class="text-danger fw-black">${formatCurrency(saldoAcumulado)}</span>`;
+        } else if (saldoAcumulado < 0) {
+            subEl.className = 'badge rounded-pill bg-info bg-opacity-25 text-info-emphasis border border-info border-opacity-50 px-3 py-1.5 fs-6 fw-bold shadow-sm';
+            subEl.innerHTML = `<i class="bi bi-info-circle-fill me-1.5 text-info"></i> Saldo a Favor: <span class="text-info fw-black">${formatCurrency(Math.abs(saldoAcumulado))}</span>`;
+        } else {
+            subEl.className = 'badge rounded-pill bg-success bg-opacity-25 text-success-emphasis border border-success border-opacity-50 px-3 py-1.5 fs-6 fw-bold shadow-sm';
+            subEl.innerHTML = `<i class="bi bi-check-circle-fill me-1.5 text-success"></i> Al Día: <span class="text-success fw-black">${formatCurrency(0)}</span>`;
+        }
     }
 
     const btnWsModal = document.getElementById('btnWhatsappModal');
@@ -807,59 +864,37 @@ function compartirWhatsApp(nombreCliente, telefono, fecha, total, items = [], de
         return Swal.fire('Atención', 'El cliente no tiene un teléfono registrado.', 'warning');
     }
 
-    const local = DATOS_EMPRESA?.name?.toUpperCase() || "BAEZ POS";
-    const direccion = DATOS_EMPRESA?.address || "";
-    const mensajePie = DATOS_EMPRESA?.ticketMessage || '¡Muchas gracias por su compra!';
-
+    const nombreNegocio = obtenerNombreNegocio();
+    const clienteNombre = nombreCliente ? String(nombreCliente).trim() : 'Cliente';
     const totalNum = parseFloat(total) || 0;
-    const descNum = parseFloat(descuento) || 0;
-    const recNum = parseFloat(recargo) || 0;
-    const subtotalNum = parseFloat(subtotal) || 0;
+    const totalFormateado = (typeof formatCurrency === 'function' ? formatCurrency(totalNum).replace('$', '').trim() : totalNum.toFixed(2));
 
-    let texto = `=====================\n`;
-    texto += `BAEZ POS\n`;
-    texto += `TICKET DE PAGO\n`;
-    texto += `=====================\n\n`;
-    texto += `  ðŸ ª  *${local}*\n`;
-    if (direccion) texto += `  ðŸ“   _${direccion}_\n`;
-    texto += `â”—â” â” â” â” â” â” â” â” â” â” â” â” â” â” â” â” â” â” â” â” â”›\n\n`;
-
-    texto += `*ðŸ§¾ COMPROBANTE DE COMPRA*\n`;
-    texto += `------------------------------------------\n`;
-    texto += `*ðŸ‘¤ CLIENTE:* ${nombreCliente.toUpperCase()}\n`;
-    texto += `*ðŸ“… FECHA:* ${fecha}\n`;
-    texto += `*ðŸ’³ PAGO:* LIBRETA (A CUENTA)\n`;
-    texto += `------------------------------------------\n\n`;
-
+    let detalleTexto = '';
     if (Array.isArray(items) && items.length > 0) {
-        texto += `*ðŸ›’ DETALLE DE PRODUCTOS:*\n`;
-        items.forEach(i => {
+        detalleTexto = items.map(i => {
             const sub = i.subtotal !== undefined ? parseFloat(i.subtotal) : ((parseFloat(i.price) || 0) * (parseFloat(i.quantity) || 1));
-            const cantidadFormateada = formatQuantity(i.quantity, i.isFractional);
-
-            texto += `- ${cantidadFormateada} ${(i.productName || i.nombre || 'Producto').toUpperCase()} $${(i.subtotal || 0).toFixed(2)}\n`;
-        });
-        texto += `------------------------------------------\n`;
-        if (subtotalNum > 0) {
-            texto += `*Subtotal:* ${formatCurrency(subtotalNum)}\n`;
-        }
+            const cantidad = formatQuantity(i.quantity, i.isFractional);
+            const producto = (i.productName || i.nombre || 'Producto').trim();
+            const precio = typeof formatCurrency === 'function' ? formatCurrency(sub).replace('$', '').trim() : sub.toFixed(2);
+            return `${cantidad} x ${producto} - $${precio}`;
+        }).join('\n');
+    } else {
+        detalleTexto = `1 x Compra en Libreta - $${totalFormateado}`;
     }
 
-    if (descNum > 0) texto += `*DESCUENTO:* -${formatCurrency(descNum)}\n`;
-    if (recNum > 0) {
-        const pctText = porcentajeRecargo > 0 ? ` (${porcentajeRecargo}%)` : '';
-        texto += `*RECARGO LIBRETA${pctText}:* +${formatCurrency(recNum)}\n`;
-    }
+    const texto = `*TICKET DE COMPRA - ${nombreNegocio}*
 
-    texto += `\n------------------------------------------\n`;
-    texto += `*ðŸ’° TOTAL FINAL: ${formatCurrency(totalNum)}*\n`;
-    texto += `------------------------------------------\n\n`;
+*Cliente:* ${clienteNombre}
+*Fecha:* ${fecha}
 
-    texto += `ðŸ’¬ _${mensajePie}_\n\n`;
-    texto += `*¡Tu saldo ha sido actualizado en la libreta!*\n\n`;
-    texto += `\n_Generado por BAEZ POS_`;
+*Detalle:*
+${detalleTexto}
 
-    const numLimpio = telefono.replace(/\D/g, '');
+*TOTAL FINAL: $${totalFormateado}*
+
+¡Muchas gracias por su compra!`;
+
+    const numLimpio = String(telefono).replace(/\D/g, '');
     window.open(`https://wa.me/${numLimpio}?text=${encodeURIComponent(texto)}`, '_blank');
 }
 
@@ -871,9 +906,11 @@ function enviarRecordatorioWhatsApp(telefono, saldo, nombre) {
         return Swal.fire('Atención', 'El cliente no tiene un número de teléfono registrado.', 'warning');
     }
     const numLimpio = String(telefono).replace(/\D/g, '');
-    const saldoFormateado = (typeof formatCurrency === 'function' ? formatCurrency(saldo).replace('$', '').trim() : String(saldo).replace('$', '').trim());
-    const nombreCliente = nombre ? String(nombre).trim() : 'estimado/a cliente';
-    const mensaje = "Hola " + nombreCliente + ", nos comunicamos para recordarte que tu saldo de cuenta corriente es de $" + saldoFormateado + ". ¡Cualquier consulta estamos a tu disposición, muchas gracias!";
+    const saldoFormateado = (typeof formatCurrency === 'function' ? formatCurrency(saldo) : `$${(parseFloat(saldo) || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+    const clienteNombre = nombre ? String(nombre).trim() : 'estimado/a cliente';
+    const nombreNegocio = obtenerNombreNegocio();
+
+    const mensaje = `Hola ${clienteNombre}, nos comunicamos de *${nombreNegocio}* para recordarte que tu saldo de cuenta corriente es de ${saldoFormateado}. ¡Cualquier consulta estamos a tu disposición, muchas gracias!`;
     const url = `https://wa.me/${numLimpio}?text=${encodeURIComponent(mensaje)}`;
     window.open(url, '_blank');
 }
@@ -891,3 +928,4 @@ window.limpiarFiltroFechas = limpiarFiltroFechas;
 window.toggleDetalle = toggleDetalle;
 window.compartirWhatsApp = compartirWhatsApp;
 window.enviarRecordatorioWhatsApp = enviarRecordatorioWhatsApp;
+window.abrirModalDetallesCliente = verHistorial;
