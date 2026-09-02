@@ -20,11 +20,31 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
     org.springframework.data.domain.Page<Expense> findByCompanyIdOrderByExpenseDateDesc(Long companyId, org.springframework.data.domain.Pageable pageable);
 
+    org.springframework.data.domain.Page<Expense> findByCompanyIdOrderByCreatedAtDesc(Long companyId, org.springframework.data.domain.Pageable pageable);
+
     org.springframework.data.domain.Page<Expense> findByCompanyIdAndExpenseDateBetweenOrderByExpenseDateDesc(Long companyId, LocalDateTime start, LocalDateTime end, org.springframework.data.domain.Pageable pageable);
 
     org.springframework.data.domain.Page<Expense> findByCompanyIdAndProviderIdOrderByExpenseDateDesc(Long companyId, Long providerId, org.springframework.data.domain.Pageable pageable);
 
+    org.springframework.data.domain.Page<Expense> findByCompanyIdAndProviderIdOrderByCreatedAtDesc(Long companyId, Long providerId, org.springframework.data.domain.Pageable pageable);
+
     org.springframework.data.domain.Page<Expense> findByCompanyIdAndProviderIdAndExpenseDateBetweenOrderByExpenseDateDesc(Long companyId, Long providerId, LocalDateTime start, LocalDateTime end, org.springframework.data.domain.Pageable pageable);
+
+    List<Expense> findByCompanyIdOrderByExpenseDateDesc(Long companyId);
+
+    List<Expense> findByCompanyIdOrderByCreatedAtDesc(Long companyId);
+
+    List<Expense> findByCompanyIdAndProviderIdOrderByExpenseDateDesc(Long companyId, Long providerId);
+
+    List<Expense> findByCompanyIdAndProviderIdOrderByCreatedAtDesc(Long companyId, Long providerId);
+
+    List<Expense> findByProviderIdOrderByExpenseDateDesc(Long providerId);
+
+    List<Expense> findByProviderIdOrderByCreatedAtDesc(Long providerId);
+
+    org.springframework.data.domain.Page<Expense> findByProviderIdOrderByExpenseDateDesc(Long providerId, org.springframework.data.domain.Pageable pageable);
+
+    org.springframework.data.domain.Page<Expense> findByProviderIdOrderByCreatedAtDesc(Long providerId, org.springframework.data.domain.Pageable pageable);
 
     Optional<Expense> findByIdAndCompanyId(Long id, Long companyId);
 

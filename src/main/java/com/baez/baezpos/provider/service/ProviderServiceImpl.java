@@ -47,7 +47,7 @@ public class ProviderServiceImpl implements ProviderService {
     public Page<ProviderResponseDTO> getAll(Pageable pageable) {
         Long companyId = getRequiredCompanyId();
         Page<Provider> page = (companyId != null)
-                ? providerRepository.findByCompanyIdAndActiveTrue(companyId, pageable)
+                ? providerRepository.findByCompanyIdAndActiveTrueOrderByBusinessNameAsc(companyId, pageable)
                 : providerRepository.findAll(pageable);
         page.forEach(this::recalcularSaldoProveedor);
         return page.map(this::mapToDTO);

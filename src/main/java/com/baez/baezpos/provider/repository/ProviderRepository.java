@@ -16,12 +16,21 @@ public interface ProviderRepository extends JpaRepository<Provider, Long> {
 
     org.springframework.data.domain.Page<Provider> findByCompanyIdAndActiveTrue(Long companyId, org.springframework.data.domain.Pageable pageable);
 
+    org.springframework.data.domain.Page<Provider> findByCompanyIdAndActiveTrueOrderByBusinessNameAsc(Long companyId, org.springframework.data.domain.Pageable pageable);
+
+    org.springframework.data.domain.Page<Provider> findByCompanyIdOrderByBusinessNameAsc(Long companyId, org.springframework.data.domain.Pageable pageable);
+
+    List<Provider> findByCompanyIdAndActiveTrueOrderByBusinessNameAsc(Long companyId);
+
+    List<Provider> findByCompanyIdOrderByBusinessNameAsc(Long companyId);
+
     Optional<Provider> findByIdAndCompanyId(Long id, Long companyId);
 
     Optional<Provider> findByIdAndCompanyIdAndActiveTrue(Long id, Long companyId);
 
     @Query("SELECT p FROM Provider p WHERE p.company.id = :companyId AND p.active = true AND " +
-            "(LOWER(p.businessName) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.taxId) LIKE LOWER(CONCAT('%', :query, '%')))")
+            "(LOWER(p.businessName) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.taxId) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+            "ORDER BY p.businessName ASC")
     org.springframework.data.domain.Page<Provider> searchProvidersByCompanyId(@Param("query") String query, @Param("companyId") Long companyId, org.springframework.data.domain.Pageable pageable);
 
     @Query("SELECT COALESCE(SUM(p.currentBalance), 0) FROM Provider p WHERE p.company.id = :companyId AND p.active = true")

@@ -165,7 +165,6 @@ function renderizarProveedores(lista) {
                     </div>
                     <div>
                         <strong class="text-dark d-block">${escapeHTML(prov.businessName)}</strong>
-                        <small class="text-muted">ID #${prov.id}</small>
                     </div>
                 </div>
             </td>
@@ -419,7 +418,7 @@ async function guardarProveedor() {
  */
 async function eliminarProveedor(id) {
     const prov = proveedoresGlobales.find(p => p.id === id);
-    const nombre = prov ? prov.businessName : `ID #${id}`;
+    const nombre = prov ? prov.businessName : 'este proveedor';
 
     const confirmacion = await Swal.fire({
         title: '¿Dar de baja proveedor?',
