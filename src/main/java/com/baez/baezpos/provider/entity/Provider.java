@@ -37,6 +37,10 @@ public class Provider extends TenantEntity {
     private String email;
 
     @Builder.Default
+    @Column(name = "initial_balance", precision = 12, scale = 2)
+    private BigDecimal initialBalance = BigDecimal.ZERO;
+
+    @Builder.Default
     @Column(name = "current_balance", nullable = false, precision = 12, scale = 2)
     private BigDecimal currentBalance = BigDecimal.ZERO;
 

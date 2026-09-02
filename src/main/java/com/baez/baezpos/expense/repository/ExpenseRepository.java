@@ -77,4 +77,14 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
             @Param("companyId") Long companyId,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end);
+
+    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e " +
+           "WHERE e.providerId = :providerId " +
+           "AND (e.paymentMethod IS NULL OR e.paymentMethod != com.baez.baezpos.shared.entity.PaymentMethod.CUENTA_CORRIENTE)")
+    BigDecimal sumPaymentsByProviderId(@Param("providerId") Long providerId);
+
+    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e " +
+           "WHERE e.providerId = :providerId " +
+           "AND e.paymentMethod = com.baez.baezpos.shared.entity.PaymentMethod.CUENTA_CORRIENTE")
+    BigDecimal sumCreditPurchasesByProviderId(@Param("providerId") Long providerId);
 }

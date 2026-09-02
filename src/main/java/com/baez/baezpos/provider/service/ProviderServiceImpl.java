@@ -28,6 +28,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.baez.baezpos.provider.repository.PurchaseOrderRepository;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -36,34 +38,33 @@ public class ProviderServiceImpl implements ProviderService {
     private final ProviderRepository providerRepository;
     private final CompanyRepository companyRepository;
     private final ExpenseRepository expenseRepository;
+    private final PurchaseOrderRepository purchaseOrderRepository;
     private final CashRegisterService cashRegisterService;
     private final AuditService auditService;
 
-
-
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public Page<ProviderResponseDTO> getAll(Pageable pageable) {
         Long companyId = getRequiredCompanyId();
         Page<Provider> page = (companyId != null)
                 ? providerRepository.findByCompanyIdAndActiveTrue(companyId, pageable)
                 : providerRepository.findAll(pageable);
+        page.forEach(this::recalcularSaldoProveedor);
         return page.map(this::mapToDTO);
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public ProviderResponseDTO getById(Long id) {
         Long companyId = getRequiredCompanyId();
         Provider provider = providerRepository.findByIdAndCompanyIdAndActiveTrue(id, companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado con ID: " + id));
+        provider = recalcularSaldoProveedor(provider);
         return mapToDTO(provider);
     }
 
-
-
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public Page<ProviderResponseDTO> search(String query, Pageable pageable) {
         Long companyId = getRequiredCompanyId();
         if (query == null || query.trim().isEmpty()) {
@@ -72,6 +73,7 @@ public class ProviderServiceImpl implements ProviderService {
         Page<Provider> page = (companyId != null)
                 ? providerRepository.searchProvidersByCompanyId(query.trim(), companyId, pageable)
                 : providerRepository.findAll(pageable);
+        page.forEach(this::recalcularSaldoProveedor);
         return page.map(this::mapToDTO);
     }
 
@@ -89,6 +91,7 @@ public class ProviderServiceImpl implements ProviderService {
                 .taxId(dto.taxId() != null && !dto.taxId().isBlank() ? dto.taxId().trim() : null)
                 .phone(dto.phone() != null && !dto.phone().isBlank() ? dto.phone().trim() : null)
                 .email(dto.email() != null && !dto.email().isBlank() ? dto.email().trim().toLowerCase() : null)
+                .initialBalance(initialBalance)
                 .currentBalance(initialBalance)
                 .active(true)
                 .version(0L)
@@ -123,6 +126,7 @@ public class ProviderServiceImpl implements ProviderService {
         provider.setEmail(dto.email() != null && !dto.email().isBlank() ? dto.email().trim().toLowerCase() : null);
 
         if (dto.currentBalance() != null) {
+            provider.setInitialBalance(dto.currentBalance());
             provider.setCurrentBalance(dto.currentBalance());
         }
 
@@ -131,6 +135,8 @@ public class ProviderServiceImpl implements ProviderService {
         }
 
         Provider saved = providerRepository.save(provider);
+        saved = recalcularSaldoProveedor(saved);
+
         log.info("Empresa [{}]: Proveedor [{}] '{}' actualizado", companyId, saved.getId(), saved.getBusinessName());
 
         auditService.logAction(
@@ -187,18 +193,7 @@ public class ProviderServiceImpl implements ProviderService {
             cashRegisterService.validatePhysicalCashAvailability(companyId, dto.amount());
         }
 
-        // 1. Restar el monto del currentBalance del proveedor de forma atómica
-        int updated = providerRepository.subtractBalance(id, dto.amount());
-        if (updated == 0) {
-            throw new ResourceNotFoundException("Proveedor no encontrado o inactivo para actualizar saldo");
-        }
-
-        // Para el log y DTO, simulamos el nuevo balance en memoria (sin guardarlo, ya se hizo en DB)
-        BigDecimal currentBal = provider.getCurrentBalance() != null ? provider.getCurrentBalance() : BigDecimal.ZERO;
-        BigDecimal newBalance = currentBal.subtract(dto.amount());
-        provider.setCurrentBalance(newBalance);
-
-        // 2. Generar automáticamente un registro en Expense por ese abono
+        // 1. Generar automáticamente un registro en Expense por ese abono
         String desc = "Abono / Pago a Proveedor: " + provider.getBusinessName();
         if (dto.reference() != null && !dto.reference().isBlank()) {
             desc += " - " + dto.reference().trim();
@@ -220,17 +215,96 @@ public class ProviderServiceImpl implements ProviderService {
         expense.setCompany(company);
         expenseRepository.save(expense);
 
+        // 2. Recalcular el saldo oficial de forma idéntica e inmediata
+        Provider providerActualizado = recalcularSaldoProveedor(provider);
+
         log.info("Empresa [{}]: Abono de $ {} al proveedor [{}] '{}' con {}. Nuevo saldo: $ {}. Gasto generado.",
-                companyId, dto.amount(), provider.getId(), provider.getBusinessName(), dto.paymentMethod(), newBalance);
+                companyId, dto.amount(), provider.getId(), provider.getBusinessName(), dto.paymentMethod(), providerActualizado.getCurrentBalance());
 
         auditService.logAction(
                 "ABONO_PROVEEDOR",
                 String.format("Abono de $ %.2f a Proveedor ID [%d] '%s' registrado por método %s. Nuevo saldo: $ %.2f",
-                        dto.amount(), provider.getId(), provider.getBusinessName(), dto.paymentMethod(), newBalance),
+                        dto.amount(), provider.getId(), provider.getBusinessName(), dto.paymentMethod(), providerActualizado.getCurrentBalance()),
                 "INFO"
         );
 
-        return mapToDTO(provider);
+        return mapToDTO(providerActualizado);
+    }
+
+    @Override
+    @Transactional
+    public Provider recalcularSaldoProveedor(Long providerId) {
+        if (providerId == null) return null;
+        Provider provider = providerRepository.findById(providerId).orElse(null);
+        return recalcularSaldoProveedor(provider);
+    }
+
+    @Override
+    @Transactional
+    public ProviderResponseDTO recalcularYDevolver(Long providerId) {
+        Provider updated = recalcularSaldoProveedor(providerId);
+        if (updated == null) {
+            throw new ResourceNotFoundException("Proveedor no encontrado con ID: " + providerId);
+        }
+        return mapToDTO(updated);
+    }
+
+    @Override
+    @Transactional
+    public Provider recalcularSaldoProveedor(Provider provider) {
+        if (provider == null) return null;
+
+        BigDecimal ordenesRecibidas = purchaseOrderRepository.sumReceivedOrdersByProviderId(provider.getId());
+        if (ordenesRecibidas == null) ordenesRecibidas = BigDecimal.ZERO;
+
+        BigDecimal comprasCC = expenseRepository.sumCreditPurchasesByProviderId(provider.getId());
+        if (comprasCC == null) comprasCC = BigDecimal.ZERO;
+
+        BigDecimal pagos = expenseRepository.sumPaymentsByProviderId(provider.getId());
+        if (pagos == null) pagos = BigDecimal.ZERO;
+
+        if (provider.getInitialBalance() == null) {
+            BigDecimal current = provider.getCurrentBalance() != null ? provider.getCurrentBalance() : BigDecimal.ZERO;
+            BigDecimal base = current.subtract(ordenesRecibidas).subtract(comprasCC);
+            if (base.compareTo(BigDecimal.ZERO) < 0) {
+                base = BigDecimal.ZERO;
+            }
+            provider.setInitialBalance(base);
+        }
+
+        BigDecimal inicial = provider.getInitialBalance() != null ? provider.getInitialBalance() : BigDecimal.ZERO;
+        BigDecimal nuevoSaldo = inicial.add(ordenesRecibidas).add(comprasCC).subtract(pagos);
+
+        provider.setCurrentBalance(nuevoSaldo);
+        if (provider.getVersion() == null) {
+            provider.setVersion(0L);
+        }
+        return providerRepository.save(provider);
+    }
+
+    @Override
+    @Transactional
+    public void sincronizarTodosLosSaldos() {
+        log.info("Iniciando sincronización masiva de saldos de proveedores...");
+        List<Provider> providers = providerRepository.findAll();
+        for (Provider p : providers) {
+            try {
+                recalcularSaldoProveedor(p);
+            } catch (Exception ex) {
+                log.error("Error recalculando saldo de proveedor ID [{}]: {}", p.getId(), ex.getMessage());
+            }
+        }
+        log.info("Sincronización masiva de saldos de proveedores finalizada.");
+    }
+
+    @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+    @Transactional
+    public void sincronizarTodosLosSaldosAlInicio() {
+        try {
+            sincronizarTodosLosSaldos();
+        } catch (Exception e) {
+            log.warn("No se pudo completar la sincronización inicial de proveedores: {}", e.getMessage());
+        }
     }
 
     private Long getRequiredCompanyId() {

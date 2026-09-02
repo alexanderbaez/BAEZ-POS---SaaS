@@ -13,4 +13,9 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
     Page<PurchaseOrder> findByCompanyIdOrderByOrderDateDesc(Long companyId, Pageable pageable);
     Page<PurchaseOrder> findByCompanyIdAndProviderIdOrderByOrderDateDesc(Long companyId, Long providerId, Pageable pageable);
     Optional<PurchaseOrder> findByIdAndCompanyId(Long id, Long companyId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT COALESCE(SUM(po.totalAmount), 0) FROM PurchaseOrder po " +
+           "WHERE po.provider.id = :providerId " +
+           "AND po.status = com.baez.baezpos.provider.entity.OrderStatus.RECEIVED")
+    java.math.BigDecimal sumReceivedOrdersByProviderId(@org.springframework.data.repository.query.Param("providerId") Long providerId);
 }

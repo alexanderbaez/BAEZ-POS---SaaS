@@ -28,4 +28,8 @@ public interface ProviderService {
     void delete(Long id);
 
     ProviderResponseDTO pay(Long id, ProviderPaymentRequestDTO dto);
+    com.baez.baezpos.provider.entity.Provider recalcularSaldoProveedor(com.baez.baezpos.provider.entity.Provider provider);
+    com.baez.baezpos.provider.entity.Provider recalcularSaldoProveedor(Long providerId);
+    ProviderResponseDTO recalcularYDevolver(Long providerId);
+    void sincronizarTodosLosSaldos();
 }

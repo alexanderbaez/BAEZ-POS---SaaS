@@ -26,6 +26,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.baez.baezpos.provider.service.ProviderService;
+import org.springframework.context.annotation.Lazy;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -34,6 +37,8 @@ public class ExpenseServiceImpl implements ExpenseService {
     private final ExpenseRepository expenseRepository;
     private final CompanyRepository companyRepository;
     private final ProviderRepository providerRepository;
+    @Lazy
+    private final ProviderService providerService;
     private final CashRegisterService cashRegisterService;
     private final AuditService auditService;
 
@@ -57,30 +62,10 @@ public class ExpenseServiceImpl implements ExpenseService {
             cashRegisterService.validatePhysicalCashAvailability(companyId, dto.amount());
         }
 
-        // Sincronización automática con saldo/deuda de proveedores
+        // Validar que el proveedor pertenezca a la empresa si viene informado
         if (dto.providerId() != null) {
-            Provider provider = providerRepository.findByIdAndCompanyId(dto.providerId(), companyId)
+            providerRepository.findByIdAndCompanyId(dto.providerId(), companyId)
                     .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado con ID: " + dto.providerId()));
-
-            BigDecimal currentBal = (provider.getCurrentBalance() != null) ? provider.getCurrentBalance() : BigDecimal.ZERO;
-
-            if (dto.paymentMethod() == PaymentMethod.CUENTA_CORRIENTE) {
-                // Compra a crédito: aumenta la deuda del proveedor
-                BigDecimal newBalance = currentBal.add(dto.amount());
-                provider.setCurrentBalance(newBalance);
-                providerRepository.save(provider);
-
-                log.info("Empresa [{}]: Sumado $ {} a cuenta corriente del Proveedor [{}] '{}'. Nuevo saldo: $ {}",
-                        companyId, dto.amount(), provider.getId(), provider.getBusinessName(), newBalance);
-            } else {
-                // Pago / abono a proveedor: disminuye automáticamente la deuda
-                BigDecimal newBalance = currentBal.subtract(dto.amount());
-                provider.setCurrentBalance(newBalance);
-                providerRepository.save(provider);
-
-                log.info("Empresa [{}]: Restado $ {} de deuda al Proveedor [{}] '{}' por pago de gasto. Nuevo saldo: $ {}",
-                        companyId, dto.amount(), provider.getId(), provider.getBusinessName(), newBalance);
-            }
         }
 
         ExpenseCategory category = dto.category() != null
@@ -104,6 +89,12 @@ public class ExpenseServiceImpl implements ExpenseService {
         expense.setCompany(company);
 
         Expense saved = expenseRepository.save(expense);
+
+        // Sincronización dinámica idéntica del balance del proveedor
+        if (saved.getProviderId() != null) {
+            providerService.recalcularSaldoProveedor(saved.getProviderId());
+        }
+
         log.info("Empresa [{}]: Gasto registrado por $ {} - Cat: {} - Descuenta Caja: {} - Método: {}",
                 companyId, saved.getAmount(), saved.getCategory(), saved.getDeductFromBox(), saved.getPaymentMethod());
 
@@ -150,23 +141,15 @@ public class ExpenseServiceImpl implements ExpenseService {
         Expense expense = expenseRepository.findByIdAndCompanyId(id, companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Gasto no encontrado o no pertenece a su empresa. ID: " + id));
 
-        // Si el gasto estaba asociado a un proveedor, revertir el impacto en su saldo
-        if (expense.getProviderId() != null) {
-            providerRepository.findByIdAndCompanyId(expense.getProviderId(), companyId)
-                    .ifPresent(provider -> {
-                        BigDecimal currentBal = (provider.getCurrentBalance() != null) ? provider.getCurrentBalance() : BigDecimal.ZERO;
-                        if (expense.getPaymentMethod() == PaymentMethod.CUENTA_CORRIENTE) {
-                            provider.setCurrentBalance(currentBal.subtract(expense.getAmount()));
-                        } else {
-                            provider.setCurrentBalance(currentBal.add(expense.getAmount()));
-                        }
-                        providerRepository.save(provider);
-                        log.info("Empresa [{}]: Revertido saldo del Proveedor [{}] '{}' por eliminación de Gasto [{}]",
-                                companyId, provider.getId(), provider.getBusinessName(), id);
-                    });
+        Long provId = expense.getProviderId();
+        expenseRepository.delete(expense);
+
+        if (provId != null) {
+            providerService.recalcularSaldoProveedor(provId);
+            log.info("Empresa [{}]: Recalculado saldo del Proveedor [{}] por eliminación de Gasto [{}]",
+                    companyId, provId, id);
         }
 
-        expenseRepository.delete(expense);
         log.warn("Empresa [{}]: Gasto ID [{}] eliminado por $ {}", companyId, id, expense.getAmount());
 
         auditService.logAction(

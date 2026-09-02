@@ -72,4 +72,17 @@ public class ProviderController {
             @Valid @RequestBody ProviderPaymentRequestDTO dto) {
         return ResponseEntity.ok(providerService.pay(id, dto));
     }
+
+    @PostMapping("/{id}/recalculate-balance")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'SUPER_ADMIN')")
+    public ResponseEntity<ProviderResponseDTO> recalculateBalance(@PathVariable Long id) {
+        return ResponseEntity.ok(providerService.recalcularYDevolver(id));
+    }
+
+    @PostMapping("/recalculate-all")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<Map<String, String>> recalculateAll() {
+        providerService.sincronizarTodosLosSaldos();
+        return ResponseEntity.ok(Map.of("message", "Saldos de proveedores recalculados con éxito"));
+    }
 }

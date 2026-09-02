@@ -43,6 +43,8 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     private final CompanyRepository companyRepository;
     private final AuditService auditService;
     private final EmailService emailService;
+    @org.springframework.context.annotation.Lazy
+    private final ProviderService providerService;
 
     @Override
     @Transactional
@@ -138,17 +140,16 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
             providerProductRepository.save(providerProduct);
         }
 
-        // Cargar a cuenta corriente del proveedor (Atómico)
-        Provider provider = order.getProvider();
-        
-        BigDecimal currentBal = provider.getCurrentBalance() != null ? provider.getCurrentBalance() : BigDecimal.ZERO;
-        provider.setCurrentBalance(currentBal.add(order.getTotalAmount()));
-        providerRepository.save(provider);
-
         // Actualizar estado de la orden
         order.setStatus(OrderStatus.RECEIVED);
         order.setReceptionDate(LocalDateTime.now());
         purchaseOrderRepository.save(order);
+
+        // Recalcular saldo dinámico del proveedor
+        Provider provider = order.getProvider();
+        if (provider != null) {
+            providerService.recalcularSaldoProveedor(provider.getId());
+        }
 
         auditService.logAction("ORDEN_COMPRA_RECIBIDA", "Orden ID " + order.getId() + " recibida. Stock ingresado y deuda actualizada en proveedor.", "INFO");
         return mapToDTO(order);
