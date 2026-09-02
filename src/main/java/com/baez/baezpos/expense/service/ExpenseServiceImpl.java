@@ -57,22 +57,30 @@ public class ExpenseServiceImpl implements ExpenseService {
             cashRegisterService.validatePhysicalCashAvailability(companyId, dto.amount());
         }
 
-        // Si el método es CUENTA_CORRIENTE y existe un providerId, suma el monto a su currentBalance
-        if (dto.paymentMethod() == PaymentMethod.CUENTA_CORRIENTE && dto.providerId() != null) {
+        // Sincronización automática con saldo/deuda de proveedores
+        if (dto.providerId() != null) {
             Provider provider = providerRepository.findByIdAndCompanyId(dto.providerId(), companyId)
                     .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado con ID: " + dto.providerId()));
 
-            int updated = providerRepository.addBalance(dto.providerId(), dto.amount());
-            if (updated == 0) {
-                throw new ResourceNotFoundException("Proveedor no encontrado o inactivo para actualizar saldo");
-            }
-            
-            // Calculamos en memoria para el log
             BigDecimal currentBal = (provider.getCurrentBalance() != null) ? provider.getCurrentBalance() : BigDecimal.ZERO;
-            BigDecimal newBalance = currentBal.add(dto.amount());
 
-            log.info("Empresa [{}]: Sumado $ {} a cuenta corriente del Proveedor [{}] '{}'. Nuevo saldo: $ {}",
-                    companyId, dto.amount(), provider.getId(), provider.getBusinessName(), newBalance);
+            if (dto.paymentMethod() == PaymentMethod.CUENTA_CORRIENTE) {
+                // Compra a crédito: aumenta la deuda del proveedor
+                BigDecimal newBalance = currentBal.add(dto.amount());
+                provider.setCurrentBalance(newBalance);
+                providerRepository.save(provider);
+
+                log.info("Empresa [{}]: Sumado $ {} a cuenta corriente del Proveedor [{}] '{}'. Nuevo saldo: $ {}",
+                        companyId, dto.amount(), provider.getId(), provider.getBusinessName(), newBalance);
+            } else {
+                // Pago / abono a proveedor: disminuye automáticamente la deuda
+                BigDecimal newBalance = currentBal.subtract(dto.amount());
+                provider.setCurrentBalance(newBalance);
+                providerRepository.save(provider);
+
+                log.info("Empresa [{}]: Restado $ {} de deuda al Proveedor [{}] '{}' por pago de gasto. Nuevo saldo: $ {}",
+                        companyId, dto.amount(), provider.getId(), provider.getBusinessName(), newBalance);
+            }
         }
 
         ExpenseCategory category = dto.category() != null
@@ -141,6 +149,22 @@ public class ExpenseServiceImpl implements ExpenseService {
 
         Expense expense = expenseRepository.findByIdAndCompanyId(id, companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Gasto no encontrado o no pertenece a su empresa. ID: " + id));
+
+        // Si el gasto estaba asociado a un proveedor, revertir el impacto en su saldo
+        if (expense.getProviderId() != null) {
+            providerRepository.findByIdAndCompanyId(expense.getProviderId(), companyId)
+                    .ifPresent(provider -> {
+                        BigDecimal currentBal = (provider.getCurrentBalance() != null) ? provider.getCurrentBalance() : BigDecimal.ZERO;
+                        if (expense.getPaymentMethod() == PaymentMethod.CUENTA_CORRIENTE) {
+                            provider.setCurrentBalance(currentBal.subtract(expense.getAmount()));
+                        } else {
+                            provider.setCurrentBalance(currentBal.add(expense.getAmount()));
+                        }
+                        providerRepository.save(provider);
+                        log.info("Empresa [{}]: Revertido saldo del Proveedor [{}] '{}' por eliminación de Gasto [{}]",
+                                companyId, provider.getId(), provider.getBusinessName(), id);
+                    });
+        }
 
         expenseRepository.delete(expense);
         log.warn("Empresa [{}]: Gasto ID [{}] eliminado por $ {}", companyId, id, expense.getAmount());
