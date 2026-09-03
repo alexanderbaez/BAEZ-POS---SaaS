@@ -49,9 +49,14 @@
                 </div>
             </div>
             <div class="col-12 col-sm-6 col-md-2">
-                <select id="filtroCategoria" class="form-select shadow-sm" onchange="filtrarProductos()">
-                    <option value="">Todas las categorías</option>
-                </select>
+                <div class="input-group shadow-sm">
+                    <select id="filtroCategoria" class="form-select" onchange="filtrarProductos()">
+                        <option value="">Todas las categorías</option>
+                    </select>
+                    <button class="btn btn-outline-secondary" type="button" title="Gestionar Categorías" onclick="abrirModalCategoria()">
+                        <i class="bi bi-tags"></i>
+                    </button>
+                </div>
             </div>
             <div class="col-6 col-md-2">
                 <button class="btn btn-outline-secondary shadow-sm w-100" onclick="abrirPapelera()">
@@ -195,6 +200,71 @@
                             </thead>
                             <tbody id="listaBorrados"></tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL GESTIÓN DE CATEGORÍAS (CRUD COMPLETO) -->
+    <div class="modal fade" id="modalCategorias" tabindex="-1" aria-labelledby="modalCategoriasLabel" aria-hidden="true" style="z-index: 1060;">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold text-dark" id="modalCategoriasLabel">
+                        <i class="bi bi-tags text-primary me-2"></i>Gestión de Categorías
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body p-3 p-md-4">
+                    <!-- Formulario dedicado en la parte superior -->
+                    <div class="bg-light p-3 rounded-3 border mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="small fw-bold text-uppercase text-secondary" id="formCatTitulo">Nueva Categoría</span>
+                            <button type="button" class="btn btn-sm btn-link text-decoration-none text-muted p-0 d-none" id="btnCancelarEdicionCat" onclick="cancelarEdicionCategoria()">
+                                <i class="bi bi-x-circle me-1"></i>Cancelar Edición
+                            </button>
+                        </div>
+                        <form id="formCategoria" onsubmit="event.preventDefault(); guardarCategoria();">
+                            <input type="hidden" id="editCatId" value="">
+                            
+                            <!-- Input Nombre con form-floating -->
+                            <div class="form-floating mb-2">
+                                <input type="text" class="form-control" id="catNombre" placeholder="Nombre de la categoría" maxlength="120" required>
+                                <label for="catNombre">Nombre de la Categoría *</label>
+                            </div>
+
+                            <!-- Input Descripción con form-floating -->
+                            <div class="form-floating mb-2">
+                                <input type="text" class="form-control" id="catDescripcion" placeholder="Descripción breve" maxlength="255">
+                                <label for="catDescripcion">Descripción (Opcional)</label>
+                            </div>
+
+                            <!-- Estado Activo -->
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="catEstadoActivo" checked>
+                                <label class="form-check-label small fw-semibold text-secondary" for="catEstadoActivo">Categoría Activa</label>
+                            </div>
+
+                            <!-- Botón de acción dinámico -->
+                            <button type="submit" class="btn btn-primary w-100 fw-bold shadow-sm d-flex align-items-center justify-content-center" id="btnGuardarCat">
+                                <i class="bi bi-plus-circle me-2" id="iconBtnCat"></i>
+                                <span id="textoBtnCat">Crear Categoría</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Encabezado de Lista -->
+                    <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+                        <span class="small fw-bold text-uppercase text-secondary">Categorías Existentes</span>
+                        <span class="badge bg-secondary-subtle text-secondary rounded-pill" id="badgeTotalCategorias">0</span>
+                    </div>
+
+                    <!-- Lista con Bloqueo de Altura -->
+                    <div class="border rounded-3" style="max-height: 350px; overflow-y: auto;">
+                        <ul class="list-group list-group-flush" id="listaCategoriasModal">
+                            <!-- Items inyectados dinámicamente -->
+                        </ul>
                     </div>
                 </div>
             </div>

@@ -9,5 +9,11 @@ public record CategoryRequestDTO(
         String name,
 
         @Size(max = 255, message = "La descripción no puede superar los 255 caracteres")
-        String description
-) {}
+        String description,
+
+        Boolean active
+) {
+    public CategoryRequestDTO(String name, String description) {
+        this(name, description, true);
+    }
+}

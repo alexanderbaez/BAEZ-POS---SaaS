@@ -45,7 +45,7 @@ public class CategoryServiceImpl implements CategoryService {
                 .name(categoryName)
                 .description(dto.description())
                 .company(companyRef)
-                .active(true)
+                .active(dto.active() != null ? dto.active() : true)
                 .build();
 
         Category saved = categoryRepository.save(newCategory);
@@ -83,6 +83,9 @@ public class CategoryServiceImpl implements CategoryService {
 
         category.setName(dto.name().trim());
         category.setDescription(dto.description());
+        if (dto.active() != null) {
+            category.setActive(dto.active());
+        }
 
         Category updated = categoryRepository.save(category);
         auditService.logAction("ACTUALIZACION_CATEGORIA", "Categoría actualizada ID: " + id, "INFO");
@@ -136,6 +139,6 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     private CategoryResponseDTO mapToResponseDTO(Category c) {
-        return new CategoryResponseDTO(c.getId(), c.getName(), c.getDescription());
+        return new CategoryResponseDTO(c.getId(), c.getName(), c.getDescription(), c.getActive());
     }
 }

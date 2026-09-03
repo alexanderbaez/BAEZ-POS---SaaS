@@ -67,16 +67,29 @@ document.addEventListener('DOMContentLoaded', () => {
             window.history.replaceState({}, document.title, window.location.pathname);
         }, 600);
     }
+
+    const modalCat = document.getElementById('modalCategorias');
+    if (modalCat) {
+        modalCat.addEventListener('hidden.bs.modal', () => {
+            const modalProd = document.getElementById('modalProducto');
+            if (modalProd && modalProd.classList.contains('show')) {
+                document.body.classList.add('modal-open');
+            }
+        });
+    }
 });
 
 // ==========================================
-// 2. GESTIÓN DE CATEGORÍAS
+// 2. GESTIÓN DE CATEGORÍAS (CRUD COMPLETO Y REFACTORIZADO)
 // ==========================================
+let categoriasGlobales = [];
+
 async function cargarCategorias() {
     try {
         const res = await apiFetch(ENDPOINT_CATEGORIES);
         if (!res || !res.ok) return [];
-        const categorias = await res.json();
+        const data = await res.json();
+        categoriasGlobales = Array.isArray(data) ? data : (data.content || []);
 
         const selectModal = document.getElementById('prodCategoria');
         const selectFiltro = document.getElementById('filtroCategoria');
@@ -84,7 +97,7 @@ async function cargarCategorias() {
         let options = '<option value="">Seleccionar...</option>';
         let optionsFiltro = '<option value="">Todas las categorías</option>';
 
-        categorias.forEach(c => {
+        categoriasGlobales.forEach(c => {
             const nameSeguro = (c.name || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
             const opt = `<option value="${c.id}">${nameSeguro}</option>`;
             options += opt;
@@ -94,7 +107,7 @@ async function cargarCategorias() {
         if (selectModal) selectModal.innerHTML = options;
         if (selectFiltro) selectFiltro.innerHTML = optionsFiltro;
 
-        return categorias;
+        return categoriasGlobales;
     } catch (err) {
         console.error("Error al cargar categorías SaaS:", err);
         return [];
@@ -102,61 +115,153 @@ async function cargarCategorias() {
 }
 
 async function abrirModalCategoria() {
-    const categorias = await cargarCategorias();
-
-    let listadoHtml = `
-        <div class="list-group list-group-flush mb-3" style="max-height: 200px; overflow-y: auto;">
-            ${categorias.length === 0 ? '<div class="text-center p-3 text-muted">Sin categorías registradas</div>' : ''}
-            ${categorias.map(c => {
-                const nameSeguro = (c.name || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                const nameEscapado = (c.name || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                return `
-                <div class="list-group-item d-flex justify-content-between align-items-center bg-light rounded-3 mb-2 border-0">
-                    <span class="fw-bold" id="cat-label-${c.id}">${nameSeguro}</span>
-                    <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-primary border-0" onclick="prepararEdicionCat(${c.id}, '${nameEscapado}')"><i class="bi bi-pencil"></i></button>
-                        <button class="btn btn-outline-danger border-0" onclick="eliminarCategoria(${c.id})"><i class="bi bi-trash"></i></button>
-                    </div>
-                </div>`;
-            }).join('')}
-        </div>
-        <div class="p-3 bg-primary bg-opacity-10 rounded-4">
-            <label class="form-label fw-bold small text-primary">NUEVA / EDITAR CATEGORÍA</label>
-            <input type="hidden" id="editCatId" value="">
-            <input type="text" id="swalCatNombre" class="form-control mb-2" placeholder="Nombre de categoría">
-            <button class="btn btn-primary w-100 shadow-sm fw-bold" id="btnGuardarCat" onclick="guardarCategoria()">Confirmar Guardar</button>
-        </div>
-    `;
-
-    Swal.fire({
-        title: 'Gestión de Categorías',
-        html: listadoHtml,
-        showConfirmButton: false,
-        showCloseButton: true,
-        customClass: { popup: 'rounded-4' },
-        didOpen: () => {
-            const input = document.getElementById('swalCatNombre');
-            if (input) {
-                setTimeout(() => input.focus(), 100);
-                input.addEventListener('keydown', (e) => e.stopPropagation());
-            }
-        }
-    });
+    cancelarEdicionCategoria();
+    const modalEl = document.getElementById('modalCategorias');
+    if (modalEl) {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+        await renderizarListaCategoriasModal();
+        setTimeout(() => {
+            const input = document.getElementById('catNombre');
+            if (input) input.focus();
+        }, 150);
+    }
 }
 
-function prepararEdicionCat(id, nombre) {
-    if (document.getElementById('editCatId')) document.getElementById('editCatId').value = id;
-    if (document.getElementById('swalCatNombre')) document.getElementById('swalCatNombre').value = nombre;
-    if (document.getElementById('btnGuardarCat')) document.getElementById('btnGuardarCat').innerText = "Actualizar Nombre";
-    if (document.getElementById('swalCatNombre')) document.getElementById('swalCatNombre').focus();
+async function renderizarListaCategoriasModal() {
+    const listaUl = document.getElementById('listaCategoriasModal');
+    const badgeTotal = document.getElementById('badgeTotalCategorias');
+    if (!listaUl) return;
+
+    try {
+        const categorias = await cargarCategorias();
+        if (badgeTotal) badgeTotal.textContent = categorias.length;
+
+        if (!categorias || categorias.length === 0) {
+            listaUl.innerHTML = `
+                <li class="list-group-item text-center p-4 text-muted border-0">
+                    <i class="bi bi-tag fs-3 d-block mb-1 text-secondary opacity-50"></i>
+                    No hay categorías registradas.
+                </li>`;
+            return;
+        }
+
+        let html = '';
+        categorias.forEach(c => {
+            const nameSeguro = (c.name || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            const descSeguro = (c.description || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            const badgeInactivo = (c.active === false) 
+                ? '<span class="badge bg-danger-subtle text-danger ms-1 fw-normal" style="font-size: 0.7rem;">Inactiva</span>' 
+                : '';
+
+            html += `
+                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+                    <div class="me-2 text-truncate">
+                        <div class="fw-bold text-dark text-truncate">${nameSeguro} ${badgeInactivo}</div>
+                        ${c.description ? `<small class="text-muted d-block text-truncate" style="font-size: 0.8rem;">${descSeguro}</small>` : ''}
+                    </div>
+                    <div class="btn-group btn-group-sm flex-shrink-0">
+                        <button type="button" class="btn btn-sm btn-link text-secondary p-1" title="Editar categoría" onclick="prepararEdicionCat(${c.id})">
+                            <i class="bi bi-pencil fs-6"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-link text-danger p-1" title="Eliminar categoría" onclick="eliminarCategoria(${c.id})">
+                            <i class="bi bi-trash fs-6"></i>
+                        </button>
+                    </div>
+                </li>
+            `;
+        });
+
+        listaUl.innerHTML = html;
+    } catch (err) {
+        console.error("Error al renderizar categorías:", err);
+        listaUl.innerHTML = '<li class="list-group-item text-danger text-center p-3">Error al listar categorías</li>';
+    }
+}
+
+function prepararEdicionCat(id) {
+    const cat = categoriasGlobales.find(c => c.id === id);
+    if (!cat) return;
+
+    const editCatId = document.getElementById('editCatId');
+    const catNombre = document.getElementById('catNombre');
+    const catDescripcion = document.getElementById('catDescripcion');
+    const catEstadoActivo = document.getElementById('catEstadoActivo');
+    const formCatTitulo = document.getElementById('formCatTitulo');
+    const btnCancelar = document.getElementById('btnCancelarEdicionCat');
+    const btnGuardar = document.getElementById('btnGuardarCat');
+    const iconBtn = document.getElementById('iconBtnCat');
+    const textoBtn = document.getElementById('textoBtnCat');
+
+    if (editCatId) editCatId.value = cat.id;
+    if (catNombre) catNombre.value = cat.name || '';
+    if (catDescripcion) catDescripcion.value = cat.description || '';
+    if (catEstadoActivo) catEstadoActivo.checked = (cat.active !== false);
+
+    if (formCatTitulo) formCatTitulo.textContent = "Editar Categoría";
+    if (btnCancelar) btnCancelar.classList.remove('d-none');
+
+    if (btnGuardar) {
+        btnGuardar.classList.remove('btn-primary');
+        btnGuardar.classList.add('btn-warning');
+    }
+    if (iconBtn) iconBtn.className = "bi bi-check-circle me-2";
+    if (textoBtn) textoBtn.textContent = "Actualizar Categoría";
+
+    if (catNombre) {
+        catNombre.focus();
+        catNombre.select();
+    }
+}
+
+function cancelarEdicionCategoria() {
+    const editCatId = document.getElementById('editCatId');
+    const catNombre = document.getElementById('catNombre');
+    const catDescripcion = document.getElementById('catDescripcion');
+    const catEstadoActivo = document.getElementById('catEstadoActivo');
+    const formCatTitulo = document.getElementById('formCatTitulo');
+    const btnCancelar = document.getElementById('btnCancelarEdicionCat');
+    const btnGuardar = document.getElementById('btnGuardarCat');
+    const iconBtn = document.getElementById('iconBtnCat');
+    const textoBtn = document.getElementById('textoBtnCat');
+
+    if (editCatId) editCatId.value = '';
+    if (catNombre) catNombre.value = '';
+    if (catDescripcion) catDescripcion.value = '';
+    if (catEstadoActivo) catEstadoActivo.checked = true;
+
+    if (formCatTitulo) formCatTitulo.textContent = "Nueva Categoría";
+    if (btnCancelar) btnCancelar.classList.add('d-none');
+
+    if (btnGuardar) {
+        btnGuardar.classList.remove('btn-warning');
+        btnGuardar.classList.add('btn-primary');
+    }
+    if (iconBtn) iconBtn.className = "bi bi-plus-circle me-2";
+    if (textoBtn) textoBtn.textContent = "Crear Categoría";
 }
 
 async function guardarCategoria() {
     const id = document.getElementById('editCatId')?.value;
-    const nombreInput = document.getElementById('swalCatNombre');
-    const nombre = nombreInput ? nombreInput.value.trim() : "";
+    const nombreInput = document.getElementById('catNombre');
+    const descInput = document.getElementById('catDescripcion');
+    const activoInput = document.getElementById('catEstadoActivo');
 
-    if (!nombre) return Swal.fire('Atención', "Escribe un nombre para la categoría", 'warning');
+    const nombre = nombreInput ? nombreInput.value.trim() : "";
+    const description = descInput ? descInput.value.trim() : "";
+    const active = activoInput ? activoInput.checked : true;
+
+    if (!nombre) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Campo Obligatorio',
+                text: 'Escribe un nombre para la categoría.',
+                confirmButtonColor: '#0d6efd'
+            });
+        }
+        return;
+    }
 
     try {
         const url = id ? `${ENDPOINT_CATEGORIES}/${id}` : ENDPOINT_CATEGORIES;
@@ -164,22 +269,26 @@ async function guardarCategoria() {
 
         const res = await apiFetch(url, {
             method: metodo,
-            body: JSON.stringify({ name: nombre, description: "" })
+            body: JSON.stringify({ name: nombre, description: description, active: active })
         });
 
         if (res && res.ok) {
+            cancelarEdicionCategoria();
+            await renderizarListaCategoriasModal();
             await cargarCategorias();
-            Swal.fire({
-                icon: 'success',
-                title: id ? 'Actualizada' : 'Creada',
-                timer: 1000,
-                showConfirmButton: false
-            }).then(() => {
-                abrirModalCategoria();
-            });
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: id ? 'Categoría actualizada' : 'Categoría creada',
+                    timer: 1200,
+                    showConfirmButton: false
+                });
+            }
         } else if (res) {
             const errorData = await res.json().catch(() => ({}));
-            Swal.fire('Error', errorData.message || 'Error en la operación', 'error');
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Error', errorData.message || 'Error en la operación', 'error');
+            }
         }
     } catch (err) {
         console.error("Error guardando categoría:", err);
@@ -187,11 +296,16 @@ async function guardarCategoria() {
 }
 
 async function eliminarCategoria(id) {
+    const cat = categoriasGlobales.find(c => c.id === id);
+    const nombre = cat ? cat.name : '';
+
     const confirm = await Swal.fire({
         title: '¿Eliminar categoría?',
-        text: "Si tiene productos asociados, no podrá eliminarse.",
+        text: nombre ? `Se dará de baja "${nombre}". Si tiene productos asociados, no podrá eliminarse.` : "Si tiene productos asociados, no podrá eliminarse.",
         icon: 'warning',
         showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#6b7280',
         confirmButtonText: 'Sí, borrar',
         cancelButtonText: 'Cancelar'
     });
@@ -200,10 +314,18 @@ async function eliminarCategoria(id) {
         try {
             const res = await apiFetch(`${ENDPOINT_CATEGORIES}/${id}`, { method: 'DELETE' });
             if (res && res.ok) {
+                cancelarEdicionCategoria();
+                await renderizarListaCategoriasModal();
                 await cargarCategorias();
-                abrirModalCategoria();
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Categoría eliminada',
+                    timer: 1200,
+                    showConfirmButton: false
+                });
             } else {
-                Swal.fire('Error', 'La categoría tiene productos asociados o no existe.', 'error');
+                const errorData = await res.json().catch(() => ({}));
+                Swal.fire('Error', errorData.message || 'La categoría tiene productos asociados o no existe.', 'error');
             }
         } catch (err) {
             console.error("Error al borrar categoría:", err);
@@ -1044,6 +1166,7 @@ async function imprimirEtiquetasMultiples(id) {
 // ==========================================
 window.abrirModalCategoria = abrirModalCategoria;
 window.prepararEdicionCat = prepararEdicionCat;
+window.cancelarEdicionCategoria = cancelarEdicionCategoria;
 window.guardarCategoria = guardarCategoria;
 window.eliminarCategoria = eliminarCategoria;
 window.prepararFormulario = prepararFormulario;
