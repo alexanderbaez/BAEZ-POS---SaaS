@@ -15,18 +15,19 @@ const fmtARS = new Intl.NumberFormat('es-AR', {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-    const hoy = new Date().toISOString().split('T')[0];
+    const offset = new Date().getTimezoneOffset() * 60000;
+    const hoyLocal = new Date(Date.now() - offset).toISOString().split('T')[0];
     const fechaDesde = document.getElementById('fechaDesde');
     const fechaHasta = document.getElementById('fechaHasta');
-    if (fechaDesde) fechaDesde.value = hoy;
-    if (fechaHasta) fechaHasta.value = hoy;
+    if (fechaDesde) fechaDesde.value = hoyLocal;
+    if (fechaHasta) fechaHasta.value = hoyLocal;
 
     cargarGastos(0);
     cargarProveedoresParaSelect();
 
     const inputFecha = document.getElementById('fechaGasto');
     if (inputFecha && !inputFecha.value) {
-        inputFecha.value = hoy;
+        inputFecha.value = hoyLocal;
     }
 
     const formGasto = document.getElementById('formGasto');
@@ -268,11 +269,12 @@ function aplicarFiltros() {
 }
 
 function limpiarFiltros() {
-    const hoy = new Date().toISOString().split('T')[0];
+    const offset = new Date().getTimezoneOffset() * 60000;
+    const hoyLocal = new Date(Date.now() - offset).toISOString().split('T')[0];
     const fechaDesde = document.getElementById('fechaDesde');
     const fechaHasta = document.getElementById('fechaHasta');
-    if (fechaDesde) fechaDesde.value = hoy;
-    if (fechaHasta) fechaHasta.value = hoy;
+    if (fechaDesde) fechaDesde.value = hoyLocal;
+    if (fechaHasta) fechaHasta.value = hoyLocal;
     if (document.getElementById('filtroTexto')) document.getElementById('filtroTexto').value = '';
     if (document.getElementById('filtroCategoria')) document.getElementById('filtroCategoria').value = '';
     if (document.getElementById('filtroMetodoPago')) document.getElementById('filtroMetodoPago').value = '';
@@ -497,7 +499,10 @@ async function guardarGasto(e) {
             document.getElementById('formGasto').reset();
 
             const inputFecha = document.getElementById('fechaGasto');
-            if (inputFecha) inputFecha.value = new Date().toISOString().split('T')[0];
+            if (inputFecha) {
+                const offset = new Date().getTimezoneOffset() * 60000;
+                inputFecha.value = new Date(Date.now() - offset).toISOString().split('T')[0];
+            }
 
             if (metodoPagoGasto && elementDeduct) {
                 actualizarEstadoDeductFromBox(metodoPagoGasto.value, elementDeduct);
