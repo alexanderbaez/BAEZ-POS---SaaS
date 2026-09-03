@@ -248,6 +248,43 @@ label.form-label, .form-label, .form-group label {
   color: #1e293b !important;
 }
 
+/* Compatibilidad precisa para Bootstrap 5 form-floating */
+.form-floating > .form-control {
+  height: calc(3.5rem + 2px) !important;
+  line-height: 1.25 !important;
+  padding: 1rem 0.75rem !important;
+}
+
+.form-floating > .form-control::placeholder {
+  color: transparent !important;
+}
+
+.form-floating > .form-control:focus,
+.form-floating > .form-control:not(:placeholder-shown) {
+  padding-top: 1.625rem !important;
+  padding-bottom: 0.625rem !important;
+}
+
+.form-floating > label {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  z-index: 2 !important;
+  height: 100% !important;
+  padding: 1rem 0.75rem !important;
+  margin-bottom: 0 !important;
+  font-size: 0.875rem !important;
+  pointer-events: none !important;
+  transform-origin: 0 0 !important;
+  transition: opacity .15s ease-in-out, transform .15s ease-in-out !important;
+}
+
+.form-floating > .form-control:focus ~ label,
+.form-floating > .form-control:not(:placeholder-shown) ~ label {
+  opacity: .75 !important;
+  transform: scale(.85) translateY(-.5rem) translateX(.15rem) !important;
+}
+
 .form-control:disabled, .form-control[readonly],
 .form-select:disabled {
   background-color: #f1f5f9 !important;
