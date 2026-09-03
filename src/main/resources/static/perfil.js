@@ -229,7 +229,7 @@ async function cambiarPassword() {
         });
 
         if (resp && resp.ok) {
-            Swal.fire('¡Ã‰xito!', 'Contraseña actualizada correctamente.', 'success');
+            Swal.fire('¡Éxito!', 'Contraseña actualizada correctamente.', 'success');
             if (document.getElementById('nuevaPass')) document.getElementById('nuevaPass').value = '';
             if (document.getElementById('confirmarPass')) document.getElementById('confirmarPass').value = '';
         } else {
