@@ -1,4 +1,4 @@
-﻿/**
+/**
  * BÁEZ POS - CENTINELA DE SEGURIDAD Y LICENCIAMIENTO QUIRÚRGICO (SaaS)
  * Alexander Baez - 2026
  */
@@ -205,8 +205,10 @@ async function chequearEstadoLicencia() {
         if (res && res.ok) {
             const data = await res.json();
 
-            if (data.active === false || data.vencido === true) {
-                removerNotificacionVencimiento();
+            // Evaluar y mostrar el banner global según la jerarquía estricta de negocio
+            mostrarBannerSuscripcion(data);
+
+            if (data.active === false || data.vencido === true || (data.diasRestantes !== undefined && Number(data.diasRestantes) < 0)) {
                 if (esPaginaPOS) {
                     bloquearPantallaVentas(data.message || "Tu suscripción/licencia se encuentra vencida.");
                 } else {
@@ -214,14 +216,9 @@ async function chequearEstadoLicencia() {
                 }
             } else {
                 removerBloqueoVentas();
-                if (data.diasRestantes !== undefined && data.diasRestantes <= 5 && data.diasRestantes >= 0) {
-                    mostrarNotificacionVencimientoGlobal(data.diasRestantes);
-                } else {
-                    removerNotificacionVencimiento();
-                }
             }
         } else if (res && res.status === 403) {
-            removerNotificacionVencimiento();
+            mostrarBannerSuscripcion({ activo: false, estado: 'INACTIVO' });
             if (esPaginaPOS) {
                 bloquearPantallaVentas("Su suscripción se encuentra inhabilitada por administración.");
             } else {
@@ -256,14 +253,18 @@ function bloquearPantallaVentas(mensaje) {
         styleElem.id = 'baezpos-bloqueo-styles';
         styleElem.innerHTML = `
             .navbar, header, nav {
-                z-index: 1050 !important;
+                z-index: 1030 !important;
             }
 
             .sidebar, #sidebar, .offcanvas, .sidebar-wrapper, [class*="sidebar"] {
-                z-index: 10000 !important;
+                z-index: 1060 !important;
                 backdrop-filter: none !important;
                 -webkit-backdrop-filter: none !important;
                 filter: none !important;
+            }
+
+            .sidebar-backdrop, .sidebar-overlay {
+                z-index: 1050 !important;
             }
 
             #bloqueo-pos-overlay {
@@ -275,7 +276,7 @@ function bloquearPantallaVentas(mensaje) {
                 width: 100vw !important;
                 height: 100vh !important;
                 background-color: #0f172a !important;
-                z-index: 1040 !important;
+                z-index: 10 !important;
                 display: flex !important;
                 align-items: center !important;
                 justify-content: center !important;
@@ -306,7 +307,7 @@ function bloquearPantallaVentas(mensaje) {
             border-radius: 20px;
             background: #ffffff;
             position: relative;
-            z-index: 1041;
+            z-index: 11;
         ">
             <div class="mb-3 text-danger">
                 <i class="bi bi-shield-lock-fill display-3"></i>
@@ -329,6 +330,17 @@ function bloquearPantallaVentas(mensaje) {
         </div>
     `;
 
+    // Ocultar botones de acción de caja en el header para evitar apertura de modales durante suspensión
+    const controlesCaja = document.querySelectorAll('#btnAbrirCajaUI, #btnCerrarCajaUI, #btnAbrirCajaHeader, #btnCerrarCajaHeader, #badgeEstadoCaja, #btnSyncPendingSales, #btn-abrir-caja, #btn-cerrar-caja, .caja-controls-container, [data-bs-target="#modalAperturaCaja"], [data-bs-target="#modalAbrirCaja"], [data-bs-target="#modalCerrarCaja"], [onclick*="modalAbrirCaja"], [onclick*="modalCerrarCaja"]');
+    controlesCaja.forEach(control => {
+        control.style.setProperty('display', 'none', 'important');
+    });
+
+    const contenedorCaja = document.getElementById('btnAbrirCajaUI')?.closest?.('.border-end') || document.getElementById('badgeEstadoCaja')?.closest?.('.border-end');
+    if (contenedorCaja) {
+        contenedorCaja.style.setProperty('display', 'none', 'important');
+    }
+
     document.body.appendChild(overlay);
 }
 
@@ -341,73 +353,224 @@ function removerBloqueoVentas() {
 
     const mobileBottomBar = document.querySelector('.mobile-bottom-bar');
     if (mobileBottomBar) mobileBottomBar.style.display = '';
+
+    // Restaurar controles de caja al desbloquear
+    const contenedorCaja = document.getElementById('btnAbrirCajaUI')?.closest?.('.border-end') || document.getElementById('badgeEstadoCaja')?.closest?.('.border-end');
+    if (contenedorCaja) {
+        contenedorCaja.style.removeProperty('display');
+    }
+
+    const controlesCaja = document.querySelectorAll('#btnAbrirCajaUI, #btnCerrarCajaUI, #btnAbrirCajaHeader, #btnCerrarCajaHeader, #badgeEstadoCaja, #btnSyncPendingSales, #btn-abrir-caja, #btn-cerrar-caja, .caja-controls-container, [data-bs-target="#modalAperturaCaja"], [data-bs-target="#modalAbrirCaja"], [data-bs-target="#modalCerrarCaja"], [onclick*="modalAbrirCaja"], [onclick*="modalCerrarCaja"]');
+    controlesCaja.forEach(control => {
+        control.style.removeProperty('display');
+    });
+
+    if (typeof actualizarUICaja === 'function' && typeof SESION_CAJA_ACTIVA !== 'undefined') {
+        actualizarUICaja(!!SESION_CAJA_ACTIVA);
+    }
+}
+
+// ==========================================
+// 5. BANNER GLOBAL DE SUSCRIPCIÓN (COMPORTAMIENTO VOLÁTIL Y JERARQUÍA ESTRICTA)
+// ==========================================
+// Memoria volátil en RAM: NUNCA se persiste en localStorage, sessionStorage ni cookies.
+let bannerSuscripcionCerradoVolatil = false;
+let ultimoMensajeBannerSuscripcion = null;
+
+/**
+ * Evalúa el estado de la cuenta según la jerarquía estricta de negocio:
+ * 1. Bloqueo Administrativo (Prioridad 1): Si empresa.activo === false o empresa.estado === 'INACTIVO'
+ * 2. Vencida (Prioridad 2): Si diasRestantes < 0
+ * 3. Vence Hoy (Prioridad 3): Si diasRestantes === 0
+ * 4. Alerta Preventiva (Prioridad 4): Si diasRestantes <= 5 y diasRestantes > 0
+ * 
+ * La primera condición que se cumpla anula a las demás.
+ * 
+ * @param {Object|number} empresa Datos de la empresa o respuesta del servidor (o número de días)
+ * @param {number} [diasParam] Número de días restantes opcional
+ * @returns {{ mensaje: string, tipo: 'alert-danger'|'alert-warning' } | null}
+ */
+function evaluarJerarquiaSuscripcion(empresa, diasParam) {
+    if (empresa === undefined && diasParam === undefined) return null;
+
+    let datos = {};
+    if (typeof empresa === 'number') {
+        diasParam = empresa;
+    } else if (empresa && typeof empresa === 'object') {
+        datos = empresa;
+    }
+
+    const activo = datos.activo !== undefined ? datos.activo : datos.active;
+    const estado = (datos.estado || datos.status || '').toString().trim().toUpperCase();
+
+    let diasRestantes = null;
+    if (diasParam !== undefined && diasParam !== null) {
+        diasRestantes = Number(diasParam);
+    } else if (datos.diasRestantes !== undefined && datos.diasRestantes !== null) {
+        diasRestantes = Number(datos.diasRestantes);
+    }
+
+    // 1. Bloqueo Administrativo (Prioridad 1): Si la cuenta está inactiva (empresa.activo === false o empresa.estado === 'INACTIVO')
+    const esInactivoAdmin = activo === false || 
+                            estado === 'INACTIVO' ||
+                            (datos.active === false && !datos.vencido && (diasRestantes === null || diasRestantes >= 0));
+
+    if (esInactivoAdmin) {
+        return {
+            mensaje: 'Atención: Esta cuenta ha sido suspendida administrativamente. Contacte a soporte.',
+            tipo: 'alert-danger'
+        };
+    }
+
+    // 2. Vencida (Prioridad 2): Si diasRestantes < 0
+    if (diasRestantes !== null && diasRestantes < 0) {
+        return {
+            mensaje: 'Atención: Tu suscripción se encuentra vencida. Recordá regularizar el pago.',
+            tipo: 'alert-danger'
+        };
+    }
+
+    // 3. Vence Hoy (Prioridad 3): Si diasRestantes === 0
+    if (diasRestantes !== null && diasRestantes === 0) {
+        return {
+            mensaje: 'Atención: Tu suscripción vence HOY. Recordá regularizar el pago.',
+            tipo: 'alert-danger'
+        };
+    }
+
+    // 4. Alerta Preventiva (Prioridad 4): Si diasRestantes <= 5 y diasRestantes > 0
+    if (diasRestantes !== null && diasRestantes <= 5 && diasRestantes > 0) {
+        return {
+            mensaje: `Aviso: Tu suscripción vence en ${diasRestantes} días.`,
+            tipo: 'alert-warning'
+        };
+    }
+
+    // Si no cumple ninguna de las 4 condiciones prioritarias, no se muestra alerta
+    return null;
 }
 
 /**
- * NOTIFICACIÓN FLOTANTE DE VENCIMIENTO (BANNER SUPERIOR)
+ * Inyecta el contenedor del banner en el DOM dentro del header superior.
  */
-function mostrarNotificacionVencimientoGlobal(dias) {
-    if (esVistaLogin()) return;
+function inyectarBannerEnDOM(banner) {
+    // 1. Ubicación preferida: dentro del header superior (.navbar .ms-auto)
+    const navbarControls = document.querySelector('.navbar .ms-auto') || document.querySelector('nav.navbar .d-flex.ms-auto');
+    if (navbarControls) {
+        navbarControls.insertBefore(banner, navbarControls.firstChild);
+        return;
+    }
+
+    // 2. Si hay navbar pero sin .ms-auto, dentro del container de la navbar
+    const navbarContainer = document.querySelector('.navbar .container-fluid') || document.querySelector('.navbar');
+    if (navbarContainer) {
+        navbarContainer.appendChild(banner);
+        return;
+    }
+
+    // 3. Fallback de contenedor
+    const content = document.getElementById('content');
+    if (content) {
+        content.prepend(banner);
+        return;
+    }
+
+    // Fallback a nivel de body
+    if (document.body) {
+        document.body.prepend(banner);
+    }
+}
+
+/**
+ * Muestra o actualiza el banner superior de suscripción.
+ * Diseño de píldora compacta ubicada dentro del header superior.
+ * El cierre es puramente visual y volátil en RAM (NUNCA en localStorage, sessionStorage ni cookies).
+ */
+function mostrarBannerSuscripcion(empresa, diasParam) {
+    if (esVistaLogin()) {
+        removerNotificacionVencimiento();
+        return;
+    }
+
+    const evaluacion = evaluarJerarquiaSuscripcion(empresa, diasParam);
+
+    if (!evaluacion) {
+        removerNotificacionVencimiento();
+        ultimoMensajeBannerSuscripcion = null;
+        return;
+    }
+
+    const { mensaje, tipo } = evaluacion;
+
+    // Si el estado o mensaje cambió respecto a la evaluación anterior, reactivamos la visibilidad
+    if (ultimoMensajeBannerSuscripcion !== mensaje) {
+        bannerSuscripcionCerradoVolatil = false;
+        ultimoMensajeBannerSuscripcion = mensaje;
+    }
+
+    // Si fue cerrado visualmente por el usuario en esta vista actual, respetamos su cierre volátil
+    if (bannerSuscripcionCerradoVolatil) {
+        return;
+    }
 
     let banner = document.getElementById('baezpos-vencimiento-banner');
     if (!banner) {
         banner = document.createElement('div');
         banner.id = 'baezpos-vencimiento-banner';
-
-        const estilosBanner = document.createElement('style');
-        estilosBanner.id = 'baezpos-vencimiento-styles';
-        estilosBanner.innerHTML = `
-            #baezpos-vencimiento-banner {
-                position: fixed;
-                top: 10px;
-                left: 50%;
-                transform: translateX(-50%);
-                z-index: 1060;
-                background: #fff5f5;
-                color: #c53030;
-                border: 1px solid #feb2b2;
-                padding: 6px 16px;
-                border-radius: 30px;
-                font-weight: 600;
-                font-size: 0.82rem;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                white-space: nowrap;
-            }
-            @media (max-width: 768px) {
-                #baezpos-vencimiento-banner {
-                    top: 60px;
-                    width: 90%;
-                    left: 5%;
-                    transform: none;
-                    white-space: normal;
-                    text-align: center;
-                    justify-content: center;
-                    font-size: 0.75rem;
-                }
-            }
-        `;
-        if (!document.head.querySelector('#baezpos-vencimiento-styles')) {
-            document.head.appendChild(estilosBanner);
-        }
-
-        document.body.appendChild(banner);
+        inyectarBannerEnDOM(banner);
+    } else if (!banner.parentElement) {
+        inyectarBannerEnDOM(banner);
     }
 
-    const textoDias = dias === 0 ? 'vence <strong>HOY</strong>' : `vence en <strong>${dias} ${dias === 1 ? 'día' : 'días'}</strong>`;
+    const colorClase = tipo.startsWith('alert-') ? tipo.replace('alert-', '') : tipo;
+
+    banner.className = `alert alert-${colorClase} alert-dismissible fade show d-flex align-items-center m-0 py-1 px-3 rounded-3 shadow-sm position-relative`;
+    banner.setAttribute('role', 'alert');
+    banner.style.cssText = 'font-size: 0.8rem; line-height: 1.2; padding-right: 2.5rem !important;';
 
     banner.innerHTML = `
-        <i class="bi bi-exclamation-triangle-fill text-danger fs-6"></i>
-        <span>Atención: Tu suscripción ${textoDias}. Recordá regularizar el pago.</span>
+        <i class="bi bi-exclamation-triangle-fill me-2 fs-6"></i>
+        <span class="fw-semibold text-start pe-3">${mensaje}</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); padding: 0.5rem; font-size: 0.7rem;"></button>
     `;
+
+    // Escucha del evento de cierre de Bootstrap
+    banner.addEventListener('close.bs.alert', () => {
+        bannerSuscripcionCerradoVolatil = true;
+    });
+
+    const btnClose = banner.querySelector('.btn-close');
+    if (btnClose) {
+        btnClose.addEventListener('click', () => {
+            bannerSuscripcionCerradoVolatil = true;
+            banner.classList.remove('show');
+            setTimeout(() => {
+                if (banner) banner.remove();
+            }, 150);
+        });
+    }
+}
+
+/**
+ * Alias de compatibilidad hacia atrás
+ */
+function mostrarNotificacionVencimientoGlobal(dias) {
+    mostrarBannerSuscripcion(null, dias);
 }
 
 function removerNotificacionVencimiento() {
     const banner = document.getElementById('baezpos-vencimiento-banner');
     if (banner) banner.remove();
+
+    const estilosOld = document.getElementById('baezpos-vencimiento-styles');
+    if (estilosOld) estilosOld.remove();
 }
+
+// Exposición en el objeto global window
+window.evaluarJerarquiaSuscripcion = evaluarJerarquiaSuscripcion;
+window.mostrarBannerSuscripcion = mostrarBannerSuscripcion;
+window.mostrarNotificacionVencimientoGlobal = mostrarNotificacionVencimientoGlobal;
+window.removerNotificacionVencimiento = removerNotificacionVencimiento;
 
 // ==========================================
 // 6. ARQUITECTURA OFFLINE-FIRST Y SERVICE WORKER

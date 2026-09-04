@@ -2644,6 +2644,8 @@ async function verificarEstadoCaja() {
  * Actualización de UI optimizada para Viewports Estrechos (UX Mobile-First)
  */
 function actualizarUICaja(estaAbierta) {
+    if (document.getElementById('bloqueo-pos-overlay')) return;
+
     const badge = document.getElementById('badgeEstadoCaja');
     const btnAbrir = document.getElementById('btnAbrirCajaHeader') || document.getElementById('btnAbrirCajaUI');
     const btnCerrar = document.getElementById('btnCerrarCajaHeader') || document.getElementById('btnCerrarCajaUI');
@@ -2701,6 +2703,8 @@ function actualizarUICaja(estaAbierta) {
  * Modal Responsive SweetAlert2 para APERTURA DE CAJA
  */
 async function modalAbrirCaja() {
+    if (document.getElementById('bloqueo-pos-overlay')) return;
+
     if (SESION_CAJA_ACTIVA) {
         Swal.fire('Atención', 'Ya existe una sesión de caja abierta.', 'info');
         return;
@@ -2811,6 +2815,8 @@ async function ejecutarAperturaCaja(payload) {
  * En el arqueo ciego, NO se muestra el dinero teórico al cajero.
  */
 async function modalCerrarCaja() {
+    if (document.getElementById('bloqueo-pos-overlay')) return;
+
     if (!SESION_CAJA_ACTIVA) {
         Swal.fire('Atención', 'No hay ninguna sesión de caja activa para cerrar.', 'warning');
         return;

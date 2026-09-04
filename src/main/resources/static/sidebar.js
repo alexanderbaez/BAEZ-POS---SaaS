@@ -25,7 +25,7 @@
                 top: 0;
                 left: 0;
                 background: #1e293b !important;
-                z-index: 1050 !important;
+                z-index: 1060 !important;
                 display: flex;
                 flex-direction: column;
                 justify-content: space-between;
@@ -61,29 +61,30 @@
                 margin: 10px 12px;
                 border: 1px solid rgba(255, 255, 255, 0.1);
             }
-            .sidebar-backdrop {
+            .sidebar-backdrop, .sidebar-overlay {
                 position: fixed;
                 top: 0;
                 left: 0;
                 width: 100vw;
                 height: 100vh;
                 background: rgba(0, 0, 0, 0.5);
-                z-index: 1040 !important;
+                z-index: 1050 !important;
                 display: none;
                 opacity: 0;
                 transition: opacity 0.3s ease;
                 backdrop-filter: blur(2px);
                 -webkit-backdrop-filter: blur(2px);
             }
-            .sidebar-backdrop.show {
+            .sidebar-backdrop.show, .sidebar-backdrop.active,
+            .sidebar-overlay.show, .sidebar-overlay.active {
                 display: block;
                 opacity: 1;
             }
 
             @media (max-width: 768px) {
-                body > *:not(#sidebar):not(.sidebar-backdrop) { margin-left: 0 !important; }
+                body > *:not(#sidebar):not(.sidebar-backdrop):not(.sidebar-overlay) { margin-left: 0 !important; }
                 #sidebar { left: -250px !important; }
-                #sidebar.active { left: 0 !important; }
+                #sidebar.active, #sidebar.show { left: 0 !important; }
             }
         `;
         document.head.appendChild(estilos);
@@ -202,7 +203,6 @@
             elUserRoleBadge.style.fontSize = '0.65rem';
         }
 
-        inicializarGestosSidebar();
     }
 
     if (document.getElementById('sidebar-container')) {
@@ -212,17 +212,16 @@
     }
 })();
 
-// Control de eventos globales, Backdrop y Swipe
+// Control de eventos globales, Backdrop y Swipe a nivel de Documento
 document.addEventListener('DOMContentLoaded', () => {
     asegurarBackdropGlobal();
-    inicializarGestosSidebar();
 });
 
 function asegurarBackdropGlobal() {
-    let backdrop = document.querySelector('.sidebar-backdrop');
+    let backdrop = document.querySelector('.sidebar-backdrop, .sidebar-overlay');
     if (!backdrop) {
         backdrop = document.createElement('div');
-        backdrop.className = 'sidebar-backdrop';
+        backdrop.className = 'sidebar-backdrop sidebar-overlay';
         backdrop.id = 'sidebar-backdrop';
         document.body.appendChild(backdrop);
     }
@@ -230,35 +229,39 @@ function asegurarBackdropGlobal() {
     return backdrop;
 }
 
-// Variables para control de deslizamiento (Swipe)
-let touchStartX = 0;
-let touchStartY = 0;
+// Variables para control de deslizamiento (Swipe) a nivel de Documento
+let touchstartX = 0;
+let touchendX = 0;
 
-function inicializarGestosSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    if (!sidebar || sidebar.dataset.swipeAttached) return;
-    sidebar.dataset.swipeAttached = "true";
+document.addEventListener('touchstart', e => {
+    if (e.changedTouches && e.changedTouches.length > 0) {
+        touchstartX = e.changedTouches[0].screenX;
+    }
+}, { passive: true });
 
-    sidebar.addEventListener('touchstart', (e) => {
-        if (e.touches && e.touches.length > 0) {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-        }
-    }, { passive: true });
+document.addEventListener('touchend', e => {
+    if (e.changedTouches && e.changedTouches.length > 0) {
+        touchendX = e.changedTouches[0].screenX;
+        handleSwipe();
+    }
+}, { passive: true });
 
-    sidebar.addEventListener('touchend', (e) => {
-        if (e.changedTouches && e.changedTouches.length > 0) {
-            const touchEndX = e.changedTouches[0].clientX;
-            const touchEndY = e.changedTouches[0].clientY;
-            const diffX = touchStartX - touchEndX;
-            const diffY = Math.abs(touchStartY - touchEndY);
-
-            // Si el usuario desliza hacia la izquierda (diferencia de X > 50px)
-            if (diffX > 50 && diffX > diffY) {
-                cerrarSidebar();
+function handleSwipe() {
+    // Si el deslizamiento hacia la izquierda es mayor a 50px
+    if (touchstartX - touchendX > 50) {
+        const sidebar = document.getElementById('sidebar');
+        // Si el sidebar está visible en móvil (ej. tiene clase 'show' o 'active')
+        if (sidebar && (sidebar.classList.contains('show') || sidebar.classList.contains('active'))) {
+            sidebar.classList.remove('show');
+            sidebar.classList.remove('active');
+            // Remover overlay oscuro si existe
+            const overlay = document.querySelector('.sidebar-backdrop, .sidebar-overlay');
+            if (overlay) {
+                overlay.classList.remove('show');
+                overlay.classList.remove('active');
             }
         }
-    }, { passive: true });
+    }
 }
 
 document.addEventListener('click', (event) => {
@@ -269,7 +272,7 @@ document.addEventListener('click', (event) => {
     }
 
     const sidebar = document.getElementById('sidebar');
-    if (sidebar && sidebar.classList.contains('active')) {
+    if (sidebar && (sidebar.classList.contains('active') || sidebar.classList.contains('show'))) {
         const tocandoSidebar = event.target.closest('#sidebar');
         if (!tocandoSidebar) {
             cerrarSidebar();
@@ -279,7 +282,7 @@ document.addEventListener('click', (event) => {
 
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
-    if (sidebar && sidebar.classList.contains('active')) {
+    if (sidebar && (sidebar.classList.contains('active') || sidebar.classList.contains('show'))) {
         cerrarSidebar();
     } else {
         abrirSidebar();
@@ -291,20 +294,24 @@ function abrirSidebar() {
     const backdrop = asegurarBackdropGlobal();
     if (sidebar) {
         sidebar.classList.add('active');
+        sidebar.classList.add('show');
     }
     if (backdrop) {
         backdrop.classList.add('show');
+        backdrop.classList.add('active');
     }
 }
 
 function cerrarSidebar() {
     const sidebar = document.getElementById('sidebar');
-    const backdrop = document.querySelector('.sidebar-backdrop');
+    const backdrop = document.querySelector('.sidebar-backdrop, .sidebar-overlay');
     if (sidebar) {
         sidebar.classList.remove('active');
+        sidebar.classList.remove('show');
     }
     if (backdrop) {
         backdrop.classList.remove('show');
+        backdrop.classList.remove('active');
     }
 }
 

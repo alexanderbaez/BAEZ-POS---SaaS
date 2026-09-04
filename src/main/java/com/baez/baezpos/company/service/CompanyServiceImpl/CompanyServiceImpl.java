@@ -112,15 +112,20 @@ public class CompanyServiceImpl implements CompanyService {
         res.put("companyName", company.getName());
         res.put("vencido", isExpired);
         res.put("active", isActive);
+        res.put("activo", isManualActive);
+        res.put("estado", !isManualActive ? "INACTIVO" : (isExpired ? "VENCIDO" : "ACTIVO"));
         res.put("diasRestantes", diasRestantes);
         res.put("expirationDate", company.getExpirationDate() != null ? company.getExpirationDate().toString() : "N/A");
 
         if (!isManualActive) {
             res.put("message", "Su cuenta ha sido inhabilitada por el administrador del sistema.");
+            res.put("canOperate", false);
         } else if (isExpired) {
             res.put("message", "Tu suscripción/licencia se encuentra vencida.");
             res.put("canOperate", false);
+        } else {
             res.put("message", "Suscripción activa.");
+            res.put("canOperate", true);
         }
 
         return res;
