@@ -141,6 +141,7 @@ public class MasterAdminService implements MasterAdmin {
         }
 
         companyRepository.save(company);
+        userRepository.invalidateAllCompanySessions(id);
     }
 
     @Override
@@ -153,6 +154,7 @@ public class MasterAdminService implements MasterAdmin {
             company.setVersion(0L);
         }
         companyRepository.save(company);
+        userRepository.invalidateAllCompanySessions(id);
     }
 
     @Override
@@ -178,6 +180,7 @@ public class MasterAdminService implements MasterAdmin {
             company.setVersion(0L);
         }
         companyRepository.save(company);
+        userRepository.invalidateAllCompanySessions(id);
     }
 
     @Override
@@ -195,6 +198,7 @@ public class MasterAdminService implements MasterAdmin {
 
         owner.setPassword(passwordEncoder.encode(newRawPassword));
         userRepository.save(owner);
+        userRepository.invalidateAllCompanySessions(companyId);
 
         try {
             emailService.enviarMailResetPassword(

@@ -37,6 +37,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT COALESCE(u.tokenVersion, 0) FROM User u WHERE u.email = :email")
     Integer findTokenVersionByEmail(@Param("email") String email);
 
+    @Modifying
+    @Transactional
+    @Query("UPDATE User u SET u.tokenVersion = COALESCE(u.tokenVersion, 0) + 1 WHERE u.company.id = :companyId")
+    void invalidateAllCompanySessions(@Param("companyId") Long companyId);
+
     // ==========================================
     // BÚSQUEDAS FILTRADAS POR BAJA LÓGICA (active = true)
     // ==========================================
