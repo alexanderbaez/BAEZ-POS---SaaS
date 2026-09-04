@@ -87,6 +87,12 @@ async function cargarVentas(pagina = 0) {
 
 function renderizarPaginacion(data) {
     const contenedor = document.getElementById('paginacionContenedor');
+    const infoPaginacion = document.getElementById('infoPaginacion');
+    if (infoPaginacion) {
+        const total = (data && data.totalElements !== undefined) ? data.totalElements : (totalElementosBackend || 0);
+        infoPaginacion.innerText = 'Mostrando ' + total + ' comprobantes';
+    }
+
     if (!contenedor) return;
     contenedor.innerHTML = '';
 
@@ -142,6 +148,11 @@ function obtenerNumTicketVisual(v) {
 // ==========================================
 function renderizarTabla(ventas) {
     const tbody = document.getElementById('listaVentas');
+    const infoPaginacion = document.getElementById('infoPaginacion');
+    if (infoPaginacion) {
+        const total = (totalElementosBackend !== undefined && totalElementosBackend !== null) ? totalElementosBackend : (ventas ? ventas.length : 0);
+        infoPaginacion.innerText = 'Mostrando ' + total + ' comprobantes';
+    }
     if (!tbody) return;
 
     tbody.innerHTML = '';

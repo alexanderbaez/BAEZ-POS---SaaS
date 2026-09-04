@@ -217,6 +217,12 @@ async function cargarGastos(pagina = 0) {
 
 function renderizarPaginacion(data) {
     const contenedor = document.getElementById('paginacionContenedor');
+    const infoPaginacion = document.getElementById('infoPaginacion');
+    if (infoPaginacion) {
+        const total = (data && data.totalElements !== undefined) ? data.totalElements : (totalElementosBackend || 0);
+        infoPaginacion.innerText = 'Mostrando ' + total + ' gastos';
+    }
+
     if (!contenedor) return;
     contenedor.innerHTML = '';
 
@@ -283,6 +289,11 @@ function limpiarFiltros() {
 
 function renderizarGastos(gastos) {
     const tbody = document.getElementById('listaGastos');
+    const infoPaginacion = document.getElementById('infoPaginacion');
+    if (infoPaginacion) {
+        const total = (totalElementosBackend !== undefined && totalElementosBackend !== null) ? totalElementosBackend : (gastos ? gastos.length : 0);
+        infoPaginacion.innerText = 'Mostrando ' + total + ' gastos';
+    }
     if (!tbody) return;
 
     tbody.innerHTML = '';

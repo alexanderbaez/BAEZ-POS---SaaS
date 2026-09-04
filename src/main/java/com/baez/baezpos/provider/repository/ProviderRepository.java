@@ -41,6 +41,8 @@ public interface ProviderRepository extends JpaRepository<Provider, Long> {
 
     @Query("SELECT COUNT(p) FROM Provider p WHERE p.company.id = :companyId AND p.active = true AND p.currentBalance > 0")
     Long countProvidersWithDebtByCompanyId(@Param("companyId") Long companyId);
+
+    Long countByCompanyIdAndActiveTrueAndCurrentBalanceGreaterThan(Long companyId, BigDecimal currentBalance);
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Provider p SET p.currentBalance = p.currentBalance - :amount WHERE p.id = :id")
     int subtractBalance(@Param("id") Long id, @Param("amount") BigDecimal amount);

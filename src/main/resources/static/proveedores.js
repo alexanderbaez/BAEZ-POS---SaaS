@@ -109,6 +109,11 @@ async function cargarProveedores(pagina = 0) {
  */
 function renderizarProveedores(lista) {
     const tbody = document.getElementById('tablaProveedores');
+    const infoPaginacion = document.getElementById('infoPaginacion');
+    if (infoPaginacion) {
+        const total = (totalElementosBackend !== undefined && totalElementosBackend !== null) ? totalElementosBackend : (lista ? lista.length : 0);
+        infoPaginacion.innerText = 'Mostrando ' + total + ' proveedores';
+    }
     if (!tbody) return;
 
     tbody.innerHTML = '';
@@ -206,6 +211,12 @@ function renderizarProveedores(lista) {
 
 function renderizarPaginacion(data) {
     const contenedor = document.getElementById('paginacionContenedor');
+    const infoPaginacion = document.getElementById('infoPaginacion');
+    if (infoPaginacion) {
+        const total = (data && data.totalElements !== undefined) ? data.totalElements : (totalElementosBackend || 0);
+        infoPaginacion.innerText = 'Mostrando ' + total + ' proveedores';
+    }
+
     if (!contenedor) return;
     contenedor.innerHTML = '';
 

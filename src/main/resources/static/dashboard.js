@@ -261,7 +261,7 @@ async function cargarKpisYTablas() {
         }
 
         setElementText('kpiDeudaProveedores', fmtARS.format(totalDeudaProveedores));
-        setElementText('kpiProveedoresCount', `${proveedoresConDeuda > 0 ? proveedoresConDeuda : totalProveedoresCount} con saldo pendiente`);
+        setElementText('kpiProveedoresCount', `${proveedoresConDeuda || 0} con saldo pendiente`);
 
         // --- RENDERIZAR TABLAS GERENCIALES ---
         renderizarTopProductos(ventasActivasMes);
