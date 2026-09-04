@@ -45,16 +45,31 @@ public class User extends BaseEntity {
     @Column(name = "security_pin", length = 255, nullable = true)
     private String securityPin;
 
+    @Builder.Default
+    @Column(name = "token_version")
+    private Integer tokenVersion = 0;
+
     // RELACIÓN MULTI-TENANT (SaaS)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = true)
     private Company company;
+
+    public Integer getTokenVersion() {
+        return tokenVersion != null ? tokenVersion : 0;
+    }
+
+    public void setTokenVersion(Integer tokenVersion) {
+        this.tokenVersion = tokenVersion != null ? tokenVersion : 0;
+    }
 
     // Blindaje extra: Asegura que nunca se guarde como null o falso por descuido al persistir
     @PrePersist
     public void prePersist() {
         if (this.active == null) {
             this.active = true;
+        }
+        if (this.tokenVersion == null) {
+            this.tokenVersion = 0;
         }
     }
 }

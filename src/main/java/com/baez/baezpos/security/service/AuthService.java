@@ -61,6 +61,10 @@ public class AuthService {
             userRepository.clearPasswordResetAt(user.getId(), LocalDateTime.now());
         }
 
+        // Control de concurrencia de sesiones: invalida sesiones anteriores al loguear
+        user.setTokenVersion(user.getTokenVersion() + 1);
+        userRepository.save(user);
+
         String jwtToken = jwtService.generateToken(user);
         Long companyId = (user.getCompany() != null) ? user.getCompany().getId() : null;
 

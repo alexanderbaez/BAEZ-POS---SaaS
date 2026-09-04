@@ -120,7 +120,12 @@ async function apiFetch(path, options = {}) {
             if (!esVistaLogin()) {
                 sessionStorage.clear();
                 localStorage.clear();
+                if (!window.__baezpos_session_expired_alerted) {
+                    window.__baezpos_session_expired_alerted = true;
+                    alert("Tu sesión fue cerrada porque se inició en otro dispositivo.");
+                }
                 window.location.href = 'login.html';
+                return response;
             }
         }
 

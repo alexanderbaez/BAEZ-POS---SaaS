@@ -67,6 +67,7 @@ public class JwtService {
         claims.put("role", user.getRole().name());
         claims.put("userId", user.getId());
         claims.put("enabled", Boolean.TRUE.equals(user.getActive()));
+        claims.put("tokenVersion", user.getTokenVersion() != null ? user.getTokenVersion() : 0);
 
         if (user.getRole() != com.baez.baezpos.user.entity.Role.SUPER_ADMIN && user.getCompany() != null) {
             claims.put("companyId", user.getCompany().getId());

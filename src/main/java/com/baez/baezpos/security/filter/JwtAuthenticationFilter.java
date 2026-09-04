@@ -2,6 +2,7 @@ package com.baez.baezpos.security.filter;
 
 import com.baez.baezpos.security.JwtService;
 import com.baez.baezpos.security.entity.UserPrincipal;
+import com.baez.baezpos.user.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,6 +24,7 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final UserRepository userRepository;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -61,6 +63,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UserPrincipal userPrincipal = jwtService.extractUserPrincipal(jwt);
 
                 if (userPrincipal != null && userPrincipal.getUsername() != null && jwtService.isTokenValid(jwt, userPrincipal.getUsername())) {
+
+                    // Control de concurrencia de sesiones (Token Versioning)
+                    Integer tokenVersionInClaim = userPrincipal.getTokenVersion();
+                    Integer currentDbTokenVersion = userPrincipal.getId() != null
+                            ? userRepository.findTokenVersionById(userPrincipal.getId())
+                            : userRepository.findTokenVersionByEmail(userPrincipal.getUsername());
+
+                    if (currentDbTokenVersion == null || !tokenVersionInClaim.equals(currentDbTokenVersion)) {
+                        sendJsonError(response, HttpServletResponse.SC_UNAUTHORIZED, "SESSION_INVALIDATED", "Tu sesión fue cerrada porque se inició en otro dispositivo.");
+                        return;
+                    }
 
                     if (!userPrincipal.isEnabled()) {
                         sendJsonError(response, HttpServletResponse.SC_FORBIDDEN, "CUENTA_DESACTIVADA", "La cuenta de usuario se encuentra desactivada.");

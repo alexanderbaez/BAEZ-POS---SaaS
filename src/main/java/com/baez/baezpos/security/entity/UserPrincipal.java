@@ -24,6 +24,7 @@ public class UserPrincipal implements UserDetails {
     private boolean companyActive;
     private LocalDate companyExpirationDate;
     private Role role; // Guardamos el Enum directamente para chequeos limpios
+    private Integer tokenVersion;
     private Collection<? extends GrantedAuthority> authorities;
 
     public static UserPrincipal create(User user) {
@@ -47,6 +48,7 @@ public class UserPrincipal implements UserDetails {
                 companyActive,
                 expirationDate,
                 user.getRole(),
+                user.getTokenVersion() != null ? user.getTokenVersion() : 0,
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
         );
     }
@@ -70,6 +72,9 @@ public class UserPrincipal implements UserDetails {
         String expDateStr = (String) claims.get("companyExpirationDate");
         LocalDate companyExpirationDate = (expDateStr != null && !expDateStr.isBlank()) ? LocalDate.parse(expDateStr) : null;
 
+        Object tokenVersionObj = claims.get("tokenVersion");
+        Integer tokenVersion = (tokenVersionObj instanceof Number number) ? number.intValue() : 0;
+
         Collection<SimpleGrantedAuthority> authorities = Collections.singletonList(
                 new SimpleGrantedAuthority("ROLE_" + role.name())
         );
@@ -83,8 +88,13 @@ public class UserPrincipal implements UserDetails {
                 companyActive,
                 companyExpirationDate,
                 role,
+                tokenVersion,
                 authorities
         );
+    }
+
+    public Integer getTokenVersion() {
+        return tokenVersion != null ? tokenVersion : 0;
     }
 
     /**

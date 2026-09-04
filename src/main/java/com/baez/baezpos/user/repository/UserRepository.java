@@ -31,6 +31,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("UPDATE User u SET u.passwordResetAt = NULL, u.updatedAt = :now WHERE u.id = :id")
     int clearPasswordResetAt(@Param("id") Long id, @Param("now") LocalDateTime now);
 
+    @Query("SELECT COALESCE(u.tokenVersion, 0) FROM User u WHERE u.id = :id")
+    Integer findTokenVersionById(@Param("id") Long id);
+
+    @Query("SELECT COALESCE(u.tokenVersion, 0) FROM User u WHERE u.email = :email")
+    Integer findTokenVersionByEmail(@Param("email") String email);
+
     // ==========================================
     // BÚSQUEDAS FILTRADAS POR BAJA LÓGICA (active = true)
     // ==========================================
