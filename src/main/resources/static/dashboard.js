@@ -670,9 +670,26 @@ async function cargarGraficoSemanal() {
         let valores = [];
 
         if (data.length > 0) {
-            labels = data.map(d => {
-                const dateObj = new Date(d.date + 'T00:00:00');
-                return dateObj.toLocaleDateString('es-AR', { timeZone: TIMEZONE_AR, weekday: 'short', day: 'numeric', month: 'short' });
+            labels = data.map(item => {
+                let fechaCruda = item.fecha || item.label || item.date || item.dia || '';
+                if (!fechaCruda) return 'Fecha Inválida';
+
+                let d;
+                if (typeof fechaCruda === 'string') {
+                    const clean = fechaCruda.trim();
+                    const match = clean.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                    if (match) {
+                        d = new Date(parseInt(match[1], 10), parseInt(match[2], 10) - 1, parseInt(match[3], 10));
+                    } else {
+                        d = new Date(clean.includes('T') ? clean : clean + 'T00:00:00');
+                    }
+                } else {
+                    d = new Date(fechaCruda);
+                }
+
+                if (isNaN(d.getTime())) return 'Fecha Inválida';
+
+                return d.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' });
             });
             valores = data.map(d => parseFloat(d.total) || 0);
         } else {
@@ -680,7 +697,7 @@ async function cargarGraficoSemanal() {
             for (let i = 6; i >= 0; i--) {
                 const d = new Date(hoy);
                 d.setDate(hoy.getDate() - i);
-                labels.push(d.toLocaleDateString('es-AR', { timeZone: TIMEZONE_AR, weekday: 'short', day: 'numeric', month: 'short' }));
+                labels.push(d.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' }));
                 valores.push(0);
             }
         }
