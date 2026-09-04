@@ -1,4 +1,4 @@
-﻿/**
+/**
  * BÁEZ POS - MÓDULO DE EMPLEADOS (SaaS)
  * Alexander Baez - 2026
  */
@@ -271,7 +271,7 @@ if (formEmpleado) {
 
             if (res && res.ok) {
                 Swal.fire({
-                    title: '¡Ã‰xito!',
+                    title: '¡Éxito!',
                     text: isEditing ? 'Empleado actualizado correctamente.' : 'Nuevo empleado creado con éxito.',
                     icon: 'success',
                     timer: 1500,

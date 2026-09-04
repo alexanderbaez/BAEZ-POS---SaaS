@@ -677,7 +677,7 @@ async function exportarExcelPro() {
 }
 
 // ==========================================
-// 9. REIMPRESIÓN DE TICKET TÃ‰RMICO (58mm POS)
+// 9. REIMPRESIÓN DE TICKET TÉRMICO (58mm POS)
 // ==========================================
 /**
  * Motor de impresión nativo mediante CSS @media print y #print-section.
@@ -991,13 +991,13 @@ function generarFacturaA4HTML(venta) {
 
     let letra = 'C';
     let codigoComprobante = 'COD. 011';
-    if (tipoComprobante.includes('FACTURA A') || tipoComprobante.includes('NOTA DE DÃ‰BITO A') || tipoComprobante.includes('NOTA DE CRÃ‰DITO A')) {
+    if (tipoComprobante.includes('FACTURA A') || tipoComprobante.includes('NOTA DE DÉBITO A') || tipoComprobante.includes('NOTA DE CRÉDITO A')) {
         letra = 'A';
         codigoComprobante = 'COD. 001';
-    } else if (tipoComprobante.includes('FACTURA B') || tipoComprobante.includes('NOTA DE DÃ‰BITO B') || tipoComprobante.includes('NOTA DE CRÃ‰DITO B')) {
+    } else if (tipoComprobante.includes('FACTURA B') || tipoComprobante.includes('NOTA DE DÉBITO B') || tipoComprobante.includes('NOTA DE CRÉDITO B')) {
         letra = 'B';
         codigoComprobante = 'COD. 006';
-    } else if (tipoComprobante.includes('FACTURA C') || tipoComprobante.includes('NOTA DE DÃ‰BITO C') || tipoComprobante.includes('NOTA DE CRÃ‰DITO C')) {
+    } else if (tipoComprobante.includes('FACTURA C') || tipoComprobante.includes('NOTA DE DÉBITO C') || tipoComprobante.includes('NOTA DE CRÉDITO C')) {
         letra = 'C';
         codigoComprobante = 'COD. 011';
     } else {
