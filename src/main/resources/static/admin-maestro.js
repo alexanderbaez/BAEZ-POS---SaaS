@@ -1,4 +1,4 @@
-﻿/**
+/**
  * BÁEZ POS - PANEL MAESTRO SUPER ADMIN & SEGURIDAD SAAS
  */
 
@@ -431,8 +431,8 @@ if (formEdit) {
 // MOVIMIENTOS Y AUDITORÍA DE UN CLIENTE
 async function verMovimientos(id, nombreComercio) {
     document.getElementById('lblClienteMov').innerText = nombreComercio;
-    document.getElementById('detTotalVentas').innerText = "â€”";
-    document.getElementById('detVolumen').innerText = "$ â€”";
+    document.getElementById('detTotalVentas').innerText = "—";
+    document.getElementById('detVolumen').innerText = "$ —";
     document.getElementById('detUltimaAct').innerText = "Cargando...";
 
     const tbodyMov = document.getElementById('tablaMovimientosCliente');
