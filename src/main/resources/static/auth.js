@@ -660,7 +660,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     chequearEstadoLicencia();
-    setInterval(chequearEstadoLicencia, 15000);
+    setInterval(chequearEstadoLicencia, 300000);
 });
 
 // ==========================================

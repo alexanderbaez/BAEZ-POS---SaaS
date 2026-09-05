@@ -145,15 +145,22 @@ public class SaleServiceImpl implements SaleService {
                 .total(BigDecimal.ZERO)
                 .build();
 
-        BigDecimal subtotalAcumulado = BigDecimal.ZERO;
+        // Descuento atómico de stock ordenado por productId ascendente para prevenir deadlocks en InnoDB
+        List<SaleItemRequestDTO> itemsParaStock = saleDTO.items().stream()
+                .sorted(Comparator.comparing(SaleItemRequestDTO::productId))
+                .toList();
 
-        for (SaleItemRequestDTO itemDTO : saleDTO.items()) {
+        Map<Long, Product> productCache = new HashMap<>();
+
+        for (SaleItemRequestDTO itemDTO : itemsParaStock) {
             Product product = productRepository.findById(itemDTO.productId())
                     .orElseThrow(() -> new ResourceNotFoundException("Producto ID " + itemDTO.productId() + " no encontrado."));
 
             if (product.getCompany() == null || !product.getCompany().getId().equals(companyId)) {
                 throw new ResourceNotFoundException("Producto ID " + itemDTO.productId() + " no encontrado en su empresa.");
             }
+
+            productCache.put(itemDTO.productId(), product);
 
             BigDecimal cantidadVendida = itemDTO.quantity() != null ? itemDTO.quantity() : BigDecimal.ONE;
 
@@ -162,7 +169,14 @@ public class SaleServiceImpl implements SaleService {
                 BigDecimal stockActual = product.getStock() != null ? product.getStock() : BigDecimal.ZERO;
                 throw new BadRequestException("Stock insuficiente para: " + product.getName() + " (Disponible: " + stockActual + ")");
             }
+        }
 
+        BigDecimal subtotalAcumulado = BigDecimal.ZERO;
+
+        for (SaleItemRequestDTO itemDTO : saleDTO.items()) {
+            Product product = productCache.get(itemDTO.productId());
+
+            BigDecimal cantidadVendida = itemDTO.quantity() != null ? itemDTO.quantity() : BigDecimal.ONE;
             BigDecimal precioVenta = (itemDTO.price() != null) ? itemDTO.price() : product.getPrice();
             BigDecimal subtotalItem = precioVenta.multiply(cantidadVendida);
 

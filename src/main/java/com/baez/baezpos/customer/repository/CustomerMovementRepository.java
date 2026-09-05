@@ -14,6 +14,22 @@ import java.util.Optional;
 @Repository
 public interface CustomerMovementRepository extends JpaRepository<CustomerMovement, Long> {
 
+    @Query("SELECT cm FROM CustomerMovement cm " +
+           "LEFT JOIN FETCH cm.sale s " +
+           "LEFT JOIN FETCH s.items i " +
+           "LEFT JOIN FETCH i.product p " +
+           "WHERE cm.customer.id = :customerId AND cm.customer.company.id = :companyId " +
+           "ORDER BY cm.id DESC")
+    List<CustomerMovement> findFullHistoryByCustomer(@Param("customerId") Long customerId, @Param("companyId") Long companyId);
+
+    @Query("SELECT cm FROM CustomerMovement cm " +
+           "LEFT JOIN FETCH cm.sale s " +
+           "LEFT JOIN FETCH s.items i " +
+           "LEFT JOIN FETCH i.product p " +
+           "WHERE cm.customer.id = :customerId " +
+           "ORDER BY cm.id DESC")
+    List<CustomerMovement> findFullHistoryByCustomer(@Param("customerId") Long customerId);
+
     List<CustomerMovement> findByCustomerIdAndCustomerCompanyIdOrderByIdDesc(Long customerId, Long companyId);
 
     List<CustomerMovement> findByCustomerIdOrderByIdDesc(Long customerId);

@@ -180,8 +180,8 @@ public class CustomerServiceImpl implements CustomerService {
         Long companyId = SecurityUtils.getCurrentCompanyId();
 
         List<CustomerMovement> movements = (companyId != null)
-                ? customerMovementRepository.findByCustomerIdAndCustomerCompanyIdOrderByIdDesc(customerId, companyId)
-                : customerMovementRepository.findByCustomerIdOrderByIdDesc(customerId);
+                ? customerMovementRepository.findFullHistoryByCustomer(customerId, companyId)
+                : customerMovementRepository.findFullHistoryByCustomer(customerId);
 
         return movements.stream().map(m -> {
             Sale sale = m.getSale();
