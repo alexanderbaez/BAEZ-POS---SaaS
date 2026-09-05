@@ -112,8 +112,9 @@
             <!-- Encabezado del Offcanvas -->
             <div class="offcanvas-header bg-primary text-white p-3 px-4">
                 <div class="d-flex align-items-center gap-2">
-                    <div class="p-2 bg-white bg-opacity-20 rounded-circle text-white d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
-                        <i class="bi bi-book-half fs-5"></i>
+                    <div class="bg-white rounded-circle p-1 d-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px; flex-shrink: 0;">
+                        <img src="logo.ico" alt="BAEZ POS" style="width: 24px; height: 24px; object-fit: contain;" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.classList.remove('d-none');">
+                        <i class="bi bi-life-preserver text-primary fs-5 d-none"></i>
                     </div>
                     <div>
                         <h5 class="offcanvas-title fw-bold m-0 fs-6" id="offcanvasAyudaLabel">Centro de Ayuda BAEZ POS</h5>
@@ -641,6 +642,60 @@
                 inputFiltro.focus();
             }
         });
+
+        // Soporte de gesto Swipe-to-Close (deslizar hacia la derecha para cerrar en móviles)
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchCurrentX = 0;
+        let touchCurrentY = 0;
+
+        offcanvasEl.addEventListener('touchstart', (e) => {
+            if (e.touches && e.touches.length === 1) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                touchCurrentX = touchStartX;
+                touchCurrentY = touchStartY;
+            }
+        }, { passive: true });
+
+        offcanvasEl.addEventListener('touchmove', (e) => {
+            if (e.touches && e.touches.length === 1) {
+                touchCurrentX = e.touches[0].clientX;
+                touchCurrentY = e.touches[0].clientY;
+            }
+        }, { passive: true });
+
+        offcanvasEl.addEventListener('touchend', () => {
+            const deltaX = touchCurrentX - touchStartX;
+            const deltaY = touchCurrentY - touchStartY;
+
+            // Desplazamiento hacia la derecha (> 60px) y mayor que el vertical para no bloquear el scroll normal
+            if (deltaX > 60 && Math.abs(deltaX) > Math.abs(deltaY)) {
+                if (typeof bootstrap !== 'undefined' && bootstrap.Offcanvas) {
+                    const bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
+                    if (bsOffcanvas) {
+                        bsOffcanvas.hide();
+                    } else {
+                        const nuevaInstancia = bootstrap.Offcanvas.getOrCreateInstance(offcanvasEl);
+                        if (nuevaInstancia) nuevaInstancia.hide();
+                    }
+                } else {
+                    offcanvasEl.classList.remove('show');
+                }
+            }
+
+            touchStartX = 0;
+            touchStartY = 0;
+            touchCurrentX = 0;
+            touchCurrentY = 0;
+        }, { passive: true });
+
+        offcanvasEl.addEventListener('touchcancel', () => {
+            touchStartX = 0;
+            touchStartY = 0;
+            touchCurrentX = 0;
+            touchCurrentY = 0;
+        }, { passive: true });
 
         // Buscador reactivo dentro del manual
         const inputFiltro = document.getElementById('filtroTemasAyuda');
