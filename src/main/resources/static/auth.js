@@ -730,3 +730,9 @@ function cerrarSesion(e) {
     localStorage.clear();
     window.location.href = 'login.html';
 }
+
+// Autofocus Automático Global para Modales de Bootstrap
+document.addEventListener('shown.bs.modal', function (event) {
+    const primerInput = event.target.querySelector('input:not([type="hidden"]), textarea, select');
+    if (primerInput) primerInput.focus();
+});

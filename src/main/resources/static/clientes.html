@@ -122,8 +122,8 @@
           </div>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
         </div>
-        <div class="modal-body p-4">
-          <form id="formNuevoCliente" onsubmit="event.preventDefault(); guardarCliente();">
+        <form id="formNuevoCliente">
+          <div class="modal-body p-4">
             <input type="hidden" id="custId">
             <div class="mb-3">
               <label class="form-label text-dark fw-bold small text-uppercase mb-1">Nombre Completo *</label>
@@ -146,12 +146,15 @@
                 <input type="number" inputmode="decimal" id="custLimite" class="form-control border-0 p-2.5 fw-bold text-primary amount-num fs-5" value="10000">
               </div>
             </div>
-          </form>
-        </div>
-        <div class="modal-footer border-0 bg-light p-4 pt-3 d-flex flex-column-reverse flex-sm-row gap-2 justify-content-sm-end">
-          <button type="button" class="btn btn-light btn-lg px-4 w-100 w-sm-auto rounded-3" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="btn btn-primary btn-lg px-4 fw-bold w-100 w-sm-auto rounded-3 shadow-sm" onclick="guardarCliente()">Guardar Cliente</button>
-        </div>
+          </div>
+          <div class="modal-footer border-0 bg-light p-4 pt-3 d-flex flex-column-reverse flex-sm-row gap-2 justify-content-sm-end">
+            <button type="button" class="btn btn-light btn-lg px-4 w-100 w-sm-auto rounded-3" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary btn-lg px-4 fw-bold w-100 w-sm-auto rounded-3 shadow-sm d-flex align-items-center justify-content-center gap-2">
+              <span>Guardar Cliente</span>
+              <kbd class="bg-white bg-opacity-25 text-white border-0 px-2 py-0.5 rounded font-monospace small" style="font-size: 0.75rem;">Enter ↵</kbd>
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
@@ -225,8 +228,10 @@
 
           <div class="modal-footer border-0 bg-light p-4 pt-3 d-flex flex-column-reverse flex-sm-row gap-2 justify-content-sm-end">
             <button type="button" class="btn btn-light btn-lg px-4 w-100 w-sm-auto rounded-3" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-success btn-lg px-4 fw-bold w-100 flex-grow-1 rounded-3 shadow-sm" id="btnConfirmarCobro">
-              <i class="bi bi-check-circle-fill me-2"></i> Confirmar Pago
+            <button type="submit" class="btn btn-success btn-lg px-4 fw-bold w-100 flex-grow-1 rounded-3 shadow-sm d-flex align-items-center justify-content-center gap-2" id="btnConfirmarCobro">
+              <i class="bi bi-check-circle-fill me-1"></i>
+              <span>Confirmar Pago</span>
+              <kbd class="bg-white bg-opacity-25 text-white border-0 px-2 py-0.5 rounded font-monospace small" style="font-size: 0.75rem;">Enter ↵</kbd>
             </button>
           </div>
         </form>

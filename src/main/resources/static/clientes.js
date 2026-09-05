@@ -99,6 +99,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (buscarInput) buscarInput.addEventListener('input', filtrarClientes);
     if (filtroDeudores) filtroDeudores.addEventListener('change', filtrarClientes);
+
+    // Listener de submit para formulario de cliente
+    const formNuevoCliente = document.getElementById('formNuevoCliente');
+    if (formNuevoCliente) formNuevoCliente.addEventListener('submit', guardarCliente);
 });
 
 async function cargarDatosEmpresa() {
@@ -371,7 +375,8 @@ function abrirModalEditar(id) {
     modalClienteInstance.show();
 }
 
-async function guardarCliente() {
+async function guardarCliente(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
     const id = document.getElementById('custId').value;
     const data = {
         name: document.getElementById('custNombre').value.trim(),

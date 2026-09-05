@@ -33,6 +33,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Listeners de submit para modales ABM
+    const formProv = document.getElementById('formProveedor');
+    if (formProv) {
+        formProv.addEventListener('submit', guardarProveedor);
+    }
+    const formAb = document.getElementById('formAbono');
+    if (formAb) {
+        formAb.addEventListener('submit', registrarAbono);
+    }
+
     cargarProveedores(0);
 });
 
@@ -353,7 +363,8 @@ function abrirModalEditar(id) {
 /**
  * Guarda (Crear o Actualizar) un proveedor
  */
-async function guardarProveedor() {
+async function guardarProveedor(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
     const businessName = document.getElementById('provBusinessName').value.trim();
     if (!businessName) {
         return Swal.fire({
@@ -495,7 +506,8 @@ function abrirModalAbono(id) {
 /**
  * Registra el abono / pago al proveedor llamando al endpoint POST /api/v1/providers/{id}/pay
  */
-async function registrarAbono() {
+async function registrarAbono(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
     const id = document.getElementById('abonoProvId').value;
     const montoInput = document.getElementById('abonoMonto').value;
     const monto = parseFloat(montoInput.replace(',', '.'));

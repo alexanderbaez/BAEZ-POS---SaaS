@@ -198,8 +198,8 @@
           <h5 class="fw-bold m-0" id="modalProveedorTitulo">Nuevo Proveedor</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
-        <div class="modal-body p-3 p-md-4 pt-0">
-          <form id="formProveedor" onsubmit="event.preventDefault(); guardarProveedor();">
+        <form id="formProveedor">
+          <div class="modal-body p-3 p-md-4 pt-0">
             <input type="hidden" id="provId">
             <div class="mb-3">
               <label class="small fw-bold text-muted mb-1">Razón Social / Nombre Comercial *</label>
@@ -224,12 +224,15 @@
               <input type="number" inputmode="decimal" step="0.01" id="provCurrentBalance" class="form-control bg-light border-0 p-2 fw-bold text-danger amount-num" value="0.00">
               <small class="text-muted" style="font-size: 0.75rem;">Si ya posees una deuda anterior con este proveedor, ingrésala aquí.</small>
             </div>
-          </form>
-        </div>
-        <div class="modal-footer border-0 p-3 p-md-4 pt-0 d-flex flex-column-reverse flex-md-row gap-2 justify-content-md-end">
-          <button type="button" class="btn btn-light px-4 w-100 w-md-auto" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="btn btn-primary px-4 fw-bold w-100 w-md-auto" onclick="guardarProveedor()">Guardar</button>
-        </div>
+          </div>
+          <div class="modal-footer border-0 p-3 p-md-4 pt-0 d-flex flex-column-reverse flex-md-row gap-2 justify-content-md-end">
+            <button type="button" class="btn btn-light px-4 w-100 w-md-auto" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary px-4 fw-bold w-100 w-md-auto d-flex align-items-center justify-content-center gap-2">
+              <span>Guardar</span>
+              <kbd class="bg-white bg-opacity-25 text-white border-0 px-2 py-0.5 rounded font-monospace small" style="font-size: 0.75rem;">Enter ↵</kbd>
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
@@ -245,20 +248,20 @@
           </div>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
-        <div class="modal-body p-3 p-md-4">
-          <!-- Info Box Proveedor -->
-          <div class="p-3 mb-3 bg-light rounded-3 border d-flex justify-content-between align-items-center">
-            <div>
-              <span class="small text-muted d-block fw-semibold">Proveedor:</span>
-              <strong class="fs-6 text-dark" id="abonoProveedorNombre">--</strong>
+        <form id="formAbono">
+          <div class="modal-body p-3 p-md-4">
+            <!-- Info Box Proveedor -->
+            <div class="p-3 mb-3 bg-light rounded-3 border d-flex justify-content-between align-items-center">
+              <div>
+                <span class="small text-muted d-block fw-semibold">Proveedor:</span>
+                <strong class="fs-6 text-dark" id="abonoProveedorNombre">--</strong>
+              </div>
+              <div class="text-end">
+                <span class="small text-muted d-block fw-semibold">Deuda Actual:</span>
+                <span class="badge bg-danger fs-6 amount-num" id="abonoProveedorDeudaActual">$0,00</span>
+              </div>
             </div>
-            <div class="text-end">
-              <span class="small text-muted d-block fw-semibold">Deuda Actual:</span>
-              <span class="badge bg-danger fs-6 amount-num" id="abonoProveedorDeudaActual">$0,00</span>
-            </div>
-          </div>
 
-          <form id="formAbono" onsubmit="event.preventDefault(); registrarAbono();">
             <input type="hidden" id="abonoProvId">
 
             <div class="mb-3">
@@ -299,14 +302,16 @@
                 Descuenta billetes del cajón actual
               </small>
             </div>
-          </form>
-        </div>
-        <div class="modal-footer border-0 p-3 p-md-4 pt-0 d-flex flex-column-reverse flex-md-row gap-2 justify-content-md-end">
-          <button type="button" class="btn btn-light px-4 w-100 w-md-auto" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="btn btn-success px-4 fw-bold w-100 w-md-auto" onclick="registrarAbono()">
-            <i class="bi bi-check-circle me-1"></i> Confirmar Abono
-          </button>
-        </div>
+          </div>
+          <div class="modal-footer border-0 p-3 p-md-4 pt-0 d-flex flex-column-reverse flex-md-row gap-2 justify-content-md-end">
+            <button type="button" class="btn btn-light px-4 w-100 w-md-auto" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-success px-4 fw-bold w-100 w-md-auto d-flex align-items-center justify-content-center gap-2">
+              <i class="bi bi-check-circle me-1"></i>
+              <span>Confirmar Abono</span>
+              <kbd class="bg-white bg-opacity-25 text-white border-0 px-2 py-0.5 rounded font-monospace small" style="font-size: 0.75rem;">Enter ↵</kbd>
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>

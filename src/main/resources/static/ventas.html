@@ -77,7 +77,10 @@
                             <span class="input-group-text bg-white border-end-0 text-primary pe-1">
                                 <i class="bi bi-upc-scan fs-5"></i>
                             </span>
-                            <input type="text" id="buscadorVenta" class="form-control border-start-0 fs-6 fs-md-5 py-2 py-md-3" placeholder="Escanea código o busca producto..." autocomplete="off" inputmode="search" enterkeyhint="search">
+                            <input type="text" id="buscadorVenta" class="form-control border-start-0 border-end-0 fs-6 fs-md-5 py-2 py-md-3" placeholder="Escanea código o busca producto..." autocomplete="off" inputmode="search" enterkeyhint="search">
+                            <span class="input-group-text bg-white border-start-0 text-muted d-none d-md-flex align-items-center">
+                                <kbd class="bg-light text-secondary border px-1.5 py-0.5 rounded small font-monospace" style="font-size: 0.72rem;">F2</kbd>
+                            </span>
                         </div>
                         <div id="listaSugerencias" class="list-group position-absolute w-100 shadow-lg sugerencias-box"></div>
                     </div>
@@ -110,8 +113,8 @@
                         <!-- Encabezado de Total -->
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <span class="text-secondary text-uppercase fw-bold small">Total a Cobrar</span>
-                            <button type="button" class="btn btn-sm btn-outline-danger border-0 fw-semibold" onclick="cancelarVenta()">
-                                <i class="bi bi-trash3 me-1"></i>Vaciar Carrito
+                            <button type="button" class="btn btn-sm btn-outline-danger border-0 fw-semibold d-flex align-items-center gap-1" onclick="cancelarVenta()">
+                                <i class="bi bi-trash3 me-1"></i><span>Vaciar</span> <kbd class="bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-1 py-0.5 rounded font-monospace small d-none d-md-inline-block" style="font-size: 0.65rem;">F8</kbd>
                             </button>
                         </div>
 
@@ -189,7 +192,10 @@
                         <!-- Panel Vuelto / Calculadora rápida -->
                         <div id="seccionVuelto" class="bg-light p-3 rounded-3 border mb-3 shadow-sm">
                             <div class="mb-2">
-                                <label class="small fw-bold text-secondary text-uppercase mb-1 d-block" style="font-size: 0.7rem;">Paga con:</label>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="small fw-bold text-secondary text-uppercase m-0" style="font-size: 0.7rem;">Paga con:</label>
+                                    <kbd class="bg-secondary bg-opacity-10 text-secondary border-0 px-1.5 py-0.5 rounded small font-monospace d-none d-md-inline-block" style="font-size: 0.65rem;">Enter ↵</kbd>
+                                </div>
                                 <div class="input-group input-group-lg">
                                     <span class="input-group-text bg-white border-end-0 text-muted fw-bold">$</span>
                                     <input type="number" inputmode="decimal" pattern="[0-9]*" id="pagaCon" class="form-control fw-bold border-start-0 fs-4" placeholder="0.00">
@@ -207,8 +213,10 @@
 
                     <!-- Botón Acción Principal en Desktop/Tablet -->
                     <div class="mt-2 d-none d-md-block">
-                        <button id="btnFinalizarVenta" class="btn btn-primary btn-lg w-100 py-3 fw-bold shadow-sm rounded-3" onclick="finalizarVenta()">
-                            <i class="bi bi-check2-all me-2"></i>CONFIRMAR VENTA
+                        <button id="btnFinalizarVenta" class="btn btn-primary btn-lg w-100 py-3 fw-bold shadow-sm rounded-3 d-flex align-items-center justify-content-center gap-2" onclick="finalizarVenta()">
+                            <i class="bi bi-check2-all me-1"></i>
+                            <span>CONFIRMAR VENTA</span>
+                            <kbd class="bg-white bg-opacity-25 text-white border-0 px-2 py-0.5 rounded font-monospace small" style="font-size: 0.75rem;">F4</kbd>
                         </button>
                     </div>
 

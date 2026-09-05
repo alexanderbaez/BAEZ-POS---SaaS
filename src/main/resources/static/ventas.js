@@ -230,6 +230,12 @@ function inicializarListenersInterfaz() {
         inputPagaCon.addEventListener('input', function handleInputPagaCon() {
             calcularVuelto();
         });
+        inputPagaCon.addEventListener('keydown', function handleKeydownPagaCon(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                finalizarVenta();
+            }
+        });
     }
 
     const inputDesc = document.getElementById('inputDescuento');
