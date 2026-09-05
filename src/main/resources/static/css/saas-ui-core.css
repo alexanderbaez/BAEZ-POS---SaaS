@@ -1192,4 +1192,106 @@ body.login-page {
   }
 }
 
+/* ==========================================================================
+   OPTIMIZACIONES MÓVILES Y TABLETS (< 992px / < 768px)
+   ========================================================================== */
+
+/* Reglas aplicadas a Tablets y Móviles (< 991px) */
+@media (max-width: 991px) {
+  /* Punto de Venta: Altura controlada del carrito en Tablets */
+  .table-responsive-pos {
+    height: auto !important;
+    max-height: 360px !important;
+  }
+
+  /* Convivencia Sidebar & Ayuda: Ocultar #btnAyudaGlobal si el sidebar o backdrop están visibles */
+  #sidebar.active ~ #btnAyudaGlobal,
+  #sidebar.show ~ #btnAyudaGlobal,
+  body:has(#sidebar.active) #btnAyudaGlobal,
+  body:has(#sidebar.show) #btnAyudaGlobal,
+  body:has(.sidebar-backdrop.show) #btnAyudaGlobal,
+  body:has(.sidebar-overlay.show) #btnAyudaGlobal,
+  body:has(.sidebar-backdrop.active) #btnAyudaGlobal,
+  body:has(.sidebar-overlay.active) #btnAyudaGlobal {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform: scale(0.8) !important;
+    transition: opacity 0.2s ease, transform 0.2s ease !important;
+  }
+}
+
+/* Reglas aplicadas a Dispositivos Móviles (< 768px) */
+@media (max-width: 768px) {
+  /* 1. Modales Operativos con Teclado Virtual */
+  .modal-dialog {
+    margin: 10px auto !important;
+    max-height: calc(100dvh - 20px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .modal-dialog-centered {
+    min-height: calc(100dvh - 20px) !important;
+    align-items: flex-start !important; /* Evita que el header se desborde fuera del viewport */
+  }
+  .modal-content {
+    max-height: calc(100dvh - 20px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+  .modal-body {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    flex: 1 1 auto !important;
+  }
+
+  /* 2. Punto de Venta: Resguardo para la barra fija */
+  #content {
+    padding-bottom: 85px !important;
+  }
+
+  /* Touch Targets en Carrito POS (mínimo 44x44px) */
+  .table-pos-mobile .btn-group-sm > .btn {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.1rem !important;
+  }
+
+  .table-pos-mobile button[onclick*="eliminarItem"],
+  .table-pos-mobile .btn-link.text-danger {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* Botones de caja del Navbar con interacción táctil cómoda */
+  #btnAbrirCajaUI, #btnCerrarCajaUI, #btnSyncPendingSales {
+    min-height: 38px !important;
+    padding: 6px 12px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+  }
+
+  /* 3. Botón Flotante de Ayuda elevado para no solapar la barra fija */
+  #btnAyudaGlobal {
+    bottom: 85px !important;
+  }
+
+  /* 4. Columna de Fecha/Hora en Historial visible y compacta */
+  .col-fecha-hora,
+  #listaVentas td:nth-child(2) {
+    display: table-cell !important;
+    font-size: 0.75rem !important;
+    line-height: 1.25 !important;
+    max-width: 95px !important;
+    white-space: normal !important;
+  }
+}
+
+
 
