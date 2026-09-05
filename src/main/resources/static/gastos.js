@@ -434,7 +434,7 @@ function calcularResumenGastos(gastos) {
 }
 
 async function guardarGasto(e) {
-    e.preventDefault();
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
 
     const montoInput = document.getElementById('montoGasto').value;
     const monto = parseFloat(montoInput.replace(',', '.'));

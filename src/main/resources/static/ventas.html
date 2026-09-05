@@ -243,8 +243,8 @@
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title fw-bold"><i class="bi bi-door-open-fill me-2"></i>Apertura de Caja</h5>
             </div>
-            <div class="modal-body p-4">
-                <form id="formAbrirCaja" onsubmit="procesarAperturaCaja(event)">
+            <form id="formAperturaCaja">
+                <div class="modal-body p-4">
                     <div class="mb-3">
                         <label class="form-label fw-bold text-secondary">Monto Inicial en Caja ($)</label>
                         <div class="input-group input-group-lg">
@@ -253,13 +253,15 @@
                         </div>
                         <small class="text-muted">Ingrese el efectivo físico disponible en la caja al iniciar el turno.</small>
                     </div>
-                    <div class="d-grid gap-2 mt-4">
-                        <button type="submit" id="btnConfirmarApertura" class="btn btn-primary btn-lg fw-bold">
-                            <i class="bi bi-check-circle me-2"></i>Abrir Caja e Iniciar Turno
-                        </button>
-                    </div>
-                </form>
-            </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="submit" id="btnConfirmarApertura" class="btn btn-primary btn-lg fw-bold w-100 d-flex align-items-center justify-content-center gap-2">
+                        <i class="bi bi-check-circle me-1"></i>
+                        <span>Abrir Caja e Iniciar Turno</span>
+                        <kbd class="bg-white bg-opacity-25 text-white border-0 px-2 py-0.5 rounded font-monospace small" style="font-size: 0.75rem;">Enter ↵</kbd>
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

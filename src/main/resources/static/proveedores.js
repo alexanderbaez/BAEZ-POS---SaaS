@@ -42,6 +42,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (formAb) {
         formAb.addEventListener('submit', registrarAbono);
     }
+    const formOrden = document.getElementById('formOrdenCompra');
+    if (formOrden) {
+        formOrden.addEventListener('submit', generarOrdenCompra);
+    }
 
     cargarProveedores(0);
 });
@@ -870,7 +874,8 @@ function renderizarCarrito() {
     document.getElementById('totalOrdenBadge').textContent = fmtARS.format(total);
 }
 
-window.generarOrdenCompra = async function() {
+window.generarOrdenCompra = async function(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
     const providerId = document.getElementById('selectProveedor').value;
     if (!providerId) {
         return Swal.fire("Atención", "Debe seleccionar un proveedor", "warning");

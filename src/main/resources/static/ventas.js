@@ -251,6 +251,11 @@ function inicializarListenersInterfaz() {
             renderizarCarrito();
         });
     }
+
+    const formAperturaCaja = document.getElementById('formAperturaCaja');
+    if (formAperturaCaja) {
+        formAperturaCaja.addEventListener('submit', procesarAperturaCaja);
+    }
 }
 
 function inicializarAtajosTecladoGlobales() {
@@ -2704,6 +2709,26 @@ function actualizarUICaja(estaAbierta) {
         if (btnFinalizar) btnFinalizar.disabled = true;
     }
 }
+
+/**
+ * Procesa el envío del formulario nativo de Apertura de Caja
+ */
+async function procesarAperturaCaja(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    const elMonto = document.getElementById('montoInicialCaja');
+    const monto = parseFloat(elMonto ? elMonto.value : 0);
+    if (isNaN(monto) || monto < 0) {
+        Swal.fire('Atención', 'Ingrese un monto inicial válido (mayor o igual a 0)', 'warning');
+        return;
+    }
+    await ejecutarAperturaCaja({ initialAmount: monto, notes: '' });
+    const modalEl = document.getElementById('modalAbrirCaja');
+    if (modalEl) {
+        const inst = bootstrap.Modal.getInstance(modalEl);
+        if (inst) inst.hide();
+    }
+}
+window.procesarAperturaCaja = procesarAperturaCaja;
 
 /**
  * Modal Responsive SweetAlert2 para APERTURA DE CAJA
